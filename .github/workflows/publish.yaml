@@ -1,0 +1,34 @@
+name: geonum
+
+on:
+  push:
+    paths:
+    - 'src/**'
+    - 'Cargo.toml'
+    - 'Cargo.lock'
+
+jobs:
+  lint_test:
+    name: lint test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: linting
+        run: |
+          cargo fmt -- --check
+          cargo clippy -- -Dwarnings
+  unit_test:
+    name: unit test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: unit test
+        run: cargo test

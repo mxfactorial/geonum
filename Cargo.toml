@@ -1,0 +1,13 @@
+[package]
+name = "geonum"
+version = "0.1.1"
+edition = "2021"
+repository = "https://github.com/mxfactorial/geonum"
+description = "geometric number rust library"
+license = "BSD-3-Clause"
+readme = "README.md"
+keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
+categories = []
+authors = ["mxfactorial"]
+
+[dependencies]
