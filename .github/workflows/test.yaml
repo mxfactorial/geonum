@@ -1,0 +1,62 @@
+name: test
+
+on:
+  push:
+    paths:
+    - 'src/**'
+    - 'Cargo.toml'
+    - 'Cargo.lock'
+
+jobs:
+  lint_test:
+    name: lint test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: linting
+        run: |
+          cargo fmt -- --check
+          cargo clippy -- -Dwarnings
+  unit_test:
+    name: unit test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: lib unit tests
+        run: cargo test --lib
+      - name: integration tests
+        run: cargo test --test lib_test
+      - name: all tests
+        run: cargo test
+  
+  benchmark:
+    name: benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: run benchmarks
+        run: cargo bench
+  
+  coverage:
+    name: code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: install llvm-cov
+        run: cargo install cargo-llvm-cov
+      - name: run coverage
+        run: cargo llvm-cov
