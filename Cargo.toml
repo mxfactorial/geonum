@@ -1,9 +1,9 @@
 [package]
 name = "geonum"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
-description = "geometric number library with O(1) complexity for unlimited dimensions"
+description = "geometric number library supporting unlimited dimensions with O(1) complexity"
 license = "BSD-3-Clause"
 readme = "README.md"
 keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
