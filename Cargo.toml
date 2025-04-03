@@ -7,7 +7,7 @@ description = "geometric number library with O(1) complexity for unlimited dimen
 license = "BSD-3-Clause"
 readme = "README.md"
 keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
-categories = ["mathematics", "science", "science::geo", "simulation", "algorithms", "data-structures"]
+categories = ["mathematics", "simulation", "algorithms", "data-structures"]
 authors = ["mxfactorial"]
 
 [dependencies]
