@@ -391,12 +391,157 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
     group.finish();
 }
 
+// Benchmark the new Multivector operations in extreme dimensions
+fn bench_multivector_operations(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Multivector Operations");
+
+    // Benchmark grade operations in million-D space
+    group.bench_function("grade_extraction_million_d", |b| {
+        b.iter(|| {
+            // Create a million-D space
+            let _dims = Dimensions::new(1_000_000);
+
+            // Create a multivector with mixed grades
+            let mv = Multivector(vec![
+                Geonum {
+                    length: 1.0,
+                    angle: 0.0,
+                }, // scalar
+                Geonum {
+                    length: 2.0,
+                    angle: PI / 2.0,
+                }, // vector
+                Geonum {
+                    length: 3.0,
+                    angle: PI,
+                }, // negative scalar
+            ]);
+
+            // Extract specific grades
+            let scalar_parts = mv.grade(0);
+            let vector_parts = mv.grade(1);
+
+            black_box((scalar_parts, vector_parts))
+        })
+    });
+
+    // Benchmark grade involution in extreme dimensions
+    group.bench_function("grade_involution_million_d", |b| {
+        b.iter(|| {
+            // Create a million-D space
+            let dims = Dimensions::new(1_000_000);
+
+            // Create a multivector with basis vectors from this space
+            let _basis_vectors = dims.multivector(&[0, 1, 2, 3, 4]);
+
+            // Add more components to create a complex multivector
+            let mut complex_mv = Multivector::with_capacity(10);
+            complex_mv.push(Geonum {
+                length: 2.0,
+                angle: 0.0,
+            }); // scalar
+            complex_mv.push(Geonum {
+                length: 3.0,
+                angle: PI / 2.0,
+            }); // vector
+            complex_mv.push(Geonum {
+                length: 4.0,
+                angle: PI,
+            }); // bivector-like
+            complex_mv.push(Geonum {
+                length: 5.0,
+                angle: 3.0 * PI / 2.0,
+            }); // vector
+
+            // Perform grade involution - O(1) per element regardless of dimension
+            let involution = complex_mv.involute();
+
+            black_box(involution)
+        })
+    });
+
+    // Benchmark clifford conjugate in extreme dimensions
+    group.bench_function("clifford_conjugate_million_d", |b| {
+        b.iter(|| {
+            // Create a million-D space
+            let dims = Dimensions::new(1_000_000);
+
+            // Create a multivector with basis elements
+            let basis_vectors = dims.multivector(&[0, 1, 2, 3]);
+
+            // Perform clifford conjugate operation
+            let conjugate = basis_vectors.conjugate();
+
+            black_box(conjugate)
+        })
+    });
+
+    // Benchmark contractions between multivectors in extreme dimensions
+    group.bench_function("contractions_million_d", |b| {
+        b.iter(|| {
+            // Create a million-D space
+            let dims = Dimensions::new(1_000_000);
+
+            // Create two multivectors
+            let a = dims.multivector(&[0, 1]); // scalar and first basis vector
+            let b = dims.multivector(&[1, 2]); // first and second basis vectors
+
+            // Perform left and right contractions
+            let left = a.left_contract(&b);
+            let right = a.right_contract(&b);
+
+            black_box((left, right))
+        })
+    });
+
+    // Benchmark anti-commutator in extreme dimensions
+    group.bench_function("anti_commutator_million_d", |b| {
+        b.iter(|| {
+            // Create a million-D space
+            let dims = Dimensions::new(1_000_000);
+
+            // Create two multivectors from basis elements
+            let a = dims.multivector(&[0, 1]); // scalar and first basis vector
+            let b = dims.multivector(&[1, 2]); // first and second basis vectors
+
+            // Compute anti-commutator
+            let anti_comm = a.anti_commutator(&b);
+
+            black_box(anti_comm)
+        })
+    });
+
+    // Compare performance of different multivector operations
+    group.bench_function("multivector_ops_comparison", |b| {
+        b.iter(|| {
+            // Create a high-dimensional space
+            let dims = Dimensions::new(1_000);
+
+            // Create multivectors
+            let mv1 = dims.multivector(&[0, 1, 2]);
+            let mv2 = dims.multivector(&[1, 2, 3]);
+
+            // Perform various operations and compare their performance
+            let grade_op = mv1.grade(1);
+            let involution = mv1.involute();
+            let conjugate = mv1.conjugate();
+            let left_contract = mv1.left_contract(&mv2);
+            let anti_comm = mv1.anti_commutator(&mv2);
+
+            black_box((grade_op, involution, conjugate, left_contract, anti_comm))
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_tensor_product,
     bench_scaling_comparison,
     bench_ijk_product,
     bench_dimension_operations,
-    bench_extreme_dimensions
+    bench_extreme_dimensions,
+    bench_multivector_operations
 );
 criterion_main!(benches);

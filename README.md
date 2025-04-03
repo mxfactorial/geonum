@@ -2,15 +2,37 @@
 [![Discord](https://img.shields.io/discord/868565277955203122.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/KQdC65bG)
 [![docs](https://docs.rs/geonum/badge.svg)](https://docs.rs/geonum)
 [![crates.io](https://img.shields.io/crates/v/geonum.svg)](https://crates.io/crates/geonum)
+[![coverage](https://coveralls.io/repos/github/mxfactorial/geonum/badge.svg?branch=main)](https://coveralls.io/github/mxfactorial/geonum?branch=main)
 [![contribute](https://img.shields.io/badge/contribute-paypal-brightgreen.svg)](https://www.paypal.com/paypalme/mxfactorial)
 
 # geonum
 
 the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec in rust
 
+### features
+
+- dot product, wedge product, geometric product
+- inverse, division, normalization
+- million-dimension geometric algebra with O(1) complexity
+- multivector support and trivector operations
+- rotations, reflections, projections, rejections
+- exponential, interior product, dual operations
+- meet and join, commutator product, sandwich product
+- left-contraction, right-contraction
+- anti-commutator product
+- grade involution and clifford conjugate
+- grade extraction
+- section for pseudoscalar (extracting components for which a given pseudoscalar is the pseudoscalar)
+- square root operation for multivectors
+- undual operation (complement to the dual operation)
+- regressive product (alternative method for computing the meet of subspaces)
+- automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
+
 ### use
 
-`cargo add geonum`
+```
+cargo add geonum
+```
 
 see `tests/lib_test.rs` examples for scalable numerical simulation of linear and geometric algebra operations
 
@@ -44,9 +66,22 @@ geonum achieves constant O(1) time complexity regardless of problem size, 400× 
 
 geonum enables geometric algebra in million-dimensional spaces with constant time operations, achieving whats mathematically impossible with traditional implementations (requires more storage than atoms in the universe)
 
+#### multivector ops
+
+| operation | dimensions | time | traditional ga complexity |
+|-----------|------------|------|---------------------------|
+| grade extraction | 1,000,000 | 130.69 ns | O(2^n) |
+| grade involution | 1,000,000 | 157.18 ns | O(2^n) |
+| clifford conjugate | 1,000,000 | 112.90 ns | O(2^n) |
+| contractions | 1,000,000 | 266.31 ns | O(2^n) |
+| anti-commutator | 1,000,000 | 246.24 ns | O(2^n) |
+| all ops combined | 1,000 | 826.57 ns | impossible at high dimensions |
+
+geonum performs all major multivector operations with exceptional efficiency in million-dimensional spaces, maintaining sub-microsecond performance for grade-specific operations that would require exponential time and memory in traditional geometric algebra implementations
+
 ### tests
 ```
-cargo fmt --check # format check
+cargo fmt --check # format
 cargo clippy # lint
 cargo test --lib # unit
 cargo test --test lib_test # feature
@@ -61,10 +96,8 @@ cargo doc --open
 
 ### todo
 
-- [x] dot product, wedge product, geometric product
-- [x] inverse, division, normalization
-- [x] million-dimension geometric algebra with O(1) complexity
-- [x] multivector support and trivector operations
-- [ ] rotations, reflections, projections, rejections
-- [ ] exponential, interior product, dual operations
-- [ ] meet and join, commutator product, sandwich product
+- blade classification (identifying geometric types like points, lines, planes)
+- rotor estimation algorithms for transforming between sets of geometric objects
+- conformal geometry support
+- specialized projective geometric algebra (PGA) support
+- broadcasting support for operating on multiple objects (point clouds)
