@@ -10,7 +10,7 @@ the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557d
 
 ### use
 
-`cargo install geonum`
+`cargo add geonum`
 
 see `tests/lib_test.rs` examples for scalable numerical simulation of linear and geometric algebra operations
 
@@ -46,6 +46,7 @@ geonum enables geometric algebra in million-dimensional spaces with constant tim
 
 ### tests
 ```
+cargo fmt --check # format check
 cargo clippy # lint
 cargo test --lib # unit
 cargo test --test lib_test # feature
