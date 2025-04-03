@@ -1,13 +1,20 @@
 [package]
 name = "geonum"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
-description = "geometric number rust library"
+description = "geometric number library with O(1) complexity for unlimited dimensions"
 license = "BSD-3-Clause"
 readme = "README.md"
 keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
-categories = []
+categories = ["mathematics", "science", "science::geo", "simulation", "algorithms", "data-structures"]
 authors = ["mxfactorial"]
 
 [dependencies]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "geonum_benchmarks"
+harness = false

@@ -1,15 +1,18 @@
-name: geonum
+name: publish
 
 on:
   push:
+    branches:
+      - main
     paths:
-    - 'src/**'
-    - 'Cargo.toml'
-    - 'Cargo.lock'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'README.md'
 
 jobs:
-  lint_test:
-    name: lint test
+  test:
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,18 +20,42 @@ jobs:
         with:
           toolchain: stable
           components: clippy, rustfmt
-      - name: linting
+      - name: lint
         run: |
           cargo fmt -- --check
           cargo clippy -- -Dwarnings
-  unit_test:
-    name: unit test
+      - name: tests
+        run: |
+          cargo test --lib
+          cargo test --test lib_test
+          cargo test
+  
+  publish:
+    name: publish
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          components: clippy, rustfmt
-      - name: unit test
-        run: cargo test
+      - name: check version
+        id: check
+        run: |
+          PUBLISHED_VERSION=$(cargo search geonum --limit 1 | grep -o "geonum = \"[0-9.]*\"" | cut -d '"' -f 2)
+          CURRENT_VERSION=$(grep "^version =" Cargo.toml | cut -d '"' -f 2)
+          echo "published=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          if [ "$PUBLISHED_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "needs_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_publish=false" >> $GITHUB_OUTPUT
+          fi
+      - name: display versions
+        run: |
+          echo "published version ${{ steps.check.outputs.published }}"
+          echo "current version ${{ steps.check.outputs.current }}"
+          echo "needs publishing ${{ steps.check.outputs.needs_publish }}"
+      - name: publish to crates.io
+        if: steps.check.outputs.needs_publish == 'true'
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
