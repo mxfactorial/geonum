@@ -84,7 +84,7 @@ geonum performs all major multivector operations with exceptional efficiency in 
 cargo fmt --check # format
 cargo clippy # lint
 cargo test --lib # unit
-cargo test --test lib_test # feature
+cargo test --test "*" # feature
 cargo bench # bench
 cargo llvm-cov # coverage
 ```
