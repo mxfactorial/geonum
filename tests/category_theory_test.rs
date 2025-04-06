@@ -13,7 +13,7 @@
 // ```rs
 // let clockwise = [1, 0];
 // let rightward = [1, PI/2];
-// // **measure** composition
+// // measure composition
 // rightward / clockwise == [1, PI/2]
 // ```
 //

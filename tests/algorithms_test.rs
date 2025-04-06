@@ -13,7 +13,7 @@
 // ```rs
 // let sequential = [1, 0];
 // let parallel = [1, PI/2];
-// // **measure** performance gain
+// // measure performance gain
 // parallel / sequential == [1, PI/2] // orthogonal execution path
 // ```
 //

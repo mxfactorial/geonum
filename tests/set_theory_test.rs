@@ -13,7 +13,7 @@
 // ```rs
 // let real = [1, 0];
 // let imaginary = [1, PI/2];
-// // **measure** intersection
+// // measure intersection
 // imaginary / real == [1, PI/2]
 // ```
 //

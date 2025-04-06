@@ -1,5 +1,15 @@
 # changelog
 
+## 0.4.1 (2025-04-06)
+
+### added
+- tests/electromagnetic_field_theory_test.rs demonstrating electromagnetic field operations
+- is_orthogonal method for testing perpendicular geometric numbers
+- negate method for reversing direction via angle rotation
+- length_diff method for magnitude comparisons with O(1) complexity
+- propagate method for wave propagation in space and time
+- disperse method for creating waves with dispersion relations
+
 ## 0.3.2 (2025-04-05)
 
 ### added

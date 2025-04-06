@@ -7,39 +7,7 @@
 
 # geonum
 
-scaling numerical simulation with the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec
-
-### features
-
-- dot product, wedge product, geometric product
-- inverse, division, normalization
-- million-dimension geometric algebra with O(1) complexity
-- multivector support and trivector operations
-- rotations, reflections, projections, rejections
-- exponential, interior product, dual operations
-- meet and join, commutator product, sandwich product
-- left-contraction, right-contraction
-- anti-commutator product
-- grade involution and clifford conjugate
-- grade extraction
-- section for pseudoscalar (extracting components for which a given pseudoscalar is the pseudoscalar)
-- square root operation for multivectors
-- undual operation (complement to the dual operation)
-- regressive product (alternative method for computing the meet of subspaces)
-- automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
-- replaces set theory foundations with direct geometric representations
-- transforms category theory abstractions into simple angle transformations
-- unifies discrete and continuous math through a common geometric framework
-- provides physical geometric interpretations for abstract mathematical concepts
-- automates away unnecessary mathematical formalism using length-angle representation
-- enables scaling precision in statistical modeling through direct angle quantization
-- supports time evolution via simple angle rotation (angle += energy * time)
-- provides statistical methods for angle distributions (arithmetic/circular means, variance, expectation values)
-- enables O(1) machine learning operations that would otherwise require O(n²) or O(2^n) complexity
-- implements perceptron learning, regression modeling, neural networks, and activation functions 
-- replaces tensor-based neural network operations with direct angle transformations
-- enables scaling to millions of dimensions with constant-time ML computations
-- eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
+scaling scientific computing with the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec
 
 ### use
 
@@ -47,7 +15,7 @@ scaling numerical simulation with the [geometric number](https://gist.github.com
 cargo add geonum
 ```
 
-see `tests` to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory, and algebraic structures
+see `tests` to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
 
 ### benches
 
@@ -91,6 +59,37 @@ geonum enables geometric algebra in million-dimensional spaces with constant tim
 | all ops combined | 1,000 | 826.57 ns | impossible at high dimensions |
 
 geonum performs all major multivector operations with exceptional efficiency in million-dimensional spaces, maintaining sub-microsecond performance for grade-specific operations that would require exponential time and memory in traditional geometric algebra implementations
+
+### features
+
+- dot product, wedge product, geometric product
+- inverse, division, normalization
+- million-dimension geometric algebra with O(1) complexity
+- multivector support and trivector operations
+- rotations, reflections, projections, rejections
+- exponential, interior product, dual operations
+- meet and join, commutator product, sandwich product
+- left-contraction, right-contraction
+- anti-commutator product
+- grade involution and clifford conjugate
+- grade extraction
+- section for pseudoscalar (extracting components for which a given pseudoscalar is the pseudoscalar)
+- square root operation for multivectors
+- undual operation (complement to the dual operation)
+- regressive product (alternative method for computing the meet of subspaces)
+- automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
+- transforms category theory abstractions into simple angle transformations
+- unifies discrete and continuous math through a common geometric framework
+- provides physical geometric interpretations for abstract mathematical concepts
+- automates away unnecessary mathematical formalism using length-angle representation
+- enables scaling precision in statistical modeling through direct angle quantization
+- supports time evolution via simple angle rotation (angle += energy * time)
+- provides statistical methods for angle distributions (arithmetic/circular means, variance, expectation values)
+- enables O(1) machine learning operations that would otherwise require O(n²) or O(2^n) complexity
+- implements perceptron learning, regression modeling, neural networks and activation functions 
+- replaces tensor-based neural network operations with direct angle transformations
+- enables scaling to millions of dimensions with constant-time ML computations
+- eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
 
 ### tests
 ```
