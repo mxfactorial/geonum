@@ -1579,6 +1579,31 @@ impl Geonum {
         }
     }
 
+    /// negates this geometric number, reversing its direction
+    ///
+    /// negation is equivalent to rotation by π (180 degrees)
+    /// for a vector [r, θ], its negation is [r, θ + π]
+    ///
+    /// # returns
+    /// a new geometric number representing the negation
+    ///
+    /// # examples
+    /// ```
+    /// use geonum::Geonum;
+    /// use std::f64::consts::PI;
+    ///
+    /// let v = Geonum { length: 2.0, angle: PI/4.0 };
+    /// let neg_v = v.negate();
+    ///
+    /// // negation preserves length but rotates by π
+    /// assert_eq!(neg_v.length, v.length);
+    /// assert_eq!(neg_v.angle, (v.angle + PI) % (2.0 * PI));
+    /// ```
+    pub fn negate(&self) -> Self {
+        // Negate by rotating by π (180 degrees)
+        self.rotate(PI)
+    }
+
     /// reflects this geometric number across a vector
     ///
     /// in 2D geometric algebra, reflection across a vector n is -n*a*n
@@ -1690,13 +1715,39 @@ impl Geonum {
     /// * `other` - the geometric number to compute the angle distance to
     ///
     /// # returns
-    /// the smallest angle between the two geometric numbers in radians
+    /// the smallest angle between the two geometric numbers in radians (always positive, in range [0, π])
     pub fn angle_distance(&self, other: &Geonum) -> f64 {
         let diff = (self.angle - other.angle).abs() % TWO_PI;
         if diff > PI {
             TWO_PI - diff
         } else {
             diff
+        }
+    }
+
+    /// calculates the signed minimum distance between two angles
+    ///
+    /// this returns the shortest path around the circle, preserving direction
+    /// (positive when self.angle is ahead of other.angle in counterclockwise direction)
+    /// the result is in the range [-π, π]
+    ///
+    /// # arguments
+    /// * `other` - the other geometric number to compare angles with
+    ///
+    /// # returns
+    /// the signed minimum distance between angles (in range [-π, π])
+    pub fn signed_angle_distance(&self, other: &Geonum) -> f64 {
+        // Get the raw difference (other - self), which is the angle to get from other to self
+        let raw_diff = other.angle - self.angle;
+
+        // Normalize to [0, 2π) range
+        let normalized_diff = ((raw_diff % TWO_PI) + TWO_PI) % TWO_PI;
+
+        // Convert to [-π, π) range by adjusting angles greater than π
+        if normalized_diff > PI {
+            normalized_diff - TWO_PI
+        } else {
+            normalized_diff
         }
     }
 
@@ -1800,6 +1851,109 @@ impl Geonum {
             Activation::Identity => *self,
         }
     }
+
+    /// propagates this geometric number through space and time
+    /// using wave equation principles
+    ///
+    /// this is particularly useful for electromagnetic wave propagation
+    /// where the phase velocity is the speed of light
+    ///
+    /// # arguments
+    /// * `time` - the time coordinate
+    /// * `position` - the spatial coordinate
+    /// * `velocity` - the propagation velocity (usually speed of light)
+    ///
+    /// # returns
+    /// a new geometric number representing the propagated wave
+    pub fn propagate(&self, time: f64, position: f64, velocity: f64) -> Self {
+        // compute phase based on position and time
+        let phase = position - velocity * time;
+
+        // create new geometric number with same length but adjusted angle
+        Geonum {
+            length: self.length,
+            angle: self.angle + phase, // phase modulation
+        }
+    }
+
+    /// creates a dispersive wave at a given position and time
+    ///
+    /// computes the phase based on a dispersion relation with wavenumber and frequency
+    /// particularly useful for electromagnetic waves and quantum mechanical waves
+    ///
+    /// # arguments
+    /// * `position` - the spatial coordinate
+    /// * `time` - the time coordinate
+    /// * `wavenumber` - the wavenumber (k) of the wave
+    /// * `frequency` - the angular frequency (ω) of the wave
+    ///
+    /// # returns
+    /// a new geometric number representing the wave at the specified position and time
+    pub fn disperse(position: f64, time: f64, wavenumber: f64, frequency: f64) -> Self {
+        // compute phase based on dispersion relation: φ = kx - ωt
+        let phase = wavenumber * position - frequency * time;
+
+        // create new geometric number with unit length and phase angle
+        Geonum {
+            length: 1.0,
+            angle: phase,
+        }
+    }
+
+    /// determines if this geometric number is orthogonal (perpendicular) to another
+    ///
+    /// two geometric numbers are orthogonal when their dot product is zero
+    /// this occurs when the angle between them is π/2 or 3π/2 (90° or 270°)
+    ///
+    /// # arguments
+    /// * `other` - the geometric number to check orthogonality with
+    ///
+    /// # returns
+    /// `true` if the geometric numbers are orthogonal, `false` otherwise
+    ///
+    /// # examples
+    /// ```
+    /// use geonum::Geonum;
+    /// use std::f64::consts::PI;
+    ///
+    /// let a = Geonum { length: 2.0, angle: 0.0 };
+    /// let b = Geonum { length: 3.0, angle: PI/2.0 };
+    ///
+    /// assert!(a.is_orthogonal(&b));
+    /// ```
+    pub fn is_orthogonal(&self, other: &Geonum) -> bool {
+        // Two vectors are orthogonal if their dot product is zero
+        // Due to floating point precision, we check if the absolute value
+        // of the dot product is less than a small epsilon value
+        self.dot(other).abs() < EPSILON
+    }
+
+    /// computes the absolute difference between the lengths of two geometric numbers
+    ///
+    /// useful for comparing field strengths in electromagnetic contexts
+    /// or for testing convergence in iterative algorithms
+    ///
+    /// # arguments
+    /// * `other` - the geometric number to compare with
+    ///
+    /// # returns
+    /// the absolute difference between lengths as a scalar (f64)
+    ///
+    /// # examples
+    /// ```
+    /// use geonum::Geonum;
+    /// use std::f64::consts::PI;
+    ///
+    /// let a = Geonum { length: 2.0, angle: 0.0 };
+    /// // pi/2 represents 90 degrees
+    /// let b = Geonum { length: 3.0, angle: PI/2.0 };
+    ///
+    /// let diff = a.length_diff(&b);
+    /// assert_eq!(diff, 1.0);
+    /// ```
+    pub fn length_diff(&self, other: &Geonum) -> f64 {
+        (self.length - other.length).abs()
+    }
 }
 
 #[cfg(test)]
@@ -1852,6 +2006,62 @@ mod geonum_angle_distance_tests {
             angle: -PI / 2.0,
         }; // equivalent to 3π/2
         assert!((a.angle_distance(&g) - PI / 2.0).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_signed_angle_distance() {
+        let a = Geonum {
+            length: 1.0,
+            angle: 0.0,
+        };
+        let b = Geonum {
+            length: 1.0,
+            angle: PI / 2.0,
+        };
+        let c = Geonum {
+            length: 1.0,
+            angle: PI,
+        };
+        let _d = Geonum {
+            length: 1.0,
+            angle: 3.0 * PI / 2.0,
+        };
+
+        // Test basic cases
+        // From a (0°) to b (90°): positive direction is +PI/2
+        assert!((a.signed_angle_distance(&b) - (PI / 2.0)).abs() < EPSILON);
+        // From b (90°) to a (0°): negative direction is -PI/2
+        assert!((b.signed_angle_distance(&a) - (-PI / 2.0)).abs() < EPSILON);
+
+        // Test across the 0/2π boundary
+        let e = Geonum {
+            length: 1.0,
+            angle: 2.0 * PI - 0.1, // 354.3 degrees
+        };
+
+        // From a (0°) to e (354.3°): counterclockwise is -0.1 (or clockwise +359.3°)
+        assert!((a.signed_angle_distance(&e) - (-0.1)).abs() < EPSILON);
+        // From e (354.3°) to a (0°): counterclockwise is +0.1
+        assert!((e.signed_angle_distance(&a) - (0.1)).abs() < EPSILON);
+
+        // Test with angle differences exactly at π
+        // a to c: distance is π, sign could be either way
+        let ac_distance = a.signed_angle_distance(&c);
+        assert!((ac_distance.abs() - PI).abs() < EPSILON);
+
+        // Test with angles larger than 2π
+        let f = Geonum {
+            length: 1.0,
+            angle: 5.0 * PI / 2.0, // equivalent to π/2
+        };
+        assert!((a.signed_angle_distance(&f) - (PI / 2.0)).abs() < EPSILON);
+
+        // Test with negative angles
+        let g = Geonum {
+            length: 1.0,
+            angle: -PI / 2.0, // equivalent to 3π/2
+        };
+        assert!((a.signed_angle_distance(&g) - (-PI / 2.0)).abs() < EPSILON);
     }
 }
 
@@ -3800,6 +4010,314 @@ mod geonum_tests {
         assert!(
             tanh_output.length <= output.length,
             "tanh should compress values"
+        );
+    }
+
+    #[test]
+    fn it_propagates() {
+        // create a geometric number representing a wave
+        let wave = Geonum {
+            length: 1.0,
+            angle: 0.0,
+        };
+
+        // define wave parameters
+        let velocity = 3.0e8; // speed of light
+        let time_1 = 0.0;
+        let time_2 = 1.0e-9; // 1 nanosecond later
+        let position = 0.0;
+
+        // propagate wave at two different time points
+        let wave_t1 = wave.propagate(time_1, position, velocity);
+        let wave_t2 = wave.propagate(time_2, position, velocity);
+
+        // verify length is preserved during propagation
+        assert_eq!(
+            wave_t1.length, wave.length,
+            "propagation should preserve amplitude"
+        );
+        assert_eq!(
+            wave_t2.length, wave.length,
+            "propagation should preserve amplitude"
+        );
+
+        // verify phase evolves as expected: phase = position - velocity * time
+        let expected_phase_t1 = position - velocity * time_1;
+        let expected_phase_t2 = position - velocity * time_2;
+
+        assert!(
+            (wave_t1.angle - (wave.angle + expected_phase_t1)).abs() < 1e-10,
+            "phase at t1 should evolve according to position - velocity * time"
+        );
+        assert!(
+            (wave_t2.angle - (wave.angle + expected_phase_t2)).abs() < 1e-10,
+            "phase at t2 should evolve according to position - velocity * time"
+        );
+
+        // verify phase difference between two time points
+        let phase_diff = wave_t2.angle - wave_t1.angle;
+        let expected_diff = -velocity * (time_2 - time_1);
+        assert!(
+            (phase_diff - expected_diff).abs() < 1e-10,
+            "phase difference should equal negative velocity times time difference"
+        );
+
+        // verify propagation in space
+        let position_2 = 1.0; // 1 meter away
+        let wave_p2 = wave.propagate(time_1, position_2, velocity);
+
+        let expected_phase_p2 = position_2 - velocity * time_1;
+        assert!(
+            (wave_p2.angle - (wave.angle + expected_phase_p2)).abs() < 1e-10,
+            "phase at p2 should evolve according to position - velocity * time"
+        );
+    }
+
+    #[test]
+    fn it_computes_length_difference() {
+        // test length differences between various vectors
+        let a = Geonum {
+            length: 2.0,
+            angle: 0.0,
+        };
+        let b = Geonum {
+            length: 3.0,
+            angle: PI / 2.0,
+        };
+        let c = Geonum {
+            length: 1.0,
+            angle: PI,
+        };
+        let d = Geonum {
+            length: 0.0,
+            angle: 0.0,
+        }; // zero vector
+
+        // basic difference checking
+        assert_eq!(a.length_diff(&b), 1.0);
+        assert_eq!(b.length_diff(&a), 1.0); // symmetry
+        assert_eq!(a.length_diff(&c), 1.0);
+        assert_eq!(b.length_diff(&c), 2.0);
+
+        // test with zero vector
+        assert_eq!(a.length_diff(&d), 2.0);
+        assert_eq!(d.length_diff(&b), 3.0);
+
+        // self comparison results in zero
+        assert_eq!(a.length_diff(&a), 0.0);
+        assert_eq!(d.length_diff(&d), 0.0);
+
+        // test vectors with different angles but same length
+        let e = Geonum {
+            length: 2.0,
+            angle: PI / 4.0,
+        };
+        assert_eq!(
+            a.length_diff(&e),
+            0.0,
+            "vectors with different angles but same length have zero length difference"
+        );
+    }
+
+    #[test]
+    fn it_negates_vectors() {
+        // Test vectors at different angles
+        let vectors = [
+            Geonum {
+                length: 2.0,
+                angle: 0.0,
+            }, // along positive x-axis
+            Geonum {
+                length: 3.0,
+                angle: PI / 2.0,
+            }, // along positive y-axis
+            Geonum {
+                length: 1.5,
+                angle: PI,
+            }, // along negative x-axis
+            Geonum {
+                length: 2.5,
+                angle: 3.0 * PI / 2.0,
+            }, // along negative y-axis
+            Geonum {
+                length: 1.0,
+                angle: PI / 4.0,
+            }, // at 45 degrees
+            Geonum {
+                length: 1.0,
+                angle: 5.0 * PI / 4.0,
+            }, // at 225 degrees
+        ];
+
+        for vec in vectors.iter() {
+            // Create the negated vector
+            let neg_vec = vec.negate();
+
+            // Verify length is preserved
+            assert_eq!(
+                neg_vec.length, vec.length,
+                "Negation should preserve vector length"
+            );
+
+            // Verify angle is rotated by π
+            let expected_angle = (vec.angle + PI) % TWO_PI;
+            assert!(
+                (neg_vec.angle - expected_angle).abs() < EPSILON,
+                "Negation should rotate angle by π"
+            );
+
+            // Verify that negating twice returns the original vector
+            let double_neg = neg_vec.negate();
+            assert!(
+                (double_neg.angle - vec.angle) % TWO_PI < EPSILON
+                    || TWO_PI - ((double_neg.angle - vec.angle) % TWO_PI) < EPSILON,
+                "Double negation should return to original angle"
+            );
+            assert_eq!(
+                double_neg.length, vec.length,
+                "Double negation should preserve vector length"
+            );
+
+            // Check that the dot product with the original vector is negative
+            let dot_product = vec.dot(&neg_vec);
+            assert!(
+                dot_product < 0.0 || vec.length < EPSILON,
+                "Vector and its negation should have negative dot product unless vector is zero"
+            );
+        }
+
+        // Test zero vector
+        let zero_vec = Geonum {
+            length: 0.0,
+            angle: 0.0,
+        };
+        let neg_zero = zero_vec.negate();
+        assert_eq!(
+            neg_zero.length, 0.0,
+            "Negation of zero vector should remain zero"
+        );
+    }
+
+    #[test]
+    fn it_checks_orthogonality() {
+        // create perpendicular geometric numbers
+        let a = Geonum {
+            length: 2.0,
+            angle: 0.0,
+        }; // along x-axis
+        let b = Geonum {
+            length: 3.0,
+            angle: PI / 2.0,
+        }; // along y-axis
+        let c = Geonum {
+            length: 1.5,
+            angle: 3.0 * PI / 2.0,
+        }; // along negative y-axis
+        let d = Geonum {
+            length: 2.5,
+            angle: PI / 4.0,
+        }; // 45 degrees
+        let e = Geonum {
+            length: 1.0,
+            angle: 5.0 * PI / 4.0,
+        }; // 225 degrees
+
+        // test orthogonal cases
+        assert!(
+            a.is_orthogonal(&b),
+            "vectors at 90 degrees should be orthogonal"
+        );
+        assert!(
+            a.is_orthogonal(&c),
+            "vectors at 270 degrees should be orthogonal"
+        );
+        assert!(b.is_orthogonal(&a), "orthogonality should be symmetric");
+
+        // test non-orthogonal cases
+        assert!(
+            !a.is_orthogonal(&d),
+            "vectors at 45 degrees should not be orthogonal"
+        );
+        assert!(
+            !b.is_orthogonal(&d),
+            "vectors at 45 degrees from y-axis should not be orthogonal"
+        );
+        assert!(
+            !d.is_orthogonal(&e),
+            "vectors at 180 degrees should not be orthogonal"
+        );
+
+        // test edge cases
+        let zero = Geonum {
+            length: 0.0,
+            angle: 0.0,
+        };
+        assert!(
+            zero.is_orthogonal(&a),
+            "zero vector is orthogonal to any vector"
+        );
+
+        // test almost orthogonal vectors (floating point precision)
+        let almost = Geonum {
+            length: 1.0,
+            angle: PI / 2.0 + 1e-11,
+        };
+        assert!(
+            a.is_orthogonal(&almost),
+            "nearly perpendicular vectors should be considered orthogonal"
+        );
+    }
+
+    #[test]
+    fn it_disperses() {
+        // define wave parameters
+        let wavenumber = 2.0 * PI; // 2π rad/m (wavelength = 1m)
+        let frequency = 3.0e8 * wavenumber; // ω = c·k for light
+        let position_1 = 0.0;
+        let position_2 = 0.5; // half a wavelength
+        let time_1 = 0.0;
+        let time_2 = 1.0 / (frequency / (2.0 * PI)); // one period
+
+        // create waves at different positions and times
+        let wave_x1_t1 = Geonum::disperse(position_1, time_1, wavenumber, frequency);
+        let wave_x2_t1 = Geonum::disperse(position_2, time_1, wavenumber, frequency);
+        let wave_x1_t2 = Geonum::disperse(position_1, time_2, wavenumber, frequency);
+
+        // verify all waves have unit amplitude
+        assert_eq!(
+            wave_x1_t1.length, 1.0,
+            "dispersed waves should have unit amplitude"
+        );
+
+        // verify phase at origin and t=0 is zero
+        assert!(
+            (wave_x1_t1.angle % TWO_PI).abs() < 1e-10,
+            "phase at origin and t=0 should be zero"
+        );
+
+        // verify spatial phase difference after half a wavelength
+        // phase = kx - ωt, so at t=0, phase difference should be k·(x2-x1) = k·0.5 = π
+        let expected_phase_diff_space = wavenumber * (position_2 - position_1);
+        assert!(
+            (wave_x2_t1.angle - wave_x1_t1.angle - expected_phase_diff_space).abs() < 1e-10,
+            "spatial phase difference should equal wavenumber times distance"
+        );
+
+        // verify temporal phase difference after one period
+        // after one period, the phase should be the same (2π difference)
+        let phase_diff_time = (wave_x1_t2.angle - wave_x1_t1.angle) % TWO_PI;
+        assert!(
+            (phase_diff_time).abs() < 1e-10,
+            "temporal phase should repeat after one period"
+        );
+
+        // verify dispersion relation by comparing wave phase velocities
+        // For k=2π, ω=2πc, wave speed should be c
+        let wave_speed = frequency / wavenumber;
+        let expected_speed = 3.0e8; // speed of light
+        assert!(
+            (wave_speed - expected_speed).abs() / expected_speed < 1e-10,
+            "dispersion relation should yield correct wave speed"
         );
     }
 }

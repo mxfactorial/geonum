@@ -19,7 +19,7 @@
 // ```rs
 // let position = [1, 0];
 // let momentum = [1, pi/2];
-// // **measure** uncertainty relation
+// // measure uncertainty relation
 // position.wedge(momentum).length >= 0.5 // uncertainty principle
 // ```
 //
