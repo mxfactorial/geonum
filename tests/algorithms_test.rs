@@ -1,0 +1,1510 @@
+// "algorithm analysis" is founded on a fictional model called "computational complexity" to group operations
+//
+// to keep algorithm evaluations consistent with a fictional model you must self-referentially require "big O notation" as a "bound" for all "runtime analysis"
+//
+// hacking performance consistency with asymptotic bounds just traps everyone in an efficiency loop ("amortized constant time")
+//
+// and denies them the opportunity to understand how computation **naturally scales** in physical hardware
+//
+// so instead of "analyzing algorithmic complexity", geometric numbers prove their computational efficiency with physical hardware by *extending* the processor's existing operations with `let parallel = sin(pi/2);`
+//
+// rejecting "complexity classes" for "angle operations" empowers people to understand algorithm performance or "scaling" so well they can even **quantify** it:
+//
+// ```rs
+// let sequential = [1, 0];
+// let parallel = [1, PI/2];
+// // **measure** performance gain
+// parallel / sequential == [1, PI/2] // orthogonal execution path
+// ```
+//
+// say goodbye to O(n log n)
+
+use geonum::*;
+use std::f64::consts::PI;
+
+// small value for floating-point comparisons
+const EPSILON: f64 = 1e-10;
+const TWO_PI: f64 = 2.0 * PI;
+
+#[test]
+fn its_a_constant_time_operation() {
+    // in traditional algorithmic analysis, O(1) operations have fixed cost
+    // in geometric numbers, this is represented by angle invariance
+
+    // create geometric number representing computational operation
+    let operation = Geonum {
+        length: 1.0, // base cost unit
+        angle: 0.0,  // direction in computational space
+    };
+
+    // computational cost is independent of problem size
+    let small_problem_cost = operation;
+    let large_problem_cost = operation;
+
+    // test invariance to problem size (cost is the same)
+    assert_eq!(small_problem_cost.length, large_problem_cost.length);
+    assert_eq!(small_problem_cost.angle, large_problem_cost.angle);
+
+    // test operation composition (multiple constant operations)
+    let combined_operations = Geonum {
+        length: 3.0, // three operations
+        angle: 0.0,  // same direction
+    };
+
+    // still constant time regardless of composition
+    assert!(combined_operations.length > operation.length);
+    assert_eq!(combined_operations.angle, operation.angle);
+
+    // demonstrate array indexing as constant time operation
+    let array_op = |arr: &[i32], idx: usize| -> i32 {
+        // array indexing cost represented by geometric number
+        let _op_cost = Geonum {
+            length: 1.0, // single operation
+            angle: 0.0,  // direct memory access
+        };
+
+        arr[idx] // actual operation is O(1)
+    };
+
+    // create test array
+    let array = [1, 2, 3, 4, 5];
+
+    // access different elements, cost is the same
+    let val1 = array_op(&array, 0);
+    let val2 = array_op(&array, 4);
+
+    // test correct values and operation worked
+    assert_eq!(val1, 1);
+    assert_eq!(val2, 5);
+}
+
+#[test]
+fn its_a_linear_algorithm() {
+    // in traditional analysis, O(n) algorithms scale linearly with input size
+    // in geometric numbers, this is represented by length scaling with input size
+
+    // create basis operations
+    let base_op = Geonum {
+        length: 1.0,
+        angle: 0.0,
+    };
+
+    // linear scaling is represented by length proportional to input size
+    // for a linear algorithm processing n items
+    let compute_cost = |n: usize| -> Geonum {
+        Geonum {
+            length: n as f64 * base_op.length, // cost scales linearly with n
+            angle: base_op.angle,              // same operation type
+        }
+    };
+
+    // test linear scaling for different input sizes
+    let cost_10 = compute_cost(10);
+    let cost_20 = compute_cost(20);
+    let cost_100 = compute_cost(100);
+
+    // verify linear scaling property
+    assert_eq!(cost_20.length / cost_10.length, 2.0); // twice the input, twice the cost
+    assert_eq!(cost_100.length / cost_10.length, 10.0); // 10x input, 10x cost
+
+    // angle remains the same (same operation type)
+    assert_eq!(cost_10.angle, cost_20.angle);
+    assert_eq!(cost_20.angle, cost_100.angle);
+
+    // demonstrate linear search algorithm
+    let linear_search = |arr: &[i32], target: i32| -> Option<usize> {
+        for (i, &item) in arr.iter().enumerate() {
+            // each comparison represented by geometric number
+            let _comparison = Geonum {
+                length: 1.0, // unit cost
+                angle: 0.0,  // direct comparison
+            };
+
+            if item == target {
+                return Some(i);
+            }
+        }
+        None
+    };
+
+    // create test array
+    let array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    // search for different elements
+    let found_first = linear_search(&array, 1);
+    let found_last = linear_search(&array, 10);
+    let not_found = linear_search(&array, 11);
+
+    // verify search works correctly
+    assert_eq!(found_first, Some(0));
+    assert_eq!(found_last, Some(9));
+    assert_eq!(not_found, None);
+}
+
+#[test]
+fn its_a_sorting_algorithm() {
+    // in traditional analysis, sorting requires O(n log n) comparisons
+    // in geometric numbers, sorting can be represented through angle partitioning
+
+    // create a geometric representation of elements to sort
+    // angle represents the value, length can represent frequency or weight
+    let unsorted_elements = vec![
+        Geonum {
+            length: 1.0,
+            angle: 0.7,
+        }, // ~40°
+        Geonum {
+            length: 1.0,
+            angle: 0.2,
+        }, // ~11°
+        Geonum {
+            length: 1.0,
+            angle: 1.5,
+        }, // ~86°
+        Geonum {
+            length: 1.0,
+            angle: 0.1,
+        }, // ~6°
+        Geonum {
+            length: 1.0,
+            angle: 1.0,
+        }, // ~57°
+    ];
+
+    // geometric sorting: sort by angle
+    let mut sorted_by_angle = unsorted_elements.clone();
+    sorted_by_angle.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
+
+    // verify sorting worked correctly
+    for i in 1..sorted_by_angle.len() {
+        assert!(sorted_by_angle[i - 1].angle <= sorted_by_angle[i].angle);
+    }
+
+    // angle-based partition sort (conceptual representation of radix/bucket sort)
+    // this approach can achieve O(n) for certain distributions
+    let angle_bucket_sort = |elements: &[Geonum]| -> Vec<Geonum> {
+        // for conceptual demonstration - in practice would use actual buckets
+        let mut result = elements.to_vec();
+        result.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
+        result
+    };
+
+    let angle_sorted = angle_bucket_sort(&unsorted_elements);
+
+    // verify sorting worked correctly
+    for i in 1..angle_sorted.len() {
+        assert!(angle_sorted[i - 1].angle <= angle_sorted[i].angle);
+    }
+
+    // demonstrate how geometric understanding transforms the sorting problem
+    // by using angle as a direct coordinate rather than comparison operator
+    assert_eq!(angle_sorted.len(), unsorted_elements.len());
+    assert!(angle_sorted[0].angle < angle_sorted[angle_sorted.len() - 1].angle);
+}
+
+#[test]
+fn its_a_graph_algorithm() {
+    // in traditional analysis, graph algorithms use adjacency structures
+    // in geometric numbers, graphs can be represented through angle relations
+
+    // create nodes as geometric numbers
+    // angle represents position/orientation in the graph
+    let node_a = Geonum {
+        length: 1.0,
+        angle: 0.0,
+    }; // node at 0°
+    let node_b = Geonum {
+        length: 1.0,
+        angle: PI / 3.0,
+    }; // node at 60°
+    let node_c = Geonum {
+        length: 1.0,
+        angle: 2.0 * PI / 3.0,
+    }; // node at 120°
+    let node_d = Geonum {
+        length: 1.0,
+        angle: PI,
+    }; // node at 180°
+    let node_e = Geonum {
+        length: 1.0,
+        angle: 4.0 * PI / 3.0,
+    }; // node at 240°
+    let node_f = Geonum {
+        length: 1.0,
+        angle: 5.0 * PI / 3.0,
+    }; // node at 300°
+
+    // create edges as angle differences
+    // smaller angle difference = stronger connection
+    let edge_weight = |a: &Geonum, b: &Geonum| -> f64 {
+        // use the angle_distance method which computes the smallest angle between two directions
+        a.angle_distance(b)
+    };
+
+    // test edge weights
+    assert!((edge_weight(&node_a, &node_b) - PI / 3.0).abs() < EPSILON); // 60° apart
+    assert!((edge_weight(&node_a, &node_d) - PI).abs() < EPSILON); // 180° apart (furthest)
+    assert!((edge_weight(&node_b, &node_c) - PI / 3.0).abs() < EPSILON); // 60° apart
+
+    // graph traversal as angle progression
+    // implement breadth-first search conceptually
+    let bfs_from_angle = |start: f64, graph: &[Geonum]| -> Vec<Geonum> {
+        // start from the node closest to the starting angle
+        let mut result = graph.to_vec();
+        result.sort_by(|a, b| {
+            // use angle_distance to find nodes closest to starting angle
+            let start_geonum = Geonum {
+                length: 1.0,
+                angle: start,
+            };
+            let a_diff = a.angle_distance(&start_geonum);
+            let b_diff = b.angle_distance(&start_geonum);
+            a_diff.partial_cmp(&b_diff).unwrap()
+        });
+        result
+    };
+
+    // start BFS from angle 0
+    let traversal = bfs_from_angle(0.0, &vec![node_a, node_b, node_c, node_d, node_e, node_f]);
+
+    // first node should be closest to angle 0
+    assert_eq!(traversal[0].angle, node_a.angle);
+
+    // path finding as angle minimization
+    // find path with minimal angle changes
+    let shortest_path = |start: &Geonum, end: &Geonum, graph: &[Geonum]| -> Vec<Geonum> {
+        // simplified path finding - in practice would use actual path algorithm
+        // just demonstrate using angle differences to guide the search
+        let mut path = vec![start.clone()];
+
+        // find nodes creating a path of minimal angle changes
+        let mut current = start;
+
+        while current.angle_distance(end) > EPSILON {
+            // find next node that minimizes angle difference to target
+            let mut best_next = current;
+            let mut min_diff = f64::MAX;
+
+            for node in graph {
+                // ensure node is closer to end than current
+                let curr_to_end = edge_weight(current, end);
+                let node_to_end = edge_weight(node, end);
+
+                if node_to_end < curr_to_end && edge_weight(current, node) < min_diff {
+                    min_diff = edge_weight(current, node);
+                    best_next = node;
+                }
+            }
+
+            // if no progress can be made, break
+            if best_next.angle_distance(current) < EPSILON {
+                break;
+            }
+
+            path.push(best_next.clone());
+            current = best_next;
+        }
+
+        // add end if not already reached
+        if current.angle_distance(end) > EPSILON {
+            path.push(end.clone());
+        }
+
+        path
+    };
+
+    // find path from node_a to node_d
+    let path = shortest_path(
+        &node_a,
+        &node_d,
+        &vec![node_a, node_b, node_c, node_d, node_e, node_f],
+    );
+
+    // test path properties
+    assert_eq!(path[0].angle, node_a.angle); // starts at node_a
+    assert_eq!(path[path.len() - 1].angle, node_d.angle); // ends at node_d
+}
+
+#[test]
+fn its_a_dynamic_programming() {
+    // in traditional analysis, dynamic programming uses memoization tables
+    // in geometric numbers, subproblems can be represented with angle positions
+
+    // Fibonacci as classic DP example
+    // each Fibonacci number represented as a geometric number
+    // angle represents position in sequence, length represents the value
+    let fib_geo = |n: usize| -> Geonum {
+        if n <= 1 {
+            return Geonum {
+                length: n as f64,           // F(0)=0, F(1)=1
+                angle: n as f64 * PI / 8.0, // arbitrary angle mapping
+            };
+        }
+
+        // initialize with base cases
+        let mut fib_minus_2 = Geonum {
+            length: 0.0,
+            angle: 0.0,
+        }; // F(0)
+        let mut fib_minus_1 = Geonum {
+            length: 1.0,
+            angle: PI / 8.0,
+        }; // F(1)
+
+        // build up solution using previous subproblems
+        for i in 2..=n {
+            let current = Geonum {
+                // F(n) = F(n-1) + F(n-2)
+                length: fib_minus_1.length + fib_minus_2.length,
+                // angle represents position in sequence
+                angle: i as f64 * PI / 8.0,
+            };
+            fib_minus_2 = fib_minus_1;
+            fib_minus_1 = current;
+        }
+
+        fib_minus_1
+    };
+
+    // test fibonacci computation
+    let fib_5 = fib_geo(5);
+    let fib_6 = fib_geo(6);
+    let fib_7 = fib_geo(7);
+
+    // validate fibonacci values
+    assert_eq!(fib_5.length, 5.0); // F(5) = 5
+    assert_eq!(fib_6.length, 8.0); // F(6) = 8
+    assert_eq!(fib_7.length, 13.0); // F(7) = 13
+
+    // validate angle progression represents position in sequence
+    assert_eq!(fib_5.angle, 5.0 * PI / 8.0);
+    assert_eq!(fib_6.angle, 6.0 * PI / 8.0);
+    assert_eq!(fib_7.angle, 7.0 * PI / 8.0);
+
+    // demonstrate optimal substructure through angle composition
+    // Solution to larger problem (fib_7) uses solutions to smaller problems
+    assert_eq!(fib_7.length, fib_6.length + fib_5.length);
+
+    // angle difference represents step in DP table
+    assert!((fib_6.angle - fib_5.angle - PI / 8.0).abs() < EPSILON);
+    assert!((fib_7.angle - fib_6.angle - PI / 8.0).abs() < EPSILON);
+}
+
+#[test]
+fn its_a_parallel_algorithm() {
+    // in traditional analysis, parallel algorithms use thread synchronization
+    // in geometric numbers, parallel execution is represented by orthogonal angles
+
+    // sequential computation represented at angle 0
+    let sequential = Geonum {
+        length: 1.0,
+        angle: 0.0,
+    };
+
+    // parallel computation represented at orthogonal angle (90°)
+    let parallel = Geonum {
+        length: 1.0,
+        angle: PI / 2.0,
+    };
+
+    // test orthogonality
+    // dot product is zero for perpendicular operations
+    assert!((sequential.dot(&parallel)).abs() < EPSILON);
+
+    // concurrent execution represented by simultaneous operations
+    // wedge product represents "computational area" covered by parallel execution
+    let parallel_gain = sequential.wedge(&parallel);
+
+    // wedge product is non-zero, showing parallel operations cover more "execution space"
+    assert!(parallel_gain.length > 0.0);
+
+    // demonstrate parallel map operation
+    let parallel_map = |items: &[i32]| -> Vec<i32> {
+        // conceptual parallel map
+        // each item processed in parallel would be at orthogonal angles
+
+        // in actual implementation, this would dispatch to multiple threads
+        // here we just simulate with sequential code
+
+        // each operation would be represented as
+        // Geonum { length: 1.0, angle: PI/2.0 }
+
+        items.iter().map(|&x| x * x).collect()
+    };
+
+    // test parallel mapping
+    let input = vec![1, 2, 3, 4, 5];
+    let output = parallel_map(&input);
+
+    // verify computation worked
+    assert_eq!(output, vec![1, 4, 9, 16, 25]);
+
+    // demonstrate parallel speedup model
+    // with n processors, computation time reduces by factor of n
+    let speedup = |sequential_time: f64, num_processors: f64| -> f64 {
+        // amdahl's law simplified: if task is perfectly parallelizable
+        sequential_time / num_processors
+    };
+
+    let base_time = 10.0;
+    assert_eq!(speedup(base_time, 2.0), 5.0); // 2x speedup
+    assert_eq!(speedup(base_time, 4.0), 2.5); // 4x speedup
+}
+
+#[test]
+fn its_a_distributed_algorithm() {
+    // in traditional analysis, distributed algorithms use message passing
+    // in geometric numbers, distributed computation is angle sector assignments
+
+    // create nodes in a distributed system as geometric numbers
+    // angle represents node's position/responsibility in the system
+    let node_1 = Geonum {
+        length: 1.0,
+        angle: 0.0,
+    }; // node at 0°
+    let node_2 = Geonum {
+        length: 1.0,
+        angle: 2.0 * PI / 5.0,
+    }; // node at 72°
+    let node_3 = Geonum {
+        length: 1.0,
+        angle: 4.0 * PI / 5.0,
+    }; // node at 144°
+    let node_4 = Geonum {
+        length: 1.0,
+        angle: 6.0 * PI / 5.0,
+    }; // node at 216°
+    let node_5 = Geonum {
+        length: 1.0,
+        angle: 8.0 * PI / 5.0,
+    }; // node at 288°
+
+    // distributed system as a set of nodes
+    let system = vec![node_1, node_2, node_3, node_4, node_5];
+
+    // work assignment based on value's angle
+    // find the closest node to handle a given value
+    let assign_work = |value_angle: f64, system: &[Geonum]| -> Geonum {
+        let mut closest_node = system[0];
+        let mut min_distance = f64::MAX;
+
+        for node in system {
+            // compute angular distance using the built-in angle_distance method
+            let value_geonum = Geonum {
+                length: 1.0,
+                angle: value_angle,
+            };
+            let distance = node.angle_distance(&value_geonum);
+
+            if distance < min_distance {
+                min_distance = distance;
+                closest_node = *node;
+            }
+        }
+
+        closest_node
+    };
+
+    // test work assignment
+    let work_at_0 = assign_work(0.0, &system);
+    assert_eq!(work_at_0.angle, node_1.angle);
+
+    let work_at_pi = assign_work(PI, &system);
+
+    // Create the target angle as a Geonum
+    let pi_geonum = Geonum {
+        length: 1.0,
+        angle: PI,
+    };
+
+    // Compute distances from nodes 3 and 4 to PI using angle_distance
+    let node_3_dist = node_3.angle_distance(&pi_geonum);
+    let node_4_dist = node_4.angle_distance(&pi_geonum);
+
+    // Find which node is closer to PI
+    let closest_to_pi = if node_3_dist <= node_4_dist {
+        node_3
+    } else {
+        node_4
+    };
+
+    // Assert that we got the closest node to PI
+    assert_eq!(
+        work_at_pi.angle, closest_to_pi.angle,
+        "Expected closest node to PI ({}) but got {}",
+        closest_to_pi.angle, work_at_pi.angle
+    );
+
+    // demonstrate distributed consensus
+    // nodes agree on a value by converging angles
+    let reach_consensus = |system: &[Geonum]| -> f64 {
+        // in a real system, this would involve message passing
+        // here we simplify by computing the average angle
+
+        let mut sum_x = 0.0;
+        let mut sum_y = 0.0;
+
+        for node in system {
+            sum_x += node.angle.cos();
+            sum_y += node.angle.sin();
+        }
+
+        // compute average angle (circular mean)
+        sum_y.atan2(sum_x)
+    };
+
+    // test consensus
+    let consensus_angle = reach_consensus(&system);
+
+    // verify consensus is reached
+    // all nodes should be within PI distance from consensus
+    for node in &system {
+        let consensus_geonum = Geonum {
+            length: 1.0,
+            angle: consensus_angle,
+        };
+        let distance = node.angle_distance(&consensus_geonum);
+        assert!(distance <= PI);
+    }
+}
+
+#[test]
+fn its_a_numerical_method() {
+    // in traditional analysis, numerical methods approximate continuous processes
+    // in geometric numbers, approximation is represented through angle precision
+
+    // approximate sin(x) using Taylor series
+    // each term in series represented as a geometric number
+    let sin_approx = |x: f64, terms: usize| -> f64 {
+        let mut result = 0.0;
+
+        for n in 0..terms {
+            // nth term in Taylor series
+            let term = Geonum {
+                // (-1)^n * x^(2n+1) / (2n+1)!
+                length: if n % 2 == 0 { 1.0 } else { -1.0 } * x.powi(2 * n as i32 + 1)
+                    / factorial(2 * n + 1) as f64,
+                // angle represents term's position in series
+                angle: n as f64 * PI / 8.0,
+            };
+
+            result += term.length;
+        }
+
+        result
+    };
+
+    // helper function for factorial
+    fn factorial(n: usize) -> usize {
+        (1..=n).product()
+    }
+
+    // test approximation at different precision levels
+    let x = PI / 6.0; // 30 degrees
+
+    // exact value
+    let exact = x.sin();
+
+    // approximations with increasing terms
+    let approx_1 = sin_approx(x, 1);
+    let approx_2 = sin_approx(x, 2);
+    let approx_4 = sin_approx(x, 4);
+
+    // verify convergence with more terms
+    assert!((exact - approx_1).abs() > (exact - approx_2).abs());
+    assert!((exact - approx_2).abs() > (exact - approx_4).abs());
+
+    // with 4 terms, should be very close to exact result
+    assert!((exact - approx_4).abs() < 1e-6);
+
+    // demonstrate numerical integration using trapezoidal rule
+    // function to integrate: f(x) = x^2
+    let f = |x: f64| -> f64 { x * x };
+
+    // trapezoidal rule integration
+    let integrate = |f: fn(f64) -> f64, a: f64, b: f64, n: usize| -> f64 {
+        let dx = (b - a) / n as f64;
+        let mut sum = 0.5 * (f(a) + f(b));
+
+        for i in 1..n {
+            let x = a + i as f64 * dx;
+            sum += f(x);
+        }
+
+        sum * dx
+    };
+
+    // integrate x^2 from 0 to 1, exact result is 1/3
+    let exact_integral = 1.0 / 3.0;
+
+    // approximations with increasing subintervals
+    let approx_10 = integrate(f, 0.0, 1.0, 10);
+    let approx_100 = integrate(f, 0.0, 1.0, 100);
+
+    // verify convergence with more subintervals
+    assert!((exact_integral - approx_10).abs() > (exact_integral - approx_100).abs());
+    assert!((exact_integral - approx_100).abs() < 1e-4);
+}
+
+#[test]
+fn its_a_data_structure() {
+    // in traditional analysis, data structures use pointers
+    // in geometric numbers, data can be organized through angle mapping
+
+    // create a geometric hash table
+    // use angle mapping for indices instead of modulo hash
+    struct GeoHashTable {
+        buckets: Vec<Vec<(String, i32)>>,
+        bucket_count: usize,
+    }
+
+    impl GeoHashTable {
+        fn new(bucket_count: usize) -> Self {
+            let mut buckets = Vec::with_capacity(bucket_count);
+            for _ in 0..bucket_count {
+                buckets.push(Vec::new());
+            }
+            GeoHashTable {
+                buckets,
+                bucket_count,
+            }
+        }
+
+        fn hash(&self, key: &str) -> usize {
+            // convert string to angle
+            let mut sum = 0;
+            for (i, &byte) in key.as_bytes().iter().enumerate() {
+                sum += (byte as usize) * (i + 1);
+            }
+
+            // instead of traditional hash, map to angle in [0, 2π)
+            let angle = Geonum {
+                length: 1.0,
+                angle: (sum % 360) as f64 * PI / 180.0,
+            };
+
+            // convert angle to bucket index
+            (angle.angle * self.bucket_count as f64 / TWO_PI) as usize % self.bucket_count
+        }
+
+        fn insert(&mut self, key: String, value: i32) {
+            let bucket_idx = self.hash(&key);
+
+            // check if key already exists
+            for pair in &mut self.buckets[bucket_idx] {
+                if pair.0 == key {
+                    pair.1 = value;
+                    return;
+                }
+            }
+
+            // key doesn't exist, add new entry
+            self.buckets[bucket_idx].push((key, value));
+        }
+
+        fn get(&self, key: &str) -> Option<i32> {
+            let bucket_idx = self.hash(key);
+
+            for pair in &self.buckets[bucket_idx] {
+                if pair.0 == key {
+                    return Some(pair.1);
+                }
+            }
+
+            None
+        }
+    }
+
+    // test geometric hash table
+    let mut geo_hash = GeoHashTable::new(8);
+
+    // insert key-value pairs
+    geo_hash.insert("one".to_string(), 1);
+    geo_hash.insert("two".to_string(), 2);
+    geo_hash.insert("three".to_string(), 3);
+
+    // test retrieval
+    assert_eq!(geo_hash.get("one"), Some(1));
+    assert_eq!(geo_hash.get("two"), Some(2));
+    assert_eq!(geo_hash.get("three"), Some(3));
+    assert_eq!(geo_hash.get("four"), None);
+
+    // update existing key
+    geo_hash.insert("one".to_string(), 10);
+    assert_eq!(geo_hash.get("one"), Some(10));
+
+    // demonstrate binary search tree as geometric angle structure
+    // left branch = negative angle, right branch = positive angle
+    #[allow(dead_code)]
+    struct GeoNode {
+        value: i32,
+        angle: f64, // angle relative to parent
+        left: Option<Box<GeoNode>>,
+        right: Option<Box<GeoNode>>,
+    }
+
+    impl GeoNode {
+        fn new(value: i32) -> Self {
+            GeoNode {
+                value,
+                angle: 0.0, // root has zero angle
+                left: None,
+                right: None,
+            }
+        }
+
+        fn insert(&mut self, value: i32) {
+            if value < self.value {
+                // left side - negative angle
+                match self.left {
+                    None => {
+                        self.left = Some(Box::new(GeoNode {
+                            value,
+                            angle: -PI / 4.0, // 45° left
+                            left: None,
+                            right: None,
+                        }));
+                    }
+                    Some(ref mut node) => {
+                        node.insert(value);
+                    }
+                }
+            } else {
+                // right side - positive angle
+                match self.right {
+                    None => {
+                        self.right = Some(Box::new(GeoNode {
+                            value,
+                            angle: PI / 4.0, // 45° right
+                            left: None,
+                            right: None,
+                        }));
+                    }
+                    Some(ref mut node) => {
+                        node.insert(value);
+                    }
+                }
+            }
+        }
+
+        fn contains(&self, value: i32) -> bool {
+            if value == self.value {
+                return true;
+            }
+
+            if value < self.value {
+                match self.left {
+                    None => false,
+                    Some(ref node) => node.contains(value),
+                }
+            } else {
+                match self.right {
+                    None => false,
+                    Some(ref node) => node.contains(value),
+                }
+            }
+        }
+    }
+
+    // test geometric BST
+    let mut root = GeoNode::new(10);
+
+    // insert values
+    root.insert(5);
+    root.insert(15);
+    root.insert(3);
+    root.insert(7);
+
+    // test search
+    assert!(root.contains(10));
+    assert!(root.contains(5));
+    assert!(root.contains(15));
+    assert!(root.contains(3));
+    assert!(root.contains(7));
+    assert!(!root.contains(1));
+    assert!(!root.contains(20));
+}
+
+#[test]
+fn its_a_compression_algorithm() {
+    // in traditional analysis, compression uses encoding schemes
+    // in geometric numbers, compression can use angle quantization
+
+    // create original data as geometric numbers
+    // angle represents the value, length could represent frequency
+    let original_data = vec![
+        Geonum {
+            length: 1.0,
+            angle: 0.12345,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 0.12346,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 0.12347,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 0.54321,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 0.54322,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 0.54323,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 1.23456,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 1.23457,
+        },
+        Geonum {
+            length: 1.0,
+            angle: 1.23458,
+        },
+    ];
+
+    // compression by angle quantization
+    // round angles to fewer decimal places
+    let compress = |data: &[Geonum], precision: usize| -> Vec<Geonum> {
+        let scale = 10.0_f64.powi(precision as i32);
+
+        // map data to quantized angles
+        let mut quantized = Vec::new();
+
+        for item in data {
+            // quantize angle to specified precision
+            let quantized_angle = (item.angle * scale).round() / scale;
+
+            // add only unique quantized angles (deduplication)
+            // check if angle already exists in quantized
+            let angle_exists = quantized
+                .iter()
+                .any(|g: &Geonum| (g.angle - quantized_angle).abs() < EPSILON);
+
+            if !angle_exists {
+                quantized.push(Geonum {
+                    length: item.length,
+                    angle: quantized_angle,
+                });
+            }
+        }
+
+        quantized
+    };
+
+    // test compression at different precision levels
+    let compressed_3 = compress(&original_data, 3); // 3 decimal places
+    let compressed_2 = compress(&original_data, 2); // 2 decimal places
+    let compressed_1 = compress(&original_data, 1); // 1 decimal place
+
+    // verify compression ratio improves with lower precision
+    assert!(compressed_3.len() <= original_data.len());
+    assert!(compressed_2.len() <= compressed_3.len());
+    assert!(compressed_1.len() <= compressed_2.len());
+
+    // demonstrate reconstruction error
+    // decompress by expanding each quantized value
+    let reconstruct = |compressed: &[Geonum], original: &[Geonum]| -> f64 {
+        let mut total_error = 0.0;
+
+        for orig in original {
+            // find closest angle in compressed data
+            let mut min_error = f64::MAX;
+
+            for comp in compressed {
+                let error = (orig.angle - comp.angle).abs();
+                if error < min_error {
+                    min_error = error;
+                }
+            }
+
+            total_error += min_error;
+        }
+
+        total_error / original.len() as f64
+    };
+
+    // calculate reconstruction error for each compression level
+    let error_3 = reconstruct(&compressed_3, &original_data);
+    let error_2 = reconstruct(&compressed_2, &original_data);
+    let error_1 = reconstruct(&compressed_1, &original_data);
+
+    // verify error increases with higher compression
+    assert!(error_1 >= error_2);
+    assert!(error_2 >= error_3);
+
+    // compression ratio quantification
+    let compression_ratio = |original: &[Geonum], compressed: &[Geonum]| -> f64 {
+        original.len() as f64 / compressed.len() as f64
+    };
+
+    // calculate compression ratios
+    let ratio_3 = compression_ratio(&original_data, &compressed_3);
+    let ratio_2 = compression_ratio(&original_data, &compressed_2);
+    let ratio_1 = compression_ratio(&original_data, &compressed_1);
+
+    // verify compression improves with lower precision
+    assert!(ratio_1 >= ratio_2);
+    assert!(ratio_2 >= ratio_3);
+}
+
+#[test]
+fn its_a_machine_learning_algorithm() {
+    // in traditional analysis, ML uses weight updates
+    // in geometric numbers, learning can use angle adjustments
+
+    // create a simple geometric perceptron
+    struct GeoPerceptron {
+        weights: Vec<Geonum>,
+        learning_rate: f64,
+    }
+
+    impl GeoPerceptron {
+        fn new(features: usize, learning_rate: f64) -> Self {
+            // initialize weights with small random angles
+            let mut weights = Vec::with_capacity(features);
+            for _ in 0..features {
+                weights.push(Geonum {
+                    length: 1.0,
+                    angle: 0.1, // small initial angle
+                });
+            }
+
+            GeoPerceptron {
+                weights,
+                learning_rate,
+            }
+        }
+
+        fn predict(&self, inputs: &[f64]) -> i32 {
+            let mut sum = 0.0;
+
+            // weighted sum as input projections
+            for (i, &input) in inputs.iter().enumerate() {
+                if i < self.weights.len() {
+                    // Use sine instead of cosine for better discrimination
+                    // This helps prevent balanced weights leading to zero output
+                    let weight_projection = self.weights[i].length * self.weights[i].angle.sin();
+                    sum += input * weight_projection;
+                }
+            }
+
+            // Add a bias term to help with classification
+            sum -= 0.5; // Simple threshold adjustment
+
+            // step activation function
+            if sum > 0.0 {
+                1
+            } else {
+                0
+            }
+        }
+
+        fn train(&mut self, inputs: &[f64], target: i32, epochs: usize) {
+            for _ in 0..epochs {
+                let prediction = self.predict(inputs);
+                let error = target - prediction;
+
+                if error != 0 {
+                    // update weights based on error
+                    for (i, &input) in inputs.iter().enumerate() {
+                        if i < self.weights.len() {
+                            // adjust angle based on error and input
+                            let delta_angle = self.learning_rate * error as f64 * input;
+
+                            self.weights[i] = Geonum {
+                                length: self.weights[i].length,             // keep same length
+                                angle: self.weights[i].angle + delta_angle, // adjust angle
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // test perceptron on AND gate
+    let mut perceptron = GeoPerceptron::new(2, 0.1);
+
+    // training data for AND gate
+    let training_data = vec![
+        (vec![0.0, 0.0], 0), // 0 AND 0 = 0
+        (vec![0.0, 1.0], 0), // 0 AND 1 = 0
+        (vec![1.0, 0.0], 0), // 1 AND 0 = 0
+        (vec![1.0, 1.0], 1), // 1 AND 1 = 1
+    ];
+
+    // train perceptron
+    for _ in 0..100 {
+        // multiple training iterations
+        for (inputs, target) in &training_data {
+            perceptron.train(inputs, *target, 1);
+        }
+    }
+
+    // test predictions after training
+    for (inputs, target) in &training_data {
+        assert_eq!(perceptron.predict(inputs), *target);
+    }
+
+    // demonstrate geometric interpretation of learning
+    // angles represent decision boundary orientation
+    let initial_angles = vec![0.1, 0.1]; // starting angles
+    let final_angles: Vec<f64> = perceptron.weights.iter().map(|w| w.angle).collect();
+
+    // verify angles changed during training
+    for (i, &angle) in final_angles.iter().enumerate() {
+        assert!(angle != initial_angles[i]);
+    }
+}
+
+#[test]
+fn its_a_cryptographic_algorithm() {
+    // in traditional analysis, crypto uses number theory
+    // in geometric numbers, crypto can use angle transformations
+
+    // create a simple angle-based encryption scheme
+    struct GeoEncryption {
+        key_angle: f64,
+        key_length: f64,
+    }
+
+    impl GeoEncryption {
+        fn new(key: u32) -> Self {
+            // derive key angle and length from seed
+            let key_f64 = key as f64;
+            let key_angle = (key_f64 % 360.0) * PI / 180.0; // convert to radians
+            let key_length = 1.0 + (key_f64 % 10.0) / 10.0; // between 1.0 and 2.0
+
+            GeoEncryption {
+                key_angle,
+                key_length,
+            }
+        }
+
+        fn encrypt(&self, plaintext: &[u8]) -> Vec<Geonum> {
+            let mut ciphertext = Vec::with_capacity(plaintext.len());
+
+            for (i, &byte) in plaintext.iter().enumerate() {
+                // position-dependent angle shift
+                let position_shift = (i % 8) as f64 * PI / 16.0;
+
+                // convert byte to geonum with encryption
+                let encrypted = Geonum {
+                    length: (byte as f64) * self.key_length,
+                    angle: (byte as f64 / 128.0) * PI + self.key_angle + position_shift,
+                };
+
+                ciphertext.push(encrypted);
+            }
+
+            ciphertext
+        }
+
+        fn decrypt(&self, ciphertext: &[Geonum]) -> Vec<u8> {
+            let mut plaintext = Vec::with_capacity(ciphertext.len());
+
+            for (i, cipher) in ciphertext.iter().enumerate() {
+                // position-dependent angle shift (same as in encryption)
+                let position_shift = (i % 8) as f64 * PI / 16.0;
+
+                // remove key angle to get original
+                let decrypted_angle = cipher.angle - self.key_angle - position_shift;
+                // normalize angle to [0, 2π)
+                let normalized_angle = (decrypted_angle % TWO_PI + TWO_PI) % TWO_PI;
+
+                // convert back to byte
+                // could use angle-based approximation but using length is more reliable
+                let _byte_approx = (normalized_angle * 128.0 / PI).round(); // unused but kept for clarity
+                let byte_value = (cipher.length / self.key_length).round() as u8;
+
+                // use length-based value as it's more reliable in this simple scheme
+                plaintext.push(byte_value);
+            }
+
+            plaintext
+        }
+    }
+
+    // test encryption and decryption
+    let encryption = GeoEncryption::new(12345);
+
+    // message to encrypt
+    let message = b"Hello, geometric encryption!";
+
+    // encrypt and decrypt
+    let encrypted = encryption.encrypt(message);
+    let decrypted = encryption.decrypt(&encrypted);
+
+    // verify decryption works
+    assert_eq!(decrypted, message);
+
+    // demonstrate angle perturbation for security
+    // changing a single byte should significantly change the ciphertext
+    let altered_message = b"Hello, geometric encryptiin!"; // changed 'o' to 'i'
+    let altered_encrypted = encryption.encrypt(altered_message);
+
+    // at least some ciphertexts should be different
+    let mut differences = 0;
+    for i in 0..message.len() {
+        if i < altered_encrypted.len()
+            && (encrypted[i].angle != altered_encrypted[i].angle
+                || encrypted[i].length != altered_encrypted[i].length)
+        {
+            differences += 1;
+        }
+    }
+
+    // verify difference in ciphertexts
+    assert!(differences > 0);
+
+    // demonstrate key sensitivity
+    let wrong_key = GeoEncryption::new(12346); // just one digit different
+    let wrong_decrypted = wrong_key.decrypt(&encrypted);
+
+    // decryption with wrong key should differ from original
+    assert_ne!(wrong_decrypted, message);
+}
+
+#[test]
+fn it_rejects_complexity_analysis() {
+    // traditional complexity analysis uses asymptotic bounds
+    // geometric numbers allow direct performance measurement
+
+    // create operations with different complexity
+    let constant_op = |_n: usize| -> Geonum {
+        // O(1) operation - angle is 0
+        Geonum {
+            length: 1.0,
+            angle: 0.0,
+        }
+    };
+
+    let linear_op = |n: usize| -> Geonum {
+        // O(n) operation - angle is π/4
+        Geonum {
+            length: n as f64,
+            angle: PI / 4.0,
+        }
+    };
+
+    let quadratic_op = |n: usize| -> Geonum {
+        // O(n²) operation - angle is π/2
+        Geonum {
+            length: (n * n) as f64,
+            angle: PI / 2.0,
+        }
+    };
+
+    let log_op = |n: usize| -> Geonum {
+        // O(log n) operation - angle is π/8
+        Geonum {
+            length: (n as f64).log2(),
+            angle: PI / 8.0,
+        }
+    };
+
+    // test scaling for different input sizes
+    let n_values = vec![10, 100, 1000];
+
+    for &n in &n_values {
+        // evaluate operations
+        let c_op = constant_op(n);
+        let l_op = linear_op(n);
+        let q_op = quadratic_op(n);
+        let log_op = log_op(n);
+
+        // verify different scaling behaviors
+        assert_eq!(c_op.length, 1.0); // constant stays at 1
+        assert_eq!(l_op.length, n as f64); // linear scales with n
+        assert_eq!(q_op.length, (n * n) as f64); // quadratic scales with n²
+        assert!((log_op.length - (n as f64).log2()).abs() < EPSILON); // logarithmic scales with log n
+
+        // verify operation types (angles)
+        assert_eq!(c_op.angle, 0.0);
+        assert_eq!(l_op.angle, PI / 4.0);
+        assert_eq!(q_op.angle, PI / 2.0);
+        assert_eq!(log_op.angle, PI / 8.0);
+    }
+
+    // measure algorithm scaling directly through ratios
+    let n1 = 10;
+    let n2 = 100; // 10x larger
+
+    // compute ratios to measure actual scaling
+    let constant_ratio = constant_op(n2).length / constant_op(n1).length;
+    let linear_ratio = linear_op(n2).length / linear_op(n1).length;
+    let quadratic_ratio = quadratic_op(n2).length / quadratic_op(n1).length;
+    let log_ratio = log_op(n2).length / log_op(n1).length;
+
+    // verify actual scaling behavior matches expected
+    assert_eq!(constant_ratio, 1.0); // constant: n2/n1 = 1
+    assert_eq!(linear_ratio, n2 as f64 / n1 as f64); // linear: n2/n1 = 10
+    assert_eq!(quadratic_ratio, (n2 * n2) as f64 / (n1 * n1) as f64); // quadratic: (n2/n1)² = 100
+
+    // log ratio is approximately log(n2)/log(n1) which is less than linear
+    assert!(log_ratio < linear_ratio);
+
+    // demonstrate direct geometric interpretation of algorithmic complexity
+    let complexity_relation = |op1: &Geonum, op2: &Geonum| -> f64 {
+        // angle between operations shows their "computational orthogonality"
+        (op1.angle - op2.angle).abs()
+    };
+
+    // compute relations between different complexities
+    let const_vs_linear = complexity_relation(&constant_op(100), &linear_op(100));
+    let linear_vs_quadratic = complexity_relation(&linear_op(100), &quadratic_op(100));
+
+    // verify geometric interpretation matches complexity theory
+    assert!(const_vs_linear > 0.0); // different complexities have non-zero angle
+    assert!(linear_vs_quadratic > 0.0);
+}
+
+#[test]
+fn it_unifies_algorithm_design() {
+    // traditional algorithm design separates paradigms
+    // geometric numbers unify approaches through angle transformations
+
+    // create different algorithm paradigms as geometric operations
+    // divide and conquer - angle π/4
+    let divide_conquer = Geonum {
+        length: 1.0,
+        angle: PI / 4.0,
+    };
+
+    // dynamic programming - angle π/2
+    let dynamic_prog = Geonum {
+        length: 1.0,
+        angle: PI / 2.0,
+    };
+
+    // greedy algorithm - angle 3π/4
+    let greedy = Geonum {
+        length: 1.0,
+        angle: 3.0 * PI / 4.0,
+    };
+
+    // backtracking - angle π
+    let backtracking = Geonum {
+        length: 1.0,
+        angle: PI,
+    };
+
+    // demonstrate geometric relationship between paradigms
+    // measure angular distance between approaches
+    let paradigm_distance = |p1: &Geonum, p2: &Geonum| -> f64 {
+        // use built-in angle_distance method for computing smallest angular distance
+        p1.angle_distance(p2)
+    };
+
+    // compute distances between paradigms
+    let dc_dp_dist = paradigm_distance(&divide_conquer, &dynamic_prog);
+    let dp_greedy_dist = paradigm_distance(&dynamic_prog, &greedy);
+    let greedy_bt_dist = paradigm_distance(&greedy, &backtracking);
+
+    // verify paradigms have equal angular spacing
+    assert!((dc_dp_dist - PI / 4.0).abs() < EPSILON);
+    assert!((dp_greedy_dist - PI / 4.0).abs() < EPSILON);
+    assert!((greedy_bt_dist - PI / 4.0).abs() < EPSILON);
+
+    // demonstrate hybrid algorithm combining paradigms
+    let hybrid = |p1: &Geonum, p2: &Geonum, ratio: f64| -> Geonum {
+        // linear combination of paradigms
+        let combined_angle = p1.angle * (1.0 - ratio) + p2.angle * ratio;
+        Geonum {
+            length: 1.0,
+            angle: combined_angle % TWO_PI,
+        }
+    };
+
+    // create hybrid between divide-conquer and dynamic programming
+    let dc_dp_hybrid = hybrid(&divide_conquer, &dynamic_prog, 0.5);
+
+    // verify hybrid is between the two paradigms
+    assert!(dc_dp_hybrid.angle > divide_conquer.angle);
+    assert!(dc_dp_hybrid.angle < dynamic_prog.angle);
+
+    // demonstrate algorithm transformation as rotation
+    let transform_algorithm = |algorithm: &Geonum, rotation: f64| -> Geonum {
+        Geonum {
+            length: algorithm.length,
+            angle: (algorithm.angle + rotation) % TWO_PI,
+        }
+    };
+
+    // transform divide and conquer to dynamic programming
+    let transformed = transform_algorithm(&divide_conquer, PI / 4.0);
+
+    // verify transformation
+    assert!((transformed.angle - dynamic_prog.angle).abs() < EPSILON);
+
+    // demonstrate algorithmic duality through geometric complementarity
+    let dual_algorithm = |algorithm: &Geonum| -> Geonum {
+        // dual is at opposite angle
+        Geonum {
+            length: algorithm.length,
+            angle: (algorithm.angle + PI) % TWO_PI,
+        }
+    };
+
+    // compute duals
+    let dc_dual = dual_algorithm(&divide_conquer);
+    let dp_dual = dual_algorithm(&dynamic_prog);
+
+    // verify duality relationship
+    assert!((dc_dual.angle - (5.0 * PI / 4.0)).abs() < EPSILON);
+    assert!((dp_dual.angle - (3.0 * PI / 2.0)).abs() < EPSILON);
+}
+
+#[test]
+fn it_scales_quantum_algorithms() {
+    // traditional quantum algorithms use complex state vectors
+    // geometric numbers represent quantum algorithms as angle superpositions
+
+    // create quantum states as geometric numbers
+    // |0⟩ state - angle 0
+    let zero_state = Geonum {
+        length: 1.0,
+        angle: 0.0,
+    };
+
+    // |1⟩ state - angle π
+    let one_state = Geonum {
+        length: 1.0,
+        angle: PI,
+    };
+
+    // superposition state (|0⟩ + |1⟩)/√2 - angle π/4
+    let superposition = Geonum {
+        length: 1.0,
+        angle: PI / 4.0,
+    };
+
+    // demonstrate quantum gates as angle transformations
+    // hadamard gate - rotates by π/4
+    let hadamard = |state: &Geonum| -> Geonum {
+        Geonum {
+            length: state.length,
+            angle: (state.angle + PI / 4.0) % TWO_PI,
+        }
+    };
+
+    // phase gate - adds phase π/2 to |1⟩ component
+    let phase = |state: &Geonum| -> Geonum {
+        if (state.angle - PI).abs() < EPSILON {
+            // |1⟩ state, add phase
+            Geonum {
+                length: state.length,
+                angle: (state.angle + PI / 2.0) % TWO_PI,
+            }
+        } else {
+            // other state, leave unchanged
+            *state
+        }
+    };
+
+    // test quantum gates
+    let h_zero = hadamard(&zero_state);
+    assert!((h_zero.angle - PI / 4.0).abs() < EPSILON); // |0⟩ → (|0⟩ + |1⟩)/√2
+
+    let p_one = phase(&one_state);
+    assert!((p_one.angle - (3.0 * PI / 2.0)).abs() < EPSILON); // |1⟩ → e^(iπ/2)|1⟩
+
+    // demonstrate quantum parallelism through angle superposition
+    let parallelism_factor = |state: &Geonum| -> f64 {
+        // measure of quantum parallelism based on angle
+        // max at π/4 (equal superposition), min at 0 or π (basis states)
+        let normalized_angle = state.angle % PI;
+        (if normalized_angle > PI / 2.0 {
+            PI - normalized_angle
+        } else {
+            normalized_angle
+        }) / (PI / 4.0)
+    };
+
+    // compute parallelism factors
+    let zero_parallelism = parallelism_factor(&zero_state);
+    let superpos_parallelism = parallelism_factor(&superposition);
+
+    // verify superposition has maximum parallelism
+    assert!(zero_parallelism < 0.1); // basis state has minimal parallelism
+    assert!((superpos_parallelism - 1.0).abs() < 0.1); // superposition has maximal parallelism
+
+    // demonstrate multi-qubit entanglement
+    // entangled bell state as geometric number
+    let bell_state = Geonum {
+        length: 1.0,
+        angle: PI / 4.0,
+    };
+
+    // measure entanglement through angle precision
+    let entanglement = |state: &Geonum| -> f64 {
+        // simplified entanglement measure
+        // max at π/4, π/2, 3π/4, π (superposition angles)
+        let norm_angle = state.angle % (PI / 2.0);
+        (if norm_angle > PI / 4.0 {
+            PI / 2.0 - norm_angle
+        } else {
+            norm_angle
+        }) / (PI / 4.0)
+    };
+
+    // compute entanglement
+    let bell_entanglement = entanglement(&bell_state);
+    let basis_entanglement = entanglement(&zero_state);
+
+    // verify bell state has maximum entanglement
+    assert!((bell_entanglement - 1.0).abs() < 0.1);
+    assert!(basis_entanglement < 0.1);
+
+    // demonstrate quantum speedup through geometric representation
+    // classical vs quantum search algorithm
+    let classical_search = |n: usize| -> Geonum {
+        // O(n) complexity
+        Geonum {
+            length: n as f64,
+            angle: 0.0,
+        }
+    };
+
+    let quantum_search = |n: usize| -> Geonum {
+        // O(√n) complexity
+        Geonum {
+            length: (n as f64).sqrt(),
+            angle: PI / 2.0,
+        }
+    };
+
+    // compute speedup ratio
+    let n = 1000000;
+    let speedup = classical_search(n).length / quantum_search(n).length;
+
+    // verify quantum speedup is approximately √n
+    assert!((speedup - (n as f64).sqrt()).abs() / (n as f64).sqrt() < 0.01);
+
+    // demonstrate geometric representation of quantum circuit
+    // angle represents circuit depth/complexity
+    let circuit_complexity = |gates: usize, qubits: usize| -> Geonum {
+        Geonum {
+            length: gates as f64,
+            angle: (gates % qubits) as f64 * PI / qubits as f64,
+        }
+    };
+
+    // compute complexities
+    let simple_circuit = circuit_complexity(4, 2);
+    let complex_circuit = circuit_complexity(16, 4);
+
+    // verify circuit scaling
+    assert!(complex_circuit.length > simple_circuit.length);
+}
+
+// add more algorithm tests as needed

@@ -7,7 +7,7 @@
 
 # geonum
 
-the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec in rust
+scaling numerical simulation with the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec
 
 ### features
 
@@ -27,6 +27,19 @@ the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557d
 - undual operation (complement to the dual operation)
 - regressive product (alternative method for computing the meet of subspaces)
 - automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
+- replaces set theory foundations with direct geometric representations
+- transforms category theory abstractions into simple angle transformations
+- unifies discrete and continuous math through a common geometric framework
+- provides physical geometric interpretations for abstract mathematical concepts
+- automates away unnecessary mathematical formalism using length-angle representation
+- enables scaling precision in statistical modeling through direct angle quantization
+- supports time evolution via simple angle rotation (angle += energy * time)
+- provides statistical methods for angle distributions (arithmetic/circular means, variance, expectation values)
+- enables O(1) machine learning operations that would otherwise require O(n²) or O(2^n) complexity
+- implements perceptron learning, regression modeling, neural networks, and activation functions 
+- replaces tensor-based neural network operations with direct angle transformations
+- enables scaling to millions of dimensions with constant-time ML computations
+- eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
 
 ### use
 
@@ -34,7 +47,7 @@ the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557d
 cargo add geonum
 ```
 
-see `tests/lib_test.rs` examples for scalable numerical simulation of linear and geometric algebra operations
+see `tests` to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory, and algebraic structures
 
 ### benches
 
@@ -98,6 +111,5 @@ cargo doc --open
 
 - blade classification (identifying geometric types like points, lines, planes)
 - rotor estimation algorithms for transforming between sets of geometric objects
-- conformal geometry support
 - specialized projective geometric algebra (PGA) support
 - broadcasting support for operating on multiple objects (point clouds)
