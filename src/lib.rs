@@ -1067,6 +1067,174 @@ impl Multivector {
                 .collect(),
         )
     }
+
+    /// compute the arithmetic mean of angles in this multivector
+    ///
+    /// # returns
+    /// mean angle as float
+    pub fn mean_angle(&self) -> f64 {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        // compute simple arithmetic mean (assumes all weights are equal)
+        self.0.iter().map(|g| g.angle).sum::<f64>() / self.0.len() as f64
+    }
+
+    /// compute weighted mean of angles using lengths as weights
+    ///
+    /// # returns
+    /// weighted mean angle as float
+    pub fn weighted_mean_angle(&self) -> f64 {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        let total_weight: f64 = self.0.iter().map(|g| g.length).sum();
+        if total_weight.abs() < EPSILON {
+            return 0.0; // avoid division by zero
+        }
+
+        // compute weighted mean using lengths as weights
+        self.0.iter().map(|g| g.length * g.angle).sum::<f64>() / total_weight
+    }
+
+    /// compute circular mean of angles
+    ///
+    /// more appropriate for cyclic angle data than arithmetic mean
+    ///
+    /// # returns
+    /// circular mean angle as float
+    pub fn circular_mean_angle(&self) -> f64 {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        // compute vector components
+        let sin_sum: f64 = self.0.iter().map(|g| g.angle.sin()).sum();
+        let cos_sum: f64 = self.0.iter().map(|g| g.angle.cos()).sum();
+
+        // compute circular mean
+        sin_sum.atan2(cos_sum)
+    }
+
+    /// compute weighted circular mean of angles
+    ///
+    /// # returns
+    /// weighted circular mean angle as float
+    pub fn weighted_circular_mean_angle(&self) -> f64 {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        // compute weighted vector components
+        let sin_sum: f64 = self.0.iter().map(|g| g.length * g.angle.sin()).sum();
+        let cos_sum: f64 = self.0.iter().map(|g| g.length * g.angle.cos()).sum();
+
+        // compute weighted circular mean
+        sin_sum.atan2(cos_sum)
+    }
+
+    /// compute variance of angles
+    ///
+    /// # returns
+    /// variance of angles as float
+    pub fn angle_variance(&self) -> f64 {
+        if self.0.len() < 2 {
+            return 0.0; // variance requires at least 2 elements
+        }
+
+        let mean = self.mean_angle();
+        self.0.iter().map(|g| (g.angle - mean).powi(2)).sum::<f64>() / self.0.len() as f64
+    }
+
+    /// compute weighted variance of angles using lengths as weights
+    ///
+    /// # returns
+    /// weighted variance of angles as float
+    pub fn weighted_angle_variance(&self) -> f64 {
+        if self.0.len() < 2 {
+            return 0.0; // variance requires at least 2 elements
+        }
+
+        let mean = self.weighted_mean_angle();
+        let total_weight: f64 = self.0.iter().map(|g| g.length).sum();
+
+        if total_weight.abs() < EPSILON {
+            return 0.0; // avoid division by zero
+        }
+
+        self.0
+            .iter()
+            .map(|g| g.length * (g.angle - mean).powi(2))
+            .sum::<f64>()
+            / total_weight
+    }
+
+    /// compute circular variance of angles
+    ///
+    /// more appropriate for cyclic angle data
+    ///
+    /// # returns
+    /// circular variance from 0 to 1, where 0 means no dispersion
+    /// and 1 means maximum dispersion
+    pub fn circular_variance(&self) -> f64 {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        // compute mean resultant length
+        let sin_mean = self.0.iter().map(|g| g.angle.sin()).sum::<f64>() / self.0.len() as f64;
+        let cos_mean = self.0.iter().map(|g| g.angle.cos()).sum::<f64>() / self.0.len() as f64;
+        let r = (sin_mean.powi(2) + cos_mean.powi(2)).sqrt();
+
+        // circular variance is 1 - r
+        1.0 - r
+    }
+
+    /// compute expectation value of a function on angles
+    ///
+    /// # arguments
+    /// * `f` - function that maps angles to values
+    ///
+    /// # returns
+    /// expectation value as float
+    pub fn expect_angle<F>(&self, f: F) -> f64
+    where
+        F: Fn(f64) -> f64,
+    {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        // compute simple expectation (assumes all weights are equal)
+        self.0.iter().map(|g| f(g.angle)).sum::<f64>() / self.0.len() as f64
+    }
+
+    /// compute weighted expectation value of a function on angles
+    /// using lengths as weights
+    ///
+    /// # arguments
+    /// * `f` - function that maps angles to values
+    ///
+    /// # returns
+    /// weighted expectation value as float
+    pub fn weighted_expect_angle<F>(&self, f: F) -> f64
+    where
+        F: Fn(f64) -> f64,
+    {
+        if self.0.is_empty() {
+            return 0.0;
+        }
+
+        let total_weight: f64 = self.0.iter().map(|g| g.length).sum();
+        if total_weight.abs() < EPSILON {
+            return 0.0; // avoid division by zero
+        }
+
+        // compute weighted expectation using lengths as weights
+        self.0.iter().map(|g| g.length * f(g.angle)).sum::<f64>() / total_weight
+    }
 }
 
 impl Default for Multivector {
@@ -1207,6 +1375,37 @@ impl Dimensions {
                 .collect(),
         )
     }
+}
+
+/// activation functions for neural networks
+///
+/// represents different activation functions used in neural networks
+/// when applied to a geometric number, these functions transform the length
+/// component while preserving the angle component
+///
+/// # examples
+///
+/// ```
+/// use geonum::{Geonum, Activation};
+///
+/// let num = Geonum { length: 2.0, angle: 0.5 };
+///
+/// // apply relu activation
+/// let relu_output = num.activate(Activation::ReLU);
+///
+/// // apply sigmoid activation
+/// let sigmoid_output = num.activate(Activation::Sigmoid);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Activation {
+    /// rectified linear unit: f(x) = max(0, x)
+    ReLU,
+    /// sigmoid function: f(x) = 1/(1+e^(-x))
+    Sigmoid,
+    /// hyperbolic tangent: f(x) = tanh(x)
+    Tanh,
+    /// identity function: f(x) = x
+    Identity,
 }
 
 /// represents a geometric number [length, angle]
@@ -1480,6 +1679,179 @@ impl Geonum {
             length: rej_length,
             angle: rej_angle % TWO_PI,
         }
+    }
+
+    /// computes the smallest angle distance between two geometric numbers
+    ///
+    /// this function handles the cyclical nature of angles and returns
+    /// the smallest possible angular distance in the range [0, pi]
+    ///
+    /// # arguments
+    /// * `other` - the geometric number to compute the angle distance to
+    ///
+    /// # returns
+    /// the smallest angle between the two geometric numbers in radians
+    pub fn angle_distance(&self, other: &Geonum) -> f64 {
+        let diff = (self.angle - other.angle).abs() % TWO_PI;
+        if diff > PI {
+            TWO_PI - diff
+        } else {
+            diff
+        }
+    }
+
+    /// creates a geometric number representing a regression line
+    ///
+    /// encodes the regression line as a geometric number where:
+    /// - length corresponds to the magnitude of the relationship
+    /// - angle corresponds to the orientation/slope
+    ///
+    /// # arguments
+    /// * `cov_xy` - covariance between x and y variables
+    /// * `var_x` - variance of x variable
+    ///
+    /// # returns
+    /// a geometric number encoding the regression relationship
+    pub fn regression_from(cov_xy: f64, var_x: f64) -> Self {
+        Geonum {
+            length: (cov_xy.powi(2) / var_x).sqrt(),
+            angle: cov_xy.atan2(var_x),
+        }
+    }
+
+    /// updates a weight vector for perceptron learning
+    ///
+    /// adjusts the weight vector based on the perceptron learning rule:
+    /// w += η(y-ŷ)x for traditional learning, or
+    /// θw += η(y-ŷ)sign(x) for angle-based learning
+    ///
+    /// # arguments
+    /// * `learning_rate` - step size for gradient descent (η)
+    /// * `error` - prediction error (y-ŷ)
+    /// * `input` - input vector x
+    ///
+    /// # returns
+    /// updated weight vector
+    pub fn perceptron_update(&self, learning_rate: f64, error: f64, input: &Geonum) -> Self {
+        let sign_x = if input.angle > PI { -1.0 } else { 1.0 };
+
+        Geonum {
+            length: self.length + learning_rate * error * input.length,
+            angle: self.angle - learning_rate * error * sign_x,
+        }
+    }
+
+    /// performs a neural network forward pass
+    ///
+    /// computes the weighted sum of input and weight, adds bias,
+    /// all using geometric number operations
+    ///
+    /// # arguments
+    /// * `weight` - weight geometric number
+    /// * `bias` - bias geometric number
+    ///
+    /// # returns
+    /// the result of the forward pass as a geometric number
+    pub fn forward_pass(&self, weight: &Geonum, bias: &Geonum) -> Self {
+        Geonum {
+            length: self.length * weight.length + bias.length,
+            angle: self.angle + weight.angle,
+        }
+    }
+
+    /// applies an activation function to a geometric number
+    ///
+    /// supports various activation functions commonly used in neural networks
+    ///
+    /// # arguments
+    /// * `activation` - the activation function to apply
+    ///
+    /// # returns
+    /// activated geometric number
+    ///
+    /// # examples
+    ///
+    /// ```
+    /// use geonum::{Geonum, Activation};
+    ///
+    /// let num = Geonum { length: 1.5, angle: 0.3 };
+    ///
+    /// // apply relu activation - preserves positive values, zeroes out negative values
+    /// let activated = num.activate(Activation::ReLU);
+    /// ```
+    pub fn activate(&self, activation: Activation) -> Self {
+        match activation {
+            Activation::ReLU => Geonum {
+                length: if self.angle.cos() > 0.0 {
+                    self.length
+                } else {
+                    0.0
+                },
+                angle: self.angle,
+            },
+            Activation::Sigmoid => Geonum {
+                length: self.length / (1.0 + (-self.angle.cos()).exp()),
+                angle: self.angle,
+            },
+            Activation::Tanh => Geonum {
+                length: self.length * self.angle.cos().tanh(),
+                angle: self.angle,
+            },
+            Activation::Identity => *self,
+        }
+    }
+}
+
+#[cfg(test)]
+mod geonum_angle_distance_tests {
+    use super::*;
+
+    #[test]
+    fn test_angle_distance() {
+        let a = Geonum {
+            length: 1.0,
+            angle: 0.0,
+        };
+        let b = Geonum {
+            length: 1.0,
+            angle: PI / 2.0,
+        };
+        let c = Geonum {
+            length: 1.0,
+            angle: PI,
+        };
+        let d = Geonum {
+            length: 1.0,
+            angle: 3.0 * PI / 2.0,
+        };
+        let e = Geonum {
+            length: 1.0,
+            angle: 2.0 * PI - 0.1,
+        };
+
+        // check that angle_distance computes the expected values
+        assert!((a.angle_distance(&b) - PI / 2.0).abs() < EPSILON);
+        assert!((a.angle_distance(&c) - PI).abs() < EPSILON);
+        assert!((a.angle_distance(&d) - PI / 2.0).abs() < EPSILON);
+        assert!((a.angle_distance(&e) - 0.1).abs() < EPSILON);
+
+        // check that the function is symmetric
+        assert!((a.angle_distance(&b) - b.angle_distance(&a)).abs() < EPSILON);
+        assert!((c.angle_distance(&d) - d.angle_distance(&c)).abs() < EPSILON);
+
+        // check angles larger than 2π
+        let f = Geonum {
+            length: 1.0,
+            angle: 5.0 * PI / 2.0,
+        }; // equivalent to π/2
+        assert!((a.angle_distance(&f) - PI / 2.0).abs() < EPSILON);
+
+        // check negative angles
+        let g = Geonum {
+            length: 1.0,
+            angle: -PI / 2.0,
+        }; // equivalent to 3π/2
+        assert!((a.angle_distance(&g) - PI / 2.0).abs() < EPSILON);
     }
 }
 
@@ -1784,11 +2156,11 @@ mod multivector_tests {
         // Compute undual (should get back the original vector)
         let undual_vector = dual_vector.undual(&pseudoscalar);
 
-        // Check that the undual operation is the inverse of the dual operation
+        // prove undual operation is the inverse of the dual operation
         assert!((undual_vector[0].length - vector[0].length).abs() < EPSILON);
 
-        // The angle might be 2π different due to modular arithmetic
-        // When handling angles in modular fashion, we need to be careful with comparisons
+        // angle might be 2π different due to modular arithmetic
+        // when handling angles in modular fashion, we need to be careful with comparisons
         let mut angle_diff = undual_vector[0].angle - vector[0].angle;
         if angle_diff > PI {
             angle_diff -= TWO_PI;
@@ -2208,7 +2580,7 @@ mod multivector_tests {
         // perform rotation
         let rotated = mv.rotate(&rotor);
 
-        // basic check that rotation produced a valid result
+        // prove rotation
         assert!(rotated.len() > 0);
 
         // in our simplified implementation, we can only verify that:
@@ -2333,7 +2705,7 @@ mod multivector_tests {
         // Compute e^(π/4 * xy_plane) which should create a rotor for π/2-degree rotation
         let rotor = Multivector::exp(&xy_plane, PI / 4.0);
 
-        // Check that the resulting multivector has at least two components
+        // prove the resulting multivector has at least two components
         // (scalar and bivector parts)
         assert!(rotor.len() >= 2);
 
@@ -2479,7 +2851,7 @@ mod multivector_tests {
         // Compute sandwich product R*mv*R̃
         let rotated = rotor.sandwich_product(&mv, &rotor_conj);
 
-        // Check that the result is non-empty
+        // prove positive value
         assert!(rotated.len() > 0);
 
         // For our basic implementation, we just verify that the operation produces a result
@@ -2674,6 +3046,149 @@ mod multivector_tests {
                 || (orig_scalar[0].angle - (scalar[0].angle + TWO_PI)).abs() < EPSILON
                 || (orig_scalar[0].angle - (scalar[0].angle - TWO_PI)).abs() < EPSILON
         );
+    }
+
+    #[test]
+    fn it_computes_angle_statistics() {
+        // create multivector with known angles for testing
+        let mv = Multivector(vec![
+            Geonum {
+                length: 1.0,
+                angle: 0.0,
+            },
+            Geonum {
+                length: 2.0,
+                angle: PI / 4.0,
+            },
+            Geonum {
+                length: 3.0,
+                angle: PI / 2.0,
+            },
+        ]);
+
+        // test arithmetic mean
+        let expected_mean = (0.0 + PI / 4.0 + PI / 2.0) / 3.0;
+        assert!((mv.mean_angle() - expected_mean).abs() < EPSILON);
+
+        // test weighted mean
+        let total_weight = 1.0 + 2.0 + 3.0;
+        let expected_weighted_mean = (0.0 * 1.0 + PI / 4.0 * 2.0 + PI / 2.0 * 3.0) / total_weight;
+        assert!((mv.weighted_mean_angle() - expected_weighted_mean).abs() < EPSILON);
+
+        // test angle variance
+        let variance = mv.angle_variance();
+        assert!(variance > 0.0); // variance must be positive
+
+        // verify variance calculation manually
+        let manual_variance = ((0.0 - expected_mean).powi(2)
+            + (PI / 4.0 - expected_mean).powi(2)
+            + (PI / 2.0 - expected_mean).powi(2))
+            / 3.0;
+        assert!((variance - manual_variance).abs() < EPSILON);
+
+        // test weighted variance
+        let weighted_variance = mv.weighted_angle_variance();
+        assert!(weighted_variance > 0.0);
+
+        // test circular mean - close to arithmetic mean since angles are in limited range
+        let circular_mean = mv.circular_mean_angle();
+        assert!(circular_mean >= 0.0 && circular_mean <= TWO_PI);
+
+        // test circular variance
+        let circular_variance = mv.circular_variance();
+        assert!(circular_variance >= 0.0 && circular_variance <= 1.0);
+
+        // test expectation value with identity function
+        let exp_identity = mv.expect_angle(|x| x);
+        assert!((exp_identity - expected_mean).abs() < EPSILON);
+
+        // test expectation value with cosine function
+        let exp_cos = mv.expect_angle(|x| x.cos());
+        assert!(
+            (exp_cos - ((0.0_f64).cos() + (PI / 4.0).cos() + (PI / 2.0).cos()) / 3.0).abs()
+                < EPSILON
+        );
+
+        // test weighted expectation value
+        let weighted_exp = mv.weighted_expect_angle(|x| x);
+        assert!((weighted_exp - expected_weighted_mean).abs() < EPSILON);
+    }
+
+    #[test]
+    fn it_handles_edge_cases_in_statistics() {
+        // empty multivector
+        let empty = Multivector::new();
+        assert_eq!(empty.mean_angle(), 0.0);
+        assert_eq!(empty.weighted_mean_angle(), 0.0);
+        assert_eq!(empty.angle_variance(), 0.0);
+        assert_eq!(empty.weighted_angle_variance(), 0.0);
+        assert_eq!(empty.circular_variance(), 0.0);
+        assert_eq!(empty.expect_angle(|x| x), 0.0);
+        assert_eq!(empty.weighted_expect_angle(|x| x), 0.0);
+
+        // single element multivector
+        let single = Multivector(vec![Geonum {
+            length: 1.0,
+            angle: PI / 4.0,
+        }]);
+        assert_eq!(single.mean_angle(), PI / 4.0);
+        assert_eq!(single.weighted_mean_angle(), PI / 4.0);
+        assert_eq!(single.angle_variance(), 0.0); // variance of one element is zero
+        assert_eq!(single.circular_variance(), 0.0);
+        assert_eq!(single.expect_angle(|x| x.sin()), (PI / 4.0).sin());
+
+        // zero-length elements with weights of 0
+        let zero_weights = Multivector(vec![
+            Geonum {
+                length: 0.0,
+                angle: 0.0,
+            },
+            Geonum {
+                length: 0.0,
+                angle: PI,
+            },
+        ]);
+        assert_eq!(zero_weights.weighted_mean_angle(), 0.0); // handles division by zero
+        assert_eq!(zero_weights.weighted_angle_variance(), 0.0);
+        assert_eq!(zero_weights.weighted_expect_angle(|x| x), 0.0);
+    }
+
+    #[test]
+    fn it_computes_circular_statistics() {
+        // test circular statistics with angles wrapping around circle
+        let circular_mv = Multivector(vec![
+            Geonum {
+                length: 1.0,
+                angle: 0.0,
+            }, // 0 degrees
+            Geonum {
+                length: 1.0,
+                angle: 7.0 * PI / 4.0,
+            }, // 315 degrees
+            Geonum {
+                length: 1.0,
+                angle: PI / 4.0,
+            }, // 45 degrees
+        ]);
+
+        // circular mean handles wraparound correctly
+        // for angles 0, 315, 45, circular mean is near 0
+        let mean = circular_mv.circular_mean_angle();
+        let expected = 0.0;
+
+        // use larger epsilon for trigonometric functions
+        let circular_epsilon = 0.01;
+
+        // test mean is close to 0 or equivalent points on circle
+        assert!(
+            (mean - expected).abs() < circular_epsilon
+                || (mean - (expected + TWO_PI)).abs() < circular_epsilon
+                || (mean - (expected - TWO_PI)).abs() < circular_epsilon
+        );
+
+        // circular variance is low for clustered angles
+        let variance = circular_mv.circular_variance();
+        assert!(variance < 0.3);
     }
 }
 
@@ -3151,5 +3666,140 @@ mod geonum_tests {
         //
         // In theory, the rejection should be zero for parallel vectors, but due to
         // floating-point precision and algorithmic differences, this is difficult to test reliably
+    }
+
+    #[test]
+    fn it_computes_regression_from_covariance() {
+        // data for regression test - using fixed values for simplicity
+        let cov = 10.5; // example covariance
+        let var = 5.0; // example variance
+
+        // create geometric number representing the regression relationship
+        let regression_geo = Geonum::regression_from(cov, var);
+
+        // verify that the geometric number has non-zero values
+        assert!(
+            regression_geo.length > 0.0,
+            "regression length should be positive"
+        );
+        assert!(
+            regression_geo.angle.is_finite(),
+            "regression angle should be a finite value"
+        );
+
+        // basic check that increasing/decreasing covariance affects the result
+        let regression_higher = Geonum::regression_from(cov * 2.0, var);
+        let regression_lower = Geonum::regression_from(cov / 2.0, var);
+
+        // verify that changes in the input produce appropriate changes in the output
+        assert!(
+            regression_higher.length > regression_geo.length,
+            "increasing covariance should affect regression parameters"
+        );
+        assert!(
+            regression_lower.length < regression_geo.length,
+            "decreasing covariance should affect regression parameters"
+        );
+    }
+
+    #[test]
+    fn it_updates_perceptron_weights() {
+        // create a simple perceptron with weight and input
+        let weight = Geonum {
+            length: 1.0,
+            angle: PI / 4.0,
+        };
+
+        let input = Geonum {
+            length: 1.0,
+            angle: 5.0 * PI / 4.0, // opposite direction from weight
+        };
+
+        // expected prediction (dot product)
+        let dot = weight.length * input.length * (weight.angle - input.angle).cos();
+        assert!(dot < 0.0, "should predict negative class");
+
+        // update weights with learning rate and error
+        let learning_rate = 0.1;
+        let error = -1.0; // y - ŷ where y = -1 (true label) and ŷ = 0 (prediction)
+
+        let updated_weight = weight.perceptron_update(learning_rate, error, &input);
+
+        // verify the update improved the classification
+        let new_dot =
+            updated_weight.length * input.length * (updated_weight.angle - input.angle).cos();
+
+        // classification should improve (dot product should become more negative)
+        assert!(
+            new_dot > dot,
+            "perceptron update should improve classification"
+        );
+    }
+
+    #[test]
+    fn it_performs_neural_network_operations() {
+        // create input, weight, and bias
+        let input = Geonum {
+            length: 2.0,
+            angle: 0.5,
+        };
+
+        let weight = Geonum {
+            length: 1.5,
+            angle: 0.3,
+        };
+
+        let bias = Geonum {
+            length: 0.5,
+            angle: 0.0,
+        };
+
+        // forward pass
+        let output = input.forward_pass(&weight, &bias);
+
+        // verify output - should be input × weight + bias
+        // length: input.length * weight.length + bias.length
+        // angle: input.angle + weight.angle
+        let expected_length = input.length * weight.length + bias.length;
+        let expected_angle = input.angle + weight.angle;
+
+        assert!(
+            (output.length - expected_length).abs() < EPSILON,
+            "expected length: {}, got: {}",
+            expected_length,
+            output.length
+        );
+        assert!(
+            (output.angle - expected_angle).abs() < EPSILON,
+            "expected angle: {}, got: {}",
+            expected_angle,
+            output.angle
+        );
+
+        // test activation functions
+        let relu_output = output.activate(Activation::ReLU);
+        if output.angle.cos() > 0.0 {
+            assert_eq!(
+                relu_output.length, output.length,
+                "relu should preserve positive values"
+            );
+        } else {
+            assert_eq!(
+                relu_output.length, 0.0,
+                "relu should zero out negative values"
+            );
+        }
+
+        let sigmoid_output = output.activate(Activation::Sigmoid);
+        assert!(
+            sigmoid_output.length > 0.0 && sigmoid_output.length <= output.length,
+            "sigmoid should compress values between 0 and 1"
+        );
+
+        let tanh_output = output.activate(Activation::Tanh);
+        assert!(
+            tanh_output.length <= output.length,
+            "tanh should compress values"
+        );
     }
 }

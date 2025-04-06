@@ -1,5 +1,26 @@
 # changelog
 
+## 0.3.2 (2025-04-05)
+
+### added
+- machine learning operations with O(1) complexity
+- perceptron_update method for geometric perceptron learning
+- regression_from method for creating geometric linear regression
+- forward_pass method for neural network operations
+- activate method supporting relu, sigmoid, and tanh activations
+- extensive test suite in tests/machine_learning_test.rs demonstrating tensor replacement
+- comprehensive set theory tests in tests/set_theory_test.rs
+- quantum mechanics tests in tests/quantum_mechanics_test.rs
+- algorithm benchmarking tests in tests/algorithms_test.rs
+- category theory tests in tests/category_theory_test.rs
+- number theory tests in tests/numbers_test.rs
+
+### changed
+- updated readme with machine learning capabilities
+- extended internal test coverage to verify ML functionality
+- improved angle_distance usage across clustering implementations
+- optimized neural network operations with direct angle transformations
+
 ## 0.3.0 (2025-04-03)
 
 ### added
