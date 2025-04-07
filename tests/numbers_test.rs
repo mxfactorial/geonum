@@ -6,7 +6,7 @@ const EPSILON: f64 = 1e-10;
 const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
-fn it_is_a_scalar() {
+fn its_a_scalar() {
     // a scalar is just a number with magnitude but no direction
     // in geometric number format, its a [length, 0] for positive
     // or [length, pi] for negative
@@ -46,7 +46,7 @@ fn it_is_a_scalar() {
 }
 
 #[test]
-fn it_is_a_vector() {
+fn its_a_vector() {
     // a vector has both magnitude and direction
     // in geometric algebra, vectors are grade 1 elements
 
@@ -85,7 +85,7 @@ fn it_is_a_vector() {
 }
 
 #[test]
-fn it_is_a_real_number() {
+fn its_a_real_number() {
     // real numbers are just scalars on the real number line
     // in geometric numbers, they have angle 0 (positive) or pi (negative)
 
@@ -135,7 +135,7 @@ fn it_is_a_real_number() {
 }
 
 #[test]
-fn it_is_an_imaginary_number() {
+fn its_an_imaginary_number() {
     // imaginary numbers have angle pi/2
     // they represent rotations in the complex plane
 
@@ -172,7 +172,7 @@ fn it_is_an_imaginary_number() {
 }
 
 #[test]
-fn it_is_a_complex_number() {
+fn its_a_complex_number() {
     // complex numbers combine real and imaginary components
     // we can represent them as a multivector with two components
 
@@ -218,7 +218,7 @@ fn it_is_a_complex_number() {
 }
 
 #[test]
-fn it_is_a_quaternion() {
+fn its_a_quaternion() {
     // quaternions are an extension of complex numbers with three imaginary units i,j,k
     // they can be represented as a multivector with four components
 
@@ -308,7 +308,7 @@ fn it_is_a_quaternion() {
 }
 
 #[test]
-fn it_is_a_dual_number() {
+fn its_a_dual_number() {
     // dual numbers have the form a + bε where ε² = 0
     // they're useful for automatic differentiation
 
@@ -360,7 +360,7 @@ fn it_is_a_dual_number() {
 }
 
 #[test]
-fn it_is_an_octonion() {
+fn its_an_octonion() {
     // octonions extend quaternions with 8 components
     // they are non-associative, meaning (a*b)*c ≠ a*(b*c)
 
@@ -434,7 +434,7 @@ fn it_is_an_octonion() {
 }
 
 #[test]
-fn it_is_a_matrix() {
+fn its_a_matrix() {
     // matrices can be represented using multivectors
     // here we'll demonstrate a 2×2 identity matrix
 
@@ -495,7 +495,7 @@ fn it_is_a_matrix() {
 }
 
 #[test]
-fn it_is_a_tensor() {
+fn its_a_tensor() {
     // tensors extend matrices to higher dimensions
     // here's a 2×2×2 identity-like tensor
 
@@ -552,7 +552,7 @@ fn it_is_a_tensor() {
 }
 
 #[test]
-fn it_is_a_rational_number() {
+fn its_a_rational_number() {
     // rational numbers are fractions p/q
     // we can represent them as multivectors with numerator and denominator
 
@@ -636,7 +636,7 @@ fn it_is_a_rational_number() {
 }
 
 #[test]
-fn it_is_an_algebraic_number() {
+fn its_an_algebraic_number() {
     // algebraic numbers are roots of polynomials with rational coefficients
     // example: √2 is root of p(x) = x² - 2
 

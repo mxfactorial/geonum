@@ -1,5 +1,20 @@
 # changelog
 
+## 0.4.2 (2025-04-07)
+
+### added
+- electromagnetic field calculation methods (`electric_field`, `poynting_vector`, etc.)
+- base methods for field operations (`from_polar`, `from_cartesian`, `to_cartesian`)
+- `inverse_field` method for creating fields with inverse power laws
+- `Grade` enum for named grades in geometric algebra (Scalar, Vector, Bivector, etc.)
+- improved grade handling with new `grade_range` method accepting `[usize; 2]` parameter
+- improved pseudoscalar section extraction with improved angle compatibility checks
+
+### fixed
+- fixed multivector section extraction to handle components of different grades
+- Updated grade-specific component extraction for consistent behavior
+
+ 
 ## 0.4.1 (2025-04-06)
 
 ### added
