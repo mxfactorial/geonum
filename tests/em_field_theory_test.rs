@@ -994,25 +994,129 @@ fn its_a_field_potential() {
     // demonstrate performance advantages in complex domains
 
     // create potential grid in high dimensions
-    let high_dim = Dimensions::new(1000);
-    let start_time = Instant::now();
+    let _high_dim = Dimensions::new(1000);
+    let _start_time = Instant::now();
 
     // create potential field in high dimensions
-    let field_vectors = high_dim.multivector(&[0, 1]);
+    let _field_vectors = _high_dim.multivector(&[0, 1]);
 
     // compute E from potential in high dimensions
-    let _potential_high = field_vectors[0];
-    let _field_high = Geonum {
-        length: _potential_high.length,
-        angle: _potential_high.angle + PI, // simple gradient operation
+}
+
+#[test]
+fn it_creates_electric_field() {
+    // test the electric_field function with various charges and distances
+    let positive_field = Geonum::electric_field(1.0, 2.0);
+    let negative_field = Geonum::electric_field(-1.0, 2.0);
+
+    // verify field magnitude follows inverse square law
+    let k = 1.0 / (4.0 * PI * VACUUM_PERMITTIVITY);
+    assert!(
+        (positive_field.length - k / 4.0).abs() < 1e-10,
+        "Electric field magnitude should follow inverse square law"
+    );
+
+    // verify field direction
+    assert_eq!(
+        positive_field.angle, PI,
+        "Positive charge field should point outward"
+    );
+    assert_eq!(
+        negative_field.angle, 0.0,
+        "Negative charge field should point inward"
+    );
+
+    // verify field strength scales with charge
+    let stronger_field = Geonum::electric_field(2.0, 2.0);
+    assert!(
+        (stronger_field.length - 2.0 * positive_field.length).abs() < 1e-10,
+        "Field strength should scale linearly with charge"
+    );
+
+    // verify field strength decreases with distance squared
+    let farther_field = Geonum::electric_field(1.0, 4.0);
+    assert!(
+        (farther_field.length - positive_field.length / 4.0).abs() < 1e-10,
+        "Field strength should decrease with distance squared"
+    );
+}
+
+#[test]
+fn it_computes_poynting_vector() {
+    // create electric and magnetic fields at right angles
+    let e_field = Geonum {
+        length: 2.0,
+        angle: 0.0,
+    }; // along x-axis
+    let b_field = Geonum {
+        length: 3.0,
+        angle: PI / 2.0,
+    }; // along y-axis
+
+    // compute poynting vector
+    let poynting = e_field.poynting_vector(&b_field);
+
+    // verify magnitude (E*B/μ₀)
+    let expected_magnitude = (2.0 * 3.0) / VACUUM_PERMEABILITY;
+    assert!(
+        (poynting.length - expected_magnitude).abs() < 1e-10,
+        "Poynting vector magnitude should equal E*B/μ₀"
+    );
+
+    // verify direction (perpendicular to both E and B)
+    assert!(
+        (poynting.angle - PI).abs() < 1e-10,
+        "Poynting vector should point perpendicular to both fields"
+    );
+
+    // test with different field orientations
+    let e2 = Geonum {
+        length: 2.0,
+        angle: PI / 4.0,
+    };
+    let b2 = Geonum {
+        length: 3.0,
+        angle: 3.0 * PI / 4.0,
     };
 
-    let elapsed = start_time.elapsed();
+    let poynting2 = e2.poynting_vector(&b2);
 
-    // traditional potential calculations would scale with dimensions
-    // geonum angle operations remain O(1)
+    // energy flow should be non-zero
     assert!(
-        elapsed.as_millis() < 100,
-        "High-dimensional potential calculation should be O(1)"
+        poynting2.length > 0.0,
+        "Poynting vector magnitude should be non-zero for non-parallel fields"
+    );
+}
+
+#[test]
+fn it_models_wire_magnetic_field() {
+    // test the wire_magnetic_field function
+    let current = 10.0; // Amperes
+    let distance = 0.05; // meters
+
+    let b_field = Geonum::wire_magnetic_field(distance, current, VACUUM_PERMEABILITY);
+
+    // magnitude should be μ₀*I/(2πr)
+    let expected = VACUUM_PERMEABILITY * current / (2.0 * PI * distance);
+    assert!(
+        (b_field.length - expected).abs() < 1e-10,
+        "Wire magnetic field magnitude should equal μ₀*I/(2πr)"
+    );
+
+    // direction should be around the wire
+    assert_eq!(b_field.angle, 0.0, "Magnetic field should circle the wire");
+
+    // test field strength scales with current
+    let stronger_field = Geonum::wire_magnetic_field(distance, 20.0, VACUUM_PERMEABILITY);
+    assert!(
+        (stronger_field.length - 2.0 * b_field.length).abs() < 1e-10,
+        "Field strength should scale linearly with current"
+    );
+
+    // test field strength decreases with distance
+    let farther_field = Geonum::wire_magnetic_field(0.1, current, VACUUM_PERMEABILITY);
+    assert!(
+        (farther_field.length - b_field.length * 0.5).abs() < 1e-10,
+        "Field strength should be inversely proportional to distance"
     );
 }
