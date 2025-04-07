@@ -6,7 +6,7 @@ skip periods on single sentence paragraphs
 
 skip apostrophes in words as in "dont" unless it conflicts with another word, "we're" vs "were"
 
-express π as pi in comments and docs
+express π as PI in comments and docs
 
 avoid words like "properly", "correctly", "appropriately" and "valid"
 
