@@ -1,13 +1,36 @@
+<br>
+<p align="center"><img width="250" alt="dual" src="https://github.com/user-attachments/assets/437b25cb-4068-4358-a667-8fa2244e6f27"></p>
+
+<p align="center">scaling scientific computing with the <a href="https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085" target="_blank">geometric number</a> spec</p>
+
+<div align="center">
+
 [![build](https://github.com/mxfactorial/geonum/actions/workflows/publish.yaml/badge.svg)](https://github.com/mxfactorial/geonum/actions)
 [![Discord](https://img.shields.io/discord/868565277955203122.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/KQdC65bG)
 [![docs](https://docs.rs/geonum/badge.svg)](https://docs.rs/geonum)
 [![crates.io](https://img.shields.io/crates/v/geonum.svg)](https://crates.io/crates/geonum)
 [![coverage](https://coveralls.io/repos/github/mxfactorial/geonum/badge.svg?branch=main)](https://coveralls.io/github/mxfactorial/geonum?branch=main)
 [![contribute](https://img.shields.io/badge/contribute-paypal-brightgreen.svg)](https://www.paypal.com/paypalme/mxfactorial)
+</div>
 
 # geonum
 
-scaling scientific computing with the [geometric number](https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085) spec
+setting a metric with euclidean and squared norms creates a `k^n` possible transformation problem for vectors
+
+geonum reduces `k^n` to 2
+
+traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
+
+geonum enables all algebras and protects them from entropy by setting `log2(4)` components of the most general form (1 scalar + 2 vector + 1 bivector) as dual (⋆):
+
+```rs
+/// a geometric number [length, angle]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Geonum {
+    pub length: f64, // multiply
+    pub angle: f64, // add
+}
+```
 
 ### use
 

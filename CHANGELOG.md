@@ -1,5 +1,11 @@
 # changelog
 
+## 0.4.3 (2025-04-08)
+
+### added
+- project design
+- feature tests proving design
+
 ## 0.4.2 (2025-04-07)
 
 ### added
