@@ -1,8 +1,7 @@
 <br>
-<p align="center"><img width="250" alt="dual" src="dual.png"></p>
-
+<p align="center"><img width="250" alt="dual" src="shield.gif"></p>
+<br>
 <p align="center">scaling scientific computing with the <a href="https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085" target="_blank">geometric number</a> spec</p>
-
 <div align="center">
 
 [![build](https://github.com/mxfactorial/geonum/actions/workflows/publish.yaml/badge.svg)](https://github.com/mxfactorial/geonum/actions)
