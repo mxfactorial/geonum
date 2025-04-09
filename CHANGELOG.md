@@ -1,5 +1,10 @@
 # changelog
 
+## 0.4.4 (2025-04-08)
+
+### fixed
+- github blocks crates.io from loading user attachments
+
 ## 0.4.3 (2025-04-08)
 
 ### added
