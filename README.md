@@ -1,5 +1,5 @@
 <br>
-<p align="center"><img width="250" alt="dual" src="https://github.com/user-attachments/assets/437b25cb-4068-4358-a667-8fa2244e6f27"></p>
+<p align="center"><img width="250" alt="dual" src="dual.png"></p>
 
 <p align="center">scaling scientific computing with the <a href="https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085" target="_blank">geometric number</a> spec</p>
 
