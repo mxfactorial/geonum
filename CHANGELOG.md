@@ -1,5 +1,10 @@
 # changelog
 
+## 0.4.5 (2025-04-08)
+
+### fixed
+- switch png with gif
+
 ## 0.4.4 (2025-04-08)
 
 ### fixed
