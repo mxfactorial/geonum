@@ -1,6 +1,6 @@
 [package]
 name = "geonum"
-version = "0.4.5"
+version = "0.5.0"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
 description = "geometric number library supporting unlimited dimensions with O(1) complexity"

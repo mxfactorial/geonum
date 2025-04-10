@@ -1,5 +1,5 @@
 <br>
-<p align="center"><img width="250" alt="dual" src="shield.gif"></p>
+<p align="center"><img width="225" alt="dual" src="shield.gif"></p>
 <br>
 <p align="center">scaling scientific computing with the <a href="https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085" target="_blank">geometric number</a> spec</p>
 <div align="center">
@@ -20,14 +20,16 @@ geonum reduces `k^n` to 2
 
 traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
 
-geonum enables all algebras and protects them from entropy by setting `log2(4)` components of the most general form (1 scalar + 2 vector + 1 bivector) as dual (⋆):
+geonum sets a metric by dualizing (⋆) components inside algebra's most general form and shields its quadrature from entropy with the `log2(4)` bit minimum:
+- 1 scalar, `cos(θ)`
+- 2 vector, `sin(θ)cos(φ), sin(θ)sin(φ)`
+- 1 bivector, `sin(θ+π/2) = cos(θ)`
 
 ```rs
-/// a geometric number [length, angle]
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// a geometric number
 pub struct Geonum {
     pub length: f64, // multiply
-    pub angle: f64, // add
+    pub angle: f64,  // add
 }
 ```
 
@@ -112,9 +114,13 @@ geonum performs all major multivector operations with exceptional efficiency in 
 - replaces tensor-based neural network operations with direct angle transformations
 - enables scaling to millions of dimensions with constant-time ML computations
 - eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
+- angle-encoded data paths for O(1) structure traversal vs O(depth) conventional methods
+- optical transformations via direct angle operations (refraction, aberration, OTF)
+- Manifold trait for collection operations with lens-like path transformations
 
 ### tests
 ```
+cargo check # compile
 cargo fmt --check # format
 cargo clippy # lint
 cargo test --lib # unit
