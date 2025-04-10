@@ -1,5 +1,18 @@
 # changelog
 
+## 0.5.0 (2025-04-10)
+
+- Optics trait for physical optics operations with O(1) complexity
+- Projection trait for view operations with direct geometric access
+- Manifold trait for collections of geometric numbers with angle-based transformations
+- impl optical methods on Geonum: refract, aberrate, otf, abcd_transform, magnify
+- Manifold methods for direct data structure manipulation: set, over, compose
+- O(1) path-based operations vs O(depth) conventional traversal
+- angle arithmetic for high-performance data transformations
+- impl path access methods on Multivector: find, transform, path_mapper
+- direct angle-encoded paths eliminating complex traversal code
+- comprehensive test coverage in tests/optics_test.rs proving constant-time operations
+
 ## 0.4.5 (2025-04-08)
 
 ### fixed
