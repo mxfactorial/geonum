@@ -4800,4 +4800,291 @@ mod geonum_tests {
         assert_eq!(field.length, 0.25); // 1.0 * 2.0 / 2.0³
         assert_eq!(field.angle, PI / 2.0);
     }
+
+    #[test]
+    fn it_applies_optical_magnification() {
+        // create input ray/object point
+        let object = Geonum {
+            length: 4.0,
+            angle: PI / 6.0, // 30 degrees
+        };
+
+        // test 2x magnification
+        let magnified_2x = object.magnify(2.0);
+
+        // verify intensity follows inverse square law (1/m²)
+        let expected_intensity_2x = 4.0 / (2.0 * 2.0);
+        assert_eq!(magnified_2x.length, expected_intensity_2x);
+
+        // verify angle is inverted and scaled
+        let expected_angle_2x = (-PI / 6.0 / 2.0) % TWO_PI;
+        assert_eq!(magnified_2x.angle, expected_angle_2x);
+
+        // test 0.5x magnification (minification)
+        let magnified_half = object.magnify(0.5);
+
+        // verify intensity increases with minification
+        let expected_intensity_half = 4.0 / (0.5 * 0.5);
+        assert_eq!(magnified_half.length, expected_intensity_half);
+
+        // verify angle is inverted and scaled
+        let expected_angle_half = (-PI / 6.0 / 0.5) % TWO_PI;
+        assert_eq!(magnified_half.angle, expected_angle_half);
+    }
+}
+
+pub trait Optics: Sized {
+    /// convert lens refraction to angle transformation using Snell's law
+    /// conventional: vector-based ray tracing through interfaces O(n)
+    /// geonum: single angle transformation based on Snell's law O(1)
+    fn refract(&self, refractive_index: f64) -> Self;
+
+    /// apply optical path aberration using zernike coefficients
+    /// conventional: phase map computation + wavefront sampling O(n²)
+    /// geonum: direct phase perturbation via angle modification O(1)
+    fn aberrate(&self, zernike_coefficients: &[Self]) -> Self;
+
+    /// compute optical transfer function through frequency-space transformation
+    /// conventional: FFT-based propagation O(n log n)
+    /// geonum: direct frequency-domain angle mapping O(1)
+    fn otf(&self, focal_length: f64, wavelength: f64) -> Self;
+
+    /// apply ABCD matrix ray tracing as direct angle operations
+    /// conventional: 4×4 matrix multiplications for ray propagation O(n)
+    /// geonum: encode entire matrix effect as single angle transformation O(1)
+    fn abcd_transform(&self, a: f64, b: f64, c: f64, d: f64) -> Self;
+
+    /// apply magnification to the geometric number
+    /// conventional: complex transformations with multiple operations
+    /// geonum: direct angle scaling and intensity adjustment O(1)
+    fn magnify(&self, magnification: f64) -> Self;
+}
+
+pub trait Projection: Sized {
+    /// direct O(1) access to data at specified path
+    /// conventional: recursive traversal O(depth)
+    /// geonum: angle-encoded path with constant lookup O(1)
+    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> f64) -> Self;
+
+    /// compose lenses through simple angle addition
+    /// conventional: nested higher-order functions O(n)
+    /// geonum: direct angle arithmetic O(1)
+    fn compose(&self, other: &Self) -> Self;
+}
+
+pub trait Manifold {
+    /// find a component matching the given path angle
+    /// conventional: tree traversal or hash lookup O(log n) or O(1) with overhead
+    /// geonum: direct angle-based component lookup O(n) but with small n and no tree overhead
+    fn find(&self, path_angle: f64) -> Option<&Geonum>;
+
+    /// apply a transformation to all components through angle rotation
+    /// conventional: traverse and transform each element individually O(n)
+    /// geonum: single unified transformation through angle arithmetic O(n) with minimal operations
+    fn transform(&self, angle_rotation: f64) -> Self;
+
+    /// create path mapping function for use with complex data structures
+    /// conventional: complex path traversal functions with nested references O(depth)
+    /// geonum: angle-encoded path functions for direct geometric access O(1) per lookup
+    fn path_mapper<T>(&self, path_generator: fn(&T) -> f64) -> impl Fn(&T) -> Vec<Geonum>;
+
+    /// set value at a specific path angle
+    /// conventional: recursive traversal with mutation O(depth)
+    /// geonum: direct angle-based transformation O(1)
+    fn set(&self, path_angle: f64, new_value: f64) -> Self;
+
+    /// apply function to value at a specific path angle
+    /// conventional: complex functor composition O(depth)
+    /// geonum: direct angle-path function application O(1)
+    fn over<F>(&self, path_angle: f64, f: F) -> Self
+    where
+        F: Fn(f64) -> f64;
+
+    /// compose paths through angle addition
+    /// conventional: nested higher-order functions O(n)
+    /// geonum: direct angle arithmetic O(1)
+    fn compose(&self, other_angle: f64) -> Self;
+}
+
+impl Optics for Geonum {
+    fn refract(&self, refractive_index: f64) -> Self {
+        // apply snells law as angle transformation
+        let incident_angle = self.angle;
+        let refracted_angle = (incident_angle.sin() / refractive_index).asin();
+
+        Self {
+            length: self.length,
+            angle: refracted_angle,
+        }
+    }
+
+    fn aberrate(&self, zernike_coefficients: &[Self]) -> Self {
+        // apply zernike polynomial aberrations to phase
+        let mut perturbed_phase = self.angle;
+
+        // apply each zernike term
+        for term in zernike_coefficients {
+            let mode_effect = term.length * (term.angle * 3.0).cos();
+            perturbed_phase += mode_effect;
+        }
+
+        Self {
+            length: self.length,
+            angle: perturbed_phase % (2.0 * PI),
+        }
+    }
+
+    fn otf(&self, focal_length: f64, wavelength: f64) -> Self {
+        // convert from spatial domain to frequency domain
+        let frequency = self.length / (wavelength * focal_length);
+        let phase = self.angle + PI / 2.0;
+
+        Self {
+            length: frequency,
+            angle: phase % (2.0 * PI),
+        }
+    }
+
+    fn abcd_transform(&self, a: f64, b: f64, c: f64, d: f64) -> Self {
+        // apply ABCD matrix as angle transformation
+        let h = self.angle.sin(); // height/angle
+        let theta = self.angle; // angle
+
+        // abcd transformations for ray tracing
+        let new_h = a * h + b * theta;
+        let new_theta = c * h + d * theta;
+
+        // convert back to geonum representation
+        Self {
+            length: self.length,
+            angle: new_theta.atan2(new_h),
+        }
+    }
+
+    fn magnify(&self, magnification: f64) -> Self {
+        // magnification affects intensity (inverse square law) and angle scaling
+        let image_intensity = 1.0 / (magnification * magnification);
+
+        // image point has inverted angle and scaled height
+        let image_angle = -self.angle / magnification;
+
+        Self {
+            length: self.length * image_intensity,
+            angle: image_angle % (2.0 * PI),
+        }
+    }
+}
+
+impl Projection for Geonum {
+    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> f64) -> Self {
+        // use angle as data path
+        let data_angle = path_encoder(data);
+
+        // return value if path matches
+        if (self.angle - data_angle).abs() < EPSILON {
+            return *self;
+        }
+
+        // default null value
+        Self {
+            length: 0.0,
+            angle: 0.0,
+        }
+    }
+
+    fn compose(&self, other: &Self) -> Self {
+        Self {
+            length: self.length * other.length, // compose magnifications
+            angle: (self.angle + other.angle) % TWO_PI, // compose paths
+        }
+    }
+}
+
+impl Manifold for Multivector {
+    fn find(&self, path_angle: f64) -> Option<&Geonum> {
+        self.0
+            .iter()
+            .find(|g| (g.angle - path_angle).abs() < EPSILON)
+    }
+
+    fn transform(&self, angle_rotation: f64) -> Self {
+        Self(
+            self.0
+                .iter()
+                .map(|g| Geonum {
+                    length: g.length,
+                    angle: (g.angle + angle_rotation) % TWO_PI,
+                })
+                .collect(),
+        )
+    }
+
+    fn path_mapper<T>(&self, path_generator: fn(&T) -> f64) -> impl Fn(&T) -> Vec<Geonum> {
+        move |data: &T| {
+            let path = path_generator(data);
+            self.0
+                .iter()
+                .filter(|g| (g.angle - path).abs() < EPSILON)
+                .cloned()
+                .collect()
+        }
+    }
+
+    fn set(&self, path_angle: f64, new_value: f64) -> Self {
+        // create a new multivector with the updated value
+        Self(
+            self.0
+                .iter()
+                .map(|g| {
+                    // if this is the component at the target path, update its value
+                    if (g.angle - path_angle).abs() < EPSILON {
+                        Geonum {
+                            length: new_value,
+                            angle: g.angle,
+                        }
+                    } else {
+                        // otherwise keep the original component
+                        *g
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    fn over<F>(&self, path_angle: f64, f: F) -> Self
+    where
+        F: Fn(f64) -> f64,
+    {
+        // create a new multivector by applying the function to the target component
+        Self(
+            self.0
+                .iter()
+                .map(|g| {
+                    // if this is the component at the target path, apply the function
+                    if (g.angle - path_angle).abs() < EPSILON {
+                        Geonum {
+                            length: f(g.length),
+                            angle: g.angle,
+                        }
+                    } else {
+                        // otherwise keep the original component
+                        *g
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    fn compose(&self, other_angle: f64) -> Self {
+        // create a new multivector with composed paths
+        Self(
+            self.0
+                .iter()
+                .map(|g| Geonum {
+                    length: g.length,
+                    angle: (g.angle + other_angle) % TWO_PI,
+                })
+                .collect(),
+        )
+    }
 }
