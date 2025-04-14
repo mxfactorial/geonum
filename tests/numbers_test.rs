@@ -14,6 +14,7 @@ fn its_a_scalar() {
     let scalar = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) in geometric algebra
     };
 
     // test if scalar has expected properties
@@ -24,6 +25,7 @@ fn its_a_scalar() {
     let scalar2 = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) in geometric algebra
     };
 
     let product = scalar.mul(&scalar2);
@@ -36,6 +38,7 @@ fn its_a_scalar() {
     let neg_scalar = Geonum {
         length: 3.0,
         angle: PI,
+        blade: 0, // negative scalar (grade 0) in geometric algebra
     };
 
     let neg_product = scalar.mul(&neg_scalar);
@@ -53,6 +56,7 @@ fn its_a_vector() {
     let vector = Geonum {
         length: 2.0,
         angle: PI / 4.0, // 45 degrees
+        blade: 1,        // vector (grade 1) in geometric algebra
     };
 
     // test vector properties
@@ -63,6 +67,7 @@ fn its_a_vector() {
     let vector2 = Geonum {
         length: 3.0,
         angle: PI / 4.0, // same direction
+        blade: 1,        // vector (grade 1) in geometric algebra
     };
 
     // compute dot product as |a|*|b|*cos(angle between)
@@ -74,6 +79,7 @@ fn its_a_vector() {
     let perp_vector = Geonum {
         length: 3.0,
         angle: 3.0 * PI / 4.0, // perpendicular to vector
+        blade: 1,              // vector (grade 1) in geometric algebra
     };
 
     let dot_perp = vector.dot(&perp_vector);
@@ -92,12 +98,14 @@ fn its_a_real_number() {
     let real = Geonum {
         length: 3.0,
         angle: 0.0,
+        blade: 0, // real number as scalar (grade 0)
     };
 
     // test addition with another real
     let real2 = Geonum {
         length: 4.0,
         angle: 0.0,
+        blade: 0, // real number as scalar (grade 0)
     };
 
     // convert to cartesian for addition
@@ -106,6 +114,7 @@ fn its_a_real_number() {
     let sum = Geonum {
         length: sum_cartesian,
         angle: 0.0,
+        blade: 0, // real number sum as scalar (grade 0)
     };
 
     assert_eq!(sum.length, 7.0);
@@ -115,11 +124,13 @@ fn its_a_real_number() {
     let real3 = Geonum {
         length: 10.0,
         angle: 0.0,
+        blade: 0, // real number as scalar (grade 0)
     };
 
     let real4 = Geonum {
         length: 7.0,
         angle: 0.0,
+        blade: 0, // real number as scalar (grade 0)
     };
 
     // convert to cartesian for subtraction
@@ -128,6 +139,7 @@ fn its_a_real_number() {
     let diff = Geonum {
         length: diff_cartesian.abs(),
         angle: if diff_cartesian >= 0.0 { 0.0 } else { PI },
+        blade: 0, // real number difference as scalar (grade 0)
     };
 
     assert_eq!(diff.length, 3.0);
@@ -142,6 +154,7 @@ fn its_an_imaginary_number() {
     let imaginary = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1, // imaginary unit i as a vector (grade 1)
     };
 
     // i * i = -1
@@ -154,6 +167,7 @@ fn its_an_imaginary_number() {
     let real = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 0, // real number as scalar (grade 0)
     };
 
     let rotated = imaginary.mul(&real);
@@ -180,10 +194,12 @@ fn its_a_complex_number() {
         Geonum {
             length: 2.0,
             angle: 0.0,
+            blade: 0,
         }, // real part (2)
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // imaginary part (i)
     ]);
 
@@ -192,10 +208,12 @@ fn its_a_complex_number() {
     let i = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1, // imaginary unit i as vector (grade 1)
     };
     let pi_value = Geonum {
         length: PI,
         angle: 0.0,
+        blade: 0, // scalar representing pi (grade 0)
     };
     let _i_pi = i.mul(&pi_value); // i*pi
 
@@ -203,12 +221,14 @@ fn its_a_complex_number() {
     let e_i_pi = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 0, // negative scalar (grade 0)
     }; // equals -1
 
     // add 1 to e^(i*pi)
     let one = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar unit (grade 0)
     };
 
     // in cartesian: -1 + 1 = 0
@@ -226,18 +246,22 @@ fn its_a_quaternion() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // scalar part
         Geonum {
             length: 0.5,
             angle: PI / 2.0,
+            blade: 1,
         }, // i component
         Geonum {
             length: 0.5,
             angle: PI,
+            blade: 1,
         }, // j component
         Geonum {
             length: 0.5,
             angle: 3.0 * PI / 2.0,
+            blade: 1,
         }, // k component
     ]);
 
@@ -246,14 +270,17 @@ fn its_a_quaternion() {
     let i = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1, // imaginary unit i as vector (grade 1)
     };
     let j = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1, // quaternion unit j as vector (grade 1)
     };
     let k = Geonum {
         length: 1.0,
         angle: 3.0 * PI / 2.0,
+        blade: 1, // quaternion unit k as vector (grade 1)
     };
 
     // test i*j = k
@@ -287,18 +314,22 @@ fn its_a_quaternion() {
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // scalar part (0)
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // x component
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }, // y component
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }, // z component
     ]);
 
@@ -316,10 +347,12 @@ fn its_a_dual_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // real part
         Geonum {
             length: 1.0,
             angle: PI,
+            blade: 0,
         }, // dual part (ε)
     ]);
 
@@ -330,6 +363,7 @@ fn its_a_dual_number() {
     let epsilon = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 0, // dual unit as negative scalar (grade 0)
     };
     let epsilon_squared = epsilon.mul(&epsilon);
 
@@ -345,10 +379,12 @@ fn its_a_dual_number() {
         Geonum {
             length: x * x,
             angle: 0.0,
+            blade: 0,
         }, // f(x) = x²
         Geonum {
             length: 2.0 * x,
             angle: PI,
+            blade: 0,
         }, // f'(x) = 2x
     ]);
 
@@ -368,34 +404,42 @@ fn its_an_octonion() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // scalar part
         Geonum {
             length: 0.5,
             angle: PI / 4.0,
+            blade: 1,
         }, // e1
         Geonum {
             length: 0.5,
             angle: PI / 2.0,
+            blade: 1,
         }, // e2
         Geonum {
             length: 0.5,
             angle: 3.0 * PI / 4.0,
+            blade: 1,
         }, // e3
         Geonum {
             length: 0.5,
             angle: PI,
+            blade: 1,
         }, // e4
         Geonum {
             length: 0.5,
             angle: 5.0 * PI / 4.0,
+            blade: 1,
         }, // e5
         Geonum {
             length: 0.5,
             angle: 3.0 * PI / 2.0,
+            blade: 1,
         }, // e6
         Geonum {
             length: 0.5,
             angle: 7.0 * PI / 4.0,
+            blade: 1,
         }, // e7
     ]);
 
@@ -404,14 +448,17 @@ fn its_an_octonion() {
     let e1 = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let e2 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
     let e4 = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     };
 
     // compute (e1*e2)*e4
@@ -442,18 +489,22 @@ fn its_a_matrix() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // top-left element (1)
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // top-right element (0)
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // bottom-left element (0)
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // bottom-right element (1)
     ]);
 
@@ -465,10 +516,12 @@ fn its_a_matrix() {
         Geonum {
             length: 3.0,
             angle: 0.0,
+            blade: 0,
         }, // x component
         Geonum {
             length: 4.0,
             angle: 0.0,
+            blade: 0,
         }, // y component
     ]);
 
@@ -503,34 +556,42 @@ fn its_a_tensor() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // [0,0,0] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [0,0,1] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [0,1,0] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [0,1,1] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [1,0,0] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [1,0,1] element
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 0,
         }, // [1,1,0] element
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0,
         }, // [1,1,1] element
     ]);
 
@@ -560,10 +621,12 @@ fn its_a_rational_number() {
         Geonum {
             length: 3.0,
             angle: 0.0,
+            blade: 1,
         }, // numerator (3)
         Geonum {
             length: 4.0,
             angle: PI,
+            blade: 1,
         }, // denominator (4) - angle PI for division
     ]);
 
@@ -571,7 +634,8 @@ fn its_a_rational_number() {
     let numerator = rational[0];
     let denominator = Geonum {
         length: rational[1].length,
-        angle: 0.0, // reset angle to 0 for calculation
+        angle: 0.0,
+        blade: 1, // reset angle to 0 for calculation
     };
 
     // division in geometric numbers
@@ -586,10 +650,12 @@ fn its_a_rational_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // numerator (1)
         Geonum {
             length: 2.0,
             angle: PI,
+            blade: 1,
         }, // denominator (2) - angle PI for division
     ]);
 
@@ -644,14 +710,17 @@ fn its_an_algebraic_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // constant term (1)
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }, // x term (0)
         Geonum {
             length: 2.0,
             angle: PI,
+            blade: 1,
         }, // x² term (-2) - negative because angle is PI
     ]);
 
@@ -662,6 +731,7 @@ fn its_an_algebraic_number() {
     let sqrt2 = Geonum {
         length: 2.0_f64.sqrt(),
         angle: 0.0,
+        blade: 0, // square root of 2 as scalar (grade 0)
     };
 
     // square it
@@ -685,6 +755,7 @@ fn it_dualizes_log2_geometric_algebra_components() {
     let g = Geonum {
         length: 2.0,
         angle: std::f64::consts::PI / 4.0, // 45 degrees
+        blade: 1,                          // vector (grade 1) for demonstration
     };
 
     // a geometric number encodes what would traditionally require 4 components
@@ -722,6 +793,7 @@ fn it_keeps_information_entropy_zero() {
     let g1 = Geonum {
         length: 3.0,
         angle: PI / 3.0,
+        blade: 1, // vector (grade 1) for information demonstration
     };
 
     // create a dual geometric number
@@ -729,6 +801,7 @@ fn it_keeps_information_entropy_zero() {
     let g2 = Geonum {
         length: g1.length,
         angle: g1.angle + PI / 2.0,
+        blade: 2, // bivector (grade 2) as dual to vector g1
     };
 
     // demonstrate that these dual numbers preserve all original information
@@ -736,6 +809,7 @@ fn it_keeps_information_entropy_zero() {
     let recovered = Geonum {
         length: g2.length,
         angle: g2.angle - PI / 2.0,
+        blade: 1, // recovered vector (grade 1)
     };
 
     // test that the recovered geonum equals the original
@@ -774,10 +848,12 @@ fn its_a_bernoulli_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // numerator (1)
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // denominator (1)
     ]);
 
@@ -785,10 +861,12 @@ fn its_a_bernoulli_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // numerator (1)
         Geonum {
             length: 2.0,
             angle: 0.0,
+            blade: 1,
         }, // denominator (2)
     ]);
 
@@ -796,10 +874,12 @@ fn its_a_bernoulli_number() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // numerator (1)
         Geonum {
             length: 6.0,
             angle: 0.0,
+            blade: 1,
         }, // denominator (6)
     ]);
 
@@ -807,10 +887,12 @@ fn its_a_bernoulli_number() {
         Geonum {
             length: 1.0,
             angle: PI,
+            blade: 1,
         }, // numerator (-1) using angle PI to represent negative
         Geonum {
             length: 30.0,
             angle: 0.0,
+            blade: 1,
         }, // denominator (30)
     ]);
 
@@ -889,6 +971,7 @@ fn its_a_quadrature() {
         Geonum {
             length: x.length.powi(3) / 3.0,
             angle: x.angle * 3.0 / 1.0, // Angle transformation for cubic power
+            blade: x.blade,
         }
     };
 
@@ -902,10 +985,12 @@ fn its_a_quadrature() {
     let upper_bound = Geonum {
         length: b,
         angle: 0.0,
+        blade: 1,
     };
     let lower_bound = Geonum {
         length: a,
         angle: 0.0,
+        blade: 1,
     };
 
     // compute the integral using the fundamental theorem of calculus
@@ -925,6 +1010,7 @@ fn its_a_quadrature() {
     let x = Geonum {
         length: 0.5,
         angle: 0.0,
+        blade: 1,
     }; // Sample point x = 0.5
 
     // original function f(x) = x²
@@ -948,16 +1034,19 @@ fn its_a_quadrature() {
     let g = Geonum {
         length: 0.5,
         angle: PI / 4.0,
+        blade: 1,
     };
     let g_dual = Geonum {
         length: g.length,
         angle: g.angle + PI / 2.0,
+        blade: 1,
     };
 
     // recover original from dual
     let recovered = Geonum {
         length: g_dual.length,
         angle: g_dual.angle - PI / 2.0,
+        blade: 1,
     };
 
     // prove perfect information preservation (zero entropy)
@@ -978,10 +1067,12 @@ fn its_a_quadrature() {
     let _sin_fn = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // Represents sin
     let _cos_fn = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // Represents cos
 
     // trigonometric function use in geonum is more nuanced
@@ -999,10 +1090,12 @@ fn its_a_quadrature() {
     let _sin_at_zero = Geonum {
         length: 0.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // sin(0) = 0
     let cos_at_zero = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // cos(0) = 1
 
     // instead of testing angle equality after rotation, we'll test
@@ -1013,6 +1106,7 @@ fn its_a_quadrature() {
     let sin_shifted = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // sin(π/2) = 1
 
     // prove sin(π/2) = cos(0) = 1
@@ -1023,10 +1117,12 @@ fn its_a_quadrature() {
     let cos_shifted = Geonum {
         length: 0.0,
         angle: 0.0,
+        blade: 1,
     }; // cos(π/2) = 0
     let neg_sin_at_zero = Geonum {
         length: 0.0,
         angle: PI / 2.0 + PI,
+        blade: 1,
     }; // -sin(0) = 0
 
     // test equality of magnitudes (both should be 0)

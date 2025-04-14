@@ -38,10 +38,12 @@ fn its_a_naive_set() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // test dimension extension vs set membership
@@ -90,20 +92,24 @@ fn its_a_group() {
     let identity = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // identity element
     let quarter_turn = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // 90° rotation
     let half_turn = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     }; // 180° rotation
        // artifact of geonum automation: specific rotation names become unnecessary
        // when all angles live on the same continuous spectrum
     let _three_quarters = Geonum {
         length: 1.0,
         angle: 3.0 * PI / 2.0,
+        blade: 1,
     }; // 270° rotation
 
     // test how rotation naturally creates closure
@@ -127,6 +133,7 @@ fn its_a_group() {
     let inverse = Geonum {
         length: 1.0,
         angle: -quarter_turn.angle,
+        blade: 1,
     };
     let product = quarter_turn.mul(&inverse);
     let product_angle = product.angle % TWO_PI;
@@ -142,14 +149,17 @@ fn its_a_ring() {
     let a = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 3.0,
         angle: PI / 3.0,
+        blade: 1,
     };
     let c = Geonum {
         length: 1.5,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     // test distributivity through geometry not axioms
@@ -171,6 +181,7 @@ fn its_a_ring() {
     let bc_sum = Geonum {
         length: bc_sum_length,
         angle: bc_sum_angle,
+        blade: 1,
     };
 
     // compute a * (b + c)
@@ -197,6 +208,7 @@ fn its_a_ring() {
     let right_side = Geonum {
         length: right_side_length,
         angle: right_side_angle,
+        blade: 1,
     };
 
     // test that the distributive property holds
@@ -211,10 +223,12 @@ fn its_a_ring() {
     let scalar1 = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 1,
     };
     let scalar2 = Geonum {
         length: 3.0,
         angle: 0.0,
+        blade: 1,
     };
 
     assert_eq!(scalar1.mul(&scalar2).length, scalar2.mul(&scalar1).length);
@@ -230,10 +244,12 @@ fn its_a_field() {
     let a = Geonum {
         length: 4.0,
         angle: PI / 3.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 2.0,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     // test division as angle subtraction and length division
@@ -251,6 +267,7 @@ fn its_a_field() {
     let near_zero = Geonum {
         length: EPSILON / 10.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // test we can detect problematic division
@@ -271,10 +288,15 @@ fn its_a_field() {
         Geonum {
             length: 3.0,
             angle: 0.0,
+            blade: 1, // Real part as vector (blade: 1)
+                      // Note: In geometric algebra, the real part could be represented
+                      // as a scalar (blade: 0), but here we keep both components as vectors
+                      // (blade: 1) for consistency in complex number representation
         }, // real part
         Geonum {
             length: 4.0,
             angle: PI / 2.0,
+            blade: 1, // Imaginary part as vector (blade: 1)
         }, // imaginary part
     ]);
 
@@ -295,10 +317,12 @@ fn its_a_vector_space() {
     let e1 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // first basis vector
     let e2 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // second basis vector
 
     // create vectors as linear combinations
@@ -306,10 +330,12 @@ fn its_a_vector_space() {
         Geonum {
             length: 3.0,
             angle: 0.0,
+            blade: 1,
         }, // 3 * e1
         Geonum {
             length: 4.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // 4 * e2
     ]);
 
@@ -317,10 +343,12 @@ fn its_a_vector_space() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // 1 * e1
         Geonum {
             length: 2.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // 2 * e2
     ]);
 
@@ -360,14 +388,17 @@ fn its_an_algebra() {
     let e0 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar unit (grade 0) in geometric algebra
     }; // scalar unit
     let e1 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // first vector
     let e2 = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     }; // second vector
 
     // test rotation-based multiplication
@@ -400,18 +431,22 @@ fn its_an_algebra() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // component (0,0)
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }, // component (0,1)
         Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }, // component (1,0)
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // component (1,1)
     ]);
 
@@ -430,14 +465,17 @@ fn its_a_lie_algebra() {
     let a = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 3.0,
+        blade: 1,
     };
     let c = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     // test antisymmetry from orientation
@@ -487,10 +525,12 @@ fn its_a_clifford_algebra() {
     let e1 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let e2 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // test geometric product gives same result as explicit Clifford product
@@ -513,10 +553,12 @@ fn its_a_clifford_algebra() {
     let scalar = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 0, // Grade 0 (scalar) in geometric algebra - scalars have blade: 0
     };
     let vector = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
     // artifact of geonum automation: special algebra elements replaced by general geometric numbers
     let _bivector = scalar.wedge(&vector);
@@ -556,10 +598,12 @@ fn its_a_topological_space() {
     let p = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let q = Geonum {
         length: 1.0,
         angle: PI / 4.0 + 0.01,
+        blade: 1,
     };
 
     // test p and q are "close" in our topology
@@ -571,6 +615,7 @@ fn its_a_topological_space() {
         Geonum {
             length: point.length,
             angle: point.angle * 2.0,
+            blade: 1,
         }
     };
 
@@ -588,6 +633,7 @@ fn its_a_topological_space() {
     let distinct_point = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
     assert!((p.angle - distinct_point.angle).abs() > 0.1);
 }
@@ -601,14 +647,17 @@ fn its_a_metric_space() {
     let p = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let q = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
     let r = Geonum {
         length: 1.0,
         angle: PI / 3.0,
+        blade: 1,
     };
 
     // test distance via angle difference
@@ -639,18 +688,22 @@ fn its_a_metric_space() {
         Geonum {
             length: 1.0,
             angle: PI / 4.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 4.0 + 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 4.0 + 0.01,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 4.0 + 0.001,
+            blade: 1,
         },
     ];
 
@@ -659,6 +712,7 @@ fn its_a_metric_space() {
     let _limit = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // for this test, just observe distances without assertions
@@ -682,6 +736,7 @@ fn its_a_manifold() {
     let p = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // create a small neighborhood around p
@@ -690,14 +745,17 @@ fn its_a_manifold() {
         Geonum {
             length: 1.0,
             angle: p.angle - epsilon,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: p.angle,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: p.angle + epsilon,
+            blade: 1,
         },
     ];
 
@@ -716,6 +774,7 @@ fn its_a_manifold() {
     let tangent = Geonum {
         length: p.length,
         angle: p.angle + PI / 2.0,
+        blade: 1,
     };
     let derivative = p.differentiate();
 
@@ -737,15 +796,18 @@ fn its_a_fiber_bundle() {
     let p1 = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let p2 = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     // artifact of geonum automation: point naming schemes replaced by direct geometric properties
     let _p3 = Geonum {
         length: 3.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // test base-fiber split as angle-length split
@@ -760,6 +822,7 @@ fn its_a_fiber_bundle() {
         Geonum {
             length: angle.sin() + 2.0,
             angle: angle,
+            blade: 1,
         }
     };
 
@@ -777,6 +840,7 @@ fn its_a_fiber_bundle() {
         Geonum {
             length: point.length,
             angle: point.angle + angle_change,
+            blade: 1,
         }
     };
 
@@ -797,6 +861,7 @@ fn it_rejects_set_theory() {
     let vector = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // test the vector exists in physical space
@@ -822,14 +887,17 @@ fn it_rejects_set_theory() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 1,
     };
     let c = Geonum {
         length: 3.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // (a + b) + c = a + (b + c)
@@ -886,16 +954,19 @@ fn it_unifies_discrete_and_continuous() {
     let vector = Geonum {
         length: 2.0,
         angle: PI / 3.0,
+        blade: 1,
     };
 
     // test operations on length and angle are often dual
     let doubled = Geonum {
         length: vector.length * 2.0,
         angle: vector.angle,
+        blade: 1,
     };
     let rotated = Geonum {
         length: vector.length,
         angle: vector.angle * 2.0,
+        blade: 1,
     };
 
     assert_eq!(doubled.length, 4.0);
@@ -917,11 +988,13 @@ fn it_models_computing_structures() {
     let int_one = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     // float "type" exists in another
     let float_one = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // test both have same internal representation but different type spaces
@@ -937,6 +1010,7 @@ fn it_models_computing_structures() {
         Geonum {
             length: function(g.length),
             angle: g.angle,
+            blade: 1,
         }
     };
 
@@ -944,6 +1018,7 @@ fn it_models_computing_structures() {
     let input = Geonum {
         length: 3.0,
         angle: 0.0,
+        blade: 1,
     };
     let output = geo_function(input);
 
@@ -955,14 +1030,17 @@ fn it_models_computing_structures() {
         Geonum {
             length: 10.0,
             angle: 0.0,
+            blade: 1,
         },
         Geonum {
             length: 20.0,
             angle: 0.0,
+            blade: 1,
         },
         Geonum {
             length: 30.0,
             angle: 0.0,
+            blade: 1,
         },
     ]);
 
@@ -976,14 +1054,17 @@ fn it_models_computing_structures() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // root
         Geonum {
             length: 2.0,
             angle: PI / 3.0,
+            blade: 1,
         }, // left child
         Geonum {
             length: 3.0,
             angle: 2.0 * PI / 3.0,
+            blade: 1,
         }, // right child
     ]);
 

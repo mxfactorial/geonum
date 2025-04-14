@@ -58,6 +58,10 @@ fn it_models_business_cycles() {
         Geonum {
             length: (weighted_x * weighted_x + weighted_y * weighted_y).sqrt(),
             angle: phase_angle,
+            blade: 2, // bivector (grade 2) represents the economic cycle plane
+                      // In geometric algebra, grade 2 elements represent oriented areas
+                      // The business cycle is precisely that - a planar phenomenon with both
+                      // magnitude (economic activity) and phase direction (cycle position)
         }
     };
 
@@ -161,7 +165,9 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     ];
 
     // tax policy scenarios (as geometric objects)
-    let current_policy = Geonum::from_polar(1.0, 0.0); // baseline
+    let current_policy = Geonum::from_polar_blade(1.0, 0.0, 0); // baseline policy as scalar (grade 0)
+                                                                // Using blade: 0 for policy baseline because it represents a
+                                                                // scale factor with no directional properties - just magnitude
     let tax_cut_policy = Geonum::from_polar(0.8, -PI / 16.0); // 20% tax reduction
     let tax_increase_policy = Geonum::from_polar(1.2, PI / 16.0); // 20% tax increase
 
@@ -946,9 +952,13 @@ fn it_models_global_trade_flows() {
 
     // bilateral trade flows as bivectors between national economies
     // each represents transactions with conservation laws enforced
-    let usa_china_trade = Geonum::from_polar(650.0, PI / 2.0 + 0.3); // $650B net flow
-    let usa_eu_trade = Geonum::from_polar(1100.0, PI / 2.0 - 0.1); // $1.1T net flow
-    let china_eu_trade = Geonum::from_polar(700.0, PI / 2.0 + 0.2); // $700B net flow
+    let usa_china_trade = Geonum::from_polar_blade(650.0, PI / 2.0 + 0.3, 2); // $650B net flow as bivector (grade 2)
+                                                                              // Blade: 2 represents trade flows as oriented areas in economic space
+                                                                              // Trade transactions create a plane between two economic entities
+    let usa_eu_trade = Geonum::from_polar_blade(1100.0, PI / 2.0 - 0.1, 2); // $1.1T net flow as bivector (grade 2)
+                                                                            // PI/2 angle typical for perpendicular economic relationships
+    let china_eu_trade = Geonum::from_polar_blade(700.0, PI / 2.0 + 0.2, 2); // $700B net flow as bivector (grade 2)
+                                                                             // International trade naturally forms bivector relationships
 
     // model trade network for imbalances - which must sum to zero
     // any non-zero sum indicates measurement error or missing flows
@@ -977,6 +987,9 @@ fn it_models_global_trade_flows() {
         Geonum {
             length: total_volume,
             angle: weighted_y.atan2(weighted_x),
+            blade: 2, // bivector (grade 2) representing the global trade plane
+                      // International trade flows naturally form bivectors in geometric algebra
+                      // as they represent oriented exchange relationships between economic entities
         }
     };
 
@@ -1053,6 +1066,10 @@ fn it_measures_economic_sectoral_balance() {
         Geonum {
             length: total_magnitude,
             angle: flow_y.atan2(flow_x),
+            blade: 2, // bivector (grade 2) representing the economic sector plane
+                      // Grade 2 elements model relationships between economic sectors
+                      // Sectoral balances form a planar system where outflows from one sector
+                      // must equal inflows to other sectors (conservation of value)
         }
     };
 
@@ -1074,6 +1091,10 @@ fn it_measures_economic_sectoral_balance() {
         angle: (household_sector.angle * household_sector.length
             + business_sector.angle * business_sector.length)
             / (household_sector.length + business_sector.length),
+        blade: 2, // bivector (grade 2) representing the sectoral balance relationship
+                  // Sectoral balances in geometric algebra are naturally grade 2 elements
+                  // as they represent flows between different economic sectors
+                  // The domestic private balance is the combined households and business planes
     };
 
     // compute public sector balance (government)

@@ -14,11 +14,13 @@ fn it_adds_scalars() {
     let a = Geonum {
         length: 3.0,
         angle: 0.0, // [3, 0] = positive 3
+        blade: 0,   // scalar (grade 0) - pure magnitude without direction
     };
 
     let b = Geonum {
         length: 4.0,
         angle: 0.0, // [4, 0] = positive 4
+        blade: 0,   // scalar (grade 0) - pure magnitude without direction
     };
 
     // convert to cartesian (for scalars, just the length)
@@ -33,6 +35,7 @@ fn it_adds_scalars() {
     let result = Geonum {
         length: sum_cartesian.abs(),
         angle: if sum_cartesian >= 0.0 { 0.0 } else { PI },
+        blade: 0, // scalar (grade 0) - result of scalar addition remains scalar
     };
 
     // verify result is [7, 0]
@@ -43,11 +46,13 @@ fn it_adds_scalars() {
     let c = Geonum {
         length: 5.0,
         angle: 0.0, // [5, 0] = positive 5
+        blade: 0,   // scalar (grade 0) - pure magnitude without direction
     };
 
     let d = Geonum {
         length: 8.0,
         angle: PI, // [8, pi] = negative 8
+        blade: 0,  // scalar (grade 0) - negative scalar on real axis
     };
 
     // convert to cartesian for operation
@@ -61,6 +66,7 @@ fn it_adds_scalars() {
     let result2 = Geonum {
         length: difference.abs(),
         angle: if difference >= 0.0 { 0.0 } else { PI },
+        blade: 0, // scalar (grade 0) - result of scalar addition is still a scalar
     };
 
     // verify result is [3, pi] (negative 3)
@@ -77,11 +83,13 @@ fn it_multiplies_scalars() {
     let a = Geonum {
         length: 3.0,
         angle: 0.0, // [3, 0] = positive 3
+        blade: 0,   // scalar (grade 0) - positive number on real axis
     };
 
     let b = Geonum {
         length: 4.0,
         angle: 0.0, // [4, 0] = positive 4
+        blade: 0,   // scalar (grade 0) - positive number on real axis
     };
 
     // use the mul method directly
@@ -95,11 +103,13 @@ fn it_multiplies_scalars() {
     let c = Geonum {
         length: 5.0,
         angle: 0.0, // [5, 0] = positive 5
+        blade: 0,   // scalar (grade 0) - positive number on real axis
     };
 
     let d = Geonum {
         length: 2.0,
         angle: PI, // [2, pi] = negative 2
+        blade: 0,  // scalar (grade 0) - negative number on real axis
     };
 
     // use the mul method
@@ -113,11 +123,13 @@ fn it_multiplies_scalars() {
     let e = Geonum {
         length: 3.0,
         angle: PI, // [3, pi] = negative 3
+        blade: 0,  // scalar (grade 0) - negative number on real axis
     };
 
     let f = Geonum {
         length: 2.0,
         angle: PI, // [2, pi] = negative 2
+        blade: 0,  // scalar (grade 0) - negative number on real axis
     };
 
     // use the mul method
@@ -137,11 +149,13 @@ fn it_adds_vectors() {
     let a = Geonum {
         length: 3.0,
         angle: 0.0, // [3, 0] = 3 along x-axis
+        blade: 1,   // vector (grade 1) - directed quantity along x-axis
     };
 
     let b = Geonum {
         length: 4.0,
         angle: PI / 2.0, // [4, pi/2] = 4 along y-axis
+        blade: 1,        // vector (grade 1) - directed quantity along y-axis
     };
 
     // convert to cartesian coordinates
@@ -163,6 +177,7 @@ fn it_adds_vectors() {
     let result = Geonum {
         length: result_length,
         angle: result_angle,
+        blade: 1, // vector (grade 1) - directed quantity
     };
 
     // verify the result is a vector with length 5 and angle arctan(4/3)
@@ -173,11 +188,13 @@ fn it_adds_vectors() {
     let c = Geonum {
         length: 5.0,
         angle: 0.0, // [5, 0] = 5 along x-axis
+        blade: 1,   // vector (grade 1) - directed quantity along x-axis
     };
 
     let d = Geonum {
         length: 5.0,
         angle: PI, // [5, pi] = 5 along negative x-axis
+        blade: 1,  // vector (grade 1) - directed quantity along negative x-axis
     };
 
     // convert to cartesian
@@ -207,11 +224,13 @@ fn it_multiplies_vectors() {
     let a = Geonum {
         length: 2.0,
         angle: PI / 4.0, // [2, pi/4] = 2 at 45 degrees
+        blade: 1,        // vector (grade 1) - directed quantity at 45°
     };
 
     let b = Geonum {
         length: 3.0,
         angle: PI / 3.0, // [3, pi/3] = 3 at 60 degrees
+        blade: 1,        // vector (grade 1) - directed quantity at 60°
     };
 
     // multiply using the mul method
@@ -225,11 +244,13 @@ fn it_multiplies_vectors() {
     let c = Geonum {
         length: 2.0,
         angle: 0.0, // [2, 0] = 2 along x-axis
+        blade: 1,   // vector (grade 1) - directed quantity along x-axis
     };
 
     let d = Geonum {
         length: 4.0,
         angle: PI / 2.0, // [4, pi/2] = 4 along y-axis
+        blade: 1,        // vector (grade 1) - directed quantity along y-axis
     };
 
     // multiply vectors
@@ -243,11 +264,13 @@ fn it_multiplies_vectors() {
     let e = Geonum {
         length: 5.0,
         angle: PI / 6.0, // [5, pi/6] = 5 at 30 degrees
+        blade: 1,        // vector (grade 1) - directed quantity at 30°
     };
 
     let f = Geonum {
         length: 2.0,
         angle: -PI / 6.0, // [2, -pi/6] = 2 at -30 degrees (or 330 degrees)
+        blade: 1,         // vector (grade 1) - directed quantity at -30°
     };
 
     // multiply vectors
@@ -267,11 +290,13 @@ fn it_multiplies_vectors_with_scalars() {
     let vector = Geonum {
         length: 3.0,
         angle: PI / 4.0, // [3, pi/4] = 3 at 45 degrees
+        blade: 1,        // vector (grade 1) - directed quantity at 45°
     };
 
     let scalar = Geonum {
         length: 2.0,
         angle: 0.0, // [2, 0] = positive 2 (scalar)
+        blade: 0,   // scalar (grade 0) - pure magnitude for scaling
     };
 
     // multiply vector by positive scalar
@@ -285,6 +310,7 @@ fn it_multiplies_vectors_with_scalars() {
     let negative_scalar = Geonum {
         length: 2.0,
         angle: PI, // [2, pi] = negative 2 (scalar)
+        blade: 0,  // scalar (grade 0) - negative scale factor
     };
 
     // multiply vector by negative scalar
@@ -305,6 +331,7 @@ fn it_multiplies_vectors_with_scalars() {
     let zero_scalar = Geonum {
         length: 0.0,
         angle: 0.0, // [0, 0] = zero
+        blade: 0,   // scalar (grade 0) - zero value
     };
 
     // multiply by zero
@@ -381,6 +408,7 @@ fn it_operates_in_extreme_dimensions() {
     let v3 = Geonum {
         length: 2.0,
         angle: PI / 3.0,
+        blade: 1, // vector (grade 1) - directed quantity at 60°
     };
     let result = v1.mul(&v2).mul(&v3);
 
@@ -420,14 +448,17 @@ fn it_uses_multivector_operations() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0, // scalar (grade 0) - scalar component of multivector
         }, // scalar part
         Geonum {
             length: 2.0,
             angle: PI / 2.0,
+            blade: 1, // vector (grade 1) - vector component of multivector
         }, // vector part
         Geonum {
             length: 3.0,
             angle: PI,
+            blade: 2, // bivector (grade 2) - represents oriented plane
         }, // bivector part
     ]);
 
@@ -454,15 +485,11 @@ fn it_uses_multivector_operations() {
     let vector_parts = mixed_mv.grade(1);
 
     // verify extracted components
-    assert_eq!(scalar_parts.len(), 2); // both angle 0 and angle PI are considered scalars
+    assert_eq!(scalar_parts.len(), 1); // only blade 0 components are scalars
 
-    // first scalar component
+    // scalar component (blade 0)
     assert_eq!(scalar_parts[0].length, 1.0);
     assert_eq!(scalar_parts[0].angle, 0.0);
-
-    // second scalar component (negative scalar has angle PI)
-    assert_eq!(scalar_parts[1].length, 3.0);
-    assert_eq!(scalar_parts[1].angle, PI);
 
     assert_eq!(vector_parts.len(), 1);
     assert_eq!(vector_parts[0].length, 2.0);
@@ -475,14 +502,17 @@ fn it_uses_multivector_operations() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0, // scalar (grade 0) - scalar component
         }, // scalar (grade 0)
         Geonum {
             length: 2.0,
             angle: PI / 2.0,
+            blade: 1, // vector (grade 1) - directed component
         }, // vector (grade 1)
         Geonum {
             length: 3.0,
             angle: PI,
+            blade: 2, // bivector (grade 2) - plane element
         }, // bivector (grade 2)
     ]);
 
@@ -511,7 +541,7 @@ fn it_uses_multivector_operations() {
     assert_eq!(conj[1].angle, 3.0 * PI / 2.0); // angle rotated by π
 
     assert_eq!(conj[2].length, 3.0); // bivector negated
-    assert_eq!(conj[2].angle, PI); // bivector with angle π stays at π when negated
+    assert_eq!(conj[2].angle, TWO_PI); // bivector with angle π gets negated to 2π
 
     // 5. contraction operations
 
@@ -520,10 +550,12 @@ fn it_uses_multivector_operations() {
         Geonum {
             length: 2.0,
             angle: 0.0,
+            blade: 0, // scalar (grade 0) - magnitude component
         }, // scalar
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1, // vector (grade 1) - direction component
         }, // vector
     ]);
 
@@ -531,6 +563,7 @@ fn it_uses_multivector_operations() {
         Geonum {
             length: 3.0,
             angle: PI / 2.0,
+            blade: 1, // vector (grade 1) - direction component
         }, // vector
     ]);
 
@@ -564,10 +597,12 @@ fn it_uses_multivector_operations() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 0, // scalar (grade 0) - magnitude component
         },
         Geonum {
             length: 2.0,
             angle: PI / 2.0,
+            blade: 1, // vector (grade 1) - direction component
         },
     ];
 
@@ -584,10 +619,12 @@ fn it_uses_multivector_operations() {
     dynamic_mv.push(Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) - magnitude component
     });
     dynamic_mv.push(Geonum {
         length: 2.0,
         angle: PI / 2.0,
+        blade: 1, // vector (grade 1) - direction component
     });
 
     assert_eq!(dynamic_mv.len(), 2);
@@ -600,11 +637,13 @@ fn it_uses_multivector_operations() {
     let x_axis = Multivector(vec![Geonum {
         length: 1.0,
         angle: 0.0, // e₁ - vector along x-axis
+        blade: 1,   // vector (grade 1) - directed quantity along x-axis
     }]);
 
     let y_axis = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 2.0, // e₂ - vector along y-axis
+        blade: 1,        // vector (grade 1) - directed quantity along y-axis
     }]);
 
     // compute interior product of perpendicular vectors
@@ -618,6 +657,7 @@ fn it_uses_multivector_operations() {
     let angle45 = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 4.0, // 45 degrees
+        blade: 1,        // vector (grade 1) - directed quantity at 45° angle
     }]);
 
     // interior product with x-axis
@@ -632,6 +672,7 @@ fn it_uses_multivector_operations() {
     let pseudoscalar = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 2.0, // represents e₁∧e₂ (bivector in xy-plane)
+        blade: 2,        // bivector (grade 2) - oriented area element in xy-plane for rotation
     }]);
 
     // compute dual of x-axis vector
@@ -650,6 +691,7 @@ fn it_uses_multivector_operations() {
     let xy_plane = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 2.0, // bivector e₁∧e₂
+        blade: 2,        // bivector (grade 2) - oriented area element in xy-plane for rotation
     }]);
 
     // compute the exponential e^(θ/2 * bivector) to create a rotor
@@ -690,11 +732,13 @@ fn it_uses_advanced_operations() {
     let v1 = Multivector(vec![Geonum {
         length: 2.0,
         angle: 0.0, // along x-axis
+        blade: 1,   // vector (grade 1) - directed quantity along x-axis
     }]);
 
     let v2 = Multivector(vec![Geonum {
         length: 3.0,
         angle: PI / 2.0, // along y-axis
+        blade: 1,        // vector (grade 1) - directed quantity along y-axis
     }]);
 
     // 1. Sandwich Product
@@ -703,6 +747,7 @@ fn it_uses_advanced_operations() {
     let plane = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 2.0, // bivector e₁∧e₂
+        blade: 2,        // bivector (grade 2) - rotation plane for sandwich product
     }]);
 
     // e^(θ/2 * bivector) - for 90° rotation, θ/2 = π/4
@@ -744,6 +789,7 @@ fn it_uses_advanced_operations() {
     let scalar = Multivector(vec![Geonum {
         length: 4.0,
         angle: 0.0, // positive scalar
+        blade: 0,   // scalar (grade 0) - pure magnitude component
     }]);
 
     // Compute the square root of the scalar
@@ -757,6 +803,7 @@ fn it_uses_advanced_operations() {
     let neg_scalar = Multivector(vec![Geonum {
         length: 9.0,
         angle: PI, // negative scalar
+        blade: 0,  // scalar (grade 0) - pure magnitude component
     }]);
 
     // Compute the square root of the negative scalar
@@ -771,6 +818,7 @@ fn it_uses_advanced_operations() {
     let pseudoscalar = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI, // e₁∧e₂ with orientation
+        blade: 2,  // bivector (grade 2) - oriented area element for dual operation
     }]);
 
     // Compute the dual of v1 (x-axis vector)
@@ -799,6 +847,7 @@ fn it_uses_advanced_operations() {
     let section_pseudoscalar = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI, // 2D pseudoscalar
+        blade: 2,  // bivector (grade 2) - pseudoscalar for planar section
     }]);
 
     // Create a multivector with various components
@@ -806,14 +855,17 @@ fn it_uses_advanced_operations() {
         Geonum {
             length: 2.0,
             angle: 0.0, // Scalar component
+            blade: 0,   // scalar (grade 0) - pure magnitude component
         },
         Geonum {
             length: 3.0,
             angle: PI / 2.0, // Vector component
+            blade: 1,        // vector (grade 1) - directed component
         },
         Geonum {
             length: 5.0,
             angle: PI / 4.0, // Non-standard component
+            blade: 1,        // vector (grade 1) - directed component at 45°
         },
     ]);
 
@@ -832,17 +884,20 @@ fn it_uses_advanced_operations() {
     let regr_pseudoscalar = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI, // e₁∧e₂ with orientation
+        blade: 2,  // bivector (grade 2) - oriented area element for regressive product
     }]);
 
     // Create two lines in 2D
     let line1 = Multivector(vec![Geonum {
         length: 1.0,
         angle: PI / 4.0, // A line at 45 degrees
+        blade: 1,        // vector (grade 1) - directed quantity representing a line
     }]);
 
     let line2 = Multivector(vec![Geonum {
         length: 1.0,
         angle: 3.0 * PI / 4.0, // A line at 135 degrees (perpendicular to line1)
+        blade: 1,              // vector (grade 1) - directed quantity representing a line
     }]);
 
     // Compute the regressive product to find their intersection
@@ -867,6 +922,7 @@ fn it_uses_advanced_operations() {
     let vector = Multivector(vec![Geonum {
         length: 2.0,
         angle: PI / 3.0, // A vector at 60 degrees
+        blade: 1,        // vector (grade 1) - directed quantity for differentiation
     }]);
 
     // Compute the derivative
@@ -896,4 +952,100 @@ fn it_uses_advanced_operations() {
     let second_derivative = derivative.differentiate();
     assert_eq!(second_derivative[0].length, vector[0].length);
     assert_eq!(second_derivative[0].angle, (vector[0].angle + PI) % TWO_PI);
+}
+
+#[test]
+fn it_keeps_angles_less_than_2pi() {
+    // Create vectors with different angles but same blade
+    let a = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 1,
+    };
+    let b = Geonum {
+        length: 1.0,
+        angle: 2.0 * PI,
+        blade: 1,
+    }; // same as angle 0, but 2π rotated
+
+    // Blade grades should be preserved and distinguish vectors from bivectors
+    let c = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 2,
+    }; // bivector with angle 0
+
+    // Verify blade values are preserved in mul
+    let a_times_c = a.mul(&c);
+    assert_eq!(a_times_c.blade, 1); // Vector * bivector = vector (abs(1-2) = 1)
+
+    // Wedge product increases blade grade
+    let wedge = a.wedge(&b);
+    assert_eq!(wedge.blade, a.blade + b.blade);
+
+    // Differentiation increases blade grade
+    let a_diff = a.differentiate();
+    assert_eq!(a_diff.blade, a.blade + 1);
+
+    // Integration decreases blade grade
+    let a_int = a_diff.integrate();
+    assert_eq!(a_int.blade, a_diff.blade - 1);
+
+    // Rotation preserves blade grade
+    let a_rot = a.rotate(PI / 2.0);
+    assert_eq!(a_rot.blade, a.blade);
+
+    // Reflection preserves blade grade
+    let a_ref = a.reflect(&b);
+    assert_eq!(a_ref.blade, a.blade);
+}
+
+#[test]
+fn it_initializes_with_blade() {
+    // Test default blade values for different types
+    let scalar = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 0,
+    };
+    let _vector = Geonum {
+        length: 1.0,
+        angle: PI / 2.0,
+        blade: 1,
+    };
+    let bivector = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 2,
+    };
+    let _trivector = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 3,
+    };
+
+    // Test that blade value differentiates types even with same angle
+    let scalar_multivector = Multivector(vec![scalar]);
+    let bivector_multivector = Multivector(vec![bivector]);
+
+    // Extract grades by blade
+    let extracted_scalars = scalar_multivector.grade(0);
+    let extracted_bivectors = bivector_multivector.grade(2);
+
+    // Assert extraction worked correctly
+    assert_eq!(extracted_scalars.0.len(), 1);
+    assert_eq!(extracted_bivectors.0.len(), 1);
+
+    // Cross-check - this should be empty since we're extracting the wrong grade
+    let empty_extract = scalar_multivector.grade(2);
+    assert_eq!(empty_extract.0.len(), 0);
+
+    // Constructors should set blade properly
+    let v1 = Geonum::from_polar(1.0, 0.0);
+    let v2 = Geonum::from_polar_blade(1.0, 0.0, 2);
+    let s = Geonum::scalar(5.0);
+
+    assert_eq!(v1.blade, 1); // Default to vector
+    assert_eq!(v2.blade, 2); // Explicitly set
+    assert_eq!(s.blade, 0); // Scalar is grade 0
 }

@@ -27,11 +27,11 @@ fn it_prices_options() {
     // using geonum, option value maps directly to geometric transformations
 
     // create parameters as geometric numbers
-    let stock_price = Geonum::from_polar(100.0, 0.0);
-    let strike_price = Geonum::from_polar(110.0, 0.0);
+    let stock_price = Geonum::from_polar_blade(100.0, 0.0, 0); // scalar (grade 0) - price is a magnitude without direction
+    let strike_price = Geonum::from_polar_blade(110.0, 0.0, 0); // scalar (grade 0) - strike price is a magnitude without direction
     let volatility = Geonum::from_polar(0.2, PI / 4.0); // volatility with directional component
-    let time_to_expiry = Geonum::from_polar(0.5, 0.0); // 6 months
-    let risk_free_rate = Geonum::from_polar(0.05, 0.0);
+    let time_to_expiry = Geonum::from_polar_blade(0.5, 0.0, 0); // scalar (grade 0) - time is a pure magnitude (6 months)
+    let risk_free_rate = Geonum::from_polar_blade(0.05, 0.0, 0); // scalar (grade 0) - interest rate is a pure magnitude
 
     // define geometric black-scholes model
     let call_option_price =
@@ -53,6 +53,7 @@ fn it_prices_options() {
             Geonum {
                 length: option_magnitude.max(0.0), // option can't be worth less than 0
                 angle: s.angle + v.angle * t.angle, // option price direction combines stock movement and volatility
+                blade: 1,
             }
         };
 
@@ -125,6 +126,7 @@ fn it_computes_portfolio_optimization() {
                     Geonum {
                         length: g.length,
                         angle: g.angle - risk_angle, // rotate based on risk tolerance
+                        blade: 1,
                     }
                 })
                 .collect(),
@@ -139,6 +141,7 @@ fn it_computes_portfolio_optimization() {
                 .map(|g| Geonum {
                     length: g.length / total_weight,
                     angle: g.angle,
+                    blade: 1,
                 })
                 .collect(),
         );
@@ -174,7 +177,7 @@ fn it_computes_risk_measures() {
     // probabilistic calculations and monte carlo simulations
 
     // create asset return distributions
-    let returns = Geonum::from_polar(0.1, 0.0); // average return
+    let returns = Geonum::from_polar_blade(0.1, 0.0, 0); // scalar (grade 0) - average return is a pure magnitude
     let volatility = Geonum::from_polar(0.2, PI / 6.0); // volatility with directional component
     let portfolio_value = 1000000.0; // $1M portfolio
 
@@ -190,6 +193,7 @@ fn it_computes_risk_measures() {
         let adjusted_volatility = Geonum {
             length: vol.length,
             angle: vol.angle + confidence_angle, // rotate by confidence level
+            blade: 1,
         };
 
         // compute VaR through geometric transformation
@@ -201,6 +205,7 @@ fn it_computes_risk_measures() {
             length: var_magnitude.abs(),
             // angle pointing downward for losses, upward for gains (depends on net effect)
             angle: if var_magnitude < 0.0 { PI } else { 0.0 },
+            blade: 1,
         }
     };
 
@@ -219,6 +224,7 @@ fn it_computes_risk_measures() {
         Geonum {
             length: cvar_magnitude,
             angle: var.angle,
+            blade: 1,
         }
     };
 
@@ -283,6 +289,7 @@ fn it_simulates_asset_price_movements() {
                     length: sigma.length * time_scaling,
                     // random fluctuation is perpendicular to drift direction
                     angle: mu.angle + PI / 2.0,
+                    blade: 1,
                 };
 
                 // combine deterministic drift and random movement
@@ -290,18 +297,21 @@ fn it_simulates_asset_price_movements() {
                 let drift_component = Geonum {
                     length: mu.length * current_price.length * dt,
                     angle: mu.angle,
+                    blade: 1,
                 };
 
                 // stochastic component (simplified)
                 let stochastic_component = Geonum {
                     length: random_movement.length * current_price.length,
                     angle: random_movement.angle,
+                    blade: 1,
                 };
 
                 // update price through geometric addition
                 current_price = Geonum {
                     length: current_price.length + drift_component.length,
                     angle: (current_price.angle + stochastic_component.angle) / 2.0, // blended direction
+                    blade: 1,
                 };
 
                 path.push(current_price.clone());
@@ -343,6 +353,7 @@ fn it_simulates_asset_price_movements() {
             let path_vol = Geonum {
                 length: volatility.length,
                 angle: volatility.angle + angle_offset,
+                blade: 1,
             };
 
             simulate_price_path(&initial_price, &drift, &path_vol, steps, dt)
@@ -372,9 +383,9 @@ fn it_performs_interest_rate_modeling() {
     // interest rate models like hull-white or vasicek typically require
     // complex stochastic differential equations and numerical methods
 
-    let short_rate = Geonum::from_polar(0.03, 0.0); // current short rate
+    let short_rate = Geonum::from_polar_blade(0.03, 0.0, 0); // scalar (grade 0) - current short rate is a pure magnitude
     let mean_reversion = Geonum::from_polar(0.1, PI / 6.0); // mean reversion speed with uncertainty angle
-    let long_term_rate = Geonum::from_polar(0.05, 0.0); // long term rate
+    let long_term_rate = Geonum::from_polar_blade(0.05, 0.0, 0); // scalar (grade 0) - long term rate is a pure magnitude
     let time_horizon = 5.0; // 5 years
 
     // implement interest rate evolution using Vasicek model in geometric form
@@ -398,6 +409,7 @@ fn it_performs_interest_rate_modeling() {
             // angle blends short rate and long-term rate directions proportional to time
             angle: (r.angle * reversion_factor + b.angle * (1.0 - reversion_factor))
                 + a.angle * t.min(1.0), // Add mean reversion direction uncertainty
+            blade: 1,
         }
     };
 
@@ -442,7 +454,7 @@ fn it_calculates_credit_risk() {
     // credit risk modeling requires complex probability calculations
     // including default probability estimation and loss given default
 
-    let exposure = Geonum::from_polar(1000000.0, 0.0); // loan amount
+    let exposure = Geonum::from_polar_blade(1000000.0, 0.0, 0); // scalar (grade 0) - loan amount is a pure magnitude
     let default_prob = Geonum::from_polar(0.02, PI / 12.0); // probability with uncertainty
     let recovery_rate = Geonum::from_polar(0.4, PI / 8.0); // recovery rate with uncertainty
 
@@ -455,6 +467,7 @@ fn it_calculates_credit_risk() {
         let lgd = Geonum {
             length: 1.0 - rr.length,
             angle: -rr.angle, // Inverse of recovery rate direction
+            blade: 1,
         };
 
         // Expected loss calculation with propagated uncertainty
@@ -462,6 +475,7 @@ fn it_calculates_credit_risk() {
             length: exp.length * pd.length * lgd.length,
             // Combine uncertainty angles, weighted by relative impact
             angle: (exp.angle + pd.angle * 3.0 + lgd.angle * 2.0) / 6.0,
+            blade: 1,
         }
     };
 
@@ -484,6 +498,7 @@ fn it_calculates_credit_risk() {
             length: el.length * risk_multiplier,
             // Rotate toward maximum loss as confidence increases
             angle: el.angle + (1.0 - confidence) * PI / 4.0,
+            blade: 1,
         }
     };
 
@@ -495,6 +510,7 @@ fn it_calculates_credit_risk() {
     let stressed_pd = Geonum {
         length: default_prob.length * 3.0, // Triple default probability in stress scenario
         angle: default_prob.angle + PI / 8.0, // Add uncertainty under stress
+        blade: 1,
     };
 
     let stressed_loss = calculate_expected_loss(&exposure, &stressed_pd, &recovery_rate);
@@ -548,8 +564,8 @@ fn it_computes_arbitrage_opportunities() {
     // arbitrage detection typically requires checking price relationships
     // across multiple markets and instruments
 
-    let price_a = Geonum::from_polar(100.0, 0.0); // price in market A
-    let price_b = Geonum::from_polar(101.0, 0.0); // price in market B
+    let price_a = Geonum::from_polar_blade(100.0, 0.0, 0); // scalar (grade 0) - price in market A is a pure magnitude
+    let price_b = Geonum::from_polar_blade(101.0, 0.0, 0); // scalar (grade 0) - price in market B is a pure magnitude
     let transaction_cost = Geonum::from_polar(0.5, PI / 10.0); // cost with uncertainty
 
     // In geometric algebra, arbitrage opportunities can be detected through
@@ -580,6 +596,7 @@ fn it_computes_arbitrage_opportunities() {
         Geonum {
             length: net_profit.max(0.0),     // Can't be negative
             angle: certainty_angle.max(0.0), // Can't be negative
+            blade: 1,
         }
     };
 
@@ -596,7 +613,7 @@ fn it_computes_arbitrage_opportunities() {
     ];
 
     // Find best arbitrage opportunity across all market pairs
-    let mut best_opportunity = Geonum::from_polar(0.0, 0.0);
+    let mut best_opportunity = Geonum::from_polar_blade(0.0, 0.0, 2); // bivector (grade 2) - arbitrage opportunity represents relationship between markets
     let mut best_pair = ("", "");
 
     // Check all market pairs
@@ -667,7 +684,7 @@ fn it_performs_high_frequency_trading_calcs() {
     // for signal generation and execution timing
 
     // create market data as geometric numbers
-    let price = Geonum::from_polar(100.0, 0.0);
+    let price = Geonum::from_polar_blade(100.0, 0.0, 0); // scalar (grade 0) - market price is a pure magnitude
     let momentum = Geonum::from_polar(0.5, PI / 20.0); // price momentum (direction indicates trend)
     let volume = Geonum::from_polar(150000.0, PI / 8.0); // trading volume with direction
     let volatility = Geonum::from_polar(0.2, PI / 4.0); // volatility with direction
@@ -687,6 +704,7 @@ fn it_performs_high_frequency_trading_calcs() {
                 length: p.length * m.length * (v.length / 100000.0) * vol.length,
                 // blend angles to create market signature
                 angle: (2.0 * p.angle + 3.0 * m.angle + v.angle + vol.angle) / 7.0,
+                blade: 1,
             };
 
             // compare current state to pattern through angle difference
@@ -703,6 +721,7 @@ fn it_performs_high_frequency_trading_calcs() {
             Geonum {
                 length: signal_strength.max(0.0),
                 angle: signal_direction,
+                blade: 1,
             }
         };
 
@@ -716,11 +735,13 @@ fn it_performs_high_frequency_trading_calcs() {
         let tick_price = Geonum {
             length: price.length * (1.0 + 0.0001 * (i as f64).sin()),
             angle: price.angle,
+            blade: 1,
         };
 
         let tick_momentum = Geonum {
             length: momentum.length,
             angle: momentum.angle + 0.001 * (i as f64).cos(),
+            blade: 1,
         };
 
         // calculate trading signal
@@ -767,7 +788,7 @@ fn it_analyzes_cga_transaction_streams() {
 
     // create example transaction data (in mxfactorial, these would be fetched from API endpoints)
     // simulate a transaction between a grocery store and consumer
-    let transaction_1 = Geonum::from_polar(1.0, 0.0); // bottled water transaction
+    let transaction_1 = Geonum::from_polar_blade(1.0, 0.0, 2); // bivector (grade 2) - transaction represents exchange relationship between entities
 
     // transaction is structured as bivector with creditor/debitor coordinates
     let creditor_1 = "GroceryStore"; // maps to +1 in bivector space
@@ -781,7 +802,7 @@ fn it_analyzes_cga_transaction_streams() {
     let industry_angle = PI / 6.0; // each industry has unique angle in CGA space
 
     // simulate a second transaction
-    let transaction_2 = Geonum::from_polar(2.5, PI / 8.0); // restaurant meal transaction
+    let transaction_2 = Geonum::from_polar_blade(2.5, PI / 8.0, 2); // bivector (grade 2) - transaction represents exchange relationship between entities
     let creditor_2 = "Restaurant";
     let debitor_2 = "JacobWebb";
     let _industry_2 = "dining";
@@ -794,12 +815,13 @@ fn it_analyzes_cga_transaction_streams() {
     let analyze_transactions = |transactions: &[Geonum], industries: &[f64]| -> Geonum {
         // combine transactions with industry indicators through geometric product
         let combined_flow = transactions.iter().zip(industries.iter()).fold(
-            Geonum::from_polar(0.0, 0.0),
+            Geonum::from_polar_blade(0.0, 0.0, 2), // bivector (grade 2) - economic flow represents exchange relationship
             |acc, (trans, industry)| {
                 // rotate transaction by industry angle to create industry-weighted flow
                 let industry_weighted = Geonum {
                     length: trans.length,
                     angle: trans.angle + industry,
+                    blade: 1,
                 };
 
                 // accumulate transactions through geometric addition
@@ -808,6 +830,7 @@ fn it_analyzes_cga_transaction_streams() {
                     angle: (acc.angle * acc.length
                         + industry_weighted.angle * industry_weighted.length)
                         / (acc.length + industry_weighted.length),
+                    blade: 1,
                 }
             },
         );
@@ -844,6 +867,7 @@ fn it_analyzes_cga_transaction_streams() {
                         Geonum {
                             length: trans.length,
                             angle: -trans.angle, // invert angle for incoming money
+                            blade: 1,
                         }
                     } else {
                         trans.clone() // keep original angle for outgoing money
@@ -854,7 +878,8 @@ fn it_analyzes_cga_transaction_streams() {
             // compute spending/earning pattern as a geometric average
             user_transactions
                 .iter()
-                .fold(Geonum::from_polar(0.0, 0.0), |acc, trans| Geonum {
+                .fold(Geonum::from_polar_blade(0.0, 0.0, 2), |acc, trans| Geonum {
+                    // bivector (grade 2) - accumulates transaction patterns
                     length: acc.length + trans.length,
                     angle: if acc.length > 0.0 {
                         (acc.angle * acc.length + trans.angle * trans.length)
@@ -862,6 +887,7 @@ fn it_analyzes_cga_transaction_streams() {
                     } else {
                         trans.angle
                     },
+                    blade: 1,
                 })
         };
 
@@ -1000,6 +1026,7 @@ fn it_calculates_multi_asset_derivatives() {
             Geonum {
                 length: call_price,
                 angle: effective_angle,
+                blade: 1,
             }
         };
 
@@ -1129,6 +1156,7 @@ fn it_analyzes_trading_strategies() {
         Geonum {
             length: expected_return / risk,
             angle: (PI / 2.0) * alignment.max(0.0), // Map alignment to [0, PI/2]
+            blade: 1,
         }
     };
 
@@ -1189,6 +1217,7 @@ fn it_analyzes_trading_strategies() {
             current_market = Geonum {
                 length: current_market.length * (0.98 + 0.04 * (i as f64 / 100.0).sin()),
                 angle: (current_market.angle + PI / 20.0 * (i as f64 / 50.0).cos()) % (2.0 * PI),
+                blade: 1,
             };
 
             // Calculate strategy performance in this market

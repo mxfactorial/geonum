@@ -35,6 +35,7 @@ fn its_a_constant_time_operation() {
     let operation = Geonum {
         length: 1.0, // base cost unit
         angle: 0.0,  // direction in computational space
+        blade: 1,
     };
 
     // computational cost is independent of problem size
@@ -49,6 +50,7 @@ fn its_a_constant_time_operation() {
     let combined_operations = Geonum {
         length: 3.0, // three operations
         angle: 0.0,  // same direction
+        blade: 1,
     };
 
     // still constant time regardless of composition
@@ -61,6 +63,7 @@ fn its_a_constant_time_operation() {
         let _op_cost = Geonum {
             length: 1.0, // single operation
             angle: 0.0,  // direct memory access
+            blade: 1,
         };
 
         arr[idx] // actual operation is O(1)
@@ -87,6 +90,7 @@ fn its_a_linear_algorithm() {
     let base_op = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // linear scaling is represented by length proportional to input size
@@ -95,6 +99,7 @@ fn its_a_linear_algorithm() {
         Geonum {
             length: n as f64 * base_op.length, // cost scales linearly with n
             angle: base_op.angle,              // same operation type
+            blade: 1,
         }
     };
 
@@ -118,6 +123,7 @@ fn its_a_linear_algorithm() {
             let _comparison = Geonum {
                 length: 1.0, // unit cost
                 angle: 0.0,  // direct comparison
+                blade: 1,
             };
 
             if item == target {
@@ -152,22 +158,27 @@ fn its_a_sorting_algorithm() {
         Geonum {
             length: 1.0,
             angle: 0.7,
+            blade: 1,
         }, // ~40°
         Geonum {
             length: 1.0,
             angle: 0.2,
+            blade: 1,
         }, // ~11°
         Geonum {
             length: 1.0,
             angle: 1.5,
+            blade: 1,
         }, // ~86°
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         }, // ~6°
         Geonum {
             length: 1.0,
             angle: 1.0,
+            blade: 1,
         }, // ~57°
     ];
 
@@ -212,26 +223,32 @@ fn its_a_graph_algorithm() {
     let node_a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // node at 0°
     let node_b = Geonum {
         length: 1.0,
         angle: PI / 3.0,
+        blade: 1,
     }; // node at 60°
     let node_c = Geonum {
         length: 1.0,
         angle: 2.0 * PI / 3.0,
+        blade: 1,
     }; // node at 120°
     let node_d = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     }; // node at 180°
     let node_e = Geonum {
         length: 1.0,
         angle: 4.0 * PI / 3.0,
+        blade: 1,
     }; // node at 240°
     let node_f = Geonum {
         length: 1.0,
         angle: 5.0 * PI / 3.0,
+        blade: 1,
     }; // node at 300°
 
     // create edges as angle differences
@@ -256,6 +273,7 @@ fn its_a_graph_algorithm() {
             let start_geonum = Geonum {
                 length: 1.0,
                 angle: start,
+                blade: 1,
             };
             let a_diff = a.angle_distance(&start_geonum);
             let b_diff = b.angle_distance(&start_geonum);
@@ -338,6 +356,7 @@ fn its_a_dynamic_programming() {
             return Geonum {
                 length: n as f64,           // F(0)=0, F(1)=1
                 angle: n as f64 * PI / 8.0, // arbitrary angle mapping
+                blade: 1,
             };
         }
 
@@ -345,10 +364,12 @@ fn its_a_dynamic_programming() {
         let mut fib_minus_2 = Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         }; // F(0)
         let mut fib_minus_1 = Geonum {
             length: 1.0,
             angle: PI / 8.0,
+            blade: 1,
         }; // F(1)
 
         // build up solution using previous subproblems
@@ -358,6 +379,7 @@ fn its_a_dynamic_programming() {
                 length: fib_minus_1.length + fib_minus_2.length,
                 // angle represents position in sequence
                 angle: i as f64 * PI / 8.0,
+                blade: 1,
             };
             fib_minus_2 = fib_minus_1;
             fib_minus_1 = current;
@@ -399,12 +421,14 @@ fn its_a_parallel_algorithm() {
     let sequential = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1, // Vector (grade 1) - represents 1D computational direction
     };
 
     // parallel computation represented at orthogonal angle (90°)
     let parallel = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1, // Vector (grade 1) - represents 1D computational direction
     };
 
     // test orthogonality
@@ -414,6 +438,18 @@ fn its_a_parallel_algorithm() {
     // concurrent execution represented by simultaneous operations
     // wedge product represents "computational area" covered by parallel execution
     let parallel_gain = sequential.wedge(&parallel);
+
+    // Note: parallel_gain is a bivector (blade: 2) representing a computational area.
+    // In geometric algebra, the wedge product of two vectors (a ∧ b) creates a bivector
+    // that represents the oriented area spanned by those vectors.
+    //
+    // In our computational model:
+    // - sequential (blade: 1) is a vector representing computation in one direction
+    // - parallel (blade: 1) is a vector representing computation in an orthogonal direction
+    // - parallel_gain (blade: 2) is the bivector area representing the computational space
+    //   covered by performing both operations simultaneously
+    //
+    // The wedge operation automatically sets blade: 1+1=2 for the result.
 
     // wedge product is non-zero, showing parallel operations cover more "execution space"
     assert!(parallel_gain.length > 0.0);
@@ -461,22 +497,27 @@ fn its_a_distributed_algorithm() {
     let node_1 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // node at 0°
     let node_2 = Geonum {
         length: 1.0,
         angle: 2.0 * PI / 5.0,
+        blade: 1,
     }; // node at 72°
     let node_3 = Geonum {
         length: 1.0,
         angle: 4.0 * PI / 5.0,
+        blade: 1,
     }; // node at 144°
     let node_4 = Geonum {
         length: 1.0,
         angle: 6.0 * PI / 5.0,
+        blade: 1,
     }; // node at 216°
     let node_5 = Geonum {
         length: 1.0,
         angle: 8.0 * PI / 5.0,
+        blade: 1,
     }; // node at 288°
 
     // distributed system as a set of nodes
@@ -493,6 +534,7 @@ fn its_a_distributed_algorithm() {
             let value_geonum = Geonum {
                 length: 1.0,
                 angle: value_angle,
+                blade: 1,
             };
             let distance = node.angle_distance(&value_geonum);
 
@@ -515,6 +557,7 @@ fn its_a_distributed_algorithm() {
     let pi_geonum = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     };
 
     // Compute distances from nodes 3 and 4 to PI using angle_distance
@@ -562,6 +605,7 @@ fn its_a_distributed_algorithm() {
         let consensus_geonum = Geonum {
             length: 1.0,
             angle: consensus_angle,
+            blade: 1,
         };
         let distance = node.angle_distance(&consensus_geonum);
         assert!(distance <= PI);
@@ -586,6 +630,7 @@ fn its_a_numerical_method() {
                     / factorial(2 * n + 1) as f64,
                 // angle represents term's position in series
                 angle: n as f64 * PI / 8.0,
+                blade: 1,
             };
 
             result += term.length;
@@ -681,6 +726,7 @@ fn its_a_data_structure() {
             let angle = Geonum {
                 length: 1.0,
                 angle: (sum % 360) as f64 * PI / 180.0,
+                blade: 1,
             };
 
             // convert angle to bucket index
@@ -836,38 +882,47 @@ fn its_a_compression_algorithm() {
         Geonum {
             length: 1.0,
             angle: 0.12345,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.12346,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.12347,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.54321,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.54322,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.54323,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 1.23456,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 1.23457,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 1.23458,
+            blade: 1,
         },
     ];
 
@@ -893,6 +948,7 @@ fn its_a_compression_algorithm() {
                 quantized.push(Geonum {
                     length: item.length,
                     angle: quantized_angle,
+                    blade: 1,
                 });
             }
         }
@@ -975,6 +1031,7 @@ fn its_a_machine_learning_algorithm() {
                 weights.push(Geonum {
                     length: 1.0,
                     angle: 0.1, // small initial angle
+                    blade: 1,
                 });
             }
 
@@ -1023,6 +1080,7 @@ fn its_a_machine_learning_algorithm() {
                             self.weights[i] = Geonum {
                                 length: self.weights[i].length,             // keep same length
                                 angle: self.weights[i].angle + delta_angle, // adjust angle
+                                blade: 1,
                             };
                         }
                     }
@@ -1101,6 +1159,7 @@ fn its_a_cryptographic_algorithm() {
                 let encrypted = Geonum {
                     length: (byte as f64) * self.key_length,
                     angle: (byte as f64 / 128.0) * PI + self.key_angle + position_shift,
+                    blade: 1,
                 };
 
                 ciphertext.push(encrypted);
@@ -1185,6 +1244,7 @@ fn it_rejects_complexity_analysis() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }
     };
 
@@ -1193,6 +1253,7 @@ fn it_rejects_complexity_analysis() {
         Geonum {
             length: n as f64,
             angle: PI / 4.0,
+            blade: 1,
         }
     };
 
@@ -1201,6 +1262,7 @@ fn it_rejects_complexity_analysis() {
         Geonum {
             length: (n * n) as f64,
             angle: PI / 2.0,
+            blade: 1,
         }
     };
 
@@ -1209,6 +1271,7 @@ fn it_rejects_complexity_analysis() {
         Geonum {
             length: (n as f64).log2(),
             angle: PI / 8.0,
+            blade: 1,
         }
     };
 
@@ -1278,24 +1341,28 @@ fn it_unifies_algorithm_design() {
     let divide_conquer = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // dynamic programming - angle π/2
     let dynamic_prog = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // greedy algorithm - angle 3π/4
     let greedy = Geonum {
         length: 1.0,
         angle: 3.0 * PI / 4.0,
+        blade: 1,
     };
 
     // backtracking - angle π
     let backtracking = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     };
 
     // demonstrate geometric relationship between paradigms
@@ -1322,6 +1389,7 @@ fn it_unifies_algorithm_design() {
         Geonum {
             length: 1.0,
             angle: combined_angle % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -1337,6 +1405,7 @@ fn it_unifies_algorithm_design() {
         Geonum {
             length: algorithm.length,
             angle: (algorithm.angle + rotation) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -1352,6 +1421,7 @@ fn it_unifies_algorithm_design() {
         Geonum {
             length: algorithm.length,
             angle: (algorithm.angle + PI) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -1374,18 +1444,21 @@ fn it_scales_quantum_algorithms() {
     let zero_state = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // |1⟩ state - angle π
     let one_state = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 1,
     };
 
     // superposition state (|0⟩ + |1⟩)/√2 - angle π/4
     let superposition = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // demonstrate quantum gates as angle transformations
@@ -1394,6 +1467,7 @@ fn it_scales_quantum_algorithms() {
         Geonum {
             length: state.length,
             angle: (state.angle + PI / 4.0) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -1404,6 +1478,7 @@ fn it_scales_quantum_algorithms() {
             Geonum {
                 length: state.length,
                 angle: (state.angle + PI / 2.0) % TWO_PI,
+                blade: 1,
             }
         } else {
             // other state, leave unchanged
@@ -1443,6 +1518,7 @@ fn it_scales_quantum_algorithms() {
     let bell_state = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // measure entanglement through angle precision
@@ -1472,6 +1548,7 @@ fn it_scales_quantum_algorithms() {
         Geonum {
             length: n as f64,
             angle: 0.0,
+            blade: 1,
         }
     };
 
@@ -1480,6 +1557,7 @@ fn it_scales_quantum_algorithms() {
         Geonum {
             length: (n as f64).sqrt(),
             angle: PI / 2.0,
+            blade: 1,
         }
     };
 
@@ -1496,6 +1574,7 @@ fn it_scales_quantum_algorithms() {
         Geonum {
             length: gates as f64,
             angle: (gates % qubits) as f64 * PI / qubits as f64,
+            blade: 1,
         }
     };
 
