@@ -1,5 +1,32 @@
 # changelog
 
+## 0.6.0 (2025-04-14)
+
+### added
+- blade property to Geonum struct to preserve grade information in high dimensions
+- blade-aware constructors: from_polar_blade, scalar
+- blade helper methods: with_blade, increment_blade, decrement_blade, complement_blade, preserve_blade, with_product_blade
+- improved grade extraction using blade property instead of angle-based heuristics
+- robust support for million-dimension geometric algebra operations
+- explicit blade field assignments in benchmarks
+- tests for blade grade preservation in geometric operations
+- blade field and optical computing in README
+
+### changed
+- updated wedge product to use blade property for grade tracking
+- updated geometric product to use blade grade arithmetic
+- updated differentiation and integration to increment/decrement blade property
+- removed angle normalizations to prevent grade information loss
+- updated Multivector grade extraction to use blade property directly
+- consolidated multivector and blade tests into a single test file
+
+### fixed
+- fixed high-dimension multivector operations that were failing due to angle normalization
+- eliminated angle-based grade inference which was unreliable in high dimensions
+- fixed geometric product rule for vector*bivector operations to maintain consistent blade grades
+- fixed Clifford conjugate to avoid angle normalizations with TWO_PI
+- fixed Geonum initialization in Dimensions::multivector to set blade grades by index
+
 ## 0.5.0 (2025-04-10)
 
 - Optics trait for physical optics operations with O(1) complexity

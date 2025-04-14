@@ -20,7 +20,10 @@ geonum reduces `k^n` to 2
 
 traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
 
-geonum sets a metric by dualizing (⋆) components inside algebra's most general form and shields its quadrature from entropy with the `log2(4)` bit minimum:
+geonum dualizes (⋆) components inside algebra's most general form
+
+setting the metric from the quadrature's bivector shields it from entropy with the `log2(4)` bit minimum:
+
 - 1 scalar, `cos(θ)`
 - 2 vector, `sin(θ)cos(φ), sin(θ)sin(φ)`
 - 1 bivector, `sin(θ+π/2) = cos(θ)`
@@ -30,6 +33,7 @@ geonum sets a metric by dualizing (⋆) components inside algebra's most general
 pub struct Geonum {
     pub length: f64, // multiply
     pub angle: f64,  // add
+    pub blade: usize // count π/2 turns until light automates it
 }
 ```
 

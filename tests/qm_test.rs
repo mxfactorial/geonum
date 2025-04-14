@@ -53,6 +53,7 @@ fn its_a_state_vector() {
     let state = Geonum {
         length: 1.0,     // amplitude/probability
         angle: PI / 4.0, // phase angle
+        blade: 1,
     };
 
     // test direct geometric representation vs abstract hilbert space
@@ -64,10 +65,12 @@ fn its_a_state_vector() {
     let basis0 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) for |0⟩ basis state
     }; // |0⟩ basis state
     let basis1 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) for |1⟩ basis state, perpendicular to |0⟩
     }; // |1⟩ basis state
 
     // create superposition with equal probability (1/√2 amplitude for each component)
@@ -76,10 +79,12 @@ fn its_a_state_vector() {
         Geonum {
             length: coeff,
             angle: basis0.angle,
+            blade: 1,
         },
         Geonum {
             length: coeff,
             angle: basis1.angle,
+            blade: 1,
         },
     ]);
 
@@ -107,6 +112,7 @@ fn its_an_observable() {
     let state = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     // create an "observable" as a rotation transformation
@@ -114,6 +120,7 @@ fn its_an_observable() {
         Geonum {
             length: s.length,          // preserve amplitude
             angle: s.angle + PI / 2.0, // rotate by 90 degrees - an operation
+            blade: 1,
         }
     };
 
@@ -127,10 +134,12 @@ fn its_an_observable() {
     let eigenstate1 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) eigenstate
     };
     let eigenstate2 = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 0, // scalar (grade 0) eigenstate with negative sign
     };
 
     // define an observable that keeps 0 and π angles fixed
@@ -150,6 +159,7 @@ fn its_an_observable() {
         Geonum {
             length: s.length * eigenvalue.abs(),
             angle: s.angle,
+            blade: 1,
         }
     };
 
@@ -175,12 +185,14 @@ fn its_a_spin_system() {
     let spin_up = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) spin-up state along z-axis
     };
 
     // create a spin-down state (along z-axis)
     let spin_down = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 0, // scalar (grade 0) spin-down state along z-axis
     };
 
     // test spin as direct angle representation
@@ -193,6 +205,7 @@ fn its_a_spin_system() {
         Geonum {
             length: s.length,
             angle: s.angle + PI / 2.0,
+            blade: 1,
         }
     };
 
@@ -226,10 +239,12 @@ fn its_an_uncertainty_principle() {
     let position = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) position observable
     };
     let momentum = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) momentum observable perpendicular to position
     };
 
     // test complementarity through angle orthogonality
@@ -256,10 +271,12 @@ fn its_an_uncertainty_principle() {
     let obs1 = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
     let obs2 = Geonum {
         length: 1.0,
         angle: 3.0 * PI / 4.0,
+        blade: 1,
     };
 
     // their uncertainty also reflects geometric area
@@ -276,6 +293,7 @@ fn its_a_quantum_gate() {
     let qubit = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) representing |0⟩ qubit state
     }; // |0⟩ state
 
     // create a "hadamard gate" as an angle transformation
@@ -287,6 +305,7 @@ fn its_a_quantum_gate() {
         Geonum {
             length: q.length,
             angle: PI / 4.0,
+            blade: 1,
         }
     };
 
@@ -299,6 +318,7 @@ fn its_a_quantum_gate() {
             Geonum {
                 length: q.length,
                 angle: q.angle + PI / 2.0,
+                blade: 1,
             }
         } else {
             // otherwise leave unchanged
@@ -332,16 +352,19 @@ fn its_a_quantum_measurement() {
     let state = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     }; // superposition of |0⟩ and |1⟩
 
     // define measurement bases
     let basis0 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) for |0⟩ basis state
     }; // |0⟩ basis
     let basis1 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) for |1⟩ basis state, perpendicular to |0⟩
     }; // |1⟩ basis
 
     // test measurement as angle correlation
@@ -391,10 +414,12 @@ fn its_an_entangled_state() {
         Geonum {
             length: 1.0 / 2.0_f64.sqrt(),
             angle: 0.0, // |00⟩ component
+            blade: 1,
         },
         Geonum {
             length: 1.0 / 2.0_f64.sqrt(),
             angle: PI, // |11⟩ component
+            blade: 1,
         },
     );
 
@@ -437,14 +462,17 @@ fn its_a_quantum_harmonic_oscillator() {
     let ground_state = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) representing the ground state
     }; // n=0
     let first_excited = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) representing first excited state
     }; // n=1
     let second_excited = Geonum {
         length: 1.0,
         angle: PI,
+        blade: 0, // scalar (grade 0) representing second excited state
     }; // n=2
 
     // test energy quantization through angle discretization
@@ -461,6 +489,7 @@ fn its_a_quantum_harmonic_oscillator() {
         Geonum {
             length: state.length * ((level as f64) + 1.0).sqrt(), // √(n+1) factor
             angle: state.angle + PI / 2.0,                        // add π/2 to angle for next level
+            blade: 1,
         }
     };
 
@@ -470,12 +499,14 @@ fn its_a_quantum_harmonic_oscillator() {
             Geonum {
                 length: 0.0,
                 angle: 0.0,
+                blade: 0, // scalar (grade 0) representing zero state
             }
         } else {
             // lower energy level
             Geonum {
                 length: state.length * (level as f64).sqrt(), // √n factor
                 angle: state.angle - PI / 2.0,                // subtract π/2 from angle
+                blade: 1,
             }
         }
     };
@@ -501,14 +532,17 @@ fn its_a_quantum_field() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // field at position 0
         Geonum {
             length: 0.8,
             angle: PI / 6.0,
+            blade: 1,
         }, // field at position 1
         Geonum {
             length: 0.6,
             angle: PI / 3.0,
+            blade: 1,
         }, // field at position 2
     ];
 
@@ -525,6 +559,7 @@ fn its_a_quantum_field() {
             .map(|point| Geonum {
                 length: point.length,
                 angle: point.angle + dt, // simple phase advancement
+                blade: 1,
             })
             .collect()
     };
@@ -562,18 +597,22 @@ fn its_a_path_integral() {
         Geonum {
             length: 0.4,
             angle: 0.0,
+            blade: 1,
         }, // path 1
         Geonum {
             length: 0.4,
             angle: PI / 3.0,
+            blade: 1,
         }, // path 2
         Geonum {
             length: 0.4,
             angle: 2.0 * PI / 3.0,
+            blade: 1,
         }, // path 3
         Geonum {
             length: 0.4,
             angle: PI,
+            blade: 1,
         }, // path 4
     ];
 
@@ -602,6 +641,7 @@ fn its_a_path_integral() {
     let classical_path = Geonum {
         length: 0.4,
         angle: 0.0,
+        blade: 1,
     }; // defined as path with minimum phase
 
     // test the path with minimum angle change
@@ -619,10 +659,12 @@ fn its_a_dirac_equation() {
         Geonum {
             length: 0.8,
             angle: 0.0,
+            blade: 1,
         }, // spin-up component
         Geonum {
             length: 0.6,
             angle: PI / 2.0,
+            blade: 1,
         }, // spin-down component
     );
 
@@ -649,10 +691,12 @@ fn its_a_dirac_equation() {
         let new_up = Geonum {
             length: spinor.0.length * c1_norm + spinor.1.length * c2_norm,
             angle: spinor.0.angle,
+            blade: 1,
         };
         let new_down = Geonum {
             length: spinor.1.length * c1_norm + spinor.0.length * c2_norm,
             angle: spinor.1.angle,
+            blade: 1,
         };
         (new_up, new_down)
     };
@@ -694,6 +738,7 @@ fn its_a_quantum_information_system() {
             Geonum {
                 length: 1.0,
                 angle: 0.0,
+                blade: 1,
             },
         ), // 70% probability of this state
         (
@@ -701,6 +746,7 @@ fn its_a_quantum_information_system() {
             Geonum {
                 length: 1.0,
                 angle: PI / 2.0,
+                blade: 1,
             },
         ), // 30% probability of this state
     ];
@@ -737,12 +783,14 @@ fn its_a_quantum_information_system() {
             Geonum {
                 length: state.length * 0.7_f64.sqrt(),
                 angle: state.angle,
+                blade: 1,
             }
         } else {
             // for other states, rotate differently
             Geonum {
                 length: state.length,
                 angle: state.angle + PI / 4.0,
+                blade: 1,
             }
         }
     };
@@ -771,6 +819,7 @@ fn it_rejects_copenhagen_interpretation() {
     let state = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // test geometric interpretation vs copenhagen "collapse"
@@ -781,10 +830,12 @@ fn it_rejects_copenhagen_interpretation() {
     let basis0 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let basis1 = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // test measurement as natural process, not mysterious collapse
@@ -810,10 +861,12 @@ fn it_rejects_copenhagen_interpretation() {
     let position = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) position observable
     };
     let momentum = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // their relationship is geometric, not mysterious
@@ -830,6 +883,7 @@ fn it_unifies_quantum_and_classical() {
     let _quantum_state = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // create an equivalent "classical" state
@@ -849,6 +903,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: 0.0,
+                    blade: 1,
                 },
             ),
             (
@@ -856,6 +911,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0,
+                    blade: 1,
                 },
             ),
             (
@@ -863,6 +919,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 4.0,
+                    blade: 1,
                 },
             ),
             (
@@ -870,6 +927,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: 3.0 * PI / 8.0,
+                    blade: 1,
                 },
             ),
             (
@@ -877,6 +935,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 2.0,
+                    blade: 1,
                 },
             ),
         ],
@@ -887,6 +946,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 - 0.1,
+                    blade: 1,
                 },
             ),
             (
@@ -894,6 +954,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 - 0.05,
+                    blade: 1,
                 },
             ),
             (
@@ -901,6 +962,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0,
+                    blade: 1,
                 },
             ),
             (
@@ -908,6 +970,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 + 0.05,
+                    blade: 1,
                 },
             ),
             (
@@ -915,6 +978,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 + 0.1,
+                    blade: 1,
                 },
             ),
         ],
@@ -925,6 +989,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 - 0.01,
+                    blade: 1,
                 },
             ),
             (
@@ -932,6 +997,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 - 0.005,
+                    blade: 1,
                 },
             ),
             (
@@ -939,6 +1005,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0,
+                    blade: 1,
                 },
             ),
             (
@@ -946,6 +1013,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 + 0.005,
+                    blade: 1,
                 },
             ),
             (
@@ -953,6 +1021,7 @@ fn it_unifies_quantum_and_classical() {
                 Geonum {
                     length: 1.0,
                     angle: PI / 8.0 + 0.01,
+                    blade: 1,
                 },
             ),
         ],
@@ -997,22 +1066,27 @@ fn it_analyzes_angle_statistics() {
         Geonum {
             length: 0.1_f64.sqrt(), // use sqrt of probability as length for weight
             angle: 0.0,
+            blade: 1,
         }, // 10% probability
         Geonum {
             length: 0.2_f64.sqrt(),
             angle: PI / 8.0,
+            blade: 1,
         }, // 20% probability
         Geonum {
             length: 0.4_f64.sqrt(),
             angle: PI / 4.0,
+            blade: 1,
         }, // 40% probability
         Geonum {
             length: 0.2_f64.sqrt(),
             angle: 3.0 * PI / 8.0,
+            blade: 1,
         }, // 20% probability
         Geonum {
             length: 0.1_f64.sqrt(),
             angle: PI / 2.0,
+            blade: 1,
         }, // 10% probability
     ]);
 
@@ -1101,6 +1175,7 @@ fn it_explains_quantum_computing() {
     let qubit = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) representing |0⟩ qubit state
     }; // |0⟩ state
 
     // create quantum gates as angle transformations
@@ -1109,6 +1184,7 @@ fn it_explains_quantum_computing() {
         Geonum {
             length: q.length,
             angle: PI / 4.0, // rotate to 45 degrees
+            blade: 1,
         }
     };
 
@@ -1117,6 +1193,7 @@ fn it_explains_quantum_computing() {
         Geonum {
             length: q.length,
             angle: q.angle + PI / 2.0, // rotate by 90 degrees
+            blade: 1,
         }
     };
 
@@ -1125,6 +1202,7 @@ fn it_explains_quantum_computing() {
         Geonum {
             length: q.length,
             angle: q.angle + PI, // rotate by 180 degrees
+            blade: 1,
         }
     };
 
@@ -1145,10 +1223,12 @@ fn it_explains_quantum_computing() {
     let q0 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // |0⟩
     let q1 = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }; // |0⟩
 
     // apply hadamard to both qubits
@@ -1175,6 +1255,7 @@ fn it_evolves_through_time() {
     let state = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // create time evolution function
@@ -1182,6 +1263,7 @@ fn it_evolves_through_time() {
         Geonum {
             length: state.length,
             angle: state.angle + energy * time, // direct angle rotation
+            blade: 1,
         }
     };
 
@@ -1203,10 +1285,12 @@ fn it_evolves_through_time() {
         Geonum {
             length: 1.0 / 2.0_f64.sqrt(),
             angle: 0.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0 / 2.0_f64.sqrt(),
             angle: PI / 2.0,
+            blade: 1,
         },
     ]);
 
@@ -1234,14 +1318,17 @@ fn it_evolves_through_time() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // particle 1
         Geonum {
             length: 1.0,
             angle: PI / 4.0,
+            blade: 1,
         }, // particle 2
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // particle 3
     ];
 
@@ -1272,10 +1359,12 @@ fn it_preserves_unitary_transformation() {
         Geonum {
             length: 0.6,
             angle: 0.0,
+            blade: 1,
         }, // |0⟩ component
         Geonum {
             length: 0.8,
             angle: PI / 2.0,
+            blade: 1,
         }, // |1⟩ component
     ]);
 
@@ -1291,6 +1380,7 @@ fn it_preserves_unitary_transformation() {
                 .map(|g| Geonum {
                     length: g.length,          // preserve length (probability)
                     angle: g.angle + PI / 4.0, // rotate phase by pi/4
+                    blade: 1,
                 })
                 .collect(),
         )
@@ -1316,10 +1406,12 @@ fn it_preserves_unitary_transformation() {
         Geonum {
             length: 0.7,
             angle: PI / 6.0,
+            blade: 1,
         },
         Geonum {
             length: 0.7,
             angle: PI / 3.0,
+            blade: 1,
         },
     );
 
@@ -1342,6 +1434,7 @@ fn it_preserves_unitary_transformation() {
             } else {
                 s1.angle + PI
             },
+            blade: 1,
         };
 
         let new_s2 = Geonum {
@@ -1351,6 +1444,7 @@ fn it_preserves_unitary_transformation() {
             } else {
                 s2.angle + PI
             },
+            blade: 1,
         };
 
         (new_s1, new_s2)
@@ -1370,11 +1464,13 @@ fn it_preserves_unitary_transformation() {
     let state_a = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     let state_b = Geonum {
         length: 1.0,
         angle: PI / 3.0,
+        blade: 1,
     };
 
     // compute inner product magnitude
@@ -1384,11 +1480,13 @@ fn it_preserves_unitary_transformation() {
     let rotated_a = Geonum {
         length: state_a.length,
         angle: state_a.angle + PI / 2.0,
+        blade: 1,
     };
 
     let rotated_b = Geonum {
         length: state_b.length,
         angle: state_b.angle + PI / 2.0,
+        blade: 1,
     };
 
     // inner product magnitude should be preserved

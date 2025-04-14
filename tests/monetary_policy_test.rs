@@ -20,12 +20,30 @@ fn it_models_causal_transaction_structure() {
 
     // in mxfactorial, transactions are structured as bivectors between creditors and debitors
     // with timestamps that establish the arrow of time for value flows
+    //
+    // geometric algebra explanation of blade grade 2 for transactions:
+    // in geometric algebra, blade grade signifies the dimensional complexity of an element:
+    // - blade: 0 (scalars) - pure magnitudes without direction (like prices, interest rates)
+    // - blade: 1 (vectors) - directed quantities in 1D space (like forces, velocities)
+    // - blade: 2 (bivectors) - oriented plane elements or area sweeps (transactions, relationships)
+    //
+    // transactions are modeled as bivectors (grade 2) because they:
+    // 1. represent the economic "plane" formed between two accounts (creditor ∧ debitor)
+    // 2. encode the directed relationship between entities in a 2D financial subspace
+    // 3. demonstrate anticommutativity: (A ∧ B = -(B ∧ A)), preserving transaction directionality
+    // 4. allow for natural conservation laws in economic systems through geometric properties
+    // 5. geometrically represent the wedge product of two economic positions or entities
+    //
+    // while prices (scalar values) have blade: 0, transactions between entities have
+    // blade: 2 to maintain the geometric structure that captures the relational
+    // aspect of value exchange in a multidimensional economic space
 
     // simulate a purchasing transaction between SarahBell (software engineer) and GroceryCo (food service)
-    let ground_coffee = Geonum::from_polar(5.0, 0.0); // price magnitude, neutral angle initially
-    let pasta = Geonum::from_polar(10.0, 0.0); // 4 * $2.50
-    let paper_towels = Geonum::from_polar(6.0, 0.0); // 2 * $3.00
-    let sales_tax = Geonum::from_polar(1.89, 0.0); // total sales tax
+    // Prices are scalar quantities (grade 0) with only magnitude
+    let ground_coffee = Geonum::from_polar_blade(5.0, 0.0, 0); // price magnitude, neutral angle initially
+    let pasta = Geonum::from_polar_blade(10.0, 0.0, 0); // 4 * $2.50
+    let paper_towels = Geonum::from_polar_blade(6.0, 0.0, 0); // 2 * $3.00
+    let sales_tax = Geonum::from_polar_blade(1.89, 0.0, 0); // total sales tax
 
     // define account angles in the economic space
     // angles encode account attributes: industry, occupation, geography
@@ -50,6 +68,7 @@ fn it_models_causal_transaction_structure() {
             Geonum {
                 length: amount.length,
                 angle: transaction_angle,
+                blade: 2, // bivector (grade 2) representing the transaction plane
             }
         };
 
@@ -126,6 +145,7 @@ fn it_models_causal_transaction_structure() {
         Geonum {
             length: amount * (1.0 + time_difference), // magnitude increases with time delay
             angle: (creditor_angle - debitor_angle) % TWO_PI, // spatial orientation
+            blade: 2, // bivector (grade 2) representing the transaction plane
         }
     };
 
@@ -167,7 +187,7 @@ fn it_models_causal_transaction_structure() {
         tax_bivector,
     ]
     .iter()
-    .fold(Geonum::from_polar(0.0, 0.0), |acc, bivector| {
+    .fold(Geonum::from_polar_blade(0.0, 0.0, 2), |acc, bivector| {
         // geometric sum preserving directional information
         Geonum {
             length: acc.length + bivector.length,
@@ -178,6 +198,10 @@ fn it_models_causal_transaction_structure() {
             } else {
                 bivector.angle
             },
+            blade: 2, // bivector (grade 2) - transactions are modeled as bivectors (oriented planes)
+                      // in geometric algebra, a bivector represents an oriented area element
+                      // for transactions, this encodes the economic plane between two accounts
+                      // and preserves the directed financial relationship between entities
         }
     });
 
@@ -196,14 +220,17 @@ fn it_models_causal_transaction_structure() {
         tax_bivector,
     ]
     .iter()
-    .fold(Geonum::from_polar(0.0, 0.0), |acc, bivector| Geonum {
-        length: acc.length + bivector.length,
-        angle: if acc.length > 0.0 {
-            (acc.angle * acc.length + bivector.angle * bivector.length)
-                / (acc.length + bivector.length)
-        } else {
-            bivector.angle
-        },
+    .fold(Geonum::from_polar_blade(0.0, 0.0, 2), |acc, bivector| {
+        Geonum {
+            length: acc.length + bivector.length,
+            angle: if acc.length > 0.0 {
+                (acc.angle * acc.length + bivector.angle * bivector.length)
+                    / (acc.length + bivector.length)
+            } else {
+                bivector.angle
+            },
+            blade: 2, // bivector (grade 2) representing the combined transaction plane
+        }
     });
     let duration = start.elapsed();
 
@@ -232,18 +259,18 @@ fn it_models_investment_network_resilience() {
     // investment network: who funded whom with direct value transfers
     // each investment is a bivector with causal history preserving direction of value flow
     let investments = vec![
-        (0, 1, Geonum::from_polar(50.0, PI / 4.0)), // investor 0 → company 1: $50B
-        (1, 2, Geonum::from_polar(40.0, PI / 5.0)), // company 1 → company 2: $40B
-        (2, 3, Geonum::from_polar(30.0, PI / 6.0)), // company 2 → company 3: $30B
+        (0, 1, Geonum::from_polar_blade(50.0, PI / 4.0, 2)), // investor 0 → company 1: $50B (blade: 2 - investment represents relationship)
+        (1, 2, Geonum::from_polar_blade(40.0, PI / 5.0, 2)), // company 1 → company 2: $40B (blade: 2 - transaction between companies)
+        (2, 3, Geonum::from_polar_blade(30.0, PI / 6.0, 2)), // company 2 → company 3: $30B
     ];
 
     // account balances in system - conserved across all transactions
     // sum of all balances equals zero per bivector conservation law
     let balances = vec![
-        Geonum::from_polar(950.0, 0.1), // investor 0: $950B remaining
-        Geonum::from_polar(10.0, 0.05), // company 1: $10B (kept $10B of investor funds)
-        Geonum::from_polar(10.0, 0.2),  // company 2: $10B (kept $10B of company 1 funds)
-        Geonum::from_polar(30.0, 0.15), // company 3: $30B (received from company 2)
+        Geonum::from_polar_blade(950.0, 0.1, 0), // investor 0: $950B remaining (blade: 0 - scalar value for account balance)
+        Geonum::from_polar_blade(10.0, 0.05, 0), // company 1: $10B (blade: 0 - scalar value for account balance)
+        Geonum::from_polar_blade(10.0, 0.2, 0), // company 2: $10B (blade: 0 - scalar value for account balance)
+        Geonum::from_polar_blade(30.0, 0.15, 0), // company 3: $30B (received from company 2)
     ];
 
     // default event at node 2
@@ -277,6 +304,7 @@ fn it_models_investment_network_resilience() {
                 acct_balances[investor_idx] = Geonum {
                     length: acct_balances[investor_idx].length - loss_amount,
                     angle: acct_balances[investor_idx].angle,
+                    blade: acct_balances[investor_idx].blade, // preserve original blade value
                 };
 
                 // check if this investor now defaults and add to queue if so
@@ -317,6 +345,7 @@ fn it_models_investment_network_resilience() {
         Geonum {
             length: loss_ratio,
             angle: angle_shift,
+            blade: 1, // vector (grade 1) representing the impact direction
         }
     };
 
@@ -392,7 +421,7 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
         let sector_data: Vec<_> = data.iter().filter(|(s, _, _, _)| s == sector).collect();
 
         if sector_data.is_empty() {
-            return Geonum::from_polar(0.0, 0.0);
+            return Geonum::from_polar_blade(0.0, 0.0, 0); // blade: 0 - scalar zero for empty transaction
         }
 
         // calculate total revenue and expense
@@ -419,7 +448,7 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
         // return profit rate as geometric number
         // - length is the actual profit rate
         // - angle represents sector position in economic space
-        Geonum::from_polar(profit_rate, sector_angle)
+        Geonum::from_polar_blade(profit_rate, sector_angle, 2) // blade: 2 - bivector representing profit-sector relationship
     };
 
     // calculate natural cost of capital for each business type
@@ -454,7 +483,8 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
             // - base is geometric mean of all profit rates
             // - plus sector-specific risk premium
             // - angle represents sector position
-            Geonum::from_polar(mean_length + risk_premium, sector_angle)
+            Geonum::from_polar_blade(mean_length + risk_premium, sector_angle, 2)
+            // blade: 2 - bivector representing risk-adjusted rate
         };
 
     // convert business data to typed structure for analysis

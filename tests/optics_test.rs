@@ -40,6 +40,7 @@ fn its_a_ray() {
     let ray = Geonum {
         length: 1.0,     // normalized amplitude
         angle: PI / 4.0, // 45 degrees from optical axis
+        blade: 1,
     };
 
     // test the ray properties
@@ -52,6 +53,7 @@ fn its_a_ray() {
     let normal = Multivector(vec![Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     }]);
     let ray_mv = Multivector(vec![ray]);
 
@@ -75,6 +77,7 @@ fn its_a_ray() {
             Geonum {
                 length: r.length, // polarization amplitude
                 angle: pol_angle, // polarization angle
+                blade: 1,
             },
         ])
     };
@@ -101,10 +104,12 @@ fn its_a_ray() {
             Geonum {
                 length: transmitted_amplitude, // attenuated by polarizer
                 angle: ray_dir.angle,          // direction unchanged
+                blade: 1,
             },
             Geonum {
                 length: transmitted_amplitude, // polarization amplitude
                 angle: pol_axis,               // aligned with polarizer axis
+                blade: 1,
             },
         ])
     };
@@ -129,10 +134,12 @@ fn its_a_ray() {
             Geonum {
                 length: 1.0,  // ray amplitude
                 angle: theta, // polar angle (from z-axis)
+                blade: 1,
             },
             Geonum {
                 length: 1.0, // ray amplitude
                 angle: phi,  // azimuthal angle (xy-plane)
+                blade: 1,
             },
         ])
     };
@@ -187,6 +194,7 @@ fn its_a_lens() {
     let incident = Geonum {
         length: 1.0,
         angle: PI / 18.0, // 10 degrees
+        blade: 1,
     };
 
     // apply refraction using the Optics trait
@@ -242,6 +250,7 @@ fn its_a_lens() {
         Geonum {
             length: r.length,
             angle: (basic_refraction + aberration_effect) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -249,6 +258,7 @@ fn its_a_lens() {
     let sph_aberration = Geonum {
         length: 0.01, // small magnitude
         angle: 0.0,   // spherical aberration phase
+        blade: 1,
     };
 
     // apply lens with aberration
@@ -289,6 +299,7 @@ fn its_a_lens() {
     let steep_ray = Geonum {
         length: 1.0,
         angle: PI / 6.0, // 30 degrees
+        blade: 1,
     };
 
     let refracted_steep = steep_ray.abcd_transform(1.0, 0.0, -1.0 / 100.0, 1.0);
@@ -307,6 +318,7 @@ fn its_a_wavefront() {
     let plane_wave = Geonum {
         length: 1.0, // uniform amplitude
         angle: 0.0,  // uniform phase
+        blade: 1,
     };
 
     // test the wavefront properties
@@ -342,6 +354,7 @@ fn its_a_wavefront() {
         Geonum {
             length: 1.0 / r,       // amplitude drops with 1/r
             angle: phase % TWO_PI, // phase depends on distance
+            blade: 1,
         }
     };
 
@@ -374,6 +387,7 @@ fn its_a_wavefront() {
         Geonum {
             length: w.length * intensity_factor.abs(),
             angle: (w.angle + phase_shift) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -402,7 +416,11 @@ fn its_a_wavefront() {
         let length = (re_sum * re_sum + im_sum * im_sum).sqrt();
         let angle = im_sum.atan2(re_sum);
 
-        Geonum { length, angle }
+        Geonum {
+            length,
+            angle,
+            blade: 1,
+        }
     };
 
     // create two waves with phase difference
@@ -410,6 +428,7 @@ fn its_a_wavefront() {
     let wave2 = Geonum {
         length: 1.0,
         angle: PI, // half cycle out of phase
+        blade: 1,
     };
 
     // test destructive interference
@@ -420,6 +439,7 @@ fn its_a_wavefront() {
     let wave3 = Geonum {
         length: 1.0,
         angle: 0.0, // in phase with wave1
+        blade: 1,
     };
 
     // test constructive interference
@@ -435,10 +455,12 @@ fn its_a_wavefront() {
         Geonum {
             length: 0.1,
             angle: 0.0,
+            blade: 1,
         }, // piston
         Geonum {
             length: 0.05,
             angle: PI / 2.0,
+            blade: 1,
         }, // tilt
     ];
 
@@ -473,6 +495,7 @@ fn its_a_wavefront() {
         Geonum {
             length: 0.0,
             angle: otf_result.angle,
+            blade: 1,
         }
     } else {
         otf_result
@@ -482,7 +505,8 @@ fn its_a_wavefront() {
     // for simplicity, we just reverse the forward OTF operation
     let filtered_wave = Geonum {
         length: filtered_otf.length * (wavelength * focal_length),
-        angle: (filtered_otf.angle - PI / 2.0) % TWO_PI,
+        angle: filtered_otf.angle - PI / 2.0,
+        blade: 1,
     };
 
     // test filtered wave properties
@@ -519,7 +543,8 @@ fn it_combines_systems() {
 
         Geonum {
             length: r.length * transmission,
-            angle: (refracted_angle + aberration_effect) % TWO_PI,
+            angle: refracted_angle + aberration_effect,
+            blade: 1,
         }
     };
 
@@ -527,6 +552,7 @@ fn it_combines_systems() {
     let incident = Geonum {
         length: 1.0,
         angle: PI / 18.0, // 10 degrees
+        blade: 1,
     };
 
     // define system parameters
@@ -534,14 +560,17 @@ fn it_combines_systems() {
         Geonum {
             length: 100.0,
             angle: 0.0,
+            blade: 1,
         }, // focal length
         Geonum {
             length: 0.01,
             angle: 0.0,
+            blade: 1,
         }, // aberration
         Geonum {
             length: 0.5,
             angle: 0.0,
+            blade: 1,
         }, // aperture size
     ];
 
@@ -577,6 +606,7 @@ fn it_combines_systems() {
         Geonum {
             length: r.length,
             angle: new_angle % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -585,14 +615,17 @@ fn it_combines_systems() {
         Geonum {
             length: 200.0,
             angle: 0.0,
+            blade: 1,
         }, // first lens
         Geonum {
             length: -100.0,
             angle: 0.0,
+            blade: 1,
         }, // negative lens
         Geonum {
             length: 200.0,
             angle: 0.0,
+            blade: 1,
         }, // third lens
     ];
 
@@ -621,6 +654,7 @@ fn it_combines_systems() {
         Geonum {
             length: r.length * intensity_factor,
             angle: (r.angle + phase_shift) % TWO_PI,
+            blade: 1,
         }
     };
 
@@ -692,6 +726,7 @@ fn it_combines_systems() {
     let object = Geonum {
         length: 1.0,
         angle: PI / 10.0, // object position
+        blade: 1,
     };
 
     // apply magnification using the Optics trait
@@ -714,14 +749,17 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         Geonum {
             length: 10.0, // root value
             angle: 0.0,   // root path
+            blade: 1,
         },
         Geonum {
             length: 5.0,     // nested value 1
             angle: PI / 4.0, // path to nested value 1
+            blade: 1,
         },
         Geonum {
             length: 3.0,     // deeply nested value
             angle: PI / 2.0, // path to deeply nested value
+            blade: 1,
         },
     ]);
 
@@ -737,6 +775,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         None => Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         },
     };
     assert_eq!(nested_value.length, 5.0);
@@ -751,6 +790,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         None => Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         },
     };
     assert_eq!(updated_value.length, 7.0);
@@ -776,6 +816,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         Geonum {
             length: 42.0,         // super nested value
             angle: composed_path, // composed path angle
+            blade: 1,
         },
     ]);
 
@@ -786,6 +827,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         None => Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         },
     };
 
@@ -835,6 +877,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
             results.push(Geonum {
                 length: value / (current_depth as f64 + 1.0),
                 angle,
+                blade: 1,
             });
 
             // recurse to next level
@@ -872,6 +915,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
     fractal_with_target.0.push(Geonum {
         length: 123.0,
         angle: deep_path,
+        blade: 1,
     });
 
     // test direct O(1) access using Manifold find
@@ -881,6 +925,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         None => Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         },
     };
 
@@ -896,6 +941,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
                 .map(|g| Geonum {
                     length: g.length,
                     angle: (g.angle + rotation) % TWO_PI,
+                    blade: 1,
                 })
                 .collect(),
         )
@@ -911,6 +957,7 @@ fn its_what_a_haskell_lens_aspires_to_be() {
         None => Geonum {
             length: 0.0,
             angle: 0.0,
+            blade: 1,
         },
     };
     assert_eq!(rotated_value.length, 5.0);

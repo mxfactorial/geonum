@@ -89,15 +89,18 @@ fn bench_tensor_product(c: &mut Criterion) {
             let i = Geonum {
                 length: black_box(1.0),
                 angle: black_box(PI / 2.0),
-            }; // i = [1, pi/2]
+                blade: 1, // vector (grade 1)
+            }; // i = [1, pi/2, 1]
             let j = Geonum {
                 length: black_box(1.0),
                 angle: black_box(PI),
-            }; // j = [1, pi]
+                blade: 1, // vector (grade 1)
+            }; // j = [1, pi, 1]
             let k = Geonum {
                 length: black_box(1.0),
                 angle: black_box(3.0 * PI / 2.0),
-            }; // k = [1, 3pi/2]
+                blade: 1, // vector (grade 1)
+            }; // k = [1, 3pi/2, 1]
 
             // compute the ijk product - O(1) complexity
             let ij = i.mul(&j);
@@ -146,11 +149,13 @@ fn bench_scaling_comparison(c: &mut Criterion) {
                 let v1 = Geonum {
                     length: black_box(size as f64),
                     angle: black_box(PI / 4.0),
+                    blade: 1, // vector (grade 1)
                 };
 
                 let v2 = Geonum {
                     length: black_box(size as f64),
                     angle: black_box(PI / 3.0),
+                    blade: 1, // vector (grade 1)
                 };
 
                 // Perform geonum operations - always O(1)
@@ -172,15 +177,18 @@ fn bench_ijk_product(c: &mut Criterion) {
             let i = Geonum {
                 length: black_box(1.0),
                 angle: black_box(PI / 2.0),
-            }; // i = [1, pi/2]
+                blade: 1, // vector (grade 1)
+            }; // i = [1, pi/2, 1]
             let j = Geonum {
                 length: black_box(1.0),
                 angle: black_box(PI),
-            }; // j = [1, pi]
+                blade: 1, // vector (grade 1)
+            }; // j = [1, pi, 1]
             let k = Geonum {
                 length: black_box(1.0),
                 angle: black_box(3.0 * PI / 2.0),
-            }; // k = [1, 3pi/2]
+                blade: 1, // vector (grade 1)
+            }; // k = [1, 3pi/2, 1]
 
             // compute the ijk product
             let ij = i.mul(&j);
@@ -406,15 +414,18 @@ fn bench_multivector_operations(c: &mut Criterion) {
                 Geonum {
                     length: 1.0,
                     angle: 0.0,
+                    blade: 0, // scalar (grade 0)
                 }, // scalar
                 Geonum {
                     length: 2.0,
                     angle: PI / 2.0,
+                    blade: 1, // vector (grade 1)
                 }, // vector
                 Geonum {
                     length: 3.0,
                     angle: PI,
-                }, // negative scalar
+                    blade: 2, // bivector (grade 2)
+                }, // bivector
             ]);
 
             // Extract specific grades
@@ -439,18 +450,22 @@ fn bench_multivector_operations(c: &mut Criterion) {
             complex_mv.push(Geonum {
                 length: 2.0,
                 angle: 0.0,
+                blade: 0, // scalar (grade 0)
             }); // scalar
             complex_mv.push(Geonum {
                 length: 3.0,
                 angle: PI / 2.0,
+                blade: 1, // vector (grade 1)
             }); // vector
             complex_mv.push(Geonum {
                 length: 4.0,
                 angle: PI,
-            }); // bivector-like
+                blade: 2, // bivector (grade 2)
+            }); // bivector
             complex_mv.push(Geonum {
                 length: 5.0,
                 angle: 3.0 * PI / 2.0,
+                blade: 1, // vector (grade 1)
             }); // vector
 
             // Perform grade involution - O(1) per element regardless of dimension

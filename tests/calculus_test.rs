@@ -36,10 +36,12 @@ fn it_computes_limits() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // [1, 0]
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // [1, pi/2]
     ];
 
@@ -65,6 +67,7 @@ fn it_computes_limits() {
     let v_double_prime = Geonum {
         length: v_prime.length,
         angle: (v_prime.angle + PI / 2.0) % TWO_PI,
+        blade: 1,
     };
 
     // prove v'' = -v
@@ -75,6 +78,7 @@ fn it_computes_limits() {
     let v_triple_prime = Geonum {
         length: v_double_prime.length,
         angle: (v_double_prime.angle + PI / 2.0) % TWO_PI,
+        blade: 1,
     };
 
     // v''' = [1, 3pi/2] = -v'
@@ -84,6 +88,7 @@ fn it_computes_limits() {
     let v_quadruple_prime = Geonum {
         length: v_triple_prime.length,
         angle: (v_triple_prime.angle + PI / 2.0) % TWO_PI,
+        blade: 1,
     };
 
     // v'''' = [1, 0] = original v
@@ -94,6 +99,7 @@ fn it_computes_limits() {
     let v_quintuple_prime = Geonum {
         length: v_quadruple_prime.length,
         angle: (v_quadruple_prime.angle + PI / 2.0) % TWO_PI,
+        blade: 1,
     };
 
     // v''''' = [1, pi/2] = v'
