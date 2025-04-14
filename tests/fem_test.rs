@@ -16,6 +16,7 @@ fn its_a_shape_function() {
         Geonum {
             length: 1.0 - x, // magnitude varies with position
             angle: 0.0,      // phase is constant for linear function
+            blade: 1,
         }
     };
 
@@ -36,6 +37,7 @@ fn its_a_shape_function() {
         Geonum {
             length: value,
             angle: 0.0, // phase still constant for this function
+            blade: 1,
         }
     };
 
@@ -57,6 +59,7 @@ fn its_a_shape_function() {
         Geonum {
             length: 1.0, // derivative of 1-x is constant -1 (magnitude 1)
             angle: PI,   // angle PI represents negative value
+            blade: 1,
         }
     };
 
@@ -79,6 +82,7 @@ fn its_a_shape_function() {
         Geonum {
             length: value,
             angle: 0.0,
+            blade: 1,
         }
     };
 
@@ -107,6 +111,7 @@ fn its_a_shape_function() {
         Geonum {
             length: r * r * (3.0 - 2.0 * r), // cubic radial part
             angle: theta * phi / TWO_PI,     // angular part
+            blade: 1,
         }
     };
 
@@ -136,6 +141,7 @@ fn its_a_stiffness_matrix() {
         Geonum {
             length: disp.length,
             angle: disp.angle, // preserve angle for simple spring
+            blade: 1,
         }
     };
 
@@ -143,6 +149,7 @@ fn its_a_stiffness_matrix() {
     let displacement = Geonum {
         length: 0.5,
         angle: 0.0, // positive displacement
+        blade: 1,
     };
 
     // compute resulting force
@@ -161,6 +168,7 @@ fn its_a_stiffness_matrix() {
     let fixed_bc = Geonum {
         length: 0.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // apply the boundary condition
@@ -177,12 +185,14 @@ fn its_a_stiffness_matrix() {
     let material = Geonum {
         length: 10.0,    // elastic modulus
         angle: PI / 4.0, // represents Poisson ratio indirectly
+        blade: 1,
     };
 
     // define a 2D displacement field
     let displ_field = Geonum {
         length: 0.1,     // displacement magnitude
         angle: PI / 6.0, // direction of displacement
+        blade: 1,
     };
 
     // compute 2D stress using stiffness relationship
@@ -191,6 +201,7 @@ fn its_a_stiffness_matrix() {
         Geonum {
             length: material.length * displacement.length,
             angle: material.angle + displacement.angle,
+            blade: 1,
         }
     };
 
@@ -213,6 +224,7 @@ fn its_a_stiffness_matrix() {
         Geonum {
             length: disp.length,
             angle: disp.angle + local_coord * PI / 2.0, // position effect
+            blade: 1,
         }
     };
 
@@ -236,6 +248,7 @@ fn its_a_linear_solver() {
         Geonum {
             length: 2.0 * x.length,    // amplitude scaling
             angle: x.angle + PI / 6.0, // phase shift
+            blade: 1,
         }
     };
 
@@ -243,6 +256,7 @@ fn its_a_linear_solver() {
     let b = Geonum {
         length: 4.0,
         angle: PI / 3.0,
+        blade: 1,
     };
 
     // solve the system Ax = b directly through angle inversion
@@ -251,6 +265,7 @@ fn its_a_linear_solver() {
     let solution = Geonum {
         length: b.length / 2.0,    // invert amplitude scaling
         angle: b.angle - PI / 6.0, // invert phase shift
+        blade: 1,
     };
 
     // validate the solution by checking Ax = b
@@ -269,6 +284,7 @@ fn its_a_linear_solver() {
         Geonum {
             length: 5.0 * u.length,
             angle: u.angle + PI / 4.0,
+            blade: 1,
         }
     };
 
@@ -276,12 +292,14 @@ fn its_a_linear_solver() {
     let force = Geonum {
         length: 10.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // solve for displacement u where K*u = f
     let displacement = Geonum {
         length: force.length / 5.0,
         angle: force.angle - PI / 4.0,
+        blade: 1,
     };
 
     // validate displacement solution by applying stiffness
@@ -299,6 +317,7 @@ fn its_a_linear_solver() {
     let fixed_node = Geonum {
         length: 0.0,
         angle: 0.0,
+        blade: 1,
     };
 
     // compute reaction force at fixed node
@@ -320,6 +339,7 @@ fn its_a_linear_solver() {
         Geonum {
             length: 1000.0 * x.length, // large system scale
             angle: x.angle + PI / 3.0, // system behavior
+            blade: 1,
         }
     };
 
@@ -327,12 +347,14 @@ fn its_a_linear_solver() {
     let complex_load = Geonum {
         length: 5000.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // solve the giant system directly
     let million_node_solution = Geonum {
         length: complex_load.length / 1000.0,
         angle: complex_load.angle - PI / 3.0,
+        blade: 1,
     };
 
     // validate the solution
@@ -366,6 +388,7 @@ fn it_collapses_steps() {
         Geonum {
             length: input.length * 2.0,  // solution scaling
             angle: TWO_PI - input.angle, // solution rotation
+            blade: 1,
         }
     };
 
@@ -373,6 +396,7 @@ fn it_collapses_steps() {
     let problem_spec = Geonum {
         length: 1.0,     // loading magnitude
         angle: PI / 4.0, // loading direction
+        blade: 1,
     };
 
     // solve the entire problem in one step
@@ -396,6 +420,7 @@ fn it_collapses_steps() {
         Geonum {
             length: load.length / material.length,
             angle: load.angle - material.angle,
+            blade: 1,
         }
     };
 
@@ -403,11 +428,13 @@ fn it_collapses_steps() {
     let material = Geonum {
         length: 5.0,     // stiffness
         angle: PI / 6.0, // material orientation
+        blade: 1,
     };
 
     let load = Geonum {
         length: 10.0,    // force magnitude
         angle: PI / 2.0, // force direction
+        blade: 1,
     };
 
     // perform the entire analysis in one step
@@ -436,6 +463,7 @@ fn it_collapses_steps() {
         Geonum {
             length: geometry.length * material.length / (1.0 + boundary.length),
             angle: geometry.angle + material.angle - boundary.angle,
+            blade: 1,
         }
     };
 
@@ -444,14 +472,17 @@ fn it_collapses_steps() {
         Geonum {
             length: 2.0,
             angle: 0.0,
+            blade: 1,
         }, // geometry
         Geonum {
             length: 5.0,
             angle: PI / 4.0,
+            blade: 1,
         }, // material
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         }, // boundary
     ];
 

@@ -16,13 +16,15 @@
 // // electric field as geometric number
 // let e_field = Geonum {
 //     length: field_strength,
-//     angle: field_orientation
+//     angle: field_orientation,
+//     blade: 1 // vector (grade 1) - electric field is a vector field
 // };
 //
 // // magnetic field rotated 90 degrees (pi/2) from electric field
 // let b_field = Geonum {
 //     length: field_strength,
-//     angle: field_orientation + PI/2
+//     angle: field_orientation + PI/2,
+//     blade: 1 // vector (grade 1) - magnetic field is a vector field
 // };
 // ```
 //
@@ -35,7 +37,8 @@
 // // curl operation as rotation by pi/2
 // let curl_e = Geonum {
 //     length: e_field.length,
-//     angle: e_field.angle + PI/2
+//     angle: e_field.angle + PI/2,
+//     blade: 1 // vector (grade 1) - curl operation preserves grade
 // };
 // ```
 //
@@ -85,12 +88,16 @@ fn its_a_maxwell_equation() {
     let e_field = Geonum {
         length: 1.0,
         angle: 0.0, // oriented along x-axis
+        blade: 1,   // vector (grade 1) - electric field is a vector field in geometric algebra
+                    // representing a directed quantity with magnitude and orientation in 3D space
     };
 
     // create magnetic field vector as geometric number
     let b_field = Geonum {
         length: 1.0,
         angle: PI / 2.0, // oriented along y-axis
+        blade: 2,        // bivector (grade 2) - magnetic field is a bivector in geometric algebra
+                         // representing an oriented area element or rotation plane
     };
 
     // test perpendicular relationship between E and B fields
@@ -111,6 +118,8 @@ fn its_a_maxwell_equation() {
     let db_dt = Geonum {
         length: 2.0,
         angle: b_field.angle,
+        blade: 2, // bivector (grade 2) - time derivative of a bivector field remains bivector
+                  // preserves the geometric algebra grade of the original field
     };
 
     // faradays law in geometric form
@@ -122,6 +131,8 @@ fn its_a_maxwell_equation() {
     let curl_e_adjusted = Geonum {
         length: negative_db_dt.length, // Match exactly for the test
         angle: negative_db_dt.angle,   // Match exactly for the test
+        blade: 2, // bivector (grade 2) - curl of vector field E produces bivector field
+                  // in geometric algebra, curl operation raises grade by 1
     };
 
     // compare the simplified model
@@ -139,12 +150,16 @@ fn its_a_maxwell_equation() {
     let de_dt = Geonum {
         length: 2.0,
         angle: e_field.angle,
+        blade: 1, // vector (grade 1) - time derivative of vector field remains vector
+                  // preserves the geometric algebra grade of the original field
     };
 
     // compute μ₀ε₀∂E/∂t
     let mu_epsilon_de_dt = Geonum {
         length: de_dt.length * (VACUUM_PERMEABILITY * VACUUM_PERMITTIVITY),
         angle: de_dt.angle,
+        blade: 1, // vector (grade 1) - scaled vector remains vector field
+                  // scalar multiplication preserves the geometric algebra grade
     };
 
     // for the ampere-maxwell law test, we'll use the theoretical relationship
@@ -155,6 +170,8 @@ fn its_a_maxwell_equation() {
     let adjusted_curl_b = Geonum {
         length: mu_epsilon_de_dt.length, // match exactly
         angle: mu_epsilon_de_dt.angle,   // match exactly
+        blade: 1, // vector (grade 1) - curl of a bivector field produces a vector field
+                  // in geometric algebra, the grade is reduced by 1 when taking the curl of a bivector
     };
 
     // compare the simplified model
@@ -171,6 +188,8 @@ fn its_a_maxwell_equation() {
     let radial_e_field = Geonum {
         length: 2.0, // field strength decreases with distance
         angle: 0.0,  // radial direction
+        blade: 1,    // vector (grade 1) - electric field is a vector field
+                     // representing radially directed quantity from point charge
     };
 
     // compute divergence through angle projection
@@ -201,6 +220,8 @@ fn its_a_maxwell_equation() {
     let solenoidal_b_field = Geonum {
         length: 1.0,
         angle: PI / 2.0, // circular pattern
+        blade: 2,        // bivector (grade 2) - magnetic field is a bivector in geometric algebra
+                         // representing an oriented area element with circular pattern
     };
 
     // compute divergence of B
@@ -244,6 +265,8 @@ fn its_a_maxwell_equation() {
     let expected_b_angle = Geonum {
         length: 1.0,
         angle: e_high.angle + PI / 2.0,
+        blade: 2, // bivector (grade 2) - angle with blade grade 2 for expected magnetic field
+                  // representing oriented area element in high dimensions
     };
     assert!(b_high.angle_distance(&expected_b_angle) < EPSILON);
 
@@ -264,12 +287,16 @@ fn its_an_electromagnetic_wave() {
     let e_field = Geonum {
         length: 1.0,
         angle: 0.0, // oriented along x-axis
+        blade: 1,   // vector (grade 1) - electric field is a vector field in geometric algebra
+                    // representing a directed quantity with magnitude and orientation in 3D space
     };
 
     // magnetic field is perpendicular to electric field
     let b_field = Geonum {
         length: 1.0 / SPEED_OF_LIGHT, // B = E/c in vacuum
         angle: PI / 2.0,              // oriented along y-axis, perpendicular to E
+        blade: 2, // bivector (grade 2) - magnetic field is a bivector in geometric algebra
+                  // representing an oriented area element or rotation plane
     };
 
     // test perpendicular relationship and magnitude ratio
@@ -430,6 +457,8 @@ fn its_an_electromagnetic_wave() {
     let phase_geonum = Geonum {
         length: 1.0,
         angle: phase,
+        blade: 1, // vector (grade 1) - phase representation with blade grade 1
+                  // representing the wave phase as a directed quantity
     };
     assert!(
         geometric.angle_distance(&phase_geonum) < EPSILON,
@@ -470,12 +499,16 @@ fn its_a_poynting_vector() {
     let e_field = Geonum {
         length: 1.0,
         angle: 0.0, // oriented along x-axis
+        blade: 1,   // vector (grade 1) - electric field is a vector field
+                    // representing directed quantity in 3D space
     };
 
     // create magnetic field
     let b_field = Geonum {
         length: 1.0 / SPEED_OF_LIGHT, // B = E/c in vacuum
         angle: PI / 2.0,              // oriented along y-axis
+        blade: 2,                     // bivector (grade 2) - magnetic field is a bivector
+                                      // representing oriented area element in geometric algebra
     };
 
     // compute poynting vector using wedge product
@@ -485,12 +518,16 @@ fn its_a_poynting_vector() {
     let s_poynting = Geonum {
         length: s_wedge.length / VACUUM_PERMEABILITY,
         angle: s_wedge.angle,
+        blade: 3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
+                  // represents energy flow as oriented volume element in 3D space
     };
 
     // test direction of poynting vector (perpendicular to both E and B)
     let expected_poynting_angle = Geonum {
         length: 1.0,
         angle: e_field.angle + b_field.angle + PI / 2.0,
+        blade: 3, // trivector (grade 3) - expected Poynting vector is a trivector
+                  // representing energy flow as oriented volume element
     };
     assert!(
         s_poynting.angle_distance(&expected_poynting_angle) < EPSILON,
@@ -545,6 +582,8 @@ fn its_a_poynting_vector() {
         Geonum {
             length: s_z.abs(),
             angle: if s_z >= 0.0 { PI / 2.0 } else { 3.0 * PI / 2.0 }, // z-axis orientation
+            blade: 3, // trivector (grade 3) - Poynting vector is a trivector in geometric algebra
+                      // representing energy flow as oriented volume element
         }
     };
 
@@ -581,22 +620,30 @@ fn its_a_poynting_vector() {
     let incident_e = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1, // vector (grade 1) - electric field is a vector field
+                  // representing directed quantity for incident wave
     };
 
     let incident_b = Geonum {
         length: 1.0 / SPEED_OF_LIGHT,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) - magnetic field is a bivector
+                  // represents oriented area element for incident wave
     };
 
     // reflected wave with 50% amplitude (partially reflecting boundary)
     let reflected_e = Geonum {
         length: 0.5,
         angle: PI, // reflected 180 degrees
+        blade: 1,  // vector (grade 1) - reflected electric field is a vector field
+                   // represents directed quantity for reflected wave
     };
 
     let reflected_b = Geonum {
         length: 0.5 / SPEED_OF_LIGHT,
         angle: 3.0 * PI / 2.0, // reflected 180 degrees
+        blade: 2,              // bivector (grade 2) - reflected magnetic field is a bivector
+                               // represents oriented area element for reflected wave
     };
 
     // compute incident and reflected poynting vectors
@@ -604,29 +651,39 @@ fn its_a_poynting_vector() {
     let s_incident = Geonum {
         length: incident_wedge.length / VACUUM_PERMEABILITY,
         angle: incident_wedge.angle,
+        blade: 3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
+                  // represents energy flow as oriented volume element
     };
 
     let reflected_wedge = reflected_e.wedge(&reflected_b);
     let s_reflected = Geonum {
         length: reflected_wedge.length / VACUUM_PERMEABILITY,
         angle: reflected_wedge.angle,
+        blade: 3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
+                  // represents energy flow as oriented volume element for reflected wave
     };
 
     // transmitted wave (remaining energy)
     let transmitted_e = Geonum {
         length: (1.0 - reflected_e.length * reflected_e.length).sqrt(),
         angle: 0.0,
+        blade: 1, // vector (grade 1) - transmitted electric field is a vector field
+                  // represents directed quantity for transmitted wave
     };
 
     let transmitted_b = Geonum {
         length: transmitted_e.length / SPEED_OF_LIGHT,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) - transmitted magnetic field is a bivector
+                  // represents oriented area element for transmitted wave
     };
 
     let transmitted_wedge = transmitted_e.wedge(&transmitted_b);
     let s_transmitted = Geonum {
         length: transmitted_wedge.length / VACUUM_PERMEABILITY,
         angle: transmitted_wedge.angle,
+        blade: 3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
+                  // represents energy flow as oriented volume element for transmitted wave
     };
 
     // test energy conservation: incident = reflected + transmitted
@@ -683,6 +740,8 @@ fn its_a_poynting_vector() {
     let controlled_s = Geonum {
         length: 1.0,     // unit magnitude
         angle: PI / 2.0, // energy flow direction
+        blade: 3,        // trivector (grade 3) - energy flow vector is a trivector
+                         // represents controlled energy flow as oriented volume element
     };
 
     // create a controlled energy density flow function
@@ -780,6 +839,7 @@ fn its_a_field_potential() {
         Geonum {
             length: field_magnitude,
             angle: PI, // radially outward (gradient points inward, so E field points outward with minus sign)
+            blade: 1,  // vector (grade 1) - electric field is a vector field
         }
     };
 
@@ -810,6 +870,7 @@ fn its_a_field_potential() {
         Geonum {
             length: magnitude,
             angle: PI / 2.0, // tangential direction (theta)
+            blade: 1,        // vector (grade 1) - vector potential is a vector field
         }
     };
 
@@ -823,6 +884,8 @@ fn its_a_field_potential() {
         Geonum {
             length: magnitude,
             angle: 0.0, // magnetic field circles the wire
+            blade: 2,   // bivector (grade 2) - magnetic field is a bivector in geometric algebra
+                        // representing oriented area element circling the wire
         }
     };
 
@@ -837,6 +900,8 @@ fn its_a_field_potential() {
     let curl_a = Geonum {
         length: a_potential_r.length / test_radius_b, // radial derivative component
         angle: a_potential_r.differentiate().angle,
+        blade: 2, // bivector (grade 2) - curl of vector potential produces magnetic field bivector
+                  // in geometric algebra, curl operation on vector raises grade by 1
     };
 
     // compare with expected B field
@@ -859,6 +924,7 @@ fn its_a_field_potential() {
         Geonum {
             length: magnitude,
             angle: 0.0, // radial direction
+            blade: 1,   // vector (grade 1) - gradient of scalar is a vector field
         }
     };
 
@@ -884,6 +950,7 @@ fn its_a_field_potential() {
         Geonum {
             length: new_magnitude,
             angle: new_angle,
+            blade: 1, // vector (grade 1) - transformed vector potential is a vector field
         }
     };
 
@@ -904,11 +971,13 @@ fn its_a_field_potential() {
     let _grad1 = Geonum {
         length: 2.0 * test_radius_b, // gradient magnitude of r²
         angle: test_angle1,          // radial direction
+        blade: 1,                    // vector (grade 1) - gradient of scalar is a vector field
     };
 
     let _grad2 = Geonum {
         length: 2.0 * test_radius_b, // gradient magnitude of r²
         angle: test_angle2,          // different radial direction
+        blade: 1,                    // vector (grade 1) - gradient of scalar is a vector field
     };
 
     // in geonum, to test the curl of a gradient, we need to manually construct
@@ -922,6 +991,7 @@ fn its_a_field_potential() {
     let test_vec = Geonum {
         length: 1.0,
         angle: PI / 4.0, // arbitrary angle
+        blade: 1,        // vector (grade 1) - test vector is a vector field
     };
 
     // in mathematical terms: if curl(v) is the curl of a vector v,
@@ -1047,10 +1117,14 @@ fn it_computes_poynting_vector() {
     let e_field = Geonum {
         length: 2.0,
         angle: 0.0,
+        blade: 1, // vector (grade 1) - electric field is a vector field
+                  // representing directed quantity along x-axis
     }; // along x-axis
     let b_field = Geonum {
         length: 3.0,
         angle: PI / 2.0,
+        blade: 2, // bivector (grade 2) - magnetic field is a bivector
+                  // representing oriented area element along y-axis
     }; // along y-axis
 
     // compute poynting vector
@@ -1073,10 +1147,14 @@ fn it_computes_poynting_vector() {
     let e2 = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1, // vector (grade 1) - electric field is a vector field
+                  // representing directed quantity at 45 degrees
     };
     let b2 = Geonum {
         length: 3.0,
         angle: 3.0 * PI / 4.0,
+        blade: 2, // bivector (grade 2) - magnetic field is a bivector
+                  // representing oriented area element at 135 degrees
     };
 
     let poynting2 = e2.poynting_vector(&b2);

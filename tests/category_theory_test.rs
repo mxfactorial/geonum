@@ -39,10 +39,12 @@ fn its_a_category() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1, // Vector (grade 1) - represents an object as a 1D direction in category space
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1, // Vector (grade 1) - represents an object as a 1D direction in category space
     };
 
     // test dimension extension vs categorical objects
@@ -61,14 +63,21 @@ fn its_a_category() {
     let f = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1, // Vector (grade 1) - morphisms are 1D transformations between objects
+                  // In some geometric algebra applications, morphisms could be bivectors (blade: 2)
+                  // representing transformations in a plane, but here we model them as vectors
     }; // rotation by pi/4
     let g = Geonum {
         length: 3.0,
         angle: PI / 6.0,
+        blade: 1, // Vector (grade 1) - consistent with f for composition operations
     }; // rotation by pi/6
 
     // test composition as direct angle addition (f ∘ g)
     let f_compose_g = f.mul(&g);
+    // Note: f_compose_g inherits its blade grade through the mul operation
+    // The blade grade is determined by the with_product_blade method, which uses |a.blade - b.blade|
+    // Since both f and g have blade: 1, f_compose_g will also have blade: 1
 
     // test composed transformation properties
     assert!((f_compose_g.length - 6.0).abs() < EPSILON); // lengths multiply: 2*3=6
@@ -80,6 +89,7 @@ fn its_a_category() {
         Geonum {
             length: x.length,
             angle: x.angle + PI / 3.0, // rotate everything by pi/3
+            blade: 1,
         }
     };
 
@@ -113,16 +123,19 @@ fn its_a_functor() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // create a "morphism" in source category (rotation by pi/4)
     let f_source = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // test how rotation naturally creates structure preservation
@@ -131,6 +144,7 @@ fn its_a_functor() {
         Geonum {
             length: g.length * 2.0, // scale lengths
             angle: g.angle * 2.0,   // double angles
+            blade: 1,
         }
     };
 
@@ -157,6 +171,7 @@ fn its_a_functor() {
     let g_source = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
 
     // compose in source category
@@ -205,6 +220,7 @@ fn its_an_adjunction() {
         Geonum {
             length: g.length,
             angle: g.angle * 2.0, // double angles
+            blade: 1,
         }
     };
 
@@ -213,6 +229,7 @@ fn its_an_adjunction() {
         Geonum {
             length: g.length,
             angle: g.angle / 2.0, // halve angles
+            blade: 1,
         }
     };
 
@@ -224,10 +241,12 @@ fn its_an_adjunction() {
     let c = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     }; // object in C
     let d = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // object in D
 
     // apply functors
@@ -276,6 +295,11 @@ fn its_a_limit() {
     let _center = Geonum {
         length: 0.0,
         angle: 0.0,
+        blade: 1, // Vector (grade 1) - center point as a position vector
+                  // Note: Since this center point has length 0, it could arguably be modeled
+                  // as a scalar (blade: 0) in geometric algebra. However, we treat it as a vector
+                  // for consistency with other points in the diagram and to preserve its
+                  // role as a position vector with directional properties.
     }; // center point (will be the limit)
 
     // points in our diagram
@@ -283,14 +307,17 @@ fn its_a_limit() {
         Geonum {
             length: 2.0,
             angle: 0.0,
+            blade: 1,
         }, // point at 0°
         Geonum {
             length: 2.0,
             angle: PI / 3.0,
+            blade: 1,
         }, // point at 60°
         Geonum {
             length: 2.0,
             angle: 2.0 * PI / 3.0,
+            blade: 1,
         }, // point at 120°
     ];
 
@@ -304,6 +331,7 @@ fn its_a_limit() {
         .map(|p| Geonum {
             length: p.length,
             angle: p.angle,
+            blade: 1,
         })
         .collect();
 
@@ -315,6 +343,7 @@ fn its_a_limit() {
     let other_point = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // define projections from this point to diagram points
@@ -329,6 +358,7 @@ fn its_a_limit() {
             .sqrt(),
             angle: (p.length * p.angle.sin() - other_point.length * other_point.angle.sin())
                 .atan2(p.length * p.angle.cos() - other_point.length * other_point.angle.cos()),
+            blade: 1,
         })
         .collect();
 
@@ -337,6 +367,7 @@ fn its_a_limit() {
     let _to_center = Geonum {
         length: other_point.length,
         angle: other_point.angle,
+        blade: 1,
     };
 
     // prove existence through angle construction
@@ -352,10 +383,12 @@ fn its_a_limit() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // the product is a point that has projections to both a and b
@@ -364,16 +397,24 @@ fn its_a_limit() {
     let _product = Geonum {
         length: 0.0,
         angle: 0.0,
+        blade: 1, // Vector (grade 1) - product as a position vector in category space
+                  // Note: In geometric algebra, this zero-length element at the origin
+                  // could be represented as a scalar (blade: 0) since it has no directional
+                  // properties. However, we model it as a vector (blade: 1) to maintain
+                  // consistency with the other objects and to preserve its role as a
+                  // reference point in the geometric representation of the category.
     };
 
     // projections from product to a and b
     let proj_to_a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let proj_to_b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // verify projections exist
@@ -391,14 +432,17 @@ fn its_a_colimit() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         }, // point at 0°
         Geonum {
             length: 1.0,
             angle: PI / 3.0,
+            blade: 1,
         }, // point at 60°
         Geonum {
             length: 1.0,
             angle: 2.0 * PI / 3.0,
+            blade: 1,
         }, // point at 120°
     ];
 
@@ -406,6 +450,7 @@ fn its_a_colimit() {
     let colimit = Geonum {
         length: 2.0,
         angle: PI / 3.0,
+        blade: 1,
     }; // arbitrary point "containing" the diagram
 
     // test divergence via angle-based expansion
@@ -419,6 +464,7 @@ fn its_a_colimit() {
             .sqrt(),
             angle: (colimit.length * colimit.angle.sin() - p.length * p.angle.sin())
                 .atan2(colimit.length * colimit.angle.cos() - p.length * p.angle.cos()),
+            blade: 1,
         })
         .collect();
 
@@ -430,6 +476,7 @@ fn its_a_colimit() {
     let other_point = Geonum {
         length: 3.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // define injections from diagram points to this other point
@@ -444,6 +491,7 @@ fn its_a_colimit() {
             .sqrt(),
             angle: (other_point.length * other_point.angle.sin() - p.length * p.angle.sin())
                 .atan2(other_point.length * other_point.angle.cos() - p.length * p.angle.cos()),
+            blade: 1,
         })
         .collect();
 
@@ -460,6 +508,7 @@ fn its_a_colimit() {
         angle: (other_point.length * other_point.angle.sin()
             - colimit.length * colimit.angle.sin())
         .atan2(other_point.length * other_point.angle.cos() - colimit.length * colimit.angle.cos()),
+        blade: 1,
     };
 
     // prove colimit construction through direct angle operations
@@ -473,16 +522,19 @@ fn its_a_colimit() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // the coproduct in our geometric interpretation could be a point that "contains" both
     let coproduct = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // injections from a and b to the coproduct
@@ -490,10 +542,12 @@ fn its_a_colimit() {
     let _inj_from_a = Geonum {
         length: 1.5,
         angle: PI / 8.0,
+        blade: 1,
     };
     let _inj_from_b = Geonum {
         length: 1.5,
         angle: 3.0 * PI / 8.0,
+        blade: 1,
     };
 
     // verify injections exist with correct directionality (from points to coproduct)
@@ -514,10 +568,12 @@ fn its_a_natural_transformation() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     };
 
     // define two "functors" from C to D
@@ -525,6 +581,7 @@ fn its_a_natural_transformation() {
         Geonum {
             length: g.length * 2.0,
             angle: g.angle,
+            blade: 1,
         }
     };
 
@@ -532,6 +589,7 @@ fn its_a_natural_transformation() {
         Geonum {
             length: g.length,
             angle: g.angle + PI / 6.0,
+            blade: 1,
         }
     };
 
@@ -549,12 +607,14 @@ fn its_a_natural_transformation() {
     let transform_fa = Geonum {
         length: f_a.length / g_a.length, // adjust length ratio
         angle: eta,                      // fixed angle transformation
+        blade: 1,
     };
 
     // apply the natural transformation to F(b) to get G(b)
     let transform_fb = Geonum {
         length: f_b.length / g_b.length, // adjust length ratio
         angle: eta,                      // same angle transformation
+        blade: 1,
     };
 
     // test naturality through angle consistency
@@ -570,18 +630,21 @@ fn its_a_natural_transformation() {
     let morphism_ab = Geonum {
         length: 1.0,
         angle: PI / 2.0,
+        blade: 1,
     }; // maps a to b
 
     // compute F(morphism_ab)
     let f_morphism = Geonum {
         length: morphism_ab.length * functor_f(&a).length / a.length,
         angle: morphism_ab.angle,
+        blade: 1,
     };
 
     // compute G(morphism_ab)
     let g_morphism = Geonum {
         length: morphism_ab.length * functor_g(&a).length / a.length,
         angle: morphism_ab.angle,
+        blade: 1,
     };
 
     // verify morphisms preserve expected properties
@@ -603,6 +666,7 @@ fn its_a_monad() {
         Geonum {
             length: g.length,
             angle: g.angle * 2.0, // double the angle
+            blade: 1,
         }
     };
 
@@ -612,6 +676,7 @@ fn its_a_monad() {
         Geonum {
             length: g.length,
             angle: g.angle,
+            blade: 1,
         } // identity for simplicity
     };
 
@@ -621,6 +686,7 @@ fn its_a_monad() {
         Geonum {
             length: g.length,
             angle: g.angle / 2.0, // halve the angle (to compensate for double application)
+            blade: 1,
         }
     };
 
@@ -636,6 +702,7 @@ fn its_a_monad() {
     let x = Geonum {
         length: 2.0,
         angle: PI / 4.0,
+        blade: 1,
     };
 
     // create a function to bind with
@@ -643,6 +710,7 @@ fn its_a_monad() {
         Geonum {
             length: g.length * 3.0,
             angle: g.angle + PI / 2.0,
+            blade: 1,
         }
     };
 
@@ -656,6 +724,7 @@ fn its_a_monad() {
         Geonum {
             length: g.length / 2.0,
             angle: g.angle - PI / 3.0,
+            blade: 1,
         }
     };
 
@@ -685,10 +754,12 @@ fn it_rejects_category_theory() {
     let a = Geonum {
         length: 1.0,
         angle: 0.0,
+        blade: 1,
     };
     let b = Geonum {
         length: 1.0,
         angle: PI / 3.0,
+        blade: 1,
     };
 
     // test commutative diagram avoidance through angle measurement
@@ -703,6 +774,7 @@ fn it_rejects_category_theory() {
     let c = Geonum {
         length: 1.0,
         angle: PI / 6.0,
+        blade: 1,
     };
     let transform_ac = c.angle - a.angle;
     let transform_cb = b.angle - c.angle;
@@ -720,14 +792,17 @@ fn it_rejects_category_theory() {
     let r1 = Geonum {
         length: 1.0,
         angle: PI / 5.0,
+        blade: 1,
     };
     let r2 = Geonum {
         length: 1.0,
         angle: PI / 7.0,
+        blade: 1,
     };
     let r3 = Geonum {
         length: 1.0,
         angle: PI / 11.0,
+        blade: 1,
     };
 
     // test (r1 ∘ r2) ∘ r3 = r1 ∘ (r2 ∘ r3)
@@ -747,14 +822,17 @@ fn it_rejects_category_theory() {
         Geonum {
             length: 1.0,
             angle: 0.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 4.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         },
     ];
 

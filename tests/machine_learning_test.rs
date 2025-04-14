@@ -44,16 +44,19 @@ fn its_a_perceptron() {
     let w = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1, // Vector (grade 1) - weight vector
     };
 
     let x_pos = Geonum {
         length: 1.0,
         angle: PI / 4.0,
+        blade: 1, // Vector (grade 1) - input vector (positive example)
     };
 
     let x_neg = Geonum {
         length: 1.0,
         angle: 5.0 * PI / 4.0,
+        blade: 1, // Vector (grade 1) - input vector (negative example)
     };
 
     // demonstrate that dot product can be computed via lengths and angles
@@ -159,18 +162,22 @@ fn its_a_clustering_algorithm() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1, // vector (grade 1) - cluster point is a vector in space
         },
         Geonum {
             length: 1.2,
             angle: 0.2,
+            blade: 1, // vector (grade 1) - cluster point is a vector in space
         },
         Geonum {
             length: 3.0,
             angle: 2.0,
+            blade: 1, // vector (grade 1) - cluster point is a vector in space
         },
         Geonum {
             length: 2.8,
             angle: 1.9,
+            blade: 1, // vector (grade 1) - cluster point is a vector in space
         },
     ];
 
@@ -201,11 +208,13 @@ fn its_a_clustering_algorithm() {
     let centroid_01 = Geonum {
         length: (points[0].length + points[1].length) / 2.0,
         angle: (points[0].angle + points[1].angle) / 2.0,
+        blade: 0, // scalar (grade 0) - centroid is a pure location/magnitude
     };
 
     let centroid_23 = Geonum {
         length: (points[2].length + points[3].length) / 2.0,
         angle: (points[2].angle + points[3].angle) / 2.0,
+        blade: 0, // scalar (grade 0) - centroid is a pure location/magnitude
     };
 
     // 3. demonstrate k-means convergence using pure angle operations
@@ -243,10 +252,12 @@ fn its_a_decision_tree() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.1,
             angle: 0.15,
+            blade: 1,
         },
     ];
 
@@ -254,10 +265,12 @@ fn its_a_decision_tree() {
         Geonum {
             length: 1.0,
             angle: PI + 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.1,
             angle: PI + 0.15,
+            blade: 1,
         },
     ];
 
@@ -293,10 +306,12 @@ fn its_a_decision_tree() {
     let test_point_a = Geonum {
         length: 1.0,
         angle: 0.2,
+        blade: 1,
     };
     let test_point_b = Geonum {
         length: 1.0,
         angle: PI + 0.2,
+        blade: 1,
     };
 
     // classify based on angle comparison (constant time operation)
@@ -327,10 +342,12 @@ fn its_a_support_vector_machine() {
         Geonum {
             length: 1.0,
             angle: 0.2,
+            blade: 1,
         },
         Geonum {
             length: 1.2,
             angle: 0.3,
+            blade: 1,
         },
     ];
 
@@ -338,10 +355,12 @@ fn its_a_support_vector_machine() {
         Geonum {
             length: 1.0,
             angle: PI - 0.2,
+            blade: 1,
         },
         Geonum {
             length: 1.2,
             angle: PI - 0.3,
+            blade: 1,
         },
     ];
 
@@ -386,10 +405,12 @@ fn its_a_support_vector_machine() {
     let test_point_a = Geonum {
         length: 1.0,
         angle: 0.25,
+        blade: 1,
     };
     let test_point_b = Geonum {
         length: 1.0,
         angle: PI - 0.25,
+        blade: 1,
     };
 
     let prediction_a = if test_point_a.angle < margin_angle {
@@ -418,14 +439,17 @@ fn its_a_neural_network() {
     let input = Geonum {
         length: 2.0,
         angle: 0.5,
+        blade: 1,
     };
     let weight = Geonum {
         length: 1.5,
         angle: 0.3,
+        blade: 1,
     };
     let bias = Geonum {
         length: 0.5,
         angle: 0.0,
+        blade: 0, // scalar (grade 0) - bias is a pure magnitude without direction
     };
 
     // traditional neural network: output = activation(Wx + b)
@@ -446,10 +470,12 @@ fn its_a_neural_network() {
     let target = Geonum {
         length: 3.0,
         angle: 1.0,
+        blade: 1,
     };
     let error = Geonum {
         length: (target.length - activated.length).abs(),
         angle: target.angle - activated.angle,
+        blade: 0, // scalar (grade 0) - error magnitude is a pure scalar value
     };
 
     // update weights via direct angle and length adjustments
@@ -457,6 +483,7 @@ fn its_a_neural_network() {
     let _updated_weight = Geonum {
         length: weight.length + learning_rate * error.length * input.length,
         angle: weight.angle + learning_rate * error.angle,
+        blade: 1,
     };
 
     // 3. demonstrate activation functions as angle threshold operations
@@ -481,14 +508,17 @@ fn its_a_reinforcement_learning() {
         Geonum {
             length: 0.5,
             angle: 0.0,
+            blade: 1,
         }, // state 0
         Geonum {
             length: 0.3,
             angle: 0.1,
+            blade: 1,
         }, // state 1
         Geonum {
             length: 0.7,
             angle: 0.2,
+            blade: 1,
         }, // state 2
     ];
 
@@ -562,12 +592,14 @@ fn its_a_bayesian_method() {
     let prior = Geonum {
         length: 1.0, // prior strength
         angle: 0.0,  // prior mean direction
+        blade: 0,    // scalar (grade 0) - prior probability is a pure magnitude
     };
 
     // create likelihood for observed data
     let likelihood = Geonum {
         length: 2.0, // likelihood strength (evidence)
         angle: 0.3,  // likelihood mean direction
+        blade: 0,    // scalar (grade 0) - likelihood is a probability magnitude
     };
 
     // 2. eliminate MCMC sampling through direct angle generation
@@ -580,6 +612,7 @@ fn its_a_bayesian_method() {
         length: prior.length * likelihood.length,
         angle: (prior.angle * prior.length + likelihood.angle * likelihood.length)
             / (prior.length + likelihood.length),
+        blade: 0, // scalar (grade 0) - posterior probability is a pure magnitude
     };
 
     // 3. demonstrate Bayes' rule as angle composition
@@ -602,10 +635,12 @@ fn its_a_bayesian_method() {
         Geonum {
             length: posterior.length * (1.0 + 0.1 * (0.0_f64).cos()),
             angle: posterior.angle + 0.1 * (0.0_f64).sin(),
+            blade: 1,
         },
         Geonum {
             length: posterior.length * (1.0 + 0.1 * (1.0_f64).cos()),
             angle: posterior.angle + 0.1 * (1.0_f64).sin(),
+            blade: 1,
         },
     ];
 
@@ -629,14 +664,17 @@ fn its_a_dimensionality_reduction() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.2,
             angle: 0.2,
+            blade: 1,
         },
         Geonum {
             length: 0.8,
             angle: 0.15,
+            blade: 1,
         },
     ];
 
@@ -657,6 +695,7 @@ fn its_a_dimensionality_reduction() {
         .map(|p| Geonum {
             length: p.length - mean_length,
             angle: p.angle - mean_angle,
+            blade: 1,
         })
         .collect();
 
@@ -680,6 +719,7 @@ fn its_a_dimensionality_reduction() {
             Geonum {
                 length: projection,
                 angle: principal_angle,
+                blade: 1,
             }
         })
         .collect();
@@ -690,6 +730,7 @@ fn its_a_dimensionality_reduction() {
         .map(|p| Geonum {
             length: p.length + mean_length,
             angle: p.angle + mean_angle,
+            blade: 1,
         })
         .collect();
 
@@ -720,14 +761,17 @@ fn its_a_generative_model() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.2,
             angle: 0.2,
+            blade: 1,
         },
         Geonum {
             length: 0.9,
             angle: 0.15,
+            blade: 1,
         },
     ];
 
@@ -759,10 +803,12 @@ fn its_a_generative_model() {
         Geonum {
             length: mean_length + (0.1_f64).cos() * var_length.sqrt(),
             angle: mean_angle + (0.1_f64).sin() * var_angle.sqrt(),
+            blade: 1,
         },
         Geonum {
             length: mean_length + (0.2_f64).cos() * var_length.sqrt(),
             angle: mean_angle + (0.2_f64).sin() * var_angle.sqrt(),
+            blade: 1,
         },
     ];
 
@@ -796,10 +842,12 @@ fn its_a_transfer_learning() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         }, // weight 1
         Geonum {
             length: 1.2,
             angle: 0.2,
+            blade: 1,
         }, // weight 2
     ];
 
@@ -807,10 +855,12 @@ fn its_a_transfer_learning() {
         Geonum {
             length: 0.5,
             angle: 0.05,
+            blade: 1,
         }, // initial weight 1
         Geonum {
             length: 0.6,
             angle: 0.1,
+            blade: 1,
         }, // initial weight 2
     ];
 
@@ -862,14 +912,17 @@ fn its_an_ensemble_method() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         }, // model 1
         Geonum {
             length: 1.2,
             angle: 0.2,
+            blade: 1,
         }, // model 2
         Geonum {
             length: 0.9,
             angle: 0.3,
+            blade: 1,
         }, // model 3
     ];
 
@@ -882,6 +935,7 @@ fn its_an_ensemble_method() {
     let _ensemble = Geonum {
         length: total_length / models.len() as f64,
         angle: models.iter().map(|m| m.angle * m.length).sum::<f64>() / total_length,
+        blade: 0, // scalar (grade 0) - ensemble result is a pure magnitude/prediction
     };
 
     // 2. eliminate redundant computation through orthogonal angle components
@@ -900,14 +954,17 @@ fn its_an_ensemble_method() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.11,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 0.12,
+            blade: 1,
         },
     ];
 
@@ -915,14 +972,17 @@ fn its_an_ensemble_method() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 3.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 2.0 * PI / 3.0,
+            blade: 1,
         },
     ];
 
@@ -957,18 +1017,21 @@ fn it_rejects_learning_paradigms() {
     let classifier = Geonum {
         length: 1.0,
         angle: 0.5,
+        blade: 1,
     };
 
     // Unsupervised learning representation (cluster center)
     let cluster = Geonum {
         length: 2.0,
         angle: 1.0,
+        blade: 1,
     };
 
     // Reinforcement learning representation (state value)
     let state_value = Geonum {
         length: 0.5,
         angle: 0.3,
+        blade: 1,
     };
 
     // 2. demonstrate complete equivalence between paradigms
@@ -980,6 +1043,7 @@ fn it_rejects_learning_paradigms() {
     let point = Geonum {
         length: 1.1,
         angle: 0.6,
+        blade: 1,
     };
     let distance_to_classifier = (point.angle - classifier.angle).abs();
     let distance_to_cluster = (point.angle - cluster.angle).abs();
@@ -995,6 +1059,7 @@ fn it_rejects_learning_paradigms() {
     let _updated_value = Geonum {
         length: state_value.length + 0.1 * (classifier.length - state_value.length),
         angle: state_value.angle + 0.1 * (classifier.angle - state_value.angle),
+        blade: 1,
     };
 
     // 3. illuminate their shared foundation as different angle transformations
@@ -1006,18 +1071,21 @@ fn it_rejects_learning_paradigms() {
     let supervised_update = Geonum {
         length: classifier.length * (1.0 - learning_rate * (classifier.length - point.length)),
         angle: classifier.angle - learning_rate * (classifier.angle - point.angle),
+        blade: 2, // bivector (grade 2) - represents transformation of model in parameter space
     };
 
     // Unsupervised learning update (cluster center update)
     let unsupervised_update = Geonum {
         length: cluster.length * 0.9 + point.length * 0.1,
         angle: cluster.angle * 0.9 + point.angle * 0.1,
+        blade: 2, // bivector (grade 2) - represents the transformation of cluster center
     };
 
     // Reinforcement learning update (value iteration)
     let reinforcement_update = Geonum {
         length: state_value.length + 0.1 * (point.length - state_value.length),
         angle: state_value.angle + 0.1 * (point.angle - state_value.angle),
+        blade: 2, // bivector (grade 2) - represents transformation from one state to another
     };
 
     // 4. measure performance: unified approach enables cross-paradigm operations
@@ -1049,18 +1117,22 @@ fn it_unifies_learning_theory() {
         Geonum {
             length: 1.0,
             angle: 0.1,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI / 2.0,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: PI,
+            blade: 1,
         },
         Geonum {
             length: 1.0,
             angle: 3.0 * PI / 2.0,
+            blade: 1,
         },
     ];
 
@@ -1084,6 +1156,7 @@ fn it_unifies_learning_theory() {
     let regularized = hypotheses.map(|h| Geonum {
         length: h.length / (1.0 + regularization_strength),
         angle: h.angle * (1.0 - regularization_strength) + mean_angle * regularization_strength,
+        blade: 1,
     });
 
     // Calculate new diversity after regularization
@@ -1108,6 +1181,7 @@ fn it_unifies_learning_theory() {
             Geonum {
                 length: 1.0,
                 angle: 0.2,
+                blade: 1,
             },
             1,
         ), // class 1
@@ -1115,6 +1189,7 @@ fn it_unifies_learning_theory() {
             Geonum {
                 length: 1.0,
                 angle: 0.3,
+                blade: 1,
             },
             1,
         ), // class 1
@@ -1122,6 +1197,7 @@ fn it_unifies_learning_theory() {
             Geonum {
                 length: 1.0,
                 angle: PI + 0.2,
+                blade: 1,
             },
             -1,
         ), // class -1
@@ -1129,6 +1205,7 @@ fn it_unifies_learning_theory() {
             Geonum {
                 length: 1.0,
                 angle: PI + 0.3,
+                blade: 1,
             },
             -1,
         ), // class -1
@@ -1167,10 +1244,12 @@ fn it_unifies_learning_theory() {
         Geonum {
             length: 1.0,
             angle: 0.25,
+            blade: 1,
         }, // should be class 1
         Geonum {
             length: 1.0,
             angle: PI + 0.25,
+            blade: 1,
         }, // should be class -1
     ];
 
@@ -1205,10 +1284,12 @@ fn it_scales_quantum_learning() {
         Geonum {
             length: 0.7071,
             angle: 0.0,
+            blade: 1,
         }, // |0⟩ component
         Geonum {
             length: 0.7071,
             angle: PI / 2.0,
+            blade: 1,
         }, // |1⟩ component
     ]);
 
@@ -1227,10 +1308,12 @@ fn it_scales_quantum_learning() {
                             Geonum {
                                 length: g.length / 2.0_f64.sqrt(),
                                 angle: 0.0,
+                                blade: 1,
                             },
                             Geonum {
                                 length: g.length / 2.0_f64.sqrt(),
                                 angle: PI / 2.0,
+                                blade: 1,
                             },
                         ]
                     } else {
@@ -1239,10 +1322,12 @@ fn it_scales_quantum_learning() {
                             Geonum {
                                 length: g.length / 2.0_f64.sqrt(),
                                 angle: 0.0,
+                                blade: 1,
                             },
                             Geonum {
                                 length: g.length / 2.0_f64.sqrt(),
                                 angle: 3.0 * PI / 2.0,
+                                blade: 1,
                             },
                         ]
                     }
@@ -1276,6 +1361,7 @@ fn it_scales_quantum_learning() {
     let test_point = Geonum {
         length: 1.0,
         angle: 0.1,
+        blade: 1,
     };
     let classification = qml_classify(&transformed_state, &test_point);
 
