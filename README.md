@@ -33,7 +33,7 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 pub struct Geonum {
     pub length: f64, // multiply
     pub angle: f64,  // add
-    pub blade: usize // count π/2 turns
+    pub blade: usize // count π/2 angle turns
 }
 ```
 

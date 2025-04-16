@@ -1,5 +1,10 @@
 # changelog
 
+## 0.6.2 (2025-04-16)
+
+### added
+- show blade as a digital prosthetic to angle, a quantized offset destined to be automated by light in an optical medium
+
 ## 0.6.1 (2025-04-15)
 
 ### added
