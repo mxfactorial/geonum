@@ -1,5 +1,10 @@
 # changelog
 
+## 0.6.1 (2025-04-15)
+
+### added
+- link tests directory for convenient access in readme
+
 ## 0.6.0 (2025-04-14)
 
 ### added
