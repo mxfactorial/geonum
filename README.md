@@ -14,7 +14,7 @@
 
 # geonum
 
-setting a metric with euclidean and squared norms creates a `k^n` possible transformation problem for vectors
+setting a metric with euclidean and squared norms creates a `k^n` component problem for transforming vectors
 
 geonum reduces `k^n` to 2
 
@@ -33,7 +33,7 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 pub struct Geonum {
     pub length: f64, // multiply
     pub angle: f64,  // add
-    pub blade: usize // count π/2 turns until light automates it
+    pub blade: usize // count π/2 turns
 }
 ```
 
@@ -43,7 +43,7 @@ pub struct Geonum {
 cargo add geonum
 ```
 
-see `tests` to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
+see [tests](https://github.com/mxfactorial/geonum/tree/develop/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
 
 ### benches
 
