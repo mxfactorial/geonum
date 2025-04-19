@@ -1,5 +1,17 @@
 # changelog
 
+## 0.6.4 (2025-04-19)
+
+### added
+- robotics test suite demonstrating geonum applications in robotics and automation
+- forward and inverse kinematics tests showing O(1) complexity advantage over matrix methods
+- path planning and dynamics controller tests for high-performance robotics applications
+- SLAM algorithm and sensor fusion tests showcasing geometric number benefits
+- computer vision test suite with feature detection, optical flow, and 3D reconstruction
+- camera calibration and image registration tests using angle-based geometric transformations
+- neural image processing and segmentation tests demonstrating superior computational efficiency
+- object detection tests with geometric frame representation for robotics integration
+
 ## 0.6.3 (2025-04-18)
 
 ### added
