@@ -1,5 +1,15 @@
 # changelog
 
+## 0.6.3 (2025-04-18)
+
+### added
+- astrophysics test suite demonstrating geonum capabilities in orbital mechanics
+- relativistic orbital system tests showing general relativity effects
+- million-body simulation test highlighting O(1) complexity advantages
+- simulation helpers with orbital constants and velocity calculations
+- celestial mechanics primitives for n-body systems
+- relativistic helper functions for future gravitational simulations
+
 ## 0.6.2 (2025-04-16)
 
 ### added
