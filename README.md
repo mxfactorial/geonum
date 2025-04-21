@@ -16,9 +16,9 @@
 
 setting a metric with euclidean and squared norms creates a `k^n` component problem for transforming vectors
 
-geonum reduces `k^n` to 2
-
 traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
+
+geonum reduces `k^n(2^n)` to 2
 
 geonum dualizes (⋆) components inside algebra's most general form
 
@@ -137,10 +137,3 @@ cargo llvm-cov # coverage
 ```
 cargo doc --open
 ```
-
-### todo
-
-- blade classification (identifying geometric types like points, lines, planes)
-- rotor estimation algorithms for transforming between sets of geometric objects
-- specialized projective geometric algebra (PGA) support
-- broadcasting support for operating on multiple objects (point clouds)
