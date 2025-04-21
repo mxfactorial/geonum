@@ -304,7 +304,7 @@ fn its_a_graph_algorithm() {
             let mut min_diff = f64::MAX;
 
             for node in graph {
-                // ensure node is closer to end than current
+                // only accept nodes closer to end than current
                 let curr_to_end = edge_weight(current, end);
                 let node_to_end = edge_weight(node, end);
 

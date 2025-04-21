@@ -683,7 +683,7 @@ fn its_a_dirac_equation() {
         let c1 = mass / energy;
         let c2 = momentum / energy;
 
-        // normalize to ensure coefficients preserve probability
+        // normalize for coefficient probability preservation
         let norm = (c1.powi(2) + c2.powi(2)).sqrt();
         let c1_norm = c1 / norm;
         let c2_norm = c2 / norm;
@@ -714,8 +714,8 @@ fn its_a_dirac_equation() {
     println!("Debug: new_norm_squared = {}", new_norm_squared);
 
     // simplified implementation has issues with normalization
-    // test result is non-zero to demonstrate simplified implementation works
-    assert!(new_norm_squared > 0.0); // ensure we have non-zero result
+    // test for non-zero result
+    assert!(new_norm_squared > 0.0);
 
     // test relativistic behavior through spinor transformation
     // different momentum values affect the spinor differently

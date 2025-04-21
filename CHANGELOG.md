@@ -1,5 +1,10 @@
 # changelog
 
+## 0.6.5 (2025-04-21)
+
+### changed
+- combined coordinate blowup and multivector expansion in readme
+
 ## 0.6.4 (2025-04-19)
 
 ### added

@@ -35,7 +35,7 @@ fn it_operates_on_high_dimensional_multivectors() {
     // create e3 as multivector
     let e3_mv = Multivector(vec![e3]);
 
-    // ensure e3 has a different angle from the bivector to prevent wedge collapse
+    // rotating e3 with a different angle to prevent wedge collapse
     let e3_rotated = Geonum {
         length: 1.0,
         angle: PI / 4.0,

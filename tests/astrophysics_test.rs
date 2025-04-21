@@ -905,7 +905,7 @@ fn its_a_million_body_simulation() {
     // but for testing purposes, we'll just time the initialization of a subset
     for i in 0..10 {
         // position within galaxy
-        // ensure r is never zero to avoid division by zero
+        // r is kept above zero to prevent division by zero
         let r = galaxy_radius * (0.001 + (i as f64 / body_count as f64).sqrt()); // sqrt for uniform density
         let theta = (i as f64) * TAU / 1000.0; // distribute in angle
 

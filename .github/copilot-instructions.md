@@ -22,8 +22,8 @@ avoid the word "should", for example, "perpendicular vectors should have zero do
 
 avoid the word "actual"
 
-when fixing unused variable lint errors in tests with underscore prefixes, add "artifact of geonum automation:" comments where a library feature gap is not detected
-
 to get started developing this project, install rust then git clone https://github.com/mxfactorial/geonum
 
-except for `cargo bench` which consumes a lot of time, ask to run test commands listed in README.md tests section before finishing a task
+except for `cargo bench` which consumes a lot of time, ask to run test commands listed in README.md tests section before finishing a code task
+
+avoid the word "ensure"
