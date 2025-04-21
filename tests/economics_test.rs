@@ -292,7 +292,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     );
 
     // test results are meaningful for policy decisions
-    // ensure at least one result is found
+    // verify at least one result is found
     if vulnerable_segments.is_empty() {
         println!("note: no vulnerable segments found with current thresholds");
     }

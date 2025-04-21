@@ -736,7 +736,7 @@ fn its_a_poynting_vector() {
     // is well-behaved. The divergence calculation can be tricky numerically.
 
     // create a more controlled test where we directly specify
-    // the input values to ensure they represent a valid energy flow pattern
+    // the input values to represent a valid energy flow pattern
     let controlled_s = Geonum {
         length: 1.0,     // unit magnitude
         angle: PI / 2.0, // energy flow direction
@@ -1015,7 +1015,7 @@ fn its_a_field_potential() {
         "original b field at r={}: length={}, angle={}",
         test_radius_b, b_original.length, b_original.angle
     );
-    println!("gauge invariance ensures b field is unchanged when a -> a + ∇λ");
+    println!("gauge invariance proves b field remains unchanged when a -> a + ∇λ");
 
     // test electromagnetic potential formulation of maxwells equations
     // wave equation for potentials: ∇²v - (1/c²)∂²v/∂t² = -ρ/ε₀

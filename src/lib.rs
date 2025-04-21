@@ -159,8 +159,8 @@ impl Multivector {
         // find the grade of the pseudoscalar - better determined with improved grade detection
         let pseudo_grade = pseudo.blade_grade().unwrap_or(0);
 
-        // for test compatibility, include these specific components if they exist
-        // this ensures deterministic behavior for the tests
+        // for test compatibility, include these specific components
+        // this creates deterministic behavior for the tests
         let mut result = Vec::new();
 
         // include components with blade grades that are subspaces of the pseudoscalar
@@ -2123,7 +2123,7 @@ impl Geonum {
     /// ```
     pub fn negate(&self) -> Self {
         // Negate by rotating by π (180 degrees)
-        // For explicit blade values, we need to ensure the angle change is compatible
+        // With explicit blade values, the angle change maintains compatibility
         Geonum {
             length: self.length,
             angle: (self.angle + PI) % TWO_PI,
@@ -2142,7 +2142,7 @@ impl Geonum {
     /// a new geometric number representing the reflection
     pub fn reflect(&self, normal: &Geonum) -> Geonum {
         // reflection in 2D can be computed by rotating by twice the angle between vectors
-        // first normalize normal to ensure it's a unit vector
+        // first normalize normal to get a unit vector
         let unit_normal = normal.normalize();
 
         // compute the angle between self and normal
@@ -3025,7 +3025,7 @@ mod multivector_tests {
             .any(|g| (g.length - 5.0).abs() < EPSILON && (g.angle - PI / 3.0).abs() < EPSILON);
 
         // It may or may not include the unaligned component depending on the angle tolerance
-        // This is a simplified test that just ensures the function runs
+        // This is a simplified test that just proves the function runs
         assert!(
             section2.len() < mixed.len(),
             "Section should not include all components from the original multivector"
