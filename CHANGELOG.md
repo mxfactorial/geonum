@@ -1,5 +1,19 @@
 # changelog
 
+## 0.6.6 (2025-04-23)
+
+### added
+- organized traits into dedicated modules with feature flags
+- implemented conditional compilation for optional traits (optics, projection, manifold)
+- tensor test suite comparing mathematical representation and performance with geonum
+
+### changed
+- refactored codebase for improved maintainability and organization
+- moved primary types into separate modules (geonum.rs, multivector.rs, dimensions.rs)
+- reduced lib.rs size
+- fixed Clippy lints and warnings throughout codebase
+- new benchmark numbers in README
+
 ## 0.6.5 (2025-04-21)
 
 ### changed
