@@ -76,12 +76,12 @@ fn it_operates_on_high_dimensional_multivectors() {
     // step 6: project and reject vector from e3
     let proj = v_mv.project(&e3_mv);
     let rej = v_mv.reject(&e3_mv);
-    assert!(proj.0.len() > 0 || proj.0.is_empty()); // test execution
-    assert!(rej.0.len() > 0 || rej.0.is_empty());
+    assert!(!proj.0.is_empty()); // test execution
+    assert!(!rej.0.is_empty());
 
     // step 7: confirm mean angle is finite and within expected bounds
     let mean = t123_mv.weighted_circular_mean_angle();
-    assert!(mean >= 0.0 && mean <= TAU);
+    assert!((0.0..=TAU).contains(&mean));
 }
 
 #[test]

@@ -7,7 +7,7 @@ use std::time::Instant;
 
 /// this file contains tests demonstrating how geometric algebra enables
 /// privacy-preserving economic analysis for fiscal policy decision-making
-
+///
 /// this test demonstrates how business cycles exist in an economy without monetary inflation
 /// when transactions are modeled as bivectors with conservation laws, cycles derive from
 /// real economic factors rather than monetary distortions
@@ -81,10 +81,10 @@ fn it_models_business_cycles() {
     // interpret the cycle phase in economic terms
     // map the geometric angle to economic cycle phases
     let cycle_phase = match cycle_state.angle {
-        a if a >= 0.0 && a < PI / 2.0 => "expansion", // first quadrant: growth phase
-        a if a >= PI / 2.0 && a < PI => "peak",       // second quadrant: mature expansion
-        a if a >= PI && a < 3.0 * PI / 2.0 => "contraction", // third quadrant: declining activity
-        _ => "trough",                                // fourth quadrant: bottom of cycle
+        a if (0.0..PI / 2.0).contains(&a) => "expansion", // first quadrant: growth phase
+        a if (PI / 2.0..PI).contains(&a) => "peak",       // second quadrant: mature expansion
+        a if (PI..3.0 * PI / 2.0).contains(&a) => "contraction", // third quadrant: declining activity
+        _ => "trough",                                           // fourth quadrant: bottom of cycle
     };
 
     // compute economic cycle velocity

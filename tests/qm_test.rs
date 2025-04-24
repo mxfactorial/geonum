@@ -322,7 +322,7 @@ fn its_a_quantum_gate() {
             }
         } else {
             // otherwise leave unchanged
-            q.clone()
+            *q
         }
     };
 
@@ -372,13 +372,13 @@ fn its_a_quantum_measurement() {
     let prob_basis0 = state.length * state.length * (state.angle - basis0.angle).cos().powi(2);
 
     // test born rule through angle projection instead of abstract inner product
-    assert!(prob_basis0 >= 0.0 && prob_basis0 <= 1.0);
+    assert!((0.0..=1.0).contains(&prob_basis0));
     // for a state at pi/4, the probability is cos²(pi/4) = 0.5
     assert!((prob_basis0 - 0.5).abs() < EPSILON);
 
     // probability of measuring in basis1
     let prob_basis1 = state.length * state.length * (state.angle - basis1.angle).cos().powi(2);
-    assert!(prob_basis1 >= 0.0 && prob_basis1 <= 1.0);
+    assert!((0.0..=1.0).contains(&prob_basis1));
     // for a state at pi/4, the probability relative to pi/2 is cos²(pi/4 - pi/2) = cos²(-pi/4) = 0.5
     assert!((prob_basis1 - 0.5).abs() < EPSILON);
 
@@ -391,9 +391,9 @@ fn its_a_quantum_measurement() {
 
     // simulate measurement outcome based on probabilities
     let measured_state = if prob_basis0 > 0.5 {
-        basis0.clone() // collapse to |0⟩
+        basis0 // collapse to |0⟩
     } else {
-        basis1.clone() // collapse to |1⟩
+        basis1 // collapse to |1⟩
     };
 
     // test the measured state is aligned with one of the basis states
@@ -513,11 +513,11 @@ fn its_a_quantum_harmonic_oscillator() {
 
     // test ladder operators
     let raised = creation(&ground_state, 0);
-    assert!((raised.length - (1.0 as f64).sqrt()).abs() < EPSILON); // √1 factor
+    assert!((raised.length - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
     assert_eq!(raised.angle % TWO_PI, first_excited.angle % TWO_PI);
 
     let lowered = annihilation(&first_excited, 1);
-    assert!((lowered.length - (1.0 as f64).sqrt()).abs() < EPSILON); // √1 factor
+    assert!((lowered.length - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
     assert_eq!(lowered.angle % TWO_PI, ground_state.angle % TWO_PI);
 }
 
@@ -841,11 +841,11 @@ fn it_rejects_copenhagen_interpretation() {
     // test measurement as natural process, not mysterious collapse
     // probability of measuring in basis0
     let prob0 = state.length * state.length * (state.angle - basis0.angle).cos().powi(2);
-    assert!(prob0 >= 0.0 && prob0 <= 1.0);
+    assert!((0.0..=1.0).contains(&prob0));
 
     // probability of measuring in basis1
     let prob1 = state.length * state.length * (state.angle - basis1.angle).cos().powi(2);
-    assert!(prob1 >= 0.0 && prob1 <= 1.0);
+    assert!((0.0..=1.0).contains(&prob1));
 
     // test total probability = 1
     assert!((prob0 + prob1 - 1.0).abs() < EPSILON);
