@@ -6,8 +6,8 @@ const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn it_computes_limits() {
-    // this test demonstrates that "limits" in the traditional sense
-    // are unnecessary when using the geometric number framework
+    // this test demonstrates that "limits" as
+    // unnecessary when using geometric numbers
 
     // differentiation is simply a pi/2 rotation and the foundation of
     // calculus emerges directly from this geometric structure

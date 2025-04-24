@@ -1282,12 +1282,12 @@ fn it_scales_quantum_learning() {
     // Create quantum-like state (superposition)
     let quantum_state = Multivector(vec![
         Geonum {
-            length: 0.7071,
+            length: std::f64::consts::FRAC_1_SQRT_2,
             angle: 0.0,
             blade: 1,
         }, // |0⟩ component
         Geonum {
-            length: 0.7071,
+            length: std::f64::consts::FRAC_1_SQRT_2,
             angle: PI / 2.0,
             blade: 1,
         }, // |1⟩ component
@@ -1301,7 +1301,7 @@ fn it_scales_quantum_learning() {
             state
                 .0
                 .iter()
-                .map(|g| {
+                .flat_map(|g| {
                     if g.angle < PI / 4.0 {
                         // |0⟩ → (|0⟩ + |1⟩)/√2
                         vec![
@@ -1332,7 +1332,6 @@ fn it_scales_quantum_learning() {
                         ]
                     }
                 })
-                .flatten()
                 .collect(),
         )
     };

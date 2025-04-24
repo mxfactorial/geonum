@@ -280,9 +280,7 @@ fn its_a_lens() {
         // for simplicity, we ignore position changes during propagation here
 
         // apply second lens using ABCD transform
-        let after_second = after_first.abcd_transform(1.0, 0.0, -1.0 / f2, 1.0);
-
-        after_second
+        after_first.abcd_transform(1.0, 0.0, -1.0 / f2, 1.0)
     };
 
     // apply doublet (f1=200mm, f2=200mm)

@@ -1,6 +1,6 @@
 [package]
 name = "geonum"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
 description = "geometric number library supporting unlimited dimensions with O(1) complexity"
@@ -10,10 +10,18 @@ keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
 categories = ["mathematics", "simulation", "algorithms", "data-structures"]
 authors = ["mxfactorial"]
 
+[features]
+default = []
+optics = []
+projection = []
+manifold = []
+all = ["optics", "projection", "manifold"]
+
 [dependencies]
 
 [dev-dependencies]
 criterion = "0.5"
+geonum = { path = ".", features = ["all"] }
 
 [[bench]]
 name = "geonum_benchmarks"
