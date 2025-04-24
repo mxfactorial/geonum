@@ -33,10 +33,12 @@ pub const VACUUM_IMPEDANCE: f64 = VACUUM_PERMEABILITY * SPEED_OF_LIGHT;
 /// this allows multivectors like:
 ///
 /// ```rust
-/// Multivector(vec![
+/// use geonum::{Geonum, Multivector};
+///
+/// let mv = Multivector(vec![
 ///     Geonum { length: 0.5, angle: 0.0, blade: 0b001 }, // partial e1
 ///     Geonum { length: 0.5, angle: std::f64::consts::PI / 4.0, blade: 0b011 }, // partial e1∧e2
-/// ])
+/// ]);
 /// ```
 ///
 /// to represent superpositions or continuous transformations of blades,
