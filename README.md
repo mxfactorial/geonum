@@ -51,27 +51,27 @@ see [tests](https://github.com/mxfactorial/geonum/tree/develop/tests) to learn h
 
 | implementation | size | time |
 |----------------|------|------|
-| tensor (O(n³)) | 2 | 1.06 µs |
+| tensor (O(n³)) | 2 | 1.05 µs |
 | tensor (O(n³)) | 3 | 2.25 µs |
-| tensor (O(n³)) | 4 | 3.90 µs |
-| tensor (O(n³)) | 8 | 7.92 µs |
-| tensor (O(n³)) | 16 | 69.54 µs |
-| geonum (O(1)) | any | 9.83 ns |
+| tensor (O(n³)) | 4 | 4.20 µs |
+| tensor (O(n³)) | 8 | 7.83 µs |
+| tensor (O(n³)) | 16 | 66.65 µs |
+| geonum (O(1)) | any | 15.52 ns |
 
-geonum achieves constant O(1) time complexity regardless of problem size, 400× faster than tensor operations at size 4 and 7000× faster at size 16, eliminating cubic scaling of traditional tensor implementations
+geonum achieves constant O(1) time complexity regardless of problem size, 270× faster than tensor operations at size 4 and 4300× faster at size 16, eliminating cubic scaling of traditional tensor implementations
 
 #### extreme dimension comparison
 
 | implementation | dimensions | time | storage complexity |
 |----------------|------------|------|-------------------|
-| traditional ga | 10 | 543.40 ns (partial) | O(2^n) = 1024 components |
+| traditional ga | 10 | 545.69 ns (partial) | O(2^n) = 1024 components |
 | traditional ga | 30 | theoretical only | O(2^n) = 1 billion+ components |
 | traditional ga | 1000 | impossible | O(2^1000) ≈ 10^301 components |
 | traditional ga | 1,000,000 | impossible | O(2^1000000) components |
-| geonum (O(1)) | 10 | 134.12 ns | O(1) = 2 components |
-| geonum (O(1)) | 30 | 153.64 ns | O(1) = 2 components |
-| geonum (O(1)) | 1000 | 2.08 µs | O(1) = 2 components |
-| geonum (O(1)) | 1,000,000 | 2.94 ms | O(1) = 2 components |
+| geonum (O(1)) | 10 | 78.00 ns | O(1) = 2 components |
+| geonum (O(1)) | 30 | 79.64 ns | O(1) = 2 components |
+| geonum (O(1)) | 1000 | 77.44 ns | O(1) = 2 components |
+| geonum (O(1)) | 1,000,000 | 78.79 ns | O(1) = 2 components |
 
 geonum enables geometric algebra in million-dimensional spaces with constant time operations, achieving whats mathematically impossible with traditional implementations (requires more storage than atoms in the universe)
 
@@ -79,12 +79,12 @@ geonum enables geometric algebra in million-dimensional spaces with constant tim
 
 | operation | dimensions | time | traditional ga complexity |
 |-----------|------------|------|---------------------------|
-| grade extraction | 1,000,000 | 130.69 ns | O(2^n) |
-| grade involution | 1,000,000 | 157.18 ns | O(2^n) |
-| clifford conjugate | 1,000,000 | 112.90 ns | O(2^n) |
-| contractions | 1,000,000 | 266.31 ns | O(2^n) |
-| anti-commutator | 1,000,000 | 246.24 ns | O(2^n) |
-| all ops combined | 1,000 | 826.57 ns | impossible at high dimensions |
+| grade extraction | 1,000,000 | 136.46 ns | O(2^n) |
+| grade involution | 1,000,000 | 153.37 ns | O(2^n) |
+| clifford conjugate | 1,000,000 | 111.39 ns | O(2^n) |
+| contractions | 1,000,000 | 292.56 ns | O(2^n) |
+| anti-commutator | 1,000,000 | 264.46 ns | O(2^n) |
+| all ops combined | 1,000 | 883.74 ns | impossible at high dimensions |
 
 geonum performs all major multivector operations with exceptional efficiency in million-dimensional spaces, maintaining sub-microsecond performance for grade-specific operations that would require exponential time and memory in traditional geometric algebra implementations
 

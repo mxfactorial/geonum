@@ -702,10 +702,10 @@ fn it_uses_multivector_operations() {
     assert!(rotor.len() >= 2);
 
     // scalar part should be cos(PI/4) ≈ 0.7071
-    assert!((rotor[0].length - 0.7071).abs() < 0.01);
+    assert!((rotor[0].length - std::f64::consts::FRAC_1_SQRT_2).abs() < 0.01);
 
     // bivector part should be sin(PI/4) ≈ 0.7071
-    assert!((rotor[1].length - 0.7071).abs() < 0.01);
+    assert!((rotor[1].length - std::f64::consts::FRAC_1_SQRT_2).abs() < 0.01);
 
     // use the rotor to rotate a vector
     let rotated = x_axis.rotate(&rotor);

@@ -383,13 +383,13 @@ fn its_a_path_planner() {
     // 3. verify trajectory: it should connect start to goal
 
     // first point should match start configuration
-    for i in 0..start_config.len() {
-        assert!((trajectory[0][i].angle - start_config[i].angle).abs() < 1e-10);
+    for (i, config) in start_config.iter().enumerate() {
+        assert!((trajectory[0][i].angle - config.angle).abs() < 1e-10);
     }
 
     // last point should match goal configuration
-    for i in 0..goal_config.len() {
-        assert!((trajectory[num_waypoints - 1][i].angle - goal_config[i].angle).abs() < 1e-10);
+    for (i, config) in goal_config.iter().enumerate() {
+        assert!((trajectory[num_waypoints - 1][i].angle - config.angle).abs() < 1e-10);
     }
 
     // 4. demonstrate obstacle avoidance with angle-based constraints
@@ -444,7 +444,7 @@ fn its_a_path_planner() {
                             blade: joint.blade,
                         }
                     } else {
-                        joint.clone()
+                        *joint
                     }
                 })
                 .collect();
@@ -736,10 +736,10 @@ fn its_a_manipulator_jacobian() {
     let mut high_dof_jacobian = vec![vec![0.0; 2]; high_dof];
 
     // O(n) computation with geometric numbers
-    for i in 0..high_dof {
+    for (i, jacobian_row) in high_dof_jacobian.iter_mut().enumerate().take(high_dof) {
         let angle = (i as f64) * 0.05;
-        high_dof_jacobian[i][0] = -angle.sin(); // J_x,i
-        high_dof_jacobian[i][1] = angle.cos(); // J_y,i
+        jacobian_row[0] = -angle.sin(); // J_x,i
+        jacobian_row[1] = angle.cos(); // J_y,i
     }
 
     let elapsed = start_time.elapsed();

@@ -48,7 +48,7 @@ jobs:
         with:
           toolchain: stable
       - name: run benchmarks
-        run: cargo bench
+        run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="timeout 600" cargo bench
   
   coverage:
     name: code coverage

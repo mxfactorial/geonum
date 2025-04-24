@@ -821,7 +821,7 @@ fn its_a_fiber_bundle() {
     let section = |angle: f64| -> Geonum {
         Geonum {
             length: angle.sin() + 2.0,
-            angle: angle,
+            angle,
             blade: 1,
         }
     };

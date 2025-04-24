@@ -180,7 +180,7 @@ fn it_models_causal_transaction_structure() {
     // demonstrate geometric analysis of transaction flows in the bivector space
 
     // combine all transaction items into a single economic flow
-    let economic_flow = vec![
+    let economic_flow = [
         coffee_bivector,
         pasta_bivector,
         towels_bivector,
@@ -213,7 +213,7 @@ fn it_models_causal_transaction_structure() {
 
     // prove constant-time calculation regardless of transaction count
     let start = Instant::now();
-    let _ = vec![
+    let _ = [
         coffee_bivector,
         pasta_bivector,
         towels_bivector,

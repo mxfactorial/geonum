@@ -260,10 +260,10 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // we'll do a very limited calculation - just computing a small subset
             // of the full 1024×1024 operation
             let mut result = vec![0.0; 1024];
-            for i in 1..20 {
-                // Doing only 20 components for benchmarking sanity
-                for j in 1..20 {
-                    if v1[i] != 0.0 && v2[j] != 0.0 {
+            // Only 20 components for benchmarking sanity
+            for (i, &v1i) in v1.iter().enumerate().skip(1).take(19) {
+                for (j, &v2j) in v2.iter().enumerate().skip(1).take(19) {
+                    if v1i != 0.0 && v2j != 0.0 {
                         // XOR gives the resulting basis element index
                         let k = i ^ j;
 
