@@ -1,5 +1,10 @@
 # changelog
 
+## 0.6.7 (2025-04-25)
+
+### added
+- learn with ai readme section
+
 ## 0.6.6 (2025-04-23)
 
 ### added

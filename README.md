@@ -133,7 +133,53 @@ cargo bench # bench
 cargo llvm-cov # coverage
 ```
 
-### docs
-```
-cargo doc --open
-```
+### learn with ai
+
+1. install rust: https://www.rust-lang.org/tools/install
+1. create an api key with your preferred ai:
+    1. anthropic: https://console.anthropic.com/
+    1. openai: https://platform.openai.com/
+1. purchase api credit
+1. install a command line agent:
+    1. anthropic: [claude code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
+    1. openai: [codex](https://help.openai.com/en/articles/11096431-openai-codex-cli-getting-started)
+1. clone the geonum repo: `git clone https://github.com/mxfactorial/geonum`
+1. change your current working directory to geonum: `cd geonum`
+1. start the agent from the `geonum` directory:
+   1. anthropic: `claude`
+   1. openai: `codex`
+1. configure the ai agent with your api key
+1. supply it this series of prompts:
+    ```
+    read README.md
+
+    read the math-1-0.md geometric number spec
+
+    read tests/numbers_test.rs
+
+    read tests/multivector_test.rs
+
+    read tests/machine_learning_test.rs
+
+    read tests/astrophysics_test.rs
+
+    read tests/em_field_theory_test.rs
+
+    run 'grep "pub fn" ./src/dimensions.rs' to learn the dimensions module
+
+    run 'grep "pub fn" ./src/geonum_mod.rs' to learn the geonum module
+
+    run 'grep "pub fn" ./src/multivector.rs' to learn the multivector module
+
+    now run 'touch tests/my_test.rs'
+
+    import geonum in tests/my_test.rs with use geonum::*;
+    ```
+1. using the other test suites and library as a reference, describe the test you want the agent to implement for you
+1. execute your test: `cargo test --test my_test -- --show-output`
+1. revise and add tests
+1. ask the agent to summarize your tests and how they benefit from angle-based complexity
+1. ask the agent more questions:
+    - what does the math in the leading readme section mean?
+    - how does the geometric number spec in math-1-0.md improve computing performance?
+    - what is the tests/tensor_test.rs file about?
