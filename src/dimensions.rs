@@ -455,7 +455,7 @@ mod tests {
 
         let product = e123.mul(&vector);
 
-        // the product should follow "lengths multiply, angles add" rule
+        // the product should follow "angles add, lengths multiply" rule
         assert_eq!(product.length, e123.length * vector.length);
         assert!((product.angle - ((e123.angle + vector.angle) % TWO_PI)).abs() < EPSILON);
 

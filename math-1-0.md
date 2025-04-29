@@ -47,9 +47,11 @@ the phrase "orthogonally adding" or `+ pi/2` is important here because it reveal
 
 `∫1dθ from 0 to pi/2 = + pi/2`
 
-#### lengths multiply, angles add
+#### angles add, lengths multiply
 
-while the explicit "lengths multiply, angles add" rule revealed by the definite integral frees everyone up from toiling in a "matrix":
+the definite integral explicitly reveals the "angles add, lengths multiply" rule
+
+this rule not only frees everyone up from toiling in a "matrix":
 ```
 [1  0] × [cos(pi/2)   -sin(pi/2)] ≡ [1, 0] × [1, pi/2] = [1, pi/2]
          [sin(pi/2)    cos(pi/2)]

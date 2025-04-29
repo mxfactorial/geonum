@@ -600,10 +600,10 @@ fn its_an_n_body_performance_test() {
             });
         }
 
-        // simulation step with geonum approach
+        // simulation step with geonum
         // instead of O(n²) force calculations, use O(n) angle-based operations
 
-        // update positions and velocities with a more optimized approach
+        // update positions and velocities with a more optimized design
         for i in 0..n {
             // for demonstration purposes, this is simplified to O(n) operations
             // a full implementation would use more advanced geonum operations
@@ -659,8 +659,8 @@ fn its_an_n_body_performance_test() {
 
         // simplified benchmark display
         println!("N-body simulation performance with {} bodies:", n);
-        println!("  Traditional approach: {:?}", traditional_duration);
-        println!("  Geonum approach: {:?}", geonum_duration);
+        println!("  Traditional design: {:?}", traditional_duration);
+        println!("  Geonum design: {:?}", geonum_duration);
         println!(
             "  Speedup: {:.2}x",
             traditional_duration.as_secs_f64() / geonum_duration.as_secs_f64()
@@ -877,7 +877,7 @@ fn its_a_relativistic_orbital_system() {
 #[test]
 fn its_a_million_body_simulation() {
     // demonstrate scalability with a simulation of a million bodies
-    // this would be impossible with traditional O(n²) approaches
+    // this would be impossible with traditional O(n²) designs
 
     // number of bodies for scalability test
     let body_count = 1_000_000;

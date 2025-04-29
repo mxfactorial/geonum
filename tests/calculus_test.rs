@@ -6,8 +6,7 @@ const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn it_computes_limits() {
-    // this test demonstrates that "limits" as
-    // unnecessary when using geometric numbers
+    // this test demonstrates that "limits" are unnecessary when using geometric numbers
 
     // differentiation is simply a pi/2 rotation and the foundation of
     // calculus emerges directly from this geometric structure
@@ -16,7 +15,7 @@ fn it_computes_limits() {
 
     // everything can be a 1d "derivative" or projection of the base 2d v
     // so long as the difference between their angles is pi/2 and they
-    // follow the "lengths multiply, angles add" rule
+    // follow the "angles add, lengths multiply" rule
 
     // v'       = [1, pi/2]  # first derivative (rotate v by pi/2)
     // v''      = [1, pi]    # second derivative (rotate v' by pi/2) = -v

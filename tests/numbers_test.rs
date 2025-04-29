@@ -21,7 +21,7 @@ fn its_a_scalar() {
     assert_eq!(scalar.length, 1.0);
     assert_eq!(scalar.angle, 0.0);
 
-    // multiplying scalars follows "lengths multiply, angles add" rule
+    // multiplying scalars follows "angles add, lengths multiply" rule
     let scalar2 = Geonum {
         length: 2.0,
         angle: 0.0,
