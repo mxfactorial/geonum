@@ -1,5 +1,10 @@
 # changelog
 
+## 0.6.8 (2025-04-28)
+
+### added
+- eli5 readme section
+
 ## 0.6.7 (2025-04-25)
 
 ### added

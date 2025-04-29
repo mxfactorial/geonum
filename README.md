@@ -133,6 +133,75 @@ cargo bench # bench
 cargo llvm-cov # coverage
 ```
 
+### eli5
+
+geometric numbers depend on 2 rules:
+
+1. all numbers require a 2 component minimum:
+    1. length number
+    2. angle radian
+2. angles add, lengths multiply
+
+so:
+
+- a 1d number or scalar: `[4, 0]`
+    - 4 units long facing 0 radians
+- a 2d number or vector: `[[4, 0], [4, pi/2]]`
+    - one component 4 units at 0 radians
+    - one component 4 units at pi/2 radians
+- a 3d number: `[[4, 0], [4, pi/2], [4, pi]]`
+    - one component 4 units at 0 radians
+    - one component 4 units at pi/2 radians
+    - one component 4 units at pi radians
+
+higher dimensions just keep adding components rotated by +pi/2 each time
+
+dimensions are created by rotations and not stacking coordinates
+
+multiplying numbers adds their angles and multiplies their lengths:
+
+- `[2, 0] * [3, pi/2] = [6, pi/2]`
+
+differentiation is just rotating a number by +pi/2:
+
+- `[4, 0]' = [4, pi/2]`
+- `[4, pi/2]' = [4, pi]`
+- `[4, pi]' = [4, 3pi/2]`
+- `[4, 3pi/2]' = [4, 2pi] = [4, 0]`
+
+thats why calculus works automatically and autodiff is o1
+
+and if you spot a blade field in the code, it just counts how many pi/2 turns your angle added
+
+blade = 0 means zero turns  
+blade = 1 means one pi/2 turn  
+blade = 2 means two pi/2 turns  
+etc
+
+blade lets your geometric number index which higher dimensional structure its in without using matrices or tensors:
+```
+[4, 0]        blade = 0  (initial direction)
+    |
+    v
+
+[4, pi/2]     blade = 1  (rotated +90 degrees)
+    |
+    v
+
+[4, pi]       blade = 2  (rotated +180 degrees)
+    |
+    v
+
+[4, 3pi/2]    blade = 3  (rotated +270 degrees)
+    |
+    v
+
+[4, 2pi]      blade = 4  (rotated full circle back to start)
+```
+each +pi/2 turn rotates your geometric number into the next orthogonal direction
+
+geometric numbers build dimensions by rotating—not stacking
+
 ### learn with ai
 
 1. install rust: https://www.rust-lang.org/tools/install

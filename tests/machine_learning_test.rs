@@ -9,7 +9,7 @@
 // this isnt just inefficient - its mathematically unnecessary. the tensor dance around
 // orthogonality with squares is reconstructing information that never needed to be hidden in the first place
 //
-// the crucial insight: lengths multiply, angles add
+// the crucial insight: angles add, lengths multiply
 //
 // this single principle unlocks O(1) time complexity for operations that currently require O(n²) or O(2^n)
 // with tensor representations

@@ -498,7 +498,7 @@ impl Geonum {
     }
 
     /// multiplies two geometric numbers
-    /// lengths multiply, angles add
+    /// angles add, lengths multiply
     ///
     /// # arguments
     /// * `other` - the geometric number to multiply with

@@ -77,7 +77,7 @@ fn it_adds_scalars() {
 #[test]
 fn it_multiplies_scalars() {
     // in geometric number representation, multiplication follows the rule:
-    // "lengths multiply, angles add"
+    // "angles add, lengths multiply"
 
     // multiply two positive numbers
     let a = Geonum {
@@ -218,7 +218,7 @@ fn it_adds_vectors() {
 #[test]
 fn it_multiplies_vectors() {
     // in geometric number representation, vector multiplication follows
-    // the fundamental rule: "lengths multiply, angles add"
+    // the fundamental rule: "angles add, lengths multiply"
 
     // create two vectors as geometric numbers
     let a = Geonum {
@@ -284,7 +284,7 @@ fn it_multiplies_vectors() {
 #[test]
 fn it_multiplies_vectors_with_scalars() {
     // scalar multiplication in geometric numbers follows the same rule:
-    // "lengths multiply, angles add"
+    // "angles add, lengths multiply"
 
     // create a vector and a positive scalar
     let vector = Geonum {
