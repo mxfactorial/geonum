@@ -193,11 +193,7 @@ impl Geonum {
     /// # returns
     /// a new geonum with complementary blade (dim - blade)
     pub fn complement_blade(&self, dim: usize) -> Self {
-        let new_blade = if self.blade <= dim {
-            dim - self.blade
-        } else {
-            0
-        };
+        let new_blade = dim.saturating_sub(self.blade);
         Self {
             length: self.length,
             angle: self.angle,
@@ -230,12 +226,7 @@ impl Geonum {
     pub fn pseudo_dual_blade(&self, pseudoscalar: &Geonum) -> Self {
         // computes dimension - grade for dual operations
         // where the grade of the result is (pseudoscalar grade - vector grade)
-        let new_blade = if pseudoscalar.blade > self.blade {
-            pseudoscalar.blade - self.blade
-        } else {
-            0 // minimum blade is 0
-        };
-
+        let new_blade = pseudoscalar.blade.saturating_sub(self.blade);
         Self {
             length: self.length,
             angle: self.angle,
