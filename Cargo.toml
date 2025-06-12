@@ -15,7 +15,8 @@ default = []
 optics = []
 projection = []
 manifold = []
-all = ["optics", "projection", "manifold"]
+ml = []
+all = ["optics", "projection", "manifold", "ml"]
 
 [dependencies]
 

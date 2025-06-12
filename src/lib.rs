@@ -9,6 +9,7 @@
 //! - `optics` - ray tracing, lens operations and optical transformations
 //! - `projection` - view transformations and projections
 //! - `manifold` - manifold operations and transformations
+//! - `ml` - machine learning operations and neural network functions
 //!
 //! no features are enabled by default, only core functionality
 
@@ -20,7 +21,7 @@ pub mod traits;
 
 // re-export all primary types
 pub use dimensions::Dimensions;
-pub use geonum_mod::{Activation, Geonum, EPSILON, TWO_PI, VACUUM_IMPEDANCE};
+pub use geonum_mod::{Geonum, EPSILON, TWO_PI, VACUUM_IMPEDANCE};
 pub use multivector::{Grade, Multivector};
 
 // re-export all traits based on features
@@ -30,3 +31,5 @@ pub use traits::Manifold;
 pub use traits::Optics;
 #[cfg(feature = "projection")]
 pub use traits::Projection;
+#[cfg(feature = "ml")]
+pub use traits::{Activation, MachineLearning};
