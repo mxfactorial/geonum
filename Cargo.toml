@@ -16,7 +16,9 @@ optics = []
 projection = []
 manifold = []
 ml = []
-all = ["optics", "projection", "manifold", "ml"]
+em = []
+waves = []
+all = ["optics", "projection", "manifold", "ml", "em", "waves"]
 
 [dependencies]
 
