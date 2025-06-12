@@ -14,7 +14,7 @@ use std::f64::consts::PI;
 /// # examples
 ///
 /// ```
-/// use geonum::{Geonum, Activation};
+/// use geonum::{Geonum, Activation, MachineLearning};
 ///
 /// let num = Geonum { length: 2.0, angle: 0.5, blade: 1 };
 ///
