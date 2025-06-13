@@ -43,7 +43,7 @@ pub struct Geonum {
 cargo add geonum
 ```
 
-see [tests](https://github.com/mxfactorial/geonum/tree/develop/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
+see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
 
 ### benches
 

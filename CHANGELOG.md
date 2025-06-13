@@ -1,5 +1,18 @@
 # changelog
 
+## 0.6.9 (2025-01-12)
+
+### added
+- machine learning trait module with ml feature flag
+- electromagnetics trait module with em feature flag  
+- waves trait module with waves feature flag
+- clifford number test demonstrating million-dimensional support
+
+### changed
+- moved domain-specific functions to separate trait modules
+- cleaned core geometric algebra from application code
+- architecture: technology validation → stable development
+
 ## 0.6.8 (2025-04-28)
 
 ### added
