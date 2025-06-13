@@ -329,7 +329,7 @@ fn it_detects_early_recession_indicators() {
     // this test demonstrates how to detect early warning signs of economic downturn
 
     // define dimensions for economic indicators
-    let transaction_volumes = vec![
+    let transaction_volumes = [
         ("retail", PI / 9.0),
         ("manufacturing", 2.0 * PI / 9.0),
         ("services", 3.0 * PI / 9.0),
@@ -337,15 +337,14 @@ fn it_detects_early_recession_indicators() {
     ];
 
     // payment timing dimensions
-    let payment_timing = vec![
+    let payment_timing = [
         ("accelerated", PI / 7.0),       // paying earlier than usual
         ("on_schedule", 2.0 * PI / 7.0), // paying on normal schedule
         ("delayed", 3.0 * PI / 7.0),     // paying later than normal
         ("missed", 4.0 * PI / 7.0),      // missing payments entirely
     ];
 
-    // transaction size dimensions
-    let transaction_sizes = vec![
+    let transaction_sizes = [
         ("micro", PI / 5.0),        // very small transactions
         ("small", 2.0 * PI / 5.0),  // normal small purchases
         ("medium", 3.0 * PI / 5.0), // significant purchases
@@ -353,7 +352,7 @@ fn it_detects_early_recession_indicators() {
     ];
 
     // geographic flow dimensions
-    let geographic_flows = vec![
+    let geographic_flows = [
         ("local", PI / 8.0),
         ("regional", 2.0 * PI / 8.0),
         ("national", 3.0 * PI / 8.0),
@@ -506,7 +505,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     // demonstrates how interest rate changes affect different business segments
 
     // define business size dimensions
-    let business_sizes = vec![
+    let business_sizes = [
         ("micro", PI / 10.0),        // 1-9 employees
         ("small", 2.0 * PI / 10.0),  // 10-49 employees
         ("medium", 3.0 * PI / 10.0), // 50-249 employees
@@ -514,7 +513,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     ];
 
     // define industry dimensions
-    let industries = vec![
+    let industries = [
         ("retail", PI / 8.0),
         ("manufacturing", 2.0 * PI / 8.0),
         ("services", 3.0 * PI / 8.0),
@@ -523,7 +522,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     ];
 
     // define cash reserve duration dimensions
-    let cash_reserve_durations = vec![
+    let cash_reserve_durations = [
         ("critical", PI / 6.0),       // <1 month reserves
         ("limited", 2.0 * PI / 6.0),  // 1-3 months
         ("adequate", 3.0 * PI / 6.0), // 3-6 months
@@ -531,7 +530,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     ];
 
     // define debt service ratio dimensions
-    let debt_service_ratios = vec![
+    let debt_service_ratios = [
         ("low", PI / 4.0),            // <10% of revenue
         ("moderate", 2.0 * PI / 4.0), // 10-20% of revenue
         ("high", 3.0 * PI / 4.0),     // >20% of revenue
@@ -722,7 +721,7 @@ fn it_analyzes_housing_payment_patterns() {
     // demonstrates how payment behavior can predict housing market problems
 
     // define payment timeliness dimensions
-    let _payment_timeliness = vec![
+    let _payment_timeliness = [
         ("early", PI / 8.0),
         ("on_time", 2.0 * PI / 8.0),
         ("grace_period", 3.0 * PI / 8.0),
@@ -732,7 +731,7 @@ fn it_analyzes_housing_payment_patterns() {
     ];
 
     // define income-to-payment ratio dimensions
-    let _income_payment_ratio = vec![
+    let _income_payment_ratio = [
         ("affordable", PI / 6.0),      // <28% of income on housing
         ("moderate", 2.0 * PI / 6.0),  // 28-36% of income on housing
         ("stretched", 3.0 * PI / 6.0), // 36-43% of income on housing
@@ -740,7 +739,7 @@ fn it_analyzes_housing_payment_patterns() {
     ];
 
     // define geographic regions
-    let regions = vec![
+    let regions = [
         ("northeast", PI / 5.0),
         ("midwest", 2.0 * PI / 5.0),
         ("south", 3.0 * PI / 5.0),
@@ -748,7 +747,7 @@ fn it_analyzes_housing_payment_patterns() {
     ];
 
     // define property value change dimensions
-    let _value_change = vec![
+    let _value_change = [
         ("rising_fast", PI / 7.0),          // >10% annual appreciation
         ("rising", 2.0 * PI / 7.0),         // 3-10% appreciation
         ("stable", 3.0 * PI / 7.0),         // -3% to +3% change

@@ -154,7 +154,7 @@ fn its_a_sorting_algorithm() {
 
     // create a geometric representation of elements to sort
     // angle represents the value, length can represent frequency or weight
-    let unsorted_elements = vec![
+    let unsorted_elements = [
         Geonum {
             length: 1.0,
             angle: 0.7,
@@ -183,7 +183,7 @@ fn its_a_sorting_algorithm() {
     ];
 
     // geometric sorting: sort by angle
-    let mut sorted_by_angle = unsorted_elements.clone();
+    let mut sorted_by_angle = unsorted_elements.to_vec();
     sorted_by_angle.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
 
     // verify sorting worked correctly
@@ -283,7 +283,7 @@ fn its_a_graph_algorithm() {
     };
 
     // start BFS from angle 0
-    let traversal = bfs_from_angle(0.0, &vec![node_a, node_b, node_c, node_d, node_e, node_f]);
+    let traversal = bfs_from_angle(0.0, &[node_a, node_b, node_c, node_d, node_e, node_f]);
 
     // first node should be closest to angle 0
     assert_eq!(traversal[0].angle, node_a.angle);
@@ -293,7 +293,7 @@ fn its_a_graph_algorithm() {
     let shortest_path = |start: &Geonum, end: &Geonum, graph: &[Geonum]| -> Vec<Geonum> {
         // simplified path finding - in practice would use actual path algorithm
         // just demonstrate using angle differences to guide the search
-        let mut path = vec![start.clone()];
+        let mut path = vec![*start]; // Geonum is Copy
 
         // find nodes creating a path of minimal angle changes
         let mut current = start;
@@ -319,13 +319,13 @@ fn its_a_graph_algorithm() {
                 break;
             }
 
-            path.push(best_next.clone());
+            path.push(*best_next); // Geonum is Copy
             current = best_next;
         }
 
         // add end if not already reached
         if current.angle_distance(end) > EPSILON {
-            path.push(end.clone());
+            path.push(*end); // Geonum is Copy
         }
 
         path
@@ -335,7 +335,7 @@ fn its_a_graph_algorithm() {
     let path = shortest_path(
         &node_a,
         &node_d,
-        &vec![node_a, node_b, node_c, node_d, node_e, node_f],
+        &[node_a, node_b, node_c, node_d, node_e, node_f],
     );
 
     // test path properties
@@ -1115,7 +1115,7 @@ fn its_a_machine_learning_algorithm() {
 
     // demonstrate geometric interpretation of learning
     // angles represent decision boundary orientation
-    let initial_angles = vec![0.1, 0.1]; // starting angles
+    let initial_angles = [0.1, 0.1]; // starting angles
     let final_angles: Vec<f64> = perceptron.weights.iter().map(|w| w.angle).collect();
 
     // verify angles changed during training

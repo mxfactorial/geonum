@@ -18,3 +18,18 @@ pub use projection::Projection;
 pub mod manifold;
 #[cfg(feature = "manifold")]
 pub use manifold::Manifold;
+
+#[cfg(feature = "ml")]
+pub mod machine_learning;
+#[cfg(feature = "ml")]
+pub use machine_learning::{Activation, MachineLearning};
+
+#[cfg(feature = "em")]
+pub mod electromagnetics;
+#[cfg(feature = "em")]
+pub use electromagnetics::Electromagnetics;
+
+#[cfg(feature = "waves")]
+pub mod waves;
+#[cfg(feature = "waves")]
+pub use waves::Waves;

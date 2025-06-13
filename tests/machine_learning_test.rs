@@ -35,7 +35,7 @@
 //
 // the pathway to unbounded ai intelligence lies through geometric numbers
 
-use geonum::{Activation, Geonum, Multivector};
+use geonum::{Activation, Geonum, MachineLearning, Multivector};
 use std::f64::consts::PI;
 
 #[test]

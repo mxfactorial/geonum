@@ -732,7 +732,7 @@ fn its_a_quantum_information_system() {
     // in geometric numbers, we use angle distribution
 
     // create a "mixed state" as a collection of geometric numbers with probabilities
-    let mixed_state = vec![
+    let mixed_state = [
         (
             0.7,
             Geonum {
@@ -1314,7 +1314,7 @@ fn it_evolves_through_time() {
     );
 
     // test multi-particle system evolution
-    let particles = vec![
+    let particles = [
         Geonum {
             length: 1.0,
             angle: 0.0,
@@ -1331,9 +1331,7 @@ fn it_evolves_through_time() {
             blade: 1,
         }, // particle 3
     ];
-
-    // different energies for each particle
-    let energies = vec![PI / 2.0, PI / 4.0, PI / 8.0];
+    let energies = [PI / 2.0, PI / 4.0, PI / 8.0];
 
     // evolve each particle with its own energy
     let evolved_particles: Vec<Geonum> = particles

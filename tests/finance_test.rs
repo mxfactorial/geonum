@@ -106,8 +106,8 @@ fn it_computes_portfolio_optimization() {
 
         // extract expected returns (grades 0-1) and covariance (grade 2)
         // manually combine grade 0 and grade 1 components
-        let mut expected_returns_vec = asset_returns.grade(0).0.clone();
-        expected_returns_vec.extend(asset_returns.grade(1).0.clone());
+        let mut expected_returns_vec = asset_returns.grade(0).0;
+        expected_returns_vec.extend(asset_returns.grade(1).0);
         let expected_returns = Multivector(expected_returns_vec);
 
         // in geometric algebra, risk is encoded in higher grades
@@ -276,9 +276,9 @@ fn it_simulates_asset_price_movements() {
             // with geonum, we encode price uncertainty in the angle
 
             let mut path = Vec::with_capacity(steps + 1);
-            path.push(price.clone());
+            path.push(*price); // Geonum is Copy
 
-            let mut current_price = price.clone();
+            let mut current_price = *price;
 
             for _ in 0..steps {
                 // geometric brownian motion using angle transformations
@@ -314,7 +314,7 @@ fn it_simulates_asset_price_movements() {
                     blade: 1,
                 };
 
-                path.push(current_price.clone());
+                path.push(current_price); // Geonum is Copy
             }
 
             path
@@ -870,7 +870,7 @@ fn it_analyzes_cga_transaction_streams() {
                             blade: 1,
                         }
                     } else {
-                        trans.clone() // keep original angle for outgoing money
+                        *trans // Geonum is Copy, no need for .clone()
                     }
                 })
                 .collect();

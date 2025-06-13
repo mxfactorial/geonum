@@ -43,7 +43,7 @@ pub struct Geonum {
 cargo add geonum
 ```
 
-see [tests](https://github.com/mxfactorial/geonum/tree/develop/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
+see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
 
 ### benches
 
@@ -73,7 +73,7 @@ geonum achieves constant O(1) time complexity regardless of problem size, 270× 
 | geonum (O(1)) | 1000 | 77.44 ns | O(1) = 2 components |
 | geonum (O(1)) | 1,000,000 | 78.79 ns | O(1) = 2 components |
 
-geonum enables geometric algebra in million-dimensional spaces with constant time operations, achieving whats mathematically impossible with traditional implementations (requires more storage than atoms in the universe)
+geonum enables geometric algebra in million-dimensional spaces with constant time operations, achieving whats physically impossible with traditional implementations (requires more storage than atoms in the universe)
 
 #### multivector ops
 
