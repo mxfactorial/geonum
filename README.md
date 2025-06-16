@@ -129,6 +129,7 @@ cargo fmt --check # format
 cargo clippy # lint
 cargo test --lib # unit
 cargo test --test "*" # feature
+cargo test --doc # doc
 cargo bench # bench
 cargo llvm-cov # coverage
 ```
@@ -244,7 +245,7 @@ geometric numbers build dimensions by rotating—not stacking
 
     import geonum in tests/my_test.rs with use geonum::*;
     ```
-1. using the other test suites and library as a reference, describe the test you want the agent to implement for you
+1. describe the test you want the agent to implement for you while using the other test suites and library as a reference
 1. execute your test: `cargo test --test my_test -- --show-output`
 1. revise and add tests
 1. ask the agent to summarize your tests and how they benefit from angle-based complexity
