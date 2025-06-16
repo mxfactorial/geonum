@@ -708,6 +708,124 @@ impl Geonum {
     }
 }
 
+use std::cmp;
+use std::ops::Add;
+
+impl Add for Geonum {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        // test for special cases: same or opposite angles
+        if (self.angle - other.angle).abs() < EPSILON {
+            // same angle - just add lengths directly in polar form
+            return Self {
+                length: self.length + other.length,
+                angle: self.angle,
+                // keep blade grade if they match (homogeneous addition)
+                blade: if self.blade == other.blade {
+                    self.blade
+                } else {
+                    // for mixed grades, use the higher grade
+                    // higher-grade elements dominate in geometric algebra
+                    cmp::max(self.blade, other.blade)
+                },
+            };
+        } else if ((self.angle - other.angle).abs() - PI).abs() < EPSILON {
+            // opposite angles - subtract lengths
+            let diff = self.length - other.length;
+
+            if diff.abs() < EPSILON {
+                // they cancel out completely - result is scalar zero
+                return Self {
+                    length: 0.0,
+                    angle: 0.0,
+                    blade: 0, // when vectors cancel out, result is a scalar (grade 0)
+                };
+            } else if diff > 0.0 {
+                // first one is larger
+                return Self {
+                    length: diff,
+                    angle: self.angle,
+                    blade: self.blade, // preserve blade of dominant component
+                };
+            } else {
+                // second one is larger
+                return Self {
+                    length: -diff, // take absolute value
+                    angle: other.angle,
+                    blade: other.blade, // preserve blade of dominant component
+                };
+            }
+        }
+
+        // general case: convert to cartesian coordinates, add, convert back
+        let (x1, y1) = self.to_cartesian();
+        let (x2, y2) = other.to_cartesian();
+        let x = x1 + x2;
+        let y = y1 + y2;
+        let length = (x * x + y * y).sqrt();
+
+        // handle zero result case
+        if length < EPSILON {
+            return Self {
+                length: 0.0,
+                angle: 0.0,
+                blade: 0, // zero result is a scalar (grade 0)
+            };
+        }
+
+        let angle = y.atan2(x);
+
+        // blade handling for general case:
+        // 1. if same blade grade, preserve it
+        // 2. if different grades, use the dominant component's grade
+        let dominant_blade = if self.length > other.length {
+            self.blade
+        } else if other.length > self.length {
+            other.blade
+        } else {
+            // if equal lengths, use the higher grade
+            cmp::max(self.blade, other.blade)
+        };
+
+        Self {
+            length,
+            angle,
+            blade: dominant_blade,
+        }
+    }
+}
+
+// additional implementations for different ownership patterns
+
+// reference implementation
+impl Add for &Geonum {
+    type Output = Geonum;
+
+    fn add(self, other: Self) -> Geonum {
+        // delegate to the owned implementation
+        (*self).add(*other)
+    }
+}
+
+// mixed ownership: &Geonum + Geonum
+impl Add<Geonum> for &Geonum {
+    type Output = Geonum;
+
+    fn add(self, other: Geonum) -> Geonum {
+        (*self).add(other)
+    }
+}
+
+// mixed ownership: Geonum + &Geonum
+impl Add<&Geonum> for Geonum {
+    type Output = Geonum;
+
+    fn add(self, other: &Geonum) -> Geonum {
+        self.add(*other)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1446,5 +1564,118 @@ mod tests {
             blade: 1,         // vector (grade 1)
         };
         assert!((a.signed_angle_distance(&g) - (-PI / 2.0)).abs() < EPSILON);
+    }
+
+    #[test]
+    fn it_adds_same_angle_vectors() {
+        let a = Geonum {
+            length: 4.0,
+            angle: 0.0,
+            blade: 1,
+        };
+        let b = Geonum {
+            length: 4.0,
+            angle: 0.0,
+            blade: 1,
+        };
+
+        let result = a + b;
+
+        assert_eq!(result.length, 8.0);
+        assert_eq!(result.angle, 0.0);
+        assert_eq!(result.blade, 1);
+    }
+
+    #[test]
+    fn it_subtracts_opposite_angle_vectors() {
+        let a = Geonum {
+            length: 4.0,
+            angle: 0.0,
+            blade: 1,
+        };
+        let b = Geonum {
+            length: 4.0,
+            angle: PI,
+            blade: 1,
+        };
+
+        let result = a + b;
+
+        assert_eq!(result.length, 0.0);
+        assert_eq!(result.angle, 0.0);
+        assert_eq!(result.blade, 0); // scalar result when vectors cancel
+
+        // test with different magnitudes
+        let c = Geonum {
+            length: 5.0,
+            angle: 0.0,
+            blade: 1,
+        };
+        let d = Geonum {
+            length: 3.0,
+            angle: PI,
+            blade: 1,
+        };
+
+        let result2 = c + d;
+
+        assert_eq!(result2.length, 2.0);
+        assert_eq!(result2.angle, 0.0);
+        assert_eq!(result2.blade, 1); // preserves dominant vector's blade
+    }
+
+    #[test]
+    fn it_adds_orthogonal_vectors() {
+        let a = Geonum {
+            length: 3.0,
+            angle: 0.0,
+            blade: 1,
+        }; // 3 along x-axis
+        let b = Geonum {
+            length: 4.0,
+            angle: PI / 2.0,
+            blade: 1,
+        }; // 4 along y-axis
+
+        let result = a + b;
+
+        // expected: length = sqrt(3² + 4²) = 5, angle = atan2(4, 3)
+        assert!((result.length - 5.0).abs() < EPSILON);
+        assert!((result.angle - 4.0_f64.atan2(3.0)).abs() < EPSILON);
+        assert_eq!(result.blade, 1);
+    }
+
+    #[test]
+    fn it_handles_mixed_blade_addition() {
+        let scalar = Geonum {
+            length: 2.0,
+            angle: 0.0,
+            blade: 0,
+        };
+        let vector = Geonum {
+            length: 3.0,
+            angle: 0.0,
+            blade: 1,
+        };
+        let bivector = Geonum {
+            length: 4.0,
+            angle: 0.0,
+            blade: 2,
+        };
+
+        // scalar + vector (same direction)
+        let result1 = scalar + vector;
+        assert_eq!(result1.length, 5.0);
+        assert_eq!(result1.blade, 1); // vector dominates (higher grade)
+
+        // vector + bivector (same direction)
+        let result2 = vector + bivector;
+        assert_eq!(result2.length, 7.0);
+        assert_eq!(result2.blade, 2); // bivector dominates (higher grade)
+
+        // scalar + bivector (same direction)
+        let result3 = scalar + bivector;
+        assert_eq!(result3.length, 6.0);
+        assert_eq!(result3.blade, 2); // bivector dominates (higher grade)
     }
 }
