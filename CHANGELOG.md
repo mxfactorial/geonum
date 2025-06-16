@@ -1,5 +1,12 @@
 # changelog
 
+## 0.6.10 (2025-06-16)
+
+### added
+- add trait for geonum with optimized polar addition
+- affine trait module with affine feature flag
+- translation shear and area methods eliminating matrix overhead
+
 ## 0.6.9 (2025-01-12)
 
 ### added

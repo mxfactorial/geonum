@@ -33,3 +33,8 @@ pub use electromagnetics::Electromagnetics;
 pub mod waves;
 #[cfg(feature = "waves")]
 pub use waves::Waves;
+
+#[cfg(feature = "affine")]
+pub mod affine;
+#[cfg(feature = "affine")]
+pub use affine::Affine;
