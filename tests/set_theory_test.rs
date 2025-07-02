@@ -31,8 +31,11 @@ fn its_a_naive_set() {
     // set theory uses "membership" to group elements
     // in geometric numbers, we use angle dimensions instead
 
-    // create a "set" as an angle space
-    let space = Dimensions::new(2);
+    // transition from coordinate scaffolding to direct geometric number creation:
+    // instead of defining a "2D space" and then creating elements within it,
+    // we create geometric numbers directly at standardized angles
+    // OLD: let space = Dimensions::new(2); space.multivector(&[0, 1])
+    // NEW: direct creation without coordinate dependency
 
     // create "elements" as geometric numbers in that space
     let a = Geonum {
@@ -47,19 +50,21 @@ fn its_a_naive_set() {
     };
 
     // test dimension extension vs set membership
-    // instead of saying "a ∈ S", we say "a is in the space"
-    let elements = space.multivector(&[0, 1]);
+    // instead of saying "a ∈ S", we create geometric numbers at standardized angles
+    // dimension 0 → angle 0, dimension 1 → angle π/2
+    let elements = Multivector::create_dimension(1.0, &[0, 1]);
 
     // test elements in the space
     assert_eq!(elements[0].angle, 0.0);
     assert_eq!(elements[1].angle, PI / 2.0);
 
     // test angle-based unions vs symbol-based ∪
-    // instead of saying "A ∪ B", we combine spaces by extending dimensions
-    let combined_space = Dimensions::new(3); // extend with a new dimension
+    // instead of saying "A ∪ B", we create geometric numbers spanning more dimensions
+    // no need to "create space" - dimensions are computed on demand via trigonometry
 
-    // test the combined space contains both original spaces
-    let combined_elements = combined_space.multivector(&[0, 1, 2]);
+    // test combining dimensions through direct geometric number creation
+    // dimension 0 → angle 0, dimension 1 → angle π/2, dimension 2 → angle π
+    let combined_elements = Multivector::create_dimension(1.0, &[0, 1, 2]);
     assert_eq!(combined_elements[0].angle, 0.0);
     assert_eq!(combined_elements[1].angle, PI / 2.0);
     assert_eq!(combined_elements[2].angle, PI);
@@ -371,9 +376,10 @@ fn its_a_vector_space() {
     assert_eq!((e2.angle - e1.angle) % PI, PI / 2.0);
 
     // test dimensions as physical concepts
-    // a dimension is just an angle direction in space
-    let space = Dimensions::new(2);
-    let basis = space.multivector(&[0, 1]);
+    // a dimension is just an angle direction in space - no scaffolding needed
+    // create geometric numbers directly at standardized angles without "space" intermediary
+    // dimension 0 → angle 0, dimension 1 → angle π/2
+    let basis = Multivector::create_dimension(1.0, &[0, 1]);
 
     assert_eq!(basis[0].angle, 0.0);
     assert_eq!(basis[1].angle, PI / 2.0);
@@ -419,9 +425,10 @@ fn its_an_algebra() {
     assert!(angle_diff.abs() < EPSILON || (TWO_PI - angle_diff).abs() < EPSILON);
 
     // test dimension properties from physical space
-    // dimension of algebra is directly related to number of basis vectors
-    let space = Dimensions::new(3);
-    let basis = space.multivector(&[0, 1, 2]);
+    // dimension of algebra is directly related to angles, not "basis vectors"
+    // create geometric numbers directly without coordinate scaffolding
+    // dimension 0 → angle 0, dimension 1 → angle π/2, dimension 2 → angle π
+    let basis = Multivector::create_dimension(1.0, &[0, 1, 2]);
 
     assert_eq!(basis.len(), 3);
 
@@ -591,7 +598,8 @@ fn its_a_topological_space() {
 
     // create a "topological space" as a continuous angle spectrum
     // artifact of geonum automation: formal spaces get replaced with direct angle measurement
-    let _space = Dimensions::new(2);
+    // no need for coordinate scaffolding - continuity is built into angle representation
+    // dimensions are computed on demand via trigonometry, not predefined
 
     // test continuity from angle measure
     // we can define "nearness" directly through angle difference
@@ -729,7 +737,7 @@ fn its_a_manifold() {
     // create a "manifold" as a continuous angle space
     // (e.g., representing a circle, which is a 1-dimensional manifold)
     // artifact of geonum automation: formal manifold structure gets replaced with simple angle space
-    let _space = Dimensions::new(1);
+    // no coordinate scaffolding needed - geometric numbers exist directly in continuous angle space
 
     // test locality through angle neighborhoods
     // points on the circle are locally like a line segment
@@ -790,7 +798,7 @@ fn its_a_fiber_bundle() {
     // create a "fiber bundle" where base space is angle and fiber is length
     // (this is like a line bundle over a circle)
     // artifact of geonum automation: abstract fiber bundle structure replaced by direct angle-length pairs
-    let _base_space = Dimensions::new(1); // circle as base space
+    // no need for coordinate scaffolding - geometric numbers naturally encode bundle structure
 
     // create points in the total space (the bundle)
     let p1 = Geonum {
@@ -857,7 +865,7 @@ fn it_rejects_set_theory() {
 
     // test direct geometric foundation
     // creating a mathematical object directly from physical concepts
-    let space = Dimensions::new(2);
+    // no coordinate scaffolding needed - geometric numbers exist independently
     let vector = Geonum {
         length: 1.0,
         angle: PI / 4.0,
@@ -876,7 +884,8 @@ fn it_rejects_set_theory() {
     // are directly defined in terms of physical quantities
 
     // test we can work with "everything" without contradiction
-    let universe = space.multivector(&[0, 1]);
+    // create geometric numbers directly at standardized angles
+    let universe = Multivector::create_dimension(1.0, &[0, 1]);
     assert_eq!(universe.len(), 2);
 
     // test consistency from universe consistency
@@ -981,8 +990,7 @@ fn it_models_computing_structures() {
     // test types as angle dimensions
     // different types correspond to different angle spaces
     // artifact of geonum automation: separate type systems unified through geometric representation
-    let _int_space = Dimensions::new(1);
-    let _float_space = Dimensions::new(1);
+    // no coordinate scaffolding needed - types are just different interpretations of the same geometric structure
 
     // int "type" exists in one dimension
     let int_one = Geonum {

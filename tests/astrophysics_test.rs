@@ -885,8 +885,10 @@ fn its_a_million_body_simulation() {
     // simulation would use statistical approximations rather than direct n-body calculations
     // for realistic galaxy-scale simulations
 
-    // create a space with a million dimensions for our bodies
-    let _space = Dimensions::new(body_count);
+    // transition from coordinate scaffolding to direct stellar body modeling
+    // old design: required declaring million-dimensional \"space\" for body coordinates
+    // new design: create geometric numbers representing stellar bodies directly
+    // each body encoded as [mass, angle, blade] without coordinate scaffolding
 
     // measure time to initialize a million bodies
     let start_time = Instant::now();

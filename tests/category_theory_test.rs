@@ -32,8 +32,9 @@ fn its_a_category() {
     // in geometric numbers, we use dimensions and transformations instead
 
     // create a "category" as a transformation space
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _space = Dimensions::new(2);
+    // category theory abstracts over "objects" and "morphisms" but geonum makes this concrete:
+    // objects become geometric numbers, morphisms become rotations, composition becomes angle addition
+    // no need to declare a "space" - objects exist directly as [length, angle, blade]
 
     // create "objects" as geometric numbers in that space
     let a = Geonum {
@@ -49,7 +50,8 @@ fn its_a_category() {
 
     // test dimension extension vs categorical objects
     // instead of saying "a is an object in category C", we say "a exists in space"
-    let objects = _space.multivector(&[0, 1]);
+    // categorical objects become geometric numbers at standardized angles
+    let objects = Multivector::create_dimension(1.0, &[0, 1]);
 
     // test objects exist in the space
     assert_eq!(objects[0].angle, 0.0);
@@ -115,9 +117,9 @@ fn its_a_functor() {
     // with geometric numbers, a functor is simply a transformation between spaces
 
     // create two spaces (analogous to categories)
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _source_space = Dimensions::new(2);
-    let _target_space = Dimensions::new(2);
+    // functors traditionally require formal mappings between category structures
+    // geonum eliminates this abstraction: functors become direct angle transformations
+    // source and target "categories" are just different angle interpretations of the same geometric space
 
     // create "objects" in source category
     let a = Geonum {
@@ -211,9 +213,9 @@ fn its_an_adjunction() {
     // with geometric numbers, adjunctions are direct angle reflections
 
     // create two spaces (analogous to categories)
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _space_c = Dimensions::new(2);
-    let _space_d = Dimensions::new(2);
+    // adjunctions traditionally involve complex universal properties and natural transformations
+    // geonum simplifies this: adjoint functors become angle doubling/halving operations
+    // the "spaces" are just conceptual - the real structure lives in the angle arithmetic
 
     // define a "left adjoint" functor from C to D by doubling angles
     let left_adjoint = |g: &Geonum| -> Geonum {
@@ -561,8 +563,9 @@ fn its_a_natural_transformation() {
     // with geometric numbers, its a direct geometric transition between function spaces
 
     // create a "source category" as a space
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _space_c = Dimensions::new(2);
+    // natural transformations traditionally require naturality squares and commutative diagrams
+    // geonum makes this direct: natural transformations become coherent angle mappings
+    // no "category" setup needed - geometric numbers naturally compose with angle arithmetic
 
     // create "objects" in source category
     let a = Geonum {
@@ -658,8 +661,9 @@ fn its_a_monad() {
     // with geometric numbers, its a simple binding operation of angle rotations
 
     // create a space to work in
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _space = Dimensions::new(2);
+    // monads traditionally require unit/return and bind operations with associativity laws
+    // geonum eliminates this machinery: monadic composition becomes angle transformation chains
+    // geometric numbers inherently satisfy monad laws through angle arithmetic properties
 
     // define a "monad" as an angle transformation with bind operation
     let transform = |g: &Geonum| -> Geonum {
@@ -749,8 +753,8 @@ fn it_rejects_category_theory() {
 
     // test direct geometric relationships
     // instead of abstract morphisms, we use concrete rotations
-    // artifact of geonum automation: formal category structure replaced by simple angle space
-    let _space = Dimensions::new(2);
+    // category theory formalizes relationships through arrows and composition
+    // geonum makes this computational: relationships become measurable angle differences
     let a = Geonum {
         length: 1.0,
         angle: 0.0,

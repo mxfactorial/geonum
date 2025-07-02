@@ -205,16 +205,17 @@ fn bench_dimension_operations(c: &mut Criterion) {
     for &dim_size in &[3, 10, 100] {
         group.bench_function(format!("create_dimension_{}", dim_size), |b| {
             b.iter(|| {
-                let dims = Dimensions::new(black_box(dim_size));
-                black_box(dims)
+                // Direct geometric number creation - O(1) regardless of dimension
+                let geonum = Geonum::create_dimension(1.0, black_box(dim_size));
+                black_box(geonum)
             })
         });
 
         group.bench_function(format!("multivector_{}", dim_size), |b| {
             b.iter(|| {
-                let dims = Dimensions::new(black_box(dim_size));
-                let indices: Vec<usize> = (0..dim_size).collect();
-                let mv = dims.multivector(&indices);
+                let indices: Vec<usize> = (0..black_box(dim_size)).collect();
+                // Direct multivector creation without coordinate scaffolding
+                let mv = Multivector::create_dimension(1.0, &indices);
                 black_box(mv)
             })
         });
@@ -316,13 +317,9 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
     // Geonum in 10D - CONSTANT TIME regardless of dimension
     group.bench_function("geonum_10d_product", |b| {
         b.iter(|| {
-            // Create a 10D space
-            let dims = Dimensions::new(10);
-
-            // Get two basis vectors (could be any of the 10 dimensions)
-            let vectors = dims.multivector(&[0, 1]);
-            let v1 = vectors[0];
-            let v2 = vectors[1];
+            // Create geometric numbers in 10D space - no coordinate scaffolding needed
+            let v1 = Geonum::create_dimension(1.0, 0); // dimension 0
+            let v2 = Geonum::create_dimension(1.0, 1); // dimension 1
 
             // Perform geometric operations - all O(1) time
             let dot = v1.dot(&v2);
@@ -336,13 +333,9 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
     // Geonum in 30D - STILL CONSTANT TIME!
     group.bench_function("geonum_30d_product", |b| {
         b.iter(|| {
-            // Create a 30D space (would be impossible to represent fully in traditional GA)
-            let dims = Dimensions::new(30);
-
-            // Get two basis vectors
-            let vectors = dims.multivector(&[0, 1]);
-            let v1 = vectors[0];
-            let v2 = vectors[1];
+            // Create geometric numbers in 30D space - still O(1) complexity
+            let v1 = Geonum::create_dimension(1.0, 0); // dimension 0
+            let v2 = Geonum::create_dimension(1.0, 1); // dimension 1
 
             // Perform geometric operations - all O(1) time regardless of dimension
             let dot = v1.dot(&v2);
@@ -357,13 +350,9 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
     // This would be completely impossible with traditional GA (2^1000 components!)
     group.bench_function("geonum_1000d_product", |b| {
         b.iter(|| {
-            // Create a 1000D space
-            let dims = Dimensions::new(1000);
-
-            // Get two basis vectors
-            let vectors = dims.multivector(&[0, 1]);
-            let v1 = vectors[0];
-            let v2 = vectors[1];
+            // Create geometric numbers in 1000D space - constant time operations
+            let v1 = Geonum::create_dimension(1.0, 0); // dimension 0
+            let v2 = Geonum::create_dimension(1.0, 1); // dimension 1
 
             // Perform geometric operations - all O(1) time regardless of dimension
             let dot = v1.dot(&v2);
@@ -379,13 +368,9 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
     // which is astronomically beyond the number of atoms in the universe
     group.bench_function("geonum_million_d_product", |b| {
         b.iter(|| {
-            // Create a 1,000,000D space
-            let dims = Dimensions::new(1_000_000);
-
-            // Get two basis vectors
-            let vectors = dims.multivector(&[0, 1]);
-            let v1 = vectors[0];
-            let v2 = vectors[1];
+            // Create geometric numbers in million-D space - no storage explosion
+            let v1 = Geonum::create_dimension(1.0, 0); // dimension 0
+            let v2 = Geonum::create_dimension(1.0, 1); // dimension 1
 
             // Perform geometric operations - STILL O(1) time!
             let dot = v1.dot(&v2);
@@ -406,8 +391,7 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Benchmark grade operations in million-D space
     group.bench_function("grade_extraction_million_d", |b| {
         b.iter(|| {
-            // Create a million-D space
-            let _dims = Dimensions::new(1_000_000);
+            // Million-D operations without coordinate scaffolding
 
             // Create a multivector with mixed grades
             let mv = Multivector(vec![
@@ -439,11 +423,8 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Benchmark grade involution in extreme dimensions
     group.bench_function("grade_involution_million_d", |b| {
         b.iter(|| {
-            // Create a million-D space
-            let dims = Dimensions::new(1_000_000);
-
-            // Create a multivector with basis vectors from this space
-            let _basis_vectors = dims.multivector(&[0, 1, 2, 3, 4]);
+            // Create multivector with specific dimensions - no space initialization needed
+            let _basis_vectors = Multivector::create_dimension(1.0, &[0, 1, 2, 3, 4]);
 
             // Add more components to create a complex multivector
             let mut complex_mv = Multivector::with_capacity(10);
@@ -478,11 +459,8 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Benchmark clifford conjugate in extreme dimensions
     group.bench_function("clifford_conjugate_million_d", |b| {
         b.iter(|| {
-            // Create a million-D space
-            let dims = Dimensions::new(1_000_000);
-
-            // Create a multivector with basis elements
-            let basis_vectors = dims.multivector(&[0, 1, 2, 3]);
+            // Create multivector with basis elements - direct construction
+            let basis_vectors = Multivector::create_dimension(1.0, &[0, 1, 2, 3]);
 
             // Perform clifford conjugate operation
             let conjugate = basis_vectors.conjugate();
@@ -494,12 +472,9 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Benchmark contractions between multivectors in extreme dimensions
     group.bench_function("contractions_million_d", |b| {
         b.iter(|| {
-            // Create a million-D space
-            let dims = Dimensions::new(1_000_000);
-
-            // Create two multivectors
-            let a = dims.multivector(&[0, 1]); // scalar and first basis vector
-            let b = dims.multivector(&[1, 2]); // first and second basis vectors
+            // Create multivectors directly without space initialization
+            let a = Multivector::create_dimension(1.0, &[0, 1]); // scalar and first basis vector
+            let b = Multivector::create_dimension(1.0, &[1, 2]); // first and second basis vectors
 
             // Perform left and right contractions
             let left = a.left_contract(&b);
@@ -512,12 +487,9 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Benchmark anti-commutator in extreme dimensions
     group.bench_function("anti_commutator_million_d", |b| {
         b.iter(|| {
-            // Create a million-D space
-            let dims = Dimensions::new(1_000_000);
-
-            // Create two multivectors from basis elements
-            let a = dims.multivector(&[0, 1]); // scalar and first basis vector
-            let b = dims.multivector(&[1, 2]); // first and second basis vectors
+            // Create multivectors from basis elements - no dimensional scaffolding
+            let a = Multivector::create_dimension(1.0, &[0, 1]); // scalar and first basis vector
+            let b = Multivector::create_dimension(1.0, &[1, 2]); // first and second basis vectors
 
             // Compute anti-commutator
             let anti_comm = a.anti_commutator(&b);
@@ -529,12 +501,9 @@ fn bench_multivector_operations(c: &mut Criterion) {
     // Compare performance of different multivector operations
     group.bench_function("multivector_ops_comparison", |b| {
         b.iter(|| {
-            // Create a high-dimensional space
-            let dims = Dimensions::new(1_000);
-
-            // Create multivectors
-            let mv1 = dims.multivector(&[0, 1, 2]);
-            let mv2 = dims.multivector(&[1, 2, 3]);
+            // Create multivectors in high-dimensional space - O(1) construction
+            let mv1 = Multivector::create_dimension(1.0, &[0, 1, 2]);
+            let mv2 = Multivector::create_dimension(1.0, &[1, 2, 3]);
 
             // Perform various operations and compare their performance
             let grade_op = mv1.grade(1);
