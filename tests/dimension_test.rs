@@ -1,3 +1,24 @@
+// "linear combinations" are founded on a fictional data type called a "basis vector" to reconstruct direction
+//
+// to keep vector operations consistent with a fictional data type you must self-referentially require "orthogonal basis vectors" as "components" of all "vectors"
+//
+// hacking directional consistency with coordinate scaffolding just traps everyone in a complexity loop ("span the space")
+//
+// and denies them the opportunity to understand how direction **naturally exists** in the physical universe
+//
+// so instead of "combining basis vectors", geometric numbers prove their directional consistency with the physical universe by *preserving* the universe's existing angles with `let vector = [length, angle];`
+//
+// rejecting "linear combinations" for "angle preservation" empowers people to understand direction so well they can even **project** with it onto any dimension without predefined coordinates:
+//
+// ```rs
+// let vector_3d = [magnitude, angle, blade];
+// let x_component = vector_3d.project_to_dimension(0);  // no basis vectors needed
+// let y_component = vector_3d.project_to_dimension(1);  // no coordinate system setup
+// let z_component = vector_3d.project_to_dimension(2);  // just trigonometric projection
+// ```
+//
+// say goodbye to `x*e₁ + y*e₂ + z*e₃`
+
 use geonum::*;
 use std::f64::consts::PI;
 
@@ -7,9 +28,9 @@ const EPSILON: f64 = 1e-10;
 fn it_projects_a_geonum_onto_coordinate_axes() {
     // step 1: unify traditional [x, y, z] coordinates into single geonum
     // traditional 3d vector: [2, 3, 1]
-    let x = 2.0_f64;
-    let y = 3.0_f64;
-    let z = 1.0_f64;
+    let x: f64 = 2.0;
+    let y: f64 = 3.0;
+    let z: f64 = 1.0;
 
     // compute unified geometric representation
     let magnitude = (x * x + y * y + z * z).sqrt(); // 3.742
@@ -78,19 +99,27 @@ fn it_proves_dimensions_are_observed_from_angles() {
     // the geometric entity has meaningful projections into dimensions
     // that were never defined, declared, or initialized
 
-    // test components are well-defined (not nan or infinite)
-    assert!(dimension_3.is_finite(), "3rd dimension component is finite");
+    // compute expected trigonometric values
+    let expected_3 = 2.5 * ((3.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
+    let expected_42 = 2.5 * ((42.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
+    let expected_1000 = 2.5 * ((1000.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
+    let expected_million = 2.5 * ((1_000_000.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
+
     assert!(
-        dimension_42.is_finite(),
-        "42nd dimension component is finite"
+        (dimension_3 - expected_3).abs() < EPSILON,
+        "3rd dimension projection matches trigonometric values"
     );
     assert!(
-        dimension_1000.is_finite(),
-        "1000th dimension component is finite"
+        (dimension_42 - expected_42).abs() < EPSILON,
+        "42nd dimension projection matches trigonometric values"
     );
     assert!(
-        dimension_million.is_finite(),
-        "millionth dimension component is finite"
+        (dimension_1000 - expected_1000).abs() < EPSILON,
+        "1000th dimension projection matches trigonometric values"
+    );
+    assert!(
+        (dimension_million - expected_million).abs() < EPSILON,
+        "millionth dimension projection matches trigonometric values"
     );
 
     // test at least some dimensions have non-zero components
