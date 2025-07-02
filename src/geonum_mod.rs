@@ -148,6 +148,22 @@ impl Geonum {
         }
     }
 
+    /// creates a geometric number at a standardized dimensional angle
+    ///
+    /// # args
+    /// * `length` - magnitude component  
+    /// * `dimension_index` - which dimension (sets angle = dimension_index * PI/2)
+    ///
+    /// # returns
+    /// geometric number with blade = dimension_index and angle = dimension_index * PI/2
+    pub fn create_dimension(length: f64, dimension_index: usize) -> Self {
+        Self {
+            length,
+            angle: (dimension_index as f64) * (PI / 2.0),
+            blade: dimension_index,
+        }
+    }
+
     /// creates a new geonum with blade count incremented by 1
     ///
     /// # returns
@@ -419,6 +435,20 @@ impl Geonum {
     /// the dot product as a scalar value
     pub fn dot(&self, other: &Geonum) -> f64 {
         self.length * other.length * ((other.angle - self.angle).cos())
+    }
+
+    /// projects this geometric number onto a specified dimension
+    /// enables querying any dimension without predefined spaces
+    ///
+    /// # arguments
+    /// * `dimension_index` - target dimension to project onto
+    ///
+    /// # returns
+    /// scalar projection component in the specified dimension
+    pub fn project_to_dimension(&self, dimension_index: usize) -> f64 {
+        let target_axis_angle = (dimension_index as f64) * (PI / 2.0);
+        let current_total_angle = (self.blade as f64) * (PI / 2.0) + self.angle;
+        self.length * (target_axis_angle - current_total_angle).cos()
     }
 
     /// computes the wedge product of two geometric numbers
@@ -1677,5 +1707,35 @@ mod tests {
         let result3 = scalar + bivector;
         assert_eq!(result3.length, 6.0);
         assert_eq!(result3.blade, 2); // bivector dominates (higher grade)
+    }
+
+    #[test]
+    fn it_projects_to_arbitrary_dimensions() {
+        // test the new project_to_dimension method
+        let geonum = Geonum {
+            length: 2.0,
+            angle: PI / 4.0, // 45 degrees
+            blade: 1,
+        };
+
+        // project onto dimension 0 (x-axis)
+        let proj_0 = geonum.project_to_dimension(0);
+        // compute expected: length * cos(0 - (1 * PI/2 + PI/4)) = 2 * cos(-3PI/4)
+        let expected_0 = 2.0 * (0.0 - (PI / 2.0 + PI / 4.0)).cos();
+        assert!((proj_0 - expected_0).abs() < EPSILON);
+
+        // project onto dimension 1 (y-axis at PI/2)
+        let proj_1 = geonum.project_to_dimension(1);
+        let expected_1 = 2.0 * (PI / 2.0 - (PI / 2.0 + PI / 4.0)).cos();
+        assert!((proj_1 - expected_1).abs() < EPSILON);
+
+        // test high dimensional projection (dimension 1000)
+        let proj_1000 = geonum.project_to_dimension(1000);
+        let expected_1000 = 2.0 * ((1000.0 * PI / 2.0) - (PI / 2.0 + PI / 4.0)).cos();
+        assert!(
+            proj_1000.is_finite(),
+            "projection to dimension 1000 is finite"
+        );
+        assert!((proj_1000 - expected_1000).abs() < EPSILON);
     }
 }

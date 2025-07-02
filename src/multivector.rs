@@ -51,6 +51,22 @@ impl Multivector {
         Multivector(Vec::with_capacity(capacity))
     }
 
+    /// creates a multivector with geometric numbers at standardized dimensional angles
+    ///
+    /// # arguments
+    /// * `length` - magnitude for all geometric numbers
+    /// * `dimension_indices` - array of dimension indices for angle/blade calculation
+    ///
+    /// # returns
+    /// multivector with geometric numbers at dimension_index * PI/2 angles
+    pub fn create_dimension(length: f64, dimension_indices: &[usize]) -> Self {
+        let geonums = dimension_indices
+            .iter()
+            .map(|&idx| Geonum::create_dimension(length, idx))
+            .collect();
+        Multivector(geonums)
+    }
+
     /// estimates the grade of this multivector based on its angle
     ///
     /// for pure blades, returns the grade as a usize
@@ -97,8 +113,7 @@ impl Multivector {
         // test range
         if start_grade > end_grade {
             panic!(
-                "invalid grade range: start grade ({}) must be <= end grade ({})",
-                start_grade, end_grade
+                "invalid grade range: start grade (start_grade) must be <= end grade (end_grade)"
             );
         }
 

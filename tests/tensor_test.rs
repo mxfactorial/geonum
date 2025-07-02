@@ -143,11 +143,14 @@ fn its_a_tensor_product() {
     assert!(duration.as_micros() < 10); // completes in less than 10 microseconds
 
     // demonstrate million-dimensional tensor product
-    // create million-dimensional space
-    let high_dim = Dimensions::new(1_000_000);
+    // EDUCATIONAL: traditional coordinate systems require defining 1M-dimensional spaces
+    // and storing 1M basis vectors. geonum eliminates this scaffolding by creating
+    // geometric numbers directly at standardized angles without coordinate prerequisites
 
-    // create two vectors in this space
-    let high_dim_vectors = high_dim.multivector(&[0, 1]);
+    // create two vectors in million-dimensional space directly
+    // traditional: let high_dim = Dimensions::new(1_000_000); high_dim.multivector(&[0, 1]);
+    // geonum: direct geometric number creation without coordinate scaffolding
+    let high_dim_vectors = Multivector::create_dimension(1.0, &[0, 1]);
     let v1 = high_dim_vectors[0];
     let v2 = high_dim_vectors[1];
 
@@ -401,8 +404,10 @@ fn its_a_contraction() {
     assert_eq!(r, 1.0 * 3.0 * 5.0 + 2.0 * 4.0 * 6.0); // 15 + 48 = 63
 
     // sanity: contraction of orthogonal geonums in high dimensions
-    let dim = Dimensions::new(1000);
-    let vs = dim.multivector(&[0, 1]);
+    // EDUCATIONAL: dimensions are computed on demand via trigonometry, not predefined
+    // traditional: let dim = Dimensions::new(1000); dim.multivector(&[0, 1]);
+    // geonum: direct creation eliminates the coordinate scaffolding step
+    let vs = Multivector::create_dimension(1.0, &[0, 1]);
     let ortho = vs[0].dot(&vs[1]);
     assert!(ortho.abs() < EPSILON);
 }
@@ -2836,7 +2841,10 @@ fn its_a_tensor_comparison() {
         }
 
         // create geometric tensors
-        let geo_tensor = Dimensions::new(dim);
+        // EDUCATIONAL: the "tensor" is just a geometric number at the dimension angle
+        // traditional tensor operations require O(n²) space, geonum uses O(1) angle arithmetic
+        // removing scaffolding: Dimensions::new(dim) -> direct geometric number creation
+        // (this line is removed as geo_tensor was only used for coordinate system setup)
 
         // benchmark traditional tensor trace
         let trad_start = Instant::now();
@@ -2854,7 +2862,8 @@ fn its_a_tensor_comparison() {
         let geo_start = Instant::now();
 
         // create two basis vectors
-        let vecs = geo_tensor.multivector(&[0, 1]);
+        // EDUCATIONAL: direct geometric number creation replaces coordinate scaffolding
+        let vecs = Multivector::create_dimension(1.0, &[0, 1]);
 
         // perform o(1) operation instead of o(n)
         let _geo_op = vecs[0].mul(&vecs[1]);
@@ -2937,10 +2946,11 @@ fn its_a_tensor_comparison() {
     let geo_start = Instant::now();
 
     // create dimensional space
-    let big_space = Dimensions::new(extreme_dim);
-
-    // create two vectors in this space
-    let big_vecs = big_space.multivector(&[0, 1]);
+    // EDUCATIONAL: extreme dimensions (1 trillion) impossible in traditional systems
+    // but trivial in geonum - just geometric numbers at standardized angles
+    // traditional: let big_space = Dimensions::new(extreme_dim); big_space.multivector(&[0, 1]);
+    // geonum: direct creation without coordinate space initialization
+    let big_vecs = Multivector::create_dimension(1.0, &[0, 1]);
 
     // perform operation
     let _big_result = big_vecs[0].mul(&big_vecs[1]);

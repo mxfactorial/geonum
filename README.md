@@ -14,9 +14,13 @@
 
 # geonum
 
-setting a metric with euclidean and squared norms creates a `k^n` component problem for transforming vectors
+removing an explicit angle from numbers in the name of "pure" math throws away primitive geometric information
 
-traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
+once you amputate the angle from a number to create a "scalar", youve thrown away its compass and condemned it to hobble through a mountain of "scalars" known as "matrix" and "tensor" operations—where every step requires expensive, triangulating dot & cross product computations to reconstruct the simple detail of *which direction your number is facing*
+
+setting a metric with euclidean and squared norms between "scalars" creates a `k^n` component orthogonality search problem for transforming vectors
+
+and supporting traditional geometric algebra operations require `2^n` components to represent multivectors in `n` dimensions
 
 geonum reduces `k^n(2^n)` to 2
 
@@ -206,19 +210,13 @@ geometric numbers build dimensions by rotating—not stacking
 ### learn with ai
 
 1. install rust: https://www.rust-lang.org/tools/install
-1. create an api key with your preferred ai:
-    1. anthropic: https://console.anthropic.com/
-    1. openai: https://platform.openai.com/
+1. create an api key with anthropic: https://console.anthropic.com/
 1. purchase api credit
-1. install a command line agent:
-    1. anthropic: [claude code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
-    1. openai: [codex](https://help.openai.com/en/articles/11096431-openai-codex-cli-getting-started)
+1. install [claude code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
 1. clone the geonum repo: `git clone https://github.com/mxfactorial/geonum`
 1. change your current working directory to geonum: `cd geonum`
-1. start the agent from the `geonum` directory:
-   1. anthropic: `claude`
-   1. openai: `codex`
-1. configure the ai agent with your api key
+1. start claude from the `geonum` directory: `claude`
+1. configure claude with your api key
 1. supply it this series of prompts:
     ```
     read README.md

@@ -239,14 +239,23 @@ fn its_a_maxwell_equation() {
     // traditional approach would scale with dimensionality due to matrix operations
     // geonum angle operations remain O(1) regardless of dimensionality
 
-    // create million-dimensional field space for testing
-    let high_dim = Dimensions::new(1_000_000);
+    // traditional electromagnetic computations require massive matrix operations that scale exponentially with dimension count
+    // finite element methods for field analysis typically need millions of grid points and O(n²) or O(n³) complexity
+    // whereas geonums angle-based representation maintains O(1) complexity regardless of spatial resolution
     let start_time = Instant::now();
 
-    // create field vectors in high dimensions
-    let field_vectors = high_dim.multivector(&[0, 1]);
-    let e_high = field_vectors[0];
-    let b_high = field_vectors[1];
+    // create electromagnetic fields that would traditionally require million-element matrices
+    // but geonum represents as simple [length, angle] pairs with direct geometric meaning
+    let e_high = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 1,
+    };
+    let b_high = Geonum {
+        length: 1.0,
+        angle: PI / 2.0,
+        blade: 2,
+    };
 
     // perform curl operation (90° rotation) in million dimensions
     let curl_e_high = e_high.differentiate();
@@ -467,14 +476,23 @@ fn its_an_electromagnetic_wave() {
 
     // demonstrate high-dimensional advantage
 
-    // create high-dimensional wave space
-    let high_dim = Dimensions::new(10000);
+    // electromagnetic wave simulation traditionally requires discretizing space into thousands of grid points
+    // each point needs vector field calculations creating massive computational overhead
+    // geonum eliminates this by encoding wave behavior directly into angle evolution
     let start_time = Instant::now();
 
-    // create wave in high dimensions
-    let wave_vectors = high_dim.multivector(&[0, 1]);
-    let wave_e = wave_vectors[0];
-    let wave_b = wave_vectors[1];
+    // waves that would need 10,000-dimensional state vectors in traditional methods
+    // reduce to simple angle rotations preserving all physical behavior
+    let wave_e = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 1,
+    };
+    let wave_b = Geonum {
+        length: 1.0 / SPEED_OF_LIGHT,
+        angle: PI / 2.0,
+        blade: 2,
+    };
 
     // propagate wave in high dimensions
     let _propagated_e = wave_e.propagate(1.0e-9, 0.3, SPEED_OF_LIGHT);
@@ -793,14 +811,23 @@ fn its_a_poynting_vector() {
 
     // demonstrate high-dimensional advantage
 
-    // create high-dimensional fields
-    let high_dim = Dimensions::new(10000);
+    // poynting vector calculations in traditional field theory require cross product operations on large vector arrays
+    // computational electromagnetics codes spend most time on these vector manipulations across spatial grids
+    // geonums wedge product bypasses this entirely through direct angle arithmetic
     let start_time = Instant::now();
 
-    // create field vectors in high dimensions
-    let field_vectors = high_dim.multivector(&[0, 1]);
-    let e_high = field_vectors[0];
-    let b_high = field_vectors[1];
+    // energy flow vectors that traditional codes represent as 10,000-element arrays
+    // become simple geometric numbers with immediate physical interpretation
+    let e_high = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 1,
+    };
+    let b_high = Geonum {
+        length: 1.0 / SPEED_OF_LIGHT,
+        angle: PI / 2.0,
+        blade: 2,
+    };
 
     // compute poynting vector in high dimensions
     let _s_high = e_high.wedge(&b_high);
@@ -1063,12 +1090,23 @@ fn its_a_field_potential() {
 
     // demonstrate performance advantages in complex domains
 
-    // create potential grid in high dimensions
-    let _high_dim = Dimensions::new(1000);
+    // electromagnetic potential calculations traditionally require solving large systems of partial differential equations
+    // finite difference methods create sparse matrices with thousands of unknowns and complex boundary conditions
+    // geonum potential fields encode the same physics through angle transformations without matrix inversions
     let _start_time = Instant::now();
 
-    // create potential field in high dimensions
-    let _field_vectors = _high_dim.multivector(&[0, 1]);
+    // scalar and vector potentials that would fill 1000-dimensional solution spaces in classical methods
+    // compress to geometric numbers where gradient and curl operations become simple angle rotations
+    let _potential_field = Geonum {
+        length: 1.0,
+        angle: 0.0,
+        blade: 0,
+    };
+    let _vector_potential = Geonum {
+        length: 1.0,
+        angle: PI / 2.0,
+        blade: 1,
+    };
 
     // compute E from potential in high dimensions
 }
