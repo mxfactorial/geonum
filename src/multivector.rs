@@ -113,8 +113,7 @@ impl Multivector {
         // test range
         if start_grade > end_grade {
             panic!(
-                "invalid grade range: start grade ({}) must be <= end grade ({})",
-                start_grade, end_grade
+                "invalid grade range: start grade (start_grade) must be <= end grade (end_grade)"
             );
         }
 
