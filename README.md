@@ -14,9 +14,13 @@
 
 # geonum
 
-setting a metric with euclidean and squared norms creates a `k^n` component orthogonality search problem for transforming vectors
+removing an explicit angle from numbers in the name of "pure" math throws away primitive geometric information
 
-traditional geometric algebra solutions require `2^n` components to represent multivectors in `n` dimensions
+once you amputate the angle from a number to create a "scalar", youve thrown away its compass and condemned it to hobble through a mountain of "scalars" known as "matrix" and "tensor" operations—where every step requires expensive, triangulating dot & cross product computations to reconstruct the simple detail of *which direction your number is facing*
+
+setting a metric with euclidean and squared norms between "scalars" creates a `k^n` component orthogonality search problem for transforming vectors
+
+and supporting traditional geometric algebra operations require `2^n` components to represent multivectors in `n` dimensions
 
 geonum reduces `k^n(2^n)` to 2
 
