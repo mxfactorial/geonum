@@ -1,5 +1,16 @@
 # changelog
 
+## 0.7.0 (2025-07-18)
+
+### added
+- Angle struct that maintains angle-blade invariant
+- operator overloading for all ownership patterns on Angle and Geonum
+
+### changed
+- Geonum now uses Angle struct instead of raw f64 angle and usize blade fields
+- geo() geometric product now returns unified Geonum instead of (f64, Geonum) tuple
+- timing assertions in economics and finance tests increased for CI compatibility
+
 ## 0.6.11 (2025-07-17)
 
 ### added
