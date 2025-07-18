@@ -1,6 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use geonum::*;
-use std::f64::consts::PI;
 
 // Simulated tensor-based implementation of geometric algebra
 struct Tensor3D {
@@ -70,7 +69,7 @@ fn bench_tensor_product(c: &mut Criterion) {
 
     for &size in &sizes {
         // Tensor-based approach
-        group.bench_function(format!("tensor_product_size_{}", size), |b| {
+        group.bench_function(format!("tensor_product_size_{size}"), |b| {
             b.iter(|| {
                 let mut tensor1 = Tensor3D::new(black_box(size));
                 let mut tensor2 = Tensor3D::new(black_box(size));
@@ -86,25 +85,13 @@ fn bench_tensor_product(c: &mut Criterion) {
     // Geonum approach - O(1) complexity regardless of size
     group.bench_function("geonum_product", |b| {
         b.iter(|| {
-            let i = Geonum {
-                length: black_box(1.0),
-                angle: black_box(PI / 2.0),
-                blade: 1, // vector (grade 1)
-            }; // i = [1, pi/2, 1]
-            let j = Geonum {
-                length: black_box(1.0),
-                angle: black_box(PI),
-                blade: 1, // vector (grade 1)
-            }; // j = [1, pi, 1]
-            let k = Geonum {
-                length: black_box(1.0),
-                angle: black_box(3.0 * PI / 2.0),
-                blade: 1, // vector (grade 1)
-            }; // k = [1, 3pi/2, 1]
+            let i = Geonum::new(black_box(1.0), 1.0, 2.0); // [1, pi/2]
+            let j = Geonum::new(black_box(1.0), 1.0, 1.0); // [1, pi]
+            let k = Geonum::new(black_box(1.0), 3.0, 2.0); // [1, 3pi/2]
 
             // compute the ijk product - O(1) complexity
-            let ij = i.mul(&j);
-            let ijk = ij.mul(&k);
+            let ij = i * j;
+            let ijk = ij * k;
 
             black_box(ijk)
         })
@@ -119,7 +106,7 @@ fn bench_scaling_comparison(c: &mut Criterion) {
     // For tensor-based approach, we'll simulate increasing size
     // and measure how the performance scales with size
     for size in [2, 4, 8, 16] {
-        group.bench_function(format!("tensor_scaling_{}", size), |b| {
+        group.bench_function(format!("tensor_scaling_{size}"), |b| {
             b.iter(|| {
                 let mut tensor = Tensor3D::new(black_box(size));
                 tensor.initialize();
@@ -142,24 +129,16 @@ fn bench_scaling_comparison(c: &mut Criterion) {
     // For geonum approach, the number of operations remains
     // constant regardless of "size" parameter
     for size in [2, 4, 8, 16] {
-        group.bench_function(format!("geonum_scaling_{}", size), |b| {
+        group.bench_function(format!("geonum_scaling_{size}"), |b| {
             b.iter(|| {
                 // Regardless of the "size" parameter, geonum operations
                 // always take constant time - O(1) complexity
-                let v1 = Geonum {
-                    length: black_box(size as f64),
-                    angle: black_box(PI / 4.0),
-                    blade: 1, // vector (grade 1)
-                };
+                let v1 = Geonum::new(black_box(size as f64), 1.0, 4.0); // [size, pi/4]
 
-                let v2 = Geonum {
-                    length: black_box(size as f64),
-                    angle: black_box(PI / 3.0),
-                    blade: 1, // vector (grade 1)
-                };
+                let v2 = Geonum::new(black_box(size as f64), 1.0, 3.0); // [size, pi/3]
 
                 // Perform geonum operations - always O(1)
-                let product = v1.mul(&v2);
+                let product = v1 * v2;
                 let dot = v1.dot(&v2);
                 let wedge = v1.wedge(&v2);
 
@@ -174,25 +153,13 @@ fn bench_scaling_comparison(c: &mut Criterion) {
 fn bench_ijk_product(c: &mut Criterion) {
     c.bench_function("ijk_product", |b| {
         b.iter(|| {
-            let i = Geonum {
-                length: black_box(1.0),
-                angle: black_box(PI / 2.0),
-                blade: 1, // vector (grade 1)
-            }; // i = [1, pi/2, 1]
-            let j = Geonum {
-                length: black_box(1.0),
-                angle: black_box(PI),
-                blade: 1, // vector (grade 1)
-            }; // j = [1, pi, 1]
-            let k = Geonum {
-                length: black_box(1.0),
-                angle: black_box(3.0 * PI / 2.0),
-                blade: 1, // vector (grade 1)
-            }; // k = [1, 3pi/2, 1]
+            let i = Geonum::new(black_box(1.0), 1.0, 2.0); // [1, pi/2]
+            let j = Geonum::new(black_box(1.0), 1.0, 1.0); // [1, pi]
+            let k = Geonum::new(black_box(1.0), 3.0, 2.0); // [1, 3pi/2]
 
             // compute the ijk product
-            let ij = i.mul(&j);
-            let ijk = ij.mul(&k);
+            let ij = i * j;
+            let ijk = ij * k;
 
             black_box(ijk)
         })
@@ -203,7 +170,7 @@ fn bench_dimension_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Dimension Operations");
 
     for &dim_size in &[3, 10, 100] {
-        group.bench_function(format!("create_dimension_{}", dim_size), |b| {
+        group.bench_function(format!("create_dimension_{dim_size}"), |b| {
             b.iter(|| {
                 // Direct geometric number creation - O(1) regardless of dimension
                 let geonum = Geonum::create_dimension(1.0, black_box(dim_size));
@@ -211,7 +178,7 @@ fn bench_dimension_operations(c: &mut Criterion) {
             })
         });
 
-        group.bench_function(format!("multivector_{}", dim_size), |b| {
+        group.bench_function(format!("multivector_{dim_size}"), |b| {
             b.iter(|| {
                 let indices: Vec<usize> = (0..black_box(dim_size)).collect();
                 // Direct multivector creation without coordinate scaffolding
@@ -324,7 +291,7 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // Perform geometric operations - all O(1) time
             let dot = v1.dot(&v2);
             let wedge = v1.wedge(&v2);
-            let product = v1.mul(&v2);
+            let product = v1 * v2;
 
             black_box((dot, wedge, product))
         })
@@ -340,7 +307,7 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // Perform geometric operations - all O(1) time regardless of dimension
             let dot = v1.dot(&v2);
             let wedge = v1.wedge(&v2);
-            let product = v1.mul(&v2);
+            let product = v1 * v2;
 
             black_box((dot, wedge, product))
         })
@@ -357,7 +324,7 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // Perform geometric operations - all O(1) time regardless of dimension
             let dot = v1.dot(&v2);
             let wedge = v1.wedge(&v2);
-            let product = v1.mul(&v2);
+            let product = v1 * v2;
 
             black_box((dot, wedge, product))
         })
@@ -375,7 +342,7 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // Perform geometric operations - STILL O(1) time!
             let dot = v1.dot(&v2);
             let wedge = v1.wedge(&v2);
-            let product = v1.mul(&v2);
+            let product = v1 * v2;
 
             black_box((dot, wedge, product))
         })
@@ -395,21 +362,9 @@ fn bench_multivector_operations(c: &mut Criterion) {
 
             // Create a multivector with mixed grades
             let mv = Multivector(vec![
-                Geonum {
-                    length: 1.0,
-                    angle: 0.0,
-                    blade: 0, // scalar (grade 0)
-                }, // scalar
-                Geonum {
-                    length: 2.0,
-                    angle: PI / 2.0,
-                    blade: 1, // vector (grade 1)
-                }, // vector
-                Geonum {
-                    length: 3.0,
-                    angle: PI,
-                    blade: 2, // bivector (grade 2)
-                }, // bivector
+                Geonum::new(1.0, 0.0, 1.0), // scalar
+                Geonum::new(2.0, 1.0, 2.0), // vector
+                Geonum::new(3.0, 1.0, 1.0), // bivector
             ]);
 
             // Extract specific grades
@@ -428,26 +383,10 @@ fn bench_multivector_operations(c: &mut Criterion) {
 
             // Add more components to create a complex multivector
             let mut complex_mv = Multivector::with_capacity(10);
-            complex_mv.push(Geonum {
-                length: 2.0,
-                angle: 0.0,
-                blade: 0, // scalar (grade 0)
-            }); // scalar
-            complex_mv.push(Geonum {
-                length: 3.0,
-                angle: PI / 2.0,
-                blade: 1, // vector (grade 1)
-            }); // vector
-            complex_mv.push(Geonum {
-                length: 4.0,
-                angle: PI,
-                blade: 2, // bivector (grade 2)
-            }); // bivector
-            complex_mv.push(Geonum {
-                length: 5.0,
-                angle: 3.0 * PI / 2.0,
-                blade: 1, // vector (grade 1)
-            }); // vector
+            complex_mv.push(Geonum::new(2.0, 0.0, 1.0)); // scalar
+            complex_mv.push(Geonum::new(3.0, 1.0, 2.0)); // vector
+            complex_mv.push(Geonum::new(4.0, 1.0, 1.0)); // bivector
+            complex_mv.push(Geonum::new(5.0, 3.0, 2.0)); // trivector
 
             // Perform grade involution - O(1) per element regardless of dimension
             let involution = complex_mv.involute();

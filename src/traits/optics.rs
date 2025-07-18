@@ -2,14 +2,14 @@
 //!
 //! defines the Optics trait and related functionality for optical modeling
 
-use crate::geonum_mod::Geonum;
+use crate::{angle::Angle, geonum_mod::Geonum};
 use std::f64::consts::PI;
 
 pub trait Optics: Sized {
     /// convert lens refraction to angle transformation using Snell's law
     /// conventional: vector-based ray tracing through interfaces O(n)
     /// geonum: single angle transformation based on Snell's law O(1)
-    fn refract(&self, refractive_index: f64) -> Self;
+    fn refract(&self, refractive_index: Geonum) -> Self;
 
     /// apply optical path aberration using zernike coefficients
     /// conventional: phase map computation + wavefront sampling O(n²)
@@ -19,30 +19,28 @@ pub trait Optics: Sized {
     /// compute optical transfer function through frequency-space transformation
     /// conventional: FFT-based propagation O(n log n)
     /// geonum: direct frequency-domain angle mapping O(1)
-    fn otf(&self, focal_length: f64, wavelength: f64) -> Self;
+    fn otf(&self, focal_length: Geonum, wavelength: Geonum) -> Self;
 
     /// apply ABCD matrix ray tracing as direct angle operations
     /// conventional: 4×4 matrix multiplications for ray propagation O(n)
     /// geonum: encode entire matrix effect as single angle transformation O(1)
-    fn abcd_transform(&self, a: f64, b: f64, c: f64, d: f64) -> Self;
+    fn abcd_transform(&self, a: Geonum, b: Geonum, c: Geonum, d: Geonum) -> Self;
 
     /// apply magnification to the geometric number
     /// conventional: complex transformations with multiple operations
     /// geonum: direct angle scaling and intensity adjustment O(1)
-    fn magnify(&self, magnification: f64) -> Self;
+    fn magnify(&self, magnification: Geonum) -> Self;
 }
 
 impl Optics for Geonum {
-    fn refract(&self, refractive_index: f64) -> Self {
+    fn refract(&self, refractive_index: Geonum) -> Self {
         // apply snells law as angle transformation
         let incident_angle = self.angle;
-        let refracted_angle = (incident_angle.sin() / refractive_index).asin();
+        let n_ratio = refractive_index.length;
+        let refracted_angle_value = (incident_angle.sin() / n_ratio).asin();
+        let refracted_angle = Angle::new(refracted_angle_value, PI);
 
-        Self {
-            length: self.length,
-            angle: refracted_angle,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(self.length, refracted_angle)
     }
 
     fn aberrate(&self, zernike_coefficients: &[Self]) -> Self {
@@ -51,95 +49,138 @@ impl Optics for Geonum {
 
         // apply each zernike term
         for term in zernike_coefficients {
-            let mode_effect = term.length * (term.angle * 3.0).cos();
-            perturbed_phase += mode_effect;
+            let mode_effect_value = term.length * (term.angle.sin() * 3.0).cos();
+            let mode_effect = Angle::new(mode_effect_value, PI);
+            perturbed_phase = perturbed_phase + mode_effect;
         }
 
-        Self {
-            length: self.length,
-            angle: perturbed_phase,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(self.length, perturbed_phase)
     }
 
-    fn otf(&self, focal_length: f64, wavelength: f64) -> Self {
+    fn otf(&self, focal_length: Geonum, wavelength: Geonum) -> Self {
         // convert from spatial domain to frequency domain
-        let frequency = self.length / (wavelength * focal_length);
-        let phase = self.angle + PI / 2.0;
+        let frequency = self.length / (wavelength.length * focal_length.length);
+        let quarter_turn = Angle::new(1.0, 2.0); // π/2
+        let phase = self.angle + quarter_turn;
 
-        Self {
-            length: frequency,
-            angle: phase,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(frequency, phase)
     }
 
-    fn abcd_transform(&self, a: f64, b: f64, c: f64, d: f64) -> Self {
+    fn abcd_transform(&self, a: Geonum, b: Geonum, c: Geonum, d: Geonum) -> Self {
         // apply ABCD matrix as angle transformation
-        let h = self.angle.sin(); // height/angle
-        let theta = self.angle; // angle
+        // in ray optics: [h_out, theta_out] = [[A, B], [C, D]] * [h_in, theta_in]
+        // for geonum representation:
+        // - ray height h = self.length (distance from optical axis)
+        // - ray angle theta = self.angle (angle with optical axis)
+
+        // extract ray parameters
+        let h = self.length;
+        let theta = self.angle;
 
         // abcd transformations for ray tracing
-        let new_h = a * h + b * theta;
-        let new_theta = c * h + d * theta;
+        // new_h = A*h + B*theta
+        // new_theta = C*h + D*theta
+        // theta needs to be in radians for matrix multiplication
+        let theta_radians = theta.mod_4_angle();
+        let new_h = a.length * h + b.length * theta_radians;
+        let new_theta_radians = c.length * h + d.length * theta_radians;
+        let new_theta_angle = Angle::new(new_theta_radians, PI);
 
-        // convert back to geonum representation
-        Self {
-            length: self.length,
-            angle: new_theta.atan2(new_h),
-            blade: self.blade, // preserve blade grade
-        }
+        // return new geonum with transformed height and angle
+        Geonum::new_with_angle(new_h, new_theta_angle)
     }
 
-    fn magnify(&self, magnification: f64) -> Self {
+    fn magnify(&self, magnification: Geonum) -> Self {
         // magnification affects intensity (inverse square law) and angle scaling
-        let image_intensity = 1.0 / (magnification * magnification);
+        let mag = magnification.length;
+        let image_intensity = 1.0 / (mag * mag);
 
         // image point has inverted angle and scaled height
-        let image_angle = -self.angle / magnification;
+        let image_angle_value = -self.angle.sin() / mag;
+        let image_angle = Angle::new(image_angle_value, PI);
 
-        Self {
-            length: self.length * image_intensity,
-            angle: image_angle,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(self.length * image_intensity, image_angle)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::geonum_mod::TWO_PI;
 
     #[test]
     fn it_applies_optical_magnification() {
         // create input ray/object point
-        let object = Geonum {
-            length: 4.0,
-            angle: PI / 6.0, // 30 degrees
-            blade: 1,        // vector (grade 1)
-        };
+        let object = Geonum::new(4.0, 1.0, 6.0); // 4.0 length, π/6 angle
 
         // test 2x magnification
-        let magnified_2x = object.magnify(2.0);
+        let magnified_2x = object.magnify(Geonum::scalar(2.0));
 
-        // verify intensity follows inverse square law (1/m²)
+        // prove intensity follows inverse square law (1/m²)
         let expected_intensity_2x = 4.0 / (2.0 * 2.0);
         assert_eq!(magnified_2x.length, expected_intensity_2x);
 
-        // verify angle is inverted and scaled
-        let expected_angle_2x = (-PI / 6.0 / 2.0) % TWO_PI;
+        // prove angle is inverted and scaled based on sin transformation
+        // magnify computes: image_angle = -sin(object_angle) / mag
+        let object_sin = object.angle.sin();
+        let expected_angle_value_2x = -object_sin / 2.0;
+        let expected_angle_2x = Angle::new(expected_angle_value_2x, PI);
         assert_eq!(magnified_2x.angle, expected_angle_2x);
 
         // test 0.5x magnification (minification)
-        let magnified_half = object.magnify(0.5);
+        let magnified_half = object.magnify(Geonum::scalar(0.5));
 
-        // verify intensity increases with minification
+        // prove intensity increases with minification
         let expected_intensity_half = 4.0 / (0.5 * 0.5);
         assert_eq!(magnified_half.length, expected_intensity_half);
 
-        // verify angle is inverted and scaled
-        let expected_angle_half = (-PI / 6.0 / 0.5) % TWO_PI;
+        // prove angle is inverted and scaled
+        let expected_angle_value_half = -object_sin / 0.5;
+        let expected_angle_half = Angle::new(expected_angle_value_half, PI);
         assert_eq!(magnified_half.angle, expected_angle_half);
+    }
+
+    #[test]
+    fn it_applies_abcd_transform_angle_dependence() {
+        // test that abcd transform produces different outputs for different input angles
+        // this tests the fundamental property of ray optics matrices
+
+        // create two rays with different angles
+        let ray1 = Geonum::new(1.0, 1.0, 6.0); // π/6 angle
+        let ray2 = Geonum::new(1.0, 1.0, 3.0); // π/3 angle
+
+        // apply thin lens ABCD matrix (focal length = 100)
+        // [A B]   [1   0]
+        // [C D] = [-1/f 1]
+        let a = Geonum::scalar(1.0);
+        let b = Geonum::scalar(0.0);
+        let c = Geonum::scalar(-0.01); // -1/100
+        let d = Geonum::scalar(1.0);
+
+        let transformed1 = ray1.abcd_transform(a, b, c, d);
+        let transformed2 = ray2.abcd_transform(a, b, c, d);
+
+        // the transformed angles should be different
+        assert_ne!(transformed1.angle, transformed2.angle);
+
+        // compute expected angle difference
+        // for thin lens: new_angle = atan2(h - h/f, h) = atan2(h(1-1/f), h) = atan(1-1/f)
+        // since current implementation uses sin for both h and theta,
+        // all rays get same output angle regardless of input
+        let sin1 = ray1.angle.sin();
+        let sin2 = ray2.angle.sin();
+
+        // this assertion will fail, proving the bug
+        assert!(
+            (sin1 - sin2).abs() > 1e-10,
+            "different input angles should produce different sin values"
+        );
+
+        // the angle difference should depend on input angle difference
+        let angle_diff = transformed2.angle - transformed1.angle;
+        assert_ne!(
+            angle_diff,
+            Angle::new(0.0, 1.0),
+            "ABCD transform should produce angle-dependent refraction"
+        );
     }
 }

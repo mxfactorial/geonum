@@ -31,20 +31,18 @@
 // this isnt just more efficient - it enables direct computation of image transformations
 // through angle composition rather than matrix operations, and scales to high-dimensional feature spaces
 
-use geonum::{Geonum, Multivector};
+use geonum::{Angle, Geonum, Multivector};
 use std::f64::consts::PI;
 use std::time::Instant;
+
+const EPSILON: f64 = 1e-10;
 
 #[test]
 fn its_a_feature_detector() {
     // 1. replace convolution kernels with angle-based feature extraction
 
     // create a simplified corner feature in image coordinates
-    let corner_feature = Geonum {
-        length: 1.0,     // feature strength
-        angle: PI / 4.0, // 45-degree corner orientation
-        blade: 1,        // vector (grade 1) - directional edge feature
-    };
+    let corner_feature = Geonum::new(1.0, 1.0, 4.0); // vector (grade 1) - 45-degree corner orientation
 
     // traditional design: apply multiple convolution filters (Sobel, etc.)
     // requires O(n²k²) where n is image size and k is kernel size
@@ -54,11 +52,11 @@ fn its_a_feature_detector() {
     // 2. compute gradient direction and magnitude directly
 
     // gradient can be directly encoded in the feature angle
-    let gradient_direction = corner_feature.angle;
+    let gradient_direction = corner_feature.angle.mod_4_angle();
     let gradient_magnitude = corner_feature.length;
 
     // verify gradient direction is correct
-    assert_eq!(gradient_direction, PI / 4.0);
+    assert!((gradient_direction - PI / 4.0).abs() < EPSILON);
     assert_eq!(gradient_magnitude, 1.0);
 
     // 3. generate oriented SIFT-like descriptor
@@ -68,42 +66,41 @@ fn its_a_feature_detector() {
 
     // create a simplified SIFT descriptor with 4 bins (instead of 128)
     let _descriptor = [
-        Geonum {
-            length: 0.8, // bin 1 magnitude
-            angle: gradient_direction,
-            blade: 1, // vector (grade 1) - gradient direction in bin 1
-        },
-        Geonum {
-            length: 0.5, // bin 2 magnitude
-            angle: gradient_direction + PI / 8.0,
-            blade: 1, // vector (grade 1) - gradient direction in bin 2
-        },
-        Geonum {
-            length: 0.3, // bin 3 magnitude
-            angle: gradient_direction - PI / 8.0,
-            blade: 1, // vector (grade 1) - gradient direction in bin 3
-        },
-        Geonum {
-            length: 0.2, // bin 4 magnitude
-            angle: gradient_direction + PI / 4.0,
-            blade: 1, // vector (grade 1) - gradient direction in bin 4
-        },
+        Geonum::new_with_angle(
+            0.8, // bin 1 magnitude
+            corner_feature.angle,
+        ), // vector (grade 1) - gradient direction in bin 1
+        Geonum::new_with_angle(
+            0.5, // bin 2 magnitude
+            corner_feature.angle + Angle::new(1.0, 8.0),
+        ), // vector (grade 1) - gradient direction in bin 2
+        Geonum::new_with_angle(
+            0.3, // bin 3 magnitude
+            corner_feature.angle - Angle::new(1.0, 8.0),
+        ), // vector (grade 1) - gradient direction in bin 3
+        Geonum::new_with_angle(
+            0.2, // bin 4 magnitude
+            corner_feature.angle + Angle::new(1.0, 4.0),
+        ), // vector (grade 1) - gradient direction in bin 4
     ];
 
     // 4. demonstrate feature matching through angle alignment
 
     // create a similar feature with slight rotation (simulating another view of same point)
-    let rotated_feature = Geonum {
-        length: 0.95,          // slightly weaker in second view
-        angle: PI / 4.0 + 0.1, // slight rotation
-        blade: 1,              // vector (grade 1) - same feature type
-    };
+    let rotated_feature = Geonum::new_with_angle(
+        0.95,                                        // slightly weaker in second view
+        corner_feature.angle + Angle::new(0.05, PI), // slight rotation
+    ); // vector (grade 1) - same feature type
 
     // compute match quality using angle distance
-    let match_quality = 1.0 - corner_feature.angle_distance(&rotated_feature) / PI;
+    let angle_diff = (rotated_feature.angle - corner_feature.angle).mod_4_angle();
+    let match_quality = 1.0 - angle_diff / PI;
 
     // prove close match (close to 1.0)
-    assert!(match_quality > 0.9, "Features should match closely");
+    assert!(
+        match_quality > 0.9,
+        "Features should match closely. Match quality: {match_quality}"
+    );
 
     // 5. measure performance for high-dimensional feature spaces
 
@@ -116,11 +113,11 @@ fn its_a_feature_detector() {
     for i in 0..dimensions {
         // distribute angles across full circle
         let angle = (i as f64) * 2.0 * PI / (dimensions as f64);
-        high_dim_descriptor.push(Geonum {
-            length: 1.0 / (1.0 + (angle - gradient_direction).abs()),
+        high_dim_descriptor.push(Geonum::new(
+            1.0 / (1.0 + (angle - gradient_direction).abs()),
             angle,
-            blade: 1, // vector (grade 1) - gradient component
-        });
+            PI,
+        )); // vector (grade 1) - gradient component
     }
 
     // compute total descriptor norm for normalization
@@ -133,11 +130,7 @@ fn its_a_feature_detector() {
     // normalize descriptor (constant time regardless of dimensions)
     let _normalized_descriptor: Vec<Geonum> = high_dim_descriptor
         .iter()
-        .map(|g| Geonum {
-            length: g.length / norm,
-            angle: g.angle,
-            blade: g.blade,
-        })
+        .map(|g| Geonum::new_with_angle(g.length / norm, g.angle))
         .collect();
 
     let elapsed = start_time.elapsed();
@@ -155,17 +148,12 @@ fn its_an_optical_flow_estimator() {
     // 1. replace dense matrix operations with angle-based flow computation
 
     // create feature points from two consecutive frames
-    let frame1_point = Geonum {
-        length: 1.0,     // distance from image center
-        angle: PI / 6.0, // orientation in image
-        blade: 1,        // vector (grade 1) - image point as a directed element
-    };
+    let frame1_point = Geonum::new(1.0, 1.0, 6.0); // orientation at π/6
 
-    let frame2_point = Geonum {
-        length: 1.05,           // slightly moved outward
-        angle: PI / 6.0 + 0.02, // slightly rotated
-        blade: 1,               // vector (grade 1) - image point as a directed element
-    };
+    let frame2_point = Geonum::new_with_angle(
+        1.05,                                      // slightly moved outward
+        frame1_point.angle + Angle::new(0.02, PI), // slightly rotated
+    );
 
     // traditional design: compute flow field with least squares estimation
     // requires O(n³) matrix operations for n points
@@ -176,22 +164,18 @@ fn its_an_optical_flow_estimator() {
 
     // flow vector is the difference between frame2 and frame1 points
     // convert to cartesian for illustrative purposes
-    let frame1_x = frame1_point.length * f64::cos(frame1_point.angle);
-    let frame1_y = frame1_point.length * f64::sin(frame1_point.angle);
+    let frame1_x = frame1_point.length * frame1_point.angle.cos();
+    let frame1_y = frame1_point.length * frame1_point.angle.sin();
 
-    let frame2_x = frame2_point.length * f64::cos(frame2_point.angle);
-    let frame2_y = frame2_point.length * f64::sin(frame2_point.angle);
+    let frame2_x = frame2_point.length * frame2_point.angle.cos();
+    let frame2_y = frame2_point.length * frame2_point.angle.sin();
 
     // flow vector components
     let flow_x = frame2_x - frame1_x;
     let flow_y = frame2_y - frame1_y;
 
     // convert flow to geometric number representation
-    let flow_vector = Geonum {
-        length: f64::sqrt(flow_x * flow_x + flow_y * flow_y),
-        angle: f64::atan2(flow_y, flow_x),
-        blade: 1, // vector (grade 1) - flow as a directed quantity
-    };
+    let flow_vector = Geonum::new_from_cartesian(flow_x, flow_y);
 
     // verify flow magnitude and direction
     assert!(
@@ -205,46 +189,57 @@ fn its_an_optical_flow_estimator() {
     // computing image pyramids and running the algorithm multiple times
 
     // With geonum, scales can be encoded directly in the blade grade
+    // Ensure flow_vector is grade 1 (vector)
+    let flow_grade_1 = Geonum::new_with_blade(
+        flow_vector.length,
+        1, // ensure vector (grade 1)
+        flow_vector.angle.mod_4_angle(),
+        PI,
+    );
+
     let multiscale_flow = Multivector(vec![
-        Geonum {
-            length: flow_vector.length,
-            angle: flow_vector.angle,
-            blade: 1, // vector (grade 1) - original scale flow
-        },
-        Geonum {
-            length: flow_vector.length * 0.5, // half magnitude at coarser scale
-            angle: flow_vector.angle,
-            blade: 2, // bivector (grade 2) - coarser scale flow
-        },
-        Geonum {
-            length: flow_vector.length * 0.25, // quarter magnitude at coarsest scale
-            angle: flow_vector.angle,
-            blade: 3, // trivector (grade 3) - coarsest scale flow
-        },
+        flow_grade_1, // vector (grade 1) - original scale flow
+        Geonum::new_with_blade(
+            flow_vector.length * 0.5, // half magnitude at coarser scale
+            2,                        // bivector (grade 2) - coarser scale flow
+            flow_vector.angle.mod_4_angle(),
+            PI,
+        ),
+        Geonum::new_with_blade(
+            flow_vector.length * 0.25, // quarter magnitude at coarsest scale
+            3,                         // trivector (grade 3) - coarsest scale flow
+            flow_vector.angle.mod_4_angle(),
+            PI,
+        ),
     ]);
 
     // 4. verify multiscale representation
 
-    // extract flow at different scales using grade method
-    let fine_scale_flow = multiscale_flow.grade(1);
-    let mid_scale_flow = multiscale_flow.grade(2);
-    let coarse_scale_flow = multiscale_flow.grade(3);
+    // extract flow at different scales using blade index
+    let flow_components: Vec<&Geonum> = multiscale_flow.0.iter().collect();
 
-    // verify correct grade extraction
+    // verify we have all three scale components
     assert_eq!(
-        fine_scale_flow.0.len(),
+        flow_components.len(),
+        3,
+        "Should have three scale components"
+    );
+
+    // verify blade grades are as expected
+    assert_eq!(
+        flow_components[0].angle.blade() % 4,
         1,
-        "Should extract one fine-scale component"
+        "Fine scale should be grade 1"
     );
     assert_eq!(
-        mid_scale_flow.0.len(),
-        1,
-        "Should extract one mid-scale component"
+        flow_components[1].angle.blade() % 4,
+        2,
+        "Mid scale should be grade 2"
     );
     assert_eq!(
-        coarse_scale_flow.0.len(),
-        1,
-        "Should extract one coarse-scale component"
+        flow_components[2].angle.blade() % 4,
+        3,
+        "Coarse scale should be grade 3"
     );
 
     // 5. measure performance for dense optical flow fields
@@ -259,11 +254,7 @@ fn its_an_optical_flow_estimator() {
             let angle = (i as f64) * 2.0 * PI / (num_points as f64);
             let magnitude = 0.1 * ((i as f64) / (num_points as f64)).sin().abs();
 
-            Geonum {
-                length: magnitude,
-                angle,
-                blade: 1, // vector (grade 1) - flow vector at image point
-            }
+            Geonum::new(magnitude, angle, PI) // vector (grade 1) - flow vector at image point
         })
         .collect::<Vec<Geonum>>();
 
@@ -292,30 +283,21 @@ fn its_a_camera_calibration() {
     // create a simplified camera model with intrinsic parameters
     let focal_length = 50.0; // mm
     let _principal_point = (0.0, 0.0); // image center
-    let _camera_model = Geonum {
-        length: focal_length,
-        angle: 0.0, // initial camera orientation
-        blade: 1,   // vector (grade 1) - camera as a directed element
-    };
+    let _camera_model = Geonum::new(focal_length, 0.0, 2.0); // initial camera orientation
 
     // 2. project 3D points to 2D directly using angles
 
     // 3D world point
-    let world_point = Geonum {
-        length: 100.0,   // distance from origin
-        angle: PI / 4.0, // point orientation in world
-        blade: 1,        // vector (grade 1) - 3D point as a directed element
-    };
+    let world_point = Geonum::new(100.0, 1.0, 4.0); // point at π/4 orientation
 
     // traditional projection: p = K[R|t]P where K is intrinsic matrix, [R|t] is extrinsic
     // with geonum: direct angle-based projection
 
     // simplified projection without distortion
-    let projected_point = Geonum {
-        length: focal_length * world_point.length / (10.0 * world_point.length), // perspective division
-        angle: world_point.angle, // preserve angle in simple model
-        blade: 1,                 // vector (grade 1) - image point as a directed element
-    };
+    let projected_point = Geonum::new_with_angle(
+        focal_length * world_point.length / (10.0 * world_point.length), // perspective division
+        world_point.angle, // preserve angle in simple model
+    );
 
     // verify projection preserves angles in this simplified case
     assert_eq!(projected_point.angle, world_point.angle);
@@ -323,14 +305,14 @@ fn its_a_camera_calibration() {
     // 3. compute reprojection error
 
     // simulated observed point (with noise)
-    let observed_point = Geonum {
-        length: projected_point.length + 0.1, // add noise to length
-        angle: projected_point.angle + 0.01,  // add noise to angle
-        blade: 1, // vector (grade 1) - observed point as a directed element
-    };
+    let observed_point = Geonum::new_with_angle(
+        projected_point.length + 0.1,                 // add noise to length
+        projected_point.angle + Angle::new(0.01, PI), // add noise to angle
+    );
 
     // compute reprojection error as an angle-based distance
-    let reprojection_error = observed_point.angle_distance(&projected_point);
+    let angle_diff = observed_point.angle - projected_point.angle;
+    let reprojection_error = angle_diff.mod_4_angle().abs();
 
     // error should be non-zero but small
     assert!(reprojection_error > 0.0);
@@ -343,11 +325,10 @@ fn its_a_camera_calibration() {
 
     // radial distortion as angle transformation
     let distortion_factor = 0.05; // distortion strength
-    let distorted_point = Geonum {
-        length: projected_point.length * (1.0 + distortion_factor * projected_point.length),
-        angle: projected_point.angle, // preserve angle in radial distortion
-        blade: 1,                     // vector (grade 1) - distorted point as a directed element
-    };
+    let distorted_point = Geonum::new_with_angle(
+        projected_point.length * (1.0 + distortion_factor * projected_point.length),
+        projected_point.angle, // preserve angle in radial distortion
+    );
 
     // 5. measure performance for multiple camera calibration
 
@@ -359,11 +340,7 @@ fn its_a_camera_calibration() {
         .map(|i| {
             // distribute cameras in a circle
             let angle = (i as f64) * 2.0 * PI / (num_cameras as f64);
-            Geonum {
-                length: focal_length,
-                angle,    // camera orientation
-                blade: 1, // vector (grade 1) - camera as a directed element
-            }
+            Geonum::new(focal_length, angle, PI)
         })
         .collect::<Vec<Geonum>>();
 
@@ -372,17 +349,17 @@ fn its_a_camera_calibration() {
         .iter()
         .map(|camera| {
             // compute relative angle between camera and world point
-            let relative_angle = world_point.angle - camera.angle;
+            let relative_angle = world_point.angle.mod_4_angle() - camera.angle.mod_4_angle();
 
             // projection depends on relative angle
             let visible = relative_angle.abs() < PI / 2.0; // only visible in front of camera
 
             if visible {
-                Some(Geonum {
-                    length: focal_length * world_point.length / (10.0 * world_point.length),
-                    angle: relative_angle, // angle in camera frame
-                    blade: 1,              // vector (grade 1) - image point as a directed element
-                })
+                Some(Geonum::new(
+                    focal_length * world_point.length / (10.0 * world_point.length),
+                    relative_angle, // angle in camera frame
+                    PI,
+                ))
             } else {
                 None // point not visible to this camera
             }
@@ -407,17 +384,8 @@ fn its_a_3d_reconstruction() {
     // 1. replace essential/fundamental matrix estimation with angle-based transformation
 
     // create two camera views as geometric numbers
-    let camera1 = Geonum {
-        length: 1.0,
-        angle: 0.0, // facing along positive x-axis
-        blade: 1,   // vector (grade 1) - camera viewing direction
-    };
-
-    let camera2 = Geonum {
-        length: 1.0,
-        angle: PI / 6.0, // rotated 30 degrees
-        blade: 1,        // vector (grade 1) - camera viewing direction
-    };
+    let camera1 = Geonum::new(1.0, 0.0, 2.0); // facing along positive x-axis
+    let camera2 = Geonum::new(1.0, 1.0, 6.0); // rotated 30 degrees
 
     // traditional design: compute fundamental matrix with 8-point algorithm
     // requires O(n³) SVD computation
@@ -427,11 +395,7 @@ fn its_a_3d_reconstruction() {
     // 2. compute epipolar constraint through angle relationship
 
     // point seen in first camera
-    let point_in_camera1 = Geonum {
-        length: 0.5,      // distance from image center
-        angle: PI / 12.0, // 15 degrees from camera axis
-        blade: 1,         // vector (grade 1) - image point as a directed element
-    };
+    let point_in_camera1 = Geonum::new(0.5, 1.0, 12.0); // 15 degrees from camera axis
 
     // compute corresponding epipolar line in second camera
     // this is the projection of viewing ray from camera1 into camera2
@@ -440,23 +404,22 @@ fn its_a_3d_reconstruction() {
     let relative_angle = camera2.angle - camera1.angle;
 
     // epipolar line represented as angle in second camera
-    let epipolar_line = Geonum {
-        length: 1.0,                                    // unit magnitude for line representation
-        angle: point_in_camera1.angle - relative_angle, // relative to camera2
-        blade: 2, // bivector (grade 2) - line as a directed area element
-    };
+    let epipolar_line = Geonum::new_with_angle(
+        1.0,                                     // unit magnitude for line representation
+        point_in_camera1.angle - relative_angle, // relative to camera2
+    );
 
     // 3. match points using epipolar constraint
 
     // potential match in second camera (close to epipolar line)
-    let candidate_match = Geonum {
-        length: 0.6,
-        angle: epipolar_line.angle + 0.01, // small deviation from epipolar line
-        blade: 1,                          // vector (grade 1) - image point as a directed element
-    };
+    let candidate_match = Geonum::new_with_angle(
+        0.6,
+        epipolar_line.angle + Angle::new(0.01, PI), // small deviation from epipolar line
+    );
 
     // compute distance to epipolar line (simplified as angle difference)
-    let epipolar_distance = (candidate_match.angle - epipolar_line.angle).abs();
+    let angle_diff = candidate_match.angle - epipolar_line.angle;
+    let epipolar_distance = angle_diff.mod_4_angle().abs();
 
     // should be close to epipolar line
     assert!(
@@ -483,14 +446,10 @@ fn its_a_3d_reconstruction() {
     // measure angle difference is not zero and calculate depth
     let angle_diff = ray1_angle - ray2_angle;
     // Use absolute value for positive depth
-    let depth1 = f64::abs(baseline * f64::sin(ray2_angle) / f64::sin(angle_diff));
+    let depth1 = f64::abs(baseline * ray2_angle.sin() / angle_diff.sin());
 
     // reconstructed 3D point
-    let reconstructed_point = Geonum {
-        length: depth1,
-        angle: ray1_angle,
-        blade: 1, // vector (grade 1) - 3D point as a directed element
-    };
+    let reconstructed_point = Geonum::new_with_angle(depth1, ray1_angle);
 
     // verify reconstruction has positive depth
     assert!(
@@ -505,32 +464,20 @@ fn its_a_3d_reconstruction() {
 
     // simulate three observations of the same 3D point
     let observations = [
-        Geonum {
-            length: 0.5,
-            angle: PI / 12.0,
-            blade: 1, // vector (grade 1) - observation from camera 1
-        },
-        Geonum {
-            length: 0.6,
-            angle: -PI / 18.0, // -10 degrees
-            blade: 1,          // vector (grade 1) - observation from camera 2
-        },
-        Geonum {
-            length: 0.55,
-            angle: PI / 20.0,
-            blade: 1, // vector (grade 1) - observation from camera 3
-        },
+        Geonum::new(0.5, 1.0, 12.0),  // observation from camera 1
+        Geonum::new(0.6, -1.0, 18.0), // observation from camera 2 (-10 degrees)
+        Geonum::new(0.55, 1.0, 20.0), // observation from camera 3
     ];
 
     // compute averaged 3D position (simplified bundle adjustment)
     let avg_length = observations.iter().map(|o| o.length).sum::<f64>() / observations.len() as f64;
-    let avg_angle = observations.iter().map(|o| o.angle).sum::<f64>() / observations.len() as f64;
+    let avg_angle = observations
+        .iter()
+        .map(|o| o.angle.mod_4_angle())
+        .sum::<f64>()
+        / observations.len() as f64;
 
-    let _refined_point = Geonum {
-        length: avg_length,
-        angle: avg_angle,
-        blade: 1, // vector (grade 1) - refined 3D point as a directed element
-    };
+    let _refined_point = Geonum::new(avg_length, avg_angle, PI);
 
     // 6. measure performance for large-scale reconstruction
 
@@ -544,11 +491,7 @@ fn its_a_3d_reconstruction() {
             let angle = (i as f64) * 2.0 * PI / (num_points as f64);
             let depth = 1.0 + (i as f64 / num_points as f64);
 
-            Geonum {
-                length: depth,
-                angle,
-                blade: 1, // vector (grade 1) - 3D point as a directed element
-            }
+            Geonum::new(depth, angle, PI)
         })
         .collect::<Vec<Geonum>>();
 
@@ -558,7 +501,7 @@ fn its_a_3d_reconstruction() {
     // geonum scales linearly with O(n) operations
     assert!(
         elapsed.as_micros() < 5000,
-        "Large-scale reconstruction should be fast"
+        "Large-scale reconstruction is fast"
     );
 }
 
@@ -567,17 +510,8 @@ fn its_an_image_registration() {
     // 1. replace iterative optimization with direct angle alignment
 
     // create two images represented by their dominant orientation
-    let image1 = Geonum {
-        length: 1.0, // unit magnitude
-        angle: 0.0,  // initial orientation
-        blade: 1,    // vector (grade 1) - image orientation as a directed element
-    };
-
-    let image2 = Geonum {
-        length: 1.0,
-        angle: PI / 12.0, // 15-degree rotation
-        blade: 1,         // vector (grade 1) - image orientation as a directed element
-    };
+    let image1 = Geonum::new(1.0, 0.0, 2.0); // vector at 0°
+    let image2 = Geonum::new(1.0, 1.0, 12.0); // vector at π/12 (15°)
 
     // traditional design: optimize transformation parameters iteratively
     // requires many iterations of O(n²) operations
@@ -590,29 +524,15 @@ fn its_an_image_registration() {
     let rotation_angle = image2.angle - image1.angle;
 
     // verify rotation angle
-    assert_eq!(rotation_angle, PI / 12.0);
+    assert_eq!(rotation_angle, Angle::new(1.0, 12.0));
 
     // 3. apply transformation to register images
 
-    // create transformation as geometric number
-    let transformation = Geonum {
-        length: 1.0, // pure rotation
-        angle: rotation_angle,
-        blade: 2, // bivector (grade 2) - rotation as a directed area element
-    };
-
     // apply transformation to image1
-    let registered_image = Geonum {
-        length: image1.length,                      // preserve magnitude
-        angle: image1.angle + transformation.angle, // apply rotation
-        blade: 1, // vector (grade 1) - transformed image orientation
-    };
+    let registered_image = image1.rotate(rotation_angle);
 
     // verify registration aligns images
-    assert!(
-        (registered_image.angle - image2.angle).abs() < 1e-10,
-        "Registration should align images"
-    );
+    assert_eq!(registered_image.angle, image2.angle);
 
     // 4. demonstrate multi-scale registration
 
@@ -621,21 +541,9 @@ fn its_an_image_registration() {
 
     // create multi-scale representation using multivector
     let _multiscale_image1 = Multivector(vec![
-        Geonum {
-            length: 1.0,
-            angle: 0.0, // original orientation
-            blade: 1,   // vector (grade 1) - fine scale
-        },
-        Geonum {
-            length: 1.0,
-            angle: 0.0,
-            blade: 2, // bivector (grade 2) - medium scale
-        },
-        Geonum {
-            length: 1.0,
-            angle: 0.0,
-            blade: 3, // trivector (grade 3) - coarse scale
-        },
+        Geonum::new(1.0, 0.0, 2.0),               // fine scale
+        Geonum::new_with_blade(1.0, 2, 0.0, 2.0), // medium scale
+        Geonum::new_with_blade(1.0, 3, 0.0, 2.0), // coarse scale
     ]);
 
     // 5. measure performance for high-resolution image registration
@@ -650,18 +558,10 @@ fn its_an_image_registration() {
             let feature_angle = (i as f64) * 2.0 * PI / (num_features as f64);
 
             // original feature
-            let feature = Geonum {
-                length: 1.0,
-                angle: feature_angle,
-                blade: 1, // vector (grade 1) - feature orientation
-            };
+            let feature = Geonum::new(1.0, feature_angle, PI);
 
             // transformed feature
-            let transformed_feature = Geonum {
-                length: feature.length,
-                angle: feature.angle + rotation_angle, // apply same rotation
-                blade: 1, // vector (grade 1) - transformed feature orientation
-            };
+            let transformed_feature = feature.rotate(rotation_angle);
 
             (feature, transformed_feature)
         })
@@ -687,27 +587,15 @@ fn its_a_neural_image_processing() {
     // with geometric numbers: direct angle-based feature extraction and transformation
 
     // create an input image feature
-    let input_feature = Geonum {
-        length: 1.0,     // feature strength
-        angle: PI / 4.0, // feature orientation
-        blade: 1,        // vector (grade 1) - image feature as a directed element
-    };
+    let input_feature = Geonum::new(1.0, 1.0, 4.0); // vector at π/4
 
     // 2. create a simple neural network layer using geometric transformation
 
     // create weight as geometric number
-    let weight = Geonum {
-        length: 1.2,     // weight magnitude
-        angle: PI / 6.0, // weight orientation
-        blade: 1,        // vector (grade 1) - weight as a directed transformation
-    };
+    let weight = Geonum::new(1.2, 1.0, 6.0); // weight at π/6
 
     // compute layer output directly
-    let layer_output = Geonum {
-        length: input_feature.length * weight.length, // multiply magnitudes
-        angle: input_feature.angle + weight.angle,    // add angles
-        blade: 1,                                     // vector (grade 1) - output feature
-    };
+    let layer_output = input_feature * weight;
 
     // 3. demonstrate activation functions as angle transformations
 
@@ -715,22 +603,17 @@ fn its_a_neural_image_processing() {
     // with geonum: direct angle-based nonlinearities
 
     // ReLU-like activation: preserve positive parts of signal
-    let activated_output = if f64::cos(layer_output.angle) > 0.0 {
-        Geonum {
-            length: layer_output.length * f64::cos(layer_output.angle),
-            angle: layer_output.angle,
-            blade: 1, // vector (grade 1) - activated output
-        }
+    let activated_output = if layer_output.angle.cos() > 0.0 {
+        Geonum::new_with_angle(
+            layer_output.length * layer_output.angle.cos(),
+            layer_output.angle,
+        )
     } else {
-        Geonum {
-            length: 0.0,
-            angle: 0.0,
-            blade: 1, // vector (grade 1) - zeroed output
-        }
+        Geonum::new(0.0, 0.0, 2.0) // zeroed output
     };
 
     // verify activation has expected behavior
-    if f64::cos(layer_output.angle) > 0.0 {
+    if layer_output.angle.cos() > 0.0 {
         assert!(
             activated_output.length > 0.0,
             "ReLU should preserve positive signals"
@@ -745,18 +628,10 @@ fn its_a_neural_image_processing() {
     // 4. demonstrate deep feature composition
 
     // create a multi-layer network using angle composition
-    let layer2_weight = Geonum {
-        length: 0.8,
-        angle: -PI / 8.0,
-        blade: 1, // vector (grade 1) - second layer weight
-    };
+    let layer2_weight = Geonum::new(0.8, -1.0, 8.0); // weight at -π/8
 
     // forward pass through second layer
-    let layer2_output = Geonum {
-        length: activated_output.length * layer2_weight.length, // multiply magnitudes
-        angle: activated_output.angle + layer2_weight.angle,    // add angles
-        blade: 1, // vector (grade 1) - second layer output
-    };
+    let layer2_output = activated_output * layer2_weight;
 
     // 5. measure performance for high-dimensional feature maps
 
@@ -770,11 +645,7 @@ fn its_a_neural_image_processing() {
     let mut features = (0..features_per_layer)
         .map(|i| {
             let angle = (i as f64) * 2.0 * PI / (features_per_layer as f64);
-            Geonum {
-                length: 1.0,
-                angle,
-                blade: 1, // vector (grade 1) - input feature
-            }
+            Geonum::new(1.0, angle, PI)
         })
         .collect::<Vec<Geonum>>();
 
@@ -784,25 +655,16 @@ fn its_a_neural_image_processing() {
         features = features
             .iter()
             .map(|feature| {
-                let output = Geonum {
-                    length: feature.length * 0.95, // slight attenuation
-                    angle: feature.angle + 0.01,   // slight rotation
-                    blade: 1,                      // vector (grade 1) - layer output
-                };
+                let output = Geonum::new_with_angle(
+                    feature.length * 0.95,                // slight attenuation
+                    feature.angle + Angle::new(0.01, PI), // slight rotation
+                );
 
                 // simplified activation
-                if f64::cos(output.angle) > 0.0 {
-                    Geonum {
-                        length: output.length * f64::cos(output.angle),
-                        angle: output.angle,
-                        blade: 1, // vector (grade 1) - activated output
-                    }
+                if output.angle.cos() > 0.0 {
+                    Geonum::new_with_angle(output.length * output.angle.cos(), output.angle)
                 } else {
-                    Geonum {
-                        length: 0.0,
-                        angle: 0.0,
-                        blade: 1, // vector (grade 1) - zeroed output
-                    }
+                    Geonum::new(0.0, 0.0, 2.0) // zeroed output
                 }
             })
             .collect();
@@ -829,11 +691,7 @@ fn its_a_segmentation_algorithm() {
     // 1. replace pixel-wise classification with angle-based segmentation
 
     // create an image region with dominant orientation
-    let region_orientation = Geonum {
-        length: 1.0,     // confidence
-        angle: PI / 4.0, // 45-degree texture
-        blade: 1,        // vector (grade 1) - region orientation as a directed element
-    };
+    let region_orientation = Geonum::new(1.0, 1.0, 4.0); // vector at π/4 (45-degree texture)
 
     // 2. create segmentation as angle clustering
 
@@ -846,29 +704,26 @@ fn its_a_segmentation_algorithm() {
         .map(|i| {
             // add noise to orientation
             let noise = (i as f64 / num_pixels as f64) * 0.2 - 0.1;
-            Geonum {
-                length: 1.0,
-                angle: region_orientation.angle + noise,
-                blade: 1, // vector (grade 1) - pixel orientation
-            }
+            Geonum::new_with_angle(1.0, region_orientation.angle + Angle::new(noise, PI))
         })
         .collect::<Vec<Geonum>>();
 
     // 3. compute region statistics directly from angles
 
     // calculate mean orientation
-    let mean_angle = pixels.iter().map(|p| p.angle).sum::<f64>() / pixels.len() as f64;
+    let mean_angle =
+        pixels.iter().map(|p| p.angle.mod_4_angle()).sum::<f64>() / pixels.len() as f64;
 
     // verify mean is close to original region orientation
     assert!(
-        (mean_angle - region_orientation.angle).abs() < 0.1,
+        (mean_angle - region_orientation.angle.mod_4_angle()).abs() < 0.1,
         "Mean orientation should be close to region orientation"
     );
 
     // calculate circular variance
     let circular_variance = pixels
         .iter()
-        .map(|p| 1.0 - f64::cos(p.angle - mean_angle))
+        .map(|p| 1.0 - f64::cos(p.angle.mod_4_angle() - mean_angle))
         .sum::<f64>()
         / pixels.len() as f64;
 
@@ -881,20 +736,12 @@ fn its_a_segmentation_algorithm() {
     // 4. demonstrate boundary detection through angle discontinuities
 
     // create boundary between two regions
-    let region1_pixel = Geonum {
-        length: 1.0,
-        angle: PI / 4.0, // 45 degrees
-        blade: 1,        // vector (grade 1) - region 1 pixel
-    };
-
-    let region2_pixel = Geonum {
-        length: 1.0,
-        angle: 3.0 * PI / 4.0, // 135 degrees
-        blade: 1,              // vector (grade 1) - region 2 pixel
-    };
+    let region1_pixel = Geonum::new(1.0, 1.0, 4.0); // vector at π/4 (45 degrees)
+    let region2_pixel = Geonum::new(1.0, 3.0, 4.0); // vector at 3π/4 (135 degrees)
 
     // boundary strength is angle difference
-    let boundary_strength = region1_pixel.angle_distance(&region2_pixel);
+    let angle_diff = region1_pixel.angle - region2_pixel.angle;
+    let boundary_strength = angle_diff.mod_4_angle().abs();
 
     // should detect strong boundary (PI/2 is 90 degrees)
     assert!(
@@ -919,11 +766,7 @@ fn its_a_segmentation_algorithm() {
             // each segment has distinct orientation
             let segment_angle = (segment_id as f64) * PI / (num_segments as f64);
 
-            Geonum {
-                length: 1.0,
-                angle: segment_angle,
-                blade: 1, // vector (grade 1) - segment orientation
-            }
+            Geonum::new(1.0, segment_angle, PI)
         })
         .take(1000)
         .collect::<Vec<Geonum>>(); // Only process 1000 pixels for benchmark
@@ -943,11 +786,7 @@ fn its_an_object_detection() {
     // 1. replace bounding box regression with angle-based localization
 
     // create an object with position and scale
-    let object = Geonum {
-        length: 2.0,     // object scale (size)
-        angle: PI / 6.0, // object orientation
-        blade: 1,        // vector (grade 1) - object as a directed element
-    };
+    let object = Geonum::new(2.0, 1.0, 6.0); // vector at π/6
 
     // traditional design: regress bounding box coordinates (x,y,w,h)
     // requires complex feature extraction and regression
@@ -957,34 +796,35 @@ fn its_an_object_detection() {
     // 2. represent bounding box directly with geometric numbers
 
     // compute bounding box center (simplified 2D case)
-    let center_x = 100.0 + 50.0 * f64::cos(object.angle);
-    let center_y = 100.0 + 50.0 * f64::sin(object.angle);
+    let center_x = 100.0 + 50.0 * object.angle.cos();
+    let center_y = 100.0 + 50.0 * object.angle.sin();
 
     // bounding box as center position + scale
-    let bbox = Geonum {
-        length: object.length,                 // scale
-        angle: f64::atan2(center_y, center_x), // direction from origin
-        blade: 1, // vector (grade 1) - bounding box as a directed element
-    };
+    let bbox_angle = Geonum::new_from_cartesian(center_x, center_y).angle;
+    let bbox = Geonum::new_with_angle(object.length, bbox_angle);
 
     // 3. compute IoU using angle-based overlap
 
     // create another bounding box for the same object (slight variation)
-    let bbox2 = Geonum {
-        length: object.length * 1.1, // slightly larger
-        angle: bbox.angle + 0.05,    // slightly rotated
-        blade: 1,                    // vector (grade 1) - second bounding box
-    };
+    let bbox2 = Geonum::new_with_angle(
+        object.length * 1.05,              // slightly larger
+        bbox.angle + Angle::new(0.02, PI), // slightly rotated
+    );
 
     // compute IoU-like similarity directly from angles and scales
-    let angle_diff = bbox.angle_distance(&bbox2);
+    let angle_diff = (bbox2.angle - bbox.angle).mod_4_angle();
     let scale_ratio = bbox.length.min(bbox2.length) / bbox.length.max(bbox2.length);
 
     // combine angle and scale similarity
     let similarity = scale_ratio * (1.0 - angle_diff / PI);
 
     // should be high similarity (IoU)
-    assert!(similarity > 0.8, "Bounding boxes should have high overlap");
+    // With 0.02 radian rotation and 1.05x scale, similarity should be high
+    let expected_similarity = (1.0 / 1.05) * (1.0 - 0.02 / PI); // ~0.95 * 0.994 = ~0.94
+    assert!(
+        similarity > 0.9,
+        "Bounding boxes should have high overlap. Similarity: {similarity}, expected: ~{expected_similarity}"
+    );
 
     // 4. demonstrate non-maximum suppression through angle clustering
 
@@ -993,21 +833,9 @@ fn its_an_object_detection() {
 
     // create multiple detections of same object
     let detections = [
-        Geonum {
-            length: 2.0,
-            angle: PI / 6.0,
-            blade: 1, // vector (grade 1) - detection 1
-        },
-        Geonum {
-            length: 2.1,
-            angle: PI / 6.0 + 0.05,
-            blade: 1, // vector (grade 1) - detection 2
-        },
-        Geonum {
-            length: 1.9,
-            angle: PI / 6.0 - 0.03,
-            blade: 1, // vector (grade 1) - detection 3
-        },
+        Geonum::new(2.0, 1.0, 6.0), // detection at π/6
+        Geonum::new_with_angle(2.1, Angle::new(1.0, 6.0) + Angle::new(0.05, PI)), // slightly rotated
+        Geonum::new_with_angle(1.9, Angle::new(1.0, 6.0) - Angle::new(0.03, PI)), // slightly opposite rotation
     ];
 
     // cluster detections by angle similarity
@@ -1024,7 +852,10 @@ fn its_an_object_detection() {
         assigned[i] = true;
 
         for j in i + 1..detections.len() {
-            if !assigned[j] && detections[i].angle_distance(&detections[j]) < angle_threshold {
+            let angle_diff = (detections[j].angle - detections[i].angle).mod_4_angle();
+            // Handle circular distance
+            let angle_dist = angle_diff.min(2.0 * PI - angle_diff);
+            if !assigned[j] && angle_dist < angle_threshold {
                 cluster.push(j);
                 assigned[j] = true;
             }
@@ -1057,11 +888,7 @@ fn its_an_object_detection() {
             let scale = 1.0 + (i % 10) as f64 * 0.1;
 
             // detection for object
-            let detection = Geonum {
-                length: scale,
-                angle: position_angle,
-                blade: 1, // vector (grade 1) - object detection
-            };
+            let detection = Geonum::new(scale, position_angle, PI);
 
             // class probabilities represented as multivector
             // each grade corresponds to a class
@@ -1070,11 +897,12 @@ fn its_an_object_detection() {
                     let class_id = (i + c) % num_classes;
                     let prob = if c == 0 { 0.8 } else { 0.05 }; // highest prob for first class
 
-                    Geonum {
-                        length: prob,
-                        angle: (class_id as f64) * 2.0 * PI / (num_classes as f64),
-                        blade: c + 1, // blade grade represents class ID range
-                    }
+                    Geonum::new_with_blade(
+                        prob,
+                        c + 1, // blade grade represents class ID range
+                        (class_id as f64) * 2.0 / (num_classes as f64),
+                        PI,
+                    )
                 })
                 .collect::<Vec<Geonum>>();
 

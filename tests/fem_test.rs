@@ -13,11 +13,7 @@ fn its_a_shape_function() {
     // create a linear shape function as a geometric number
     // N(x) = 1-x in the range [0,1] represented as a geonum
     let shape_function = |x: f64| -> Geonum {
-        Geonum {
-            length: 1.0 - x, // magnitude varies with position
-            angle: 0.0,      // phase is constant for linear function
-            blade: 1,
-        }
+        Geonum::new(1.0 - x, 0.0, 1.0) // magnitude varies with position, angle 0
     };
 
     // test the shape function at a few points
@@ -34,11 +30,7 @@ fn its_a_shape_function() {
     // this is the standard quadratic basis function on [0,1]
     let quadratic_shape = |x: f64| -> Geonum {
         let value = 4.0 * x * (1.0 - x);
-        Geonum {
-            length: value,
-            angle: 0.0, // phase still constant for this function
-            blade: 1,
-        }
+        Geonum::new(value, 0.0, 1.0) // phase still constant for this function
     };
 
     // test quadratic function at critical points
@@ -56,17 +48,13 @@ fn its_a_shape_function() {
     // demonstrate this with our linear shape function
     // artifact of geonum automation: parameter kept for functional clarity
     let shape_derivative = |_x: f64| -> Geonum {
-        Geonum {
-            length: 1.0, // derivative of 1-x is constant -1 (magnitude 1)
-            angle: PI,   // angle PI represents negative value
-            blade: 1,
-        }
+        Geonum::new(1.0, 1.0, 1.0) // derivative of 1-x is constant -1 (magnitude 1, angle PI)
     };
 
     // validate derivative at a point
     let deriv_at_half = shape_derivative(0.5);
     assert_eq!(deriv_at_half.length, 1.0);
-    assert_eq!(deriv_at_half.angle, PI);
+    assert_eq!(deriv_at_half.angle.mod_4_angle(), PI);
 
     // demonstrate ability to represent high-order shape functions
     // using a composition of simple angle operations
@@ -79,11 +67,7 @@ fn its_a_shape_function() {
     // define cubic shape function N(x) = x²(3-2x) as a geonum
     let cubic_shape = |x: f64| -> Geonum {
         let value = x * x * (3.0 - 2.0 * x);
-        Geonum {
-            length: value,
-            angle: 0.0,
-            blade: 1,
-        }
+        Geonum::new(value, 0.0, 1.0)
     };
 
     // test cubic function at critical points
@@ -106,22 +90,30 @@ fn its_a_shape_function() {
         // with geonum, its a simple angle-magnitude computation
         let r = (x * x + y * y + z * z).sqrt();
         let theta = y.atan2(x);
-        let phi = (r > EPSILON).then(|| (z / r).acos()).unwrap_or(0.0);
+        let phi = if r > EPSILON { (z / r).acos() } else { 0.0 };
 
-        Geonum {
-            length: r * r * (3.0 - 2.0 * r), // cubic radial part
-            angle: theta * phi / TWO_PI,     // angular part
-            blade: 1,
-        }
+        // convert angle to Angle struct
+        let angle_radians = theta * phi / TWO_PI;
+        Geonum::new(r * r * (3.0 - 2.0 * r), angle_radians, PI)
     };
 
     // test the high order shape function
     let high_order_value = high_order_shape(0.5, 0.5, 0.5);
 
-    // confirm it produces a valid result (non-zero and finite)
-    assert!(high_order_value.length > 0.0);
-    assert!(high_order_value.length.is_finite());
-    assert!(high_order_value.angle.is_finite());
+    // test high order shape function at center point (0.5, 0.5, 0.5)
+    // r = sqrt(3/4) ≈ 0.866, cubic_r = r²(3-2r) ≈ 0.598
+    let expected_r = (0.75_f64).sqrt();
+    let expected_length = expected_r * expected_r * (3.0 - 2.0 * expected_r);
+    assert!((high_order_value.length - expected_length).abs() < EPSILON);
+
+    // test angle computation: theta = atan2(0.5, 0.5) = π/4
+    // phi = acos(0.5/0.866) ≈ 0.955 radians
+    // angle should be theta * phi / (2π) ≈ 0.0378 radians
+    let expected_theta = 0.5_f64.atan2(0.5);
+    let expected_phi = (0.5 / expected_r).acos();
+    let expected_angle_value = expected_theta * expected_phi / TWO_PI;
+    assert!((high_order_value.angle.value() - expected_angle_value).abs() < EPSILON);
+    assert_eq!(high_order_value.angle.blade(), 0); // small angle, so blade is 0
 }
 
 #[test]
@@ -138,26 +130,18 @@ fn its_a_stiffness_matrix() {
     let stiffness = |disp: &Geonum| -> Geonum {
         // applying the stiffness relationship through angle transformation
         // for a spring with k=1, force = k * displacement
-        Geonum {
-            length: disp.length,
-            angle: disp.angle, // preserve angle for simple spring
-            blade: 1,
-        }
+        Geonum::new_with_angle(disp.length, disp.angle) // preserve angle for simple spring
     };
 
     // test the stiffness operation with a displacement
-    let displacement = Geonum {
-        length: 0.5,
-        angle: 0.0, // positive displacement
-        blade: 1,
-    };
+    let displacement = Geonum::new(0.5, 0.0, 1.0); // positive displacement
 
     // compute resulting force
     let force = stiffness(&displacement);
 
     // test force equals k*x for spring (k=1)
     assert_eq!(force.length, 0.5);
-    assert_eq!(force.angle, 0.0);
+    assert_eq!(force.angle.mod_4_angle(), 0.0);
 
     // demonstrate boundary condition application through angle constraints
     // with BCs, displacements are constrained in traditional FEM by modifying
@@ -165,11 +149,7 @@ fn its_a_stiffness_matrix() {
     // with geonum, we just set the angle (constant time)
 
     // apply fixed boundary condition (displacement = 0)
-    let fixed_bc = Geonum {
-        length: 0.0,
-        angle: 0.0,
-        blade: 1,
-    };
+    let fixed_bc = Geonum::new(0.0, 0.0, 1.0);
 
     // apply the boundary condition
     let fixed_force = stiffness(&fixed_bc);
@@ -182,27 +162,15 @@ fn its_a_stiffness_matrix() {
     // with geonum, we maintain O(1) complexity
 
     // define 2D material property as a geonum
-    let material = Geonum {
-        length: 10.0,    // elastic modulus
-        angle: PI / 4.0, // represents Poisson ratio indirectly
-        blade: 1,
-    };
+    let material = Geonum::new(10.0, 1.0, 4.0); // elastic modulus, angle PI/4 for Poisson ratio
 
     // define a 2D displacement field
-    let displ_field = Geonum {
-        length: 0.1,     // displacement magnitude
-        angle: PI / 6.0, // direction of displacement
-        blade: 1,
-    };
+    let displ_field = Geonum::new(0.1, 1.0, 6.0); // displacement magnitude, angle PI/6
 
     // compute 2D stress using stiffness relationship
     let compute_stress = |material: &Geonum, displacement: &Geonum| -> Geonum {
         // multiplication of geonums: angles add, lengths multiply
-        Geonum {
-            length: material.length * displacement.length,
-            angle: material.angle + displacement.angle,
-            blade: 1,
-        }
+        material * displacement
     };
 
     // compute stress
@@ -210,7 +178,7 @@ fn its_a_stiffness_matrix() {
 
     // test the stress computation
     assert!((stress.length - 1.0).abs() < EPSILON);
-    assert!((stress.angle - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
+    assert!((stress.angle.mod_4_angle() - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
 
     // demonstrate how a million-element assembly maintains O(1) complexity
     // with geonum's angle representation
@@ -221,20 +189,19 @@ fn its_a_stiffness_matrix() {
     // simulate element contribution to global matrix
     let element_contribution = |local_coord: f64, disp: &Geonum| -> Geonum {
         // encodes position-dependent stiffness through angle
-        Geonum {
-            length: disp.length,
-            angle: disp.angle + local_coord * PI / 2.0, // position effect
-            blade: 1,
-        }
+        let rotation = Angle::new(local_coord, 2.0); // local_coord * PI/2
+        Geonum::new_with_angle(disp.length, disp.angle + rotation)
     };
 
     // compute global assembly effect (traditionally an O(n³) operation)
     // with geonum, its constant time regardless of mesh size
     let global_result = element_contribution(0.5, &displ_field);
 
-    // test the result is non-zero and finite
-    assert!(global_result.length > 0.0);
-    assert!(global_result.angle.is_finite());
+    // test position-based rotation at local_coord = 0.5
+    let expected_rotation = Angle::new(0.5, 2.0); // 0.5 * PI/2 = PI/4
+    let expected_angle = displ_field.angle + expected_rotation;
+    assert_eq!(global_result.length, displ_field.length);
+    assert_eq!(global_result.angle, expected_angle);
 }
 
 #[test]
@@ -245,35 +212,25 @@ fn its_a_linear_solver() {
     // create a system matrix as a geonum transformation
     let apply_system = |x: &Geonum| -> Geonum {
         // system matrix A applied to x giving Ax
-        Geonum {
-            length: 2.0 * x.length,    // amplitude scaling
-            angle: x.angle + PI / 6.0, // phase shift
-            blade: 1,
-        }
+        let phase_shift = Angle::new(1.0, 6.0); // PI/6
+        Geonum::new_with_angle(2.0 * x.length, x.angle + phase_shift)
     };
 
     // create a right-hand side b
-    let b = Geonum {
-        length: 4.0,
-        angle: PI / 3.0,
-        blade: 1,
-    };
+    let b = Geonum::new(4.0, 1.0, 3.0); // angle PI/3
 
     // solve the system Ax = b directly through angle inversion
     // x = A⁻¹b which in geonum is:
     // |x| = |b|/|A|, angle(x) = angle(b) - angle(A)
-    let solution = Geonum {
-        length: b.length / 2.0,    // invert amplitude scaling
-        angle: b.angle - PI / 6.0, // invert phase shift
-        blade: 1,
-    };
+    let phase_shift = Angle::new(1.0, 6.0); // PI/6
+    let solution = Geonum::new_with_angle(b.length / 2.0, b.angle - phase_shift);
 
     // validate the solution by checking Ax = b
     let check = apply_system(&solution);
 
     // test the solution
     assert!((check.length - b.length).abs() < EPSILON);
-    assert!((check.angle - b.angle).abs() < EPSILON);
+    assert_eq!(check.angle, b.angle);
 
     // demonstrate solving a more complex system
     // represent a stiffness matrix-vector product K*u = f
@@ -281,44 +238,30 @@ fn its_a_linear_solver() {
     // create a more complex system operator
     let apply_stiffness = |u: &Geonum| -> Geonum {
         // K*u giving force vector f
-        Geonum {
-            length: 5.0 * u.length,
-            angle: u.angle + PI / 4.0,
-            blade: 1,
-        }
+        let rotation = Angle::new(1.0, 4.0); // PI/4
+        Geonum::new_with_angle(5.0 * u.length, u.angle + rotation)
     };
 
     // define force vector
-    let force = Geonum {
-        length: 10.0,
-        angle: PI / 2.0,
-        blade: 1,
-    };
+    let force = Geonum::new(10.0, 1.0, 2.0); // angle PI/2
 
     // solve for displacement u where K*u = f
-    let displacement = Geonum {
-        length: force.length / 5.0,
-        angle: force.angle - PI / 4.0,
-        blade: 1,
-    };
+    let rotation = Angle::new(1.0, 4.0); // PI/4
+    let displacement = Geonum::new_with_angle(force.length / 5.0, force.angle - rotation);
 
     // validate displacement solution by applying stiffness
     let check_force = apply_stiffness(&displacement);
 
     // test the solution matches the force
     assert!((check_force.length - force.length).abs() < EPSILON);
-    assert!((check_force.angle - force.angle).abs() < EPSILON);
+    assert_eq!(check_force.angle, force.angle);
 
     // demonstrate solving a system with boundary conditions
     // in traditional FEM, this requires modifying system matrices
     // with geonum, its a direct angle constraint
 
     // apply a fixed boundary condition (displacement=0 at certain nodes)
-    let fixed_node = Geonum {
-        length: 0.0,
-        angle: 0.0,
-        blade: 1,
-    };
+    let fixed_node = Geonum::new(0.0, 0.0, 1.0);
 
     // compute reaction force at fixed node
     let reaction = apply_stiffness(&fixed_node);
@@ -336,33 +279,26 @@ fn its_a_linear_solver() {
     let million_node_system = |x: &Geonum| -> Geonum {
         // the key insight is that even with a million nodes
         // the operation is still just an angle transformation
-        Geonum {
-            length: 1000.0 * x.length, // large system scale
-            angle: x.angle + PI / 3.0, // system behavior
-            blade: 1,
-        }
+        let system_rotation = Angle::new(1.0, 3.0); // PI/3
+        Geonum::new_with_angle(1000.0 * x.length, x.angle + system_rotation)
     };
 
     // create a complex load vector
-    let complex_load = Geonum {
-        length: 5000.0,
-        angle: PI / 2.0,
-        blade: 1,
-    };
+    let complex_load = Geonum::new(5000.0, 1.0, 2.0); // angle PI/2
 
     // solve the giant system directly
-    let million_node_solution = Geonum {
-        length: complex_load.length / 1000.0,
-        angle: complex_load.angle - PI / 3.0,
-        blade: 1,
-    };
+    let system_rotation = Angle::new(1.0, 3.0); // PI/3
+    let million_node_solution = Geonum::new_with_angle(
+        complex_load.length / 1000.0,
+        complex_load.angle - system_rotation,
+    );
 
     // validate the solution
     let solution_check = million_node_system(&million_node_solution);
 
     // test it matches the expected load
     assert!((solution_check.length - complex_load.length).abs() < EPSILON);
-    assert!((solution_check.angle - complex_load.angle).abs() < EPSILON);
+    assert_eq!(solution_check.angle, complex_load.angle);
 }
 
 #[test]
@@ -385,26 +321,20 @@ fn it_collapses_steps() {
         // - post-processing through direct angle output
 
         // all in one O(1) operation instead of O(n³) + O(n log n)
-        Geonum {
-            length: input.length * 2.0,  // solution scaling
-            angle: TWO_PI - input.angle, // solution rotation
-            blade: 1,
-        }
+        let full_rotation = Angle::new(2.0, 1.0); // 2*PI = full rotation
+        Geonum::new_with_angle(input.length * 2.0, full_rotation - input.angle)
     };
 
     // create a problem specification
-    let problem_spec = Geonum {
-        length: 1.0,     // loading magnitude
-        angle: PI / 4.0, // loading direction
-        blade: 1,
-    };
+    let problem_spec = Geonum::new(1.0, 1.0, 4.0); // loading magnitude, angle PI/4
 
     // solve the entire problem in one step
     let solution = unified_fem(&problem_spec);
 
-    // test the solution is valid (non-zero and finite)
+    // test the solution produces expected transformation
     assert_eq!(solution.length, 2.0);
-    assert_eq!(solution.angle, TWO_PI - PI / 4.0);
+    let expected_angle = Angle::new(2.0, 1.0) - Angle::new(1.0, 4.0); // 2*PI - PI/4
+    assert_eq!(solution.angle, expected_angle);
 
     // demonstrate skipping intermediate matrices and storage
     // traditional FEM requires storage of:
@@ -417,32 +347,21 @@ fn it_collapses_steps() {
     // simulate a complex analysis with varied material properties
     let analysis = |material: &Geonum, load: &Geonum| -> Geonum {
         // direct transformation that encodes the entire solution process
-        Geonum {
-            length: load.length / material.length,
-            angle: load.angle - material.angle,
-            blade: 1,
-        }
+        Geonum::new_with_angle(load.length / material.length, load.angle - material.angle)
     };
 
     // define material and load
-    let material = Geonum {
-        length: 5.0,     // stiffness
-        angle: PI / 6.0, // material orientation
-        blade: 1,
-    };
+    let material = Geonum::new(5.0, 1.0, 6.0); // stiffness, angle PI/6
 
-    let load = Geonum {
-        length: 10.0,    // force magnitude
-        angle: PI / 2.0, // force direction
-        blade: 1,
-    };
+    let load = Geonum::new(10.0, 1.0, 2.0); // force magnitude, angle PI/2
 
     // perform the entire analysis in one step
     let result = analysis(&material, &load);
 
     // test the result
     assert!((result.length - 2.0).abs() < EPSILON);
-    assert!((result.angle - (PI / 2.0 - PI / 6.0)).abs() < EPSILON);
+    let expected_result_angle = Angle::new(1.0, 2.0) - Angle::new(1.0, 6.0); // PI/2 - PI/6
+    assert_eq!(result.angle, expected_result_angle);
 
     // demonstrate how this design scales to extremely complex problems
     // with no increase in computational cost
@@ -460,38 +379,28 @@ fn it_collapses_steps() {
         // unify all FEM steps into one direct transformation
         // this would traditionally be hundreds of lines of code
         // and millions of operations in a traditional FEM code
-        Geonum {
-            length: geometry.length * material.length / (1.0 + boundary.length),
-            angle: geometry.angle + material.angle - boundary.angle,
-            blade: 1,
-        }
+        Geonum::new_with_angle(
+            geometry.length * material.length / (1.0 + boundary.length),
+            geometry.angle + material.angle - boundary.angle,
+        )
     };
 
     // define problem parameters
     let inputs = [
-        Geonum {
-            length: 2.0,
-            angle: 0.0,
-            blade: 1,
-        }, // geometry
-        Geonum {
-            length: 5.0,
-            angle: PI / 4.0,
-            blade: 1,
-        }, // material
-        Geonum {
-            length: 1.0,
-            angle: PI / 2.0,
-            blade: 1,
-        }, // boundary
+        Geonum::new(2.0, 0.0, 1.0), // geometry
+        Geonum::new(5.0, 1.0, 4.0), // material, angle PI/4
+        Geonum::new(1.0, 1.0, 2.0), // boundary, angle PI/2
     ];
 
     // solve the entire workflow in one step
     let final_solution = complex_workflow(&inputs);
 
-    // test the result is valid
-    assert!(final_solution.length > 0.0);
-    assert!(final_solution.angle.is_finite());
+    // test the unified workflow computation
+    // geometry.length * material.length / (1.0 + boundary.length) = 2.0 * 5.0 / 2.0 = 5.0
+    assert_eq!(final_solution.length, 5.0);
+    // angle: 0 + PI/4 - PI/2 = -PI/4
+    let expected_final_angle = Angle::new(0.0, 1.0) + Angle::new(1.0, 4.0) - Angle::new(1.0, 2.0);
+    assert_eq!(final_solution.angle, expected_final_angle);
 
     // this demonstrates how geonum collapses the entire FEM workflow
     // from O(n³) + O(n log n) to O(1) time complexity
