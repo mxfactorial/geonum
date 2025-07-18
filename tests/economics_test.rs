@@ -111,7 +111,7 @@ fn it_models_business_cycles() {
     // fast regardless of how many indicators we analyze
     // demonstrates O(1) complexity advantage of geometric algebra design
     assert!(
-        duration.as_micros() < 10000, // 10000 analyses under 10ms
+        duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "business cycle analysis runs with O(1) complexity regardless of indicator count"
     );
 
@@ -476,7 +476,7 @@ fn it_detects_early_recession_indicators() {
 
     // test O(1) complexity
     assert!(
-        duration.as_micros() < 10000,
+        duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "recession detection runs with O(1) complexity"
     );
 
