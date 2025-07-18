@@ -1,10 +1,10 @@
-use crate::geonum_mod::Geonum;
+use crate::{angle::Angle, geonum_mod::Geonum};
 
 pub trait Projection: Sized {
     /// view data through a specific projection path
     /// conventional: complex lens functions with higher-order abstractions
     /// geonum: encode projection paths as angles for direct access
-    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> f64) -> Self;
+    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> Angle) -> Self;
 
     /// compose two projections into a single new projection
     /// conventional: nested higher-order functions
@@ -13,23 +13,15 @@ pub trait Projection: Sized {
 }
 
 impl Projection for Geonum {
-    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> f64) -> Self {
-        let path = path_encoder(data);
+    fn view<T>(&self, data: &T, path_encoder: fn(&T) -> Angle) -> Self {
+        let path_angle = path_encoder(data);
 
         // create a projection by encoding the path as an angle
-        Self {
-            length: self.length,
-            angle: self.angle + path,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(self.length, self.angle + path_angle)
     }
 
     fn compose(&self, other: &Self) -> Self {
         // compose projections by angle addition
-        Self {
-            length: self.length * other.length,
-            angle: self.angle + other.angle,
-            blade: self.blade, // preserve blade grade
-        }
+        Geonum::new_with_angle(self.length * other.length, self.angle + other.angle)
     }
 }
