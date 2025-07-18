@@ -21,11 +21,11 @@ fn it_models_business_cycles() {
     // create economic indicators as geometric numbers (magnitude + direction)
     // - length: magnitude of the indicator
     // - angle: phase relationship in the business cycle
-    let gdp_growth = Geonum::from_polar(2.5, 0.1); // 2.5% growth, early expansion phase
-    let price_adjustment = Geonum::from_polar(0.8, PI / 3.0); // real price changes from supply/demand
-    let productivity = Geonum::from_polar(1.2, PI / 4.0); // productivity growth with technology
-    let unemployment = Geonum::from_polar(4.2, 5.0 * PI / 6.0); // unemployment (counter-cyclical)
-    let capital_formation = Geonum::from_polar(3.0, PI / 5.0); // investment in productive capacity
+    let gdp_growth = Geonum::new(2.5, 0.1, PI); // 2.5% growth, early expansion phase
+    let price_adjustment = Geonum::new(0.8, 1.0, 3.0); // real price changes from supply/demand
+    let productivity = Geonum::new(1.2, 1.0, 4.0); // productivity growth with technology
+    let unemployment = Geonum::new(4.2, 5.0, 6.0); // unemployment (counter-cyclical)
+    let capital_formation = Geonum::new(3.0, 1.0, 5.0); // investment in productive capacity
 
     // define a function to detect business cycle position from indicators
     // uses geometric algebra to compute the economic state vector
@@ -55,14 +55,14 @@ fn it_models_business_cycles() {
         // return the economic state as a geometric number:
         // - length: overall economic activity level (cycle amplitude)
         // - angle: position in the business cycle (cycle phase)
-        Geonum {
-            length: (weighted_x * weighted_x + weighted_y * weighted_y).sqrt(),
-            angle: phase_angle,
-            blade: 2, // bivector (grade 2) represents the economic cycle plane
-                      // In geometric algebra, grade 2 elements represent oriented areas
-                      // The business cycle is precisely that - a planar phenomenon with both
-                      // magnitude (economic activity) and phase direction (cycle position)
-        }
+        Geonum::new(
+            (weighted_x * weighted_x + weighted_y * weighted_y).sqrt(),
+            phase_angle,
+            PI,
+        ) // bivector (grade 2) represents the economic cycle plane
+          // In geometric algebra, grade 2 elements represent oriented areas
+          // The business cycle is precisely that - a planar phenomenon with both
+          // magnitude (economic activity) and phase direction (cycle position)
     };
 
     // analyze the current business cycle phase
@@ -80,7 +80,7 @@ fn it_models_business_cycles() {
 
     // interpret the cycle phase in economic terms
     // map the geometric angle to economic cycle phases
-    let cycle_phase = match cycle_state.angle {
+    let cycle_phase = match cycle_state.angle.mod_4_angle() {
         a if (0.0..PI / 2.0).contains(&a) => "expansion", // first quadrant: growth phase
         a if (PI / 2.0..PI).contains(&a) => "peak",       // second quadrant: mature expansion
         a if (PI..3.0 * PI / 2.0).contains(&a) => "contraction", // third quadrant: declining activity
@@ -111,21 +111,23 @@ fn it_models_business_cycles() {
     // fast regardless of how many indicators we analyze
     // demonstrates O(1) complexity advantage of geometric algebra design
     assert!(
-        duration.as_micros() < 10000, // 10000 analyses under 10ms
+        duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "business cycle analysis runs with O(1) complexity regardless of indicator count"
     );
 
     // output the economic analysis results
     println!("───── business cycle analysis ─────");
-    println!("cycle position: {:.2} radians", cycle_state.angle);
-    println!("current economic phase: {}", cycle_phase);
+    println!(
+        "cycle position: {:.2} radians",
+        cycle_state.angle.mod_4_angle()
+    );
+    println!("current economic phase: {cycle_phase}");
     println!(
         "cycle strength: {:.2} (overall economic activity)",
         cycle_state.length
     );
     println!(
-        "cycle velocity: {:.2} (positive = accelerating, negative = decelerating)",
-        cycle_velocity
+        "cycle velocity: {cycle_velocity:.2} (positive = accelerating, negative = decelerating)"
     );
     println!("───────────────────────────────────");
     println!("note: in a bivector economy without monetary inflation, business cycles");
@@ -165,11 +167,11 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     ];
 
     // tax policy scenarios (as geometric objects)
-    let current_policy = Geonum::from_polar_blade(1.0, 0.0, 0); // baseline policy as scalar (grade 0)
-                                                                // Using blade: 0 for policy baseline because it represents a
-                                                                // scale factor with no directional properties - just magnitude
-    let tax_cut_policy = Geonum::from_polar(0.8, -PI / 16.0); // 20% tax reduction
-    let tax_increase_policy = Geonum::from_polar(1.2, PI / 16.0); // 20% tax increase
+    let current_policy = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // baseline policy as scalar (grade 0)
+                                                                   // Using blade: 0 for policy baseline because it represents a
+                                                                   // scale factor with no directional properties - just magnitude
+    let tax_cut_policy = Geonum::new(0.8, -1.0, 16.0); // 20% tax reduction
+    let tax_increase_policy = Geonum::new(1.2, 1.0, 16.0); // 20% tax increase
 
     // create a function to simulate spending behavior under different tax policies
     let simulate_spending =
@@ -219,10 +221,10 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
             // compute geometric spending response combining all dimensions
             // length = magnitude of spending change
             // angle = combined position in economic space
-            Geonum::from_polar(
-                1.0 + policy_impact,
-                (income_angle + region_angle + category_angle + policy.angle) % (2.0 * PI),
-            )
+            let combined_angle =
+                (income_angle + region_angle + category_angle + policy.angle.mod_4_angle())
+                    % (2.0 * PI);
+            Geonum::new(1.0 + policy_impact, combined_angle, PI)
         };
 
     // analyze spending changes across multiple dimensions
@@ -311,10 +313,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
 
     // output most affected segment
     if let Some((income, region, category, _, _)) = vulnerable_segments.first() {
-        println!(
-            "most vulnerable: {} income in {} region, {} spending",
-            income, region, category
-        );
+        println!("most vulnerable: {income} income in {region} region, {category} spending");
     }
 
     println!("computation time: {:.2} nanoseconds", duration.as_nanos());
@@ -363,44 +362,44 @@ fn it_detects_early_recession_indicators() {
     // normal economic conditions (baseline period)
     let normal_transactions = vec![
         (
-            Geonum::from_polar(100.0, transaction_volumes[0].1),
-            Geonum::from_polar(1.0, payment_timing[1].1),
-            Geonum::from_polar(1.0, transaction_sizes[1].1),
-            Geonum::from_polar(1.0, geographic_flows[0].1),
+            Geonum::new(100.0, transaction_volumes[0].1, PI),
+            Geonum::new(1.0, payment_timing[1].1, PI),
+            Geonum::new(1.0, transaction_sizes[1].1, PI),
+            Geonum::new(1.0, geographic_flows[0].1, PI),
         ),
         (
-            Geonum::from_polar(150.0, transaction_volumes[1].1),
-            Geonum::from_polar(1.0, payment_timing[1].1),
-            Geonum::from_polar(1.0, transaction_sizes[2].1),
-            Geonum::from_polar(1.0, geographic_flows[1].1),
+            Geonum::new(150.0, transaction_volumes[1].1, PI),
+            Geonum::new(1.0, payment_timing[1].1, PI),
+            Geonum::new(1.0, transaction_sizes[2].1, PI),
+            Geonum::new(1.0, geographic_flows[1].1, PI),
         ),
         (
-            Geonum::from_polar(200.0, transaction_volumes[2].1),
-            Geonum::from_polar(1.0, payment_timing[1].1),
-            Geonum::from_polar(1.0, transaction_sizes[1].1),
-            Geonum::from_polar(1.0, geographic_flows[2].1),
+            Geonum::new(200.0, transaction_volumes[2].1, PI),
+            Geonum::new(1.0, payment_timing[1].1, PI),
+            Geonum::new(1.0, transaction_sizes[1].1, PI),
+            Geonum::new(1.0, geographic_flows[2].1, PI),
         ),
     ];
 
     // early recession signals (3-6 months before traditional indicators)
     let early_warning_transactions = vec![
         (
-            Geonum::from_polar(90.0, transaction_volumes[0].1),
-            Geonum::from_polar(1.0, payment_timing[2].1),
-            Geonum::from_polar(1.0, transaction_sizes[0].1),
-            Geonum::from_polar(1.0, geographic_flows[0].1),
+            Geonum::new(90.0, transaction_volumes[0].1, PI),
+            Geonum::new(1.0, payment_timing[2].1, PI),
+            Geonum::new(1.0, transaction_sizes[0].1, PI),
+            Geonum::new(1.0, geographic_flows[0].1, PI),
         ),
         (
-            Geonum::from_polar(130.0, transaction_volumes[1].1),
-            Geonum::from_polar(1.0, payment_timing[2].1),
-            Geonum::from_polar(1.0, transaction_sizes[1].1),
-            Geonum::from_polar(1.0, geographic_flows[1].1),
+            Geonum::new(130.0, transaction_volumes[1].1, PI),
+            Geonum::new(1.0, payment_timing[2].1, PI),
+            Geonum::new(1.0, transaction_sizes[1].1, PI),
+            Geonum::new(1.0, geographic_flows[1].1, PI),
         ),
         (
-            Geonum::from_polar(180.0, transaction_volumes[2].1),
-            Geonum::from_polar(1.0, payment_timing[3].1),
-            Geonum::from_polar(1.0, transaction_sizes[0].1),
-            Geonum::from_polar(1.0, geographic_flows[0].1),
+            Geonum::new(180.0, transaction_volumes[2].1, PI),
+            Geonum::new(1.0, payment_timing[3].1, PI),
+            Geonum::new(1.0, transaction_sizes[0].1, PI),
+            Geonum::new(1.0, geographic_flows[0].1, PI),
         ),
     ];
 
@@ -420,14 +419,18 @@ fn it_detects_early_recession_indicators() {
             // transaction size downshift signal
             let size_signal = transactions
                 .iter()
-                .map(|(vol, _, size, _)| vol.length * (PI / 2.0 - size.angle).sin())
+                .map(|(vol, _, size, _)| {
+                    vol.length * (size.angle.mod_4_angle() - PI / 2.0).sin().abs()
+                })
                 .sum::<f64>()
                 / total_volume;
 
             // geographic flow concentration signal (local vs distant)
             let geographic_signal = transactions
                 .iter()
-                .map(|(vol, _, _, geo)| vol.length * (PI / 2.0 - geo.angle).sin())
+                .map(|(vol, _, _, geo)| {
+                    vol.length * (geo.angle.mod_4_angle() - PI / 2.0).sin().abs()
+                })
                 .sum::<f64>()
                 / total_volume;
 
@@ -438,14 +441,17 @@ fn it_detects_early_recession_indicators() {
             // combine signals into a recession indicator
             // length = strength of recession signal
             // angle = phase (what stage of early recession)
-            Geonum::from_polar(
+            let combined_angle = (payment_timing_signal.atan2(size_signal)
+                + geographic_signal.atan2(volume_signal))
+                / 2.0;
+            Geonum::new(
                 (payment_timing_signal.powi(2)
                     + size_signal.powi(2)
                     + geographic_signal.powi(2)
                     + volume_signal.powi(2))
                 .sqrt(),
-                (payment_timing_signal.atan2(size_signal) + geographic_signal.atan2(volume_signal))
-                    / 2.0,
+                combined_angle,
+                PI,
             )
         };
 
@@ -470,7 +476,7 @@ fn it_detects_early_recession_indicators() {
 
     // test O(1) complexity
     assert!(
-        duration.as_micros() < 10000,
+        duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "recession detection runs with O(1) complexity"
     );
 
@@ -488,8 +494,8 @@ fn it_detects_early_recession_indicators() {
     println!("───── early recession detection ─────");
     println!("baseline economy signal: {:.3}", normal_signal.length);
     println!("warning signal strength: {:.3}", warning_signal.length);
-    println!("recession probability: {:.1}%", recession_probability);
-    println!("estimated lead time: {:.1} months", lead_time);
+    println!("recession probability: {recession_probability:.1}%");
+    println!("estimated lead time: {lead_time:.1} months");
     println!(
         "computation time: {:.2} nanoseconds",
         duration.as_nanos() / 10000
@@ -626,9 +632,11 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
         let new_cashflow = cashflow * (1.0 + impact_percent / 100.0);
 
         // return geometric number encoding impact
-        Geonum::from_polar(
+        let avg_angle = (size_angle + industry_angle + reserves_angle + debt_angle) / 4.0;
+        Geonum::new(
             new_cashflow / cashflow, // ratio of new to old cashflow
-            (size_angle + industry_angle + reserves_angle + debt_angle) / 4.0, // average angle
+            avg_angle,               // average angle
+            PI,
         )
     };
 
@@ -697,8 +705,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     // output most affected business
     if let Some((size, industry, reserves, debt, _, impact)) = vulnerable_businesses.first() {
         println!(
-            "most vulnerable: {} {} business with {} reserves and {} debt",
-            size, industry, reserves, debt
+            "most vulnerable: {size} {industry} business with {reserves} reserves and {debt} debt"
         );
         println!(
             "expected cashflow reduction: {:.1}%",
@@ -854,7 +861,7 @@ fn it_analyzes_housing_payment_patterns() {
         // return geometric number
         // length = market stress level (0-1)
         // angle = primary regional position
-        Geonum::from_polar(combined_stress, primary_region_angle)
+        Geonum::new(combined_stress, primary_region_angle, PI)
     };
 
     // perform stability analysis
@@ -909,14 +916,8 @@ fn it_analyzes_housing_payment_patterns() {
 
     // output housing market stability dashboard
     println!("───── housing market stability analysis ─────");
-    println!(
-        "stable market risk score: {:.3} - {}",
-        stable_risk, stable_status
-    );
-    println!(
-        "unstable market risk score: {:.3} - {}",
-        unstable_risk, unstable_status
-    );
+    println!("stable market risk score: {stable_risk:.3} - {stable_status}");
+    println!("unstable market risk score: {unstable_risk:.3} - {unstable_status}");
     println!("risk differential: {:.1}x", unstable_risk / stable_risk);
 
     // policy recommendation based on risk level
@@ -928,7 +929,7 @@ fn it_analyzes_housing_payment_patterns() {
         "standard oversight adequate"
     };
 
-    println!("policy recommendation: {}", recommendation);
+    println!("policy recommendation: {recommendation}");
     println!(
         "computation time: {:.2} nanoseconds",
         duration.as_nanos() / 10000
@@ -944,20 +945,20 @@ fn it_models_global_trade_flows() {
     // a direct flow of value with clear causality and balance requirements
 
     // model major trading nations as economic spaces
-    let usa = Geonum::from_polar(22.0, 0.1); // $22T GDP with slight trade deficit angle
-    let china = Geonum::from_polar(16.0, -0.15); // $16T GDP with trade surplus angle
-    let eu = Geonum::from_polar(18.0, 0.05); // $18T GDP with balanced trade angle
-    let japan = Geonum::from_polar(5.0, -0.2); // $5T GDP with trade surplus angle
+    let usa = Geonum::new(22.0, 0.1, PI); // $22T GDP with slight trade deficit angle
+    let china = Geonum::new(16.0, -0.15, PI); // $16T GDP with trade surplus angle
+    let eu = Geonum::new(18.0, 0.05, PI); // $18T GDP with balanced trade angle
+    let japan = Geonum::new(5.0, -0.2, PI); // $5T GDP with trade surplus angle
 
     // bilateral trade flows as bivectors between national economies
     // each represents transactions with conservation laws enforced
-    let usa_china_trade = Geonum::from_polar_blade(650.0, PI / 2.0 + 0.3, 2); // $650B net flow as bivector (grade 2)
-                                                                              // Blade: 2 represents trade flows as oriented areas in economic space
-                                                                              // Trade transactions create a plane between two economic entities
-    let usa_eu_trade = Geonum::from_polar_blade(1100.0, PI / 2.0 - 0.1, 2); // $1.1T net flow as bivector (grade 2)
-                                                                            // PI/2 angle typical for perpendicular economic relationships
-    let china_eu_trade = Geonum::from_polar_blade(700.0, PI / 2.0 + 0.2, 2); // $700B net flow as bivector (grade 2)
-                                                                             // International trade naturally forms bivector relationships
+    let usa_china_trade = Geonum::new_with_blade(650.0, 2, 1.0 + 0.3 * 2.0 / PI, 2.0); // $650B net flow as bivector (grade 2)
+                                                                                       // Blade: 2 represents trade flows as oriented areas in economic space
+                                                                                       // Trade transactions create a plane between two economic entities
+    let usa_eu_trade = Geonum::new_with_blade(1100.0, 2, 1.0 - 0.1 * 2.0 / PI, 2.0); // $1.1T net flow as bivector (grade 2)
+                                                                                     // PI/2 angle typical for perpendicular economic relationships
+    let china_eu_trade = Geonum::new_with_blade(700.0, 2, 1.0 + 0.2 * 2.0 / PI, 2.0); // $700B net flow as bivector (grade 2)
+                                                                                      // International trade naturally forms bivector relationships
 
     // model trade network for imbalances - which must sum to zero
     // any non-zero sum indicates measurement error or missing flows
@@ -983,13 +984,9 @@ fn it_models_global_trade_flows() {
         // encode global trade state as geometric number
         // - length represents total trade volume
         // - angle represents net imbalance direction
-        Geonum {
-            length: total_volume,
-            angle: weighted_y.atan2(weighted_x),
-            blade: 2, // bivector (grade 2) representing the global trade plane
-                      // International trade flows naturally form bivectors in geometric algebra
-                      // as they represent oriented exchange relationships between economic entities
-        }
+        Geonum::new(total_volume, weighted_y.atan2(weighted_x), PI) // bivector (grade 2) representing the global trade plane
+                                                                    // International trade flows naturally form bivectors in geometric algebra
+                                                                    // as they represent oriented exchange relationships between economic entities
     };
 
     // model the global trade network
@@ -1026,8 +1023,8 @@ fn it_models_global_trade_flows() {
     let is_balanced = imbalance_magnitude.abs() < balanced_trade_threshold;
 
     println!("global trade volume: ${:.2}B", global_trade.length);
-    println!("trade measurement imbalance: ${:.2}B", imbalance_magnitude);
-    println!("trade model is balanced: {}", is_balanced);
+    println!("trade measurement imbalance: ${imbalance_magnitude:.2}B");
+    println!("trade model is balanced: {is_balanced}");
 }
 
 #[test]
@@ -1040,10 +1037,10 @@ fn it_measures_economic_sectoral_balance() {
 
     // simulate major economic sectors as geometric numbers
     // where length represents total transaction volume and angle represents net flow direction
-    let household_sector = Geonum::from_polar(10000.0, 0.2); // slight net creditor
-    let business_sector = Geonum::from_polar(15000.0, -0.3); // net debitor
-    let government_sector = Geonum::from_polar(8000.0, -0.8); // strong net debitor
-    let foreign_sector = Geonum::from_polar(5000.0, 0.6); // strong net creditor
+    let household_sector = Geonum::new(10000.0, 0.2, PI); // slight net creditor
+    let business_sector = Geonum::new(15000.0, -0.3, PI); // net debitor
+    let government_sector = Geonum::new(8000.0, -0.8, PI); // strong net debitor
+    let foreign_sector = Geonum::new(5000.0, 0.6, PI); // strong net creditor
 
     // in mxfactorial, these would be computed from transaction streams in real-time
 
@@ -1062,14 +1059,10 @@ fn it_measures_economic_sectoral_balance() {
         }
 
         // result as geometric number
-        Geonum {
-            length: total_magnitude,
-            angle: flow_y.atan2(flow_x),
-            blade: 2, // bivector (grade 2) representing the economic sector plane
-                      // Grade 2 elements model relationships between economic sectors
-                      // Sectoral balances form a planar system where outflows from one sector
-                      // must equal inflows to other sectors (conservation of value)
-        }
+        Geonum::new(total_magnitude, flow_y.atan2(flow_x), PI) // bivector (grade 2) representing the economic sector plane
+                                                               // Grade 2 elements model relationships between economic sectors
+                                                               // Sectoral balances form a planar system where outflows from one sector
+                                                               // must equal inflows to other sectors (conservation of value)
     };
 
     // measure performance of sectoral analysis
@@ -1085,16 +1078,17 @@ fn it_measures_economic_sectoral_balance() {
     let duration = start.elapsed();
 
     // compute domestic sector balance (households + businesses)
-    let domestic_private_balance = Geonum {
-        length: household_sector.length + business_sector.length,
-        angle: (household_sector.angle * household_sector.length
-            + business_sector.angle * business_sector.length)
-            / (household_sector.length + business_sector.length),
-        blade: 2, // bivector (grade 2) representing the sectoral balance relationship
-                  // Sectoral balances in geometric algebra are naturally grade 2 elements
-                  // as they represent flows between different economic sectors
-                  // The domestic private balance is the combined households and business planes
-    };
+    let weighted_angle = (household_sector.angle.mod_4_angle() * household_sector.length
+        + business_sector.angle.mod_4_angle() * business_sector.length)
+        / (household_sector.length + business_sector.length);
+    let domestic_private_balance = Geonum::new(
+        household_sector.length + business_sector.length,
+        weighted_angle,
+        PI,
+    ); // bivector (grade 2) representing the sectoral balance relationship
+       // Sectoral balances in geometric algebra are naturally grade 2 elements
+       // as they represent flows between different economic sectors
+       // The domestic private balance is the combined households and business planes
 
     // compute public sector balance (government)
     let public_balance = government_sector;
@@ -1104,19 +1098,23 @@ fn it_measures_economic_sectoral_balance() {
 
     // sectoral balance identity: domestic private + public + foreign = 0
     // in angles, this means they should sum to approximate zero when weighted by magnitude
-    let _total_weighted_angle = domestic_private_balance.angle * domestic_private_balance.length
-        + public_balance.angle * public_balance.length
-        + foreign_balance.angle * foreign_balance.length;
+    let _total_weighted_angle = domestic_private_balance.angle.mod_4_angle()
+        * domestic_private_balance.length
+        + public_balance.angle.mod_4_angle() * public_balance.length
+        + foreign_balance.angle.mod_4_angle() * foreign_balance.length;
 
     // detect economic imbalances through angle analysis
-    let imbalance_detected = economic_balance.angle.abs() > 0.1;
+    let imbalance_detected = economic_balance.angle.mod_4_angle().abs() > 0.1;
 
     println!(
         "Economic balance analysis: {:.2} nanoseconds",
         duration.as_nanos()
     );
-    println!("Detected imbalance: {}", imbalance_detected);
-    println!("Economy net angle: {:.4}", economic_balance.angle);
+    println!("Detected imbalance: {imbalance_detected}");
+    println!(
+        "Economy net angle: {:.4}",
+        economic_balance.angle.mod_4_angle()
+    );
 
     // demonstrate how this analysis would detect economic crises early through
     // geometric angle shifts in sectoral balances

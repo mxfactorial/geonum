@@ -16,11 +16,13 @@
 //! no features are enabled by default, only core functionality
 
 // mod declarations first - these tell Rust about the module structure
+mod angle;
 mod geonum_mod; // avoids name collision with crate
 mod multivector;
 pub mod traits;
 
 // re-export all primary types
+pub use angle::Angle;
 pub use geonum_mod::{Geonum, EPSILON, TWO_PI};
 pub use multivector::{Grade, Multivector};
 

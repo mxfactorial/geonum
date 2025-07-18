@@ -2,7 +2,7 @@
 //!
 //! defines the MachineLearning trait and related functionality for ML modeling
 
-use crate::geonum_mod::Geonum;
+use crate::{geonum_mod::Geonum, Angle};
 use std::f64::consts::PI;
 
 /// activation functions for neural networks
@@ -16,7 +16,7 @@ use std::f64::consts::PI;
 /// ```
 /// use geonum::{Geonum, Activation, MachineLearning};
 ///
-/// let num = Geonum { length: 2.0, angle: 0.5, blade: 1 };
+/// let num = Geonum::new(2.0, 1.0, 4.0); // length 2.0, angle π/4
 ///
 /// // apply relu activation
 /// let relu_output = num.activate(Activation::ReLU);
@@ -62,18 +62,18 @@ impl MachineLearning for Geonum {
     fn regression_from(cov_xy: f64, var_x: f64) -> Self {
         Geonum {
             length: (cov_xy.powi(2) / var_x).sqrt(),
-            angle: cov_xy.atan2(var_x),
-            blade: 1, // regression line is a vector (grade 1)
+            angle: Angle::new(cov_xy.atan2(var_x), PI), // convert radians to geometric angle
         }
     }
 
     fn perceptron_update(&self, learning_rate: f64, error: f64, input: &Geonum) -> Self {
-        let sign_x = if input.angle > PI { -1.0 } else { 1.0 };
+        let input_grade = input.angle.grade();
+        let sign_x = if input_grade > 2 { -1.0 } else { 1.0 };
+        let angle_update = Angle::new(-learning_rate * error * sign_x / PI, 1.0);
 
         Geonum {
             length: self.length + learning_rate * error * input.length,
-            angle: self.angle - learning_rate * error * sign_x,
-            blade: self.blade, // preserve blade grade for weight vector
+            angle: self.angle + angle_update,
         }
     }
 
@@ -81,7 +81,6 @@ impl MachineLearning for Geonum {
         Geonum {
             length: self.length * weight.length + bias.length,
             angle: self.angle + weight.angle,
-            blade: self.with_product_blade(weight).blade, // use product blade rules
         }
     }
 
@@ -94,17 +93,14 @@ impl MachineLearning for Geonum {
                     0.0
                 },
                 angle: self.angle,
-                blade: self.blade, // preserve blade grade
             },
             Activation::Sigmoid => Geonum {
                 length: self.length / (1.0 + (-self.angle.cos()).exp()),
                 angle: self.angle,
-                blade: self.blade, // preserve blade grade
             },
             Activation::Tanh => Geonum {
                 length: self.length * self.angle.cos().tanh(),
                 angle: self.angle,
-                blade: self.blade, // preserve blade grade
             },
             Activation::Identity => *self,
         }
@@ -124,33 +120,28 @@ mod tests {
 
         let regression = Geonum::regression_from(cov_xy, var_x);
 
-        // verify length encodes the correlation strength
+        // prove length encodes the correlation strength
         let expected_length = (cov_xy.powi(2) / var_x).sqrt();
         assert!((regression.length - expected_length).abs() < EPSILON);
 
-        // verify angle encodes the slope direction
-        let expected_angle = cov_xy.atan2(var_x);
-        assert!((regression.angle - expected_angle).abs() < EPSILON);
+        // prove angle encodes the slope direction
+        let expected_angle = Angle::new(cov_xy.atan2(var_x), PI);
+        assert_eq!(regression.angle, expected_angle);
 
-        // verify blade indicates vector nature of regression line
-        assert_eq!(regression.blade, 1);
+        // regression represents the intrinsic angle of the (x,y) relationship
+        // not a 2D position but the single geometric angle between variables
+        // "no directionless numbers" means no naked x-axis - you start with (x,y)
+        // blade=0 indicates this relationship angle (≈0.464 rad) is less than π/2
+        assert_eq!(regression.angle.blade(), 0);
     }
 
     #[test]
     fn it_updates_perceptron_weights() {
         // create initial weight
-        let weight = Geonum {
-            length: 1.0,
-            angle: PI / 4.0,
-            blade: 1,
-        };
+        let weight = Geonum::new(1.0, 1.0, 4.0); // [1, π/4]
 
         // create input
-        let input = Geonum {
-            length: 2.0,
-            angle: PI / 6.0,
-            blade: 1,
-        };
+        let input = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
 
         // apply perceptron update
         let learning_rate = 0.1;
@@ -158,54 +149,40 @@ mod tests {
         let updated_weight = weight.perceptron_update(learning_rate, error, &input);
 
         // verify weight update follows perceptron rule
-        // length should be updated by learning_rate * error * input.length
+        // length is updated by learning_rate * error * input.length
         let expected_length = weight.length + learning_rate * error * input.length;
         assert!((updated_weight.length - expected_length).abs() < EPSILON);
 
-        // angle should be updated by learning rule
-        let sign_x = if input.angle > PI { -1.0 } else { 1.0 };
-        let expected_angle = weight.angle - learning_rate * error * sign_x;
-        assert!((updated_weight.angle - expected_angle).abs() < EPSILON);
+        // angle is updated by learning rule
+        let input_grade = input.angle.grade();
+        let sign_x = if input_grade > 2 { -1.0 } else { 1.0 };
+        let angle_update = Angle::new(-learning_rate * error * sign_x / PI, 1.0);
+        let expected_angle = weight.angle + angle_update;
+        assert_eq!(updated_weight.angle, expected_angle);
 
-        // blade should be preserved
-        assert_eq!(updated_weight.blade, weight.blade);
+        // grade is preserved
+        assert_eq!(updated_weight.angle.grade(), weight.angle.grade());
     }
 
     #[test]
     fn it_performs_neural_network_operations() {
         // create input, weight, and bias
-        let input = Geonum {
-            length: 2.0,
-            angle: PI / 3.0,
-            blade: 1,
-        };
-        let weight = Geonum {
-            length: 1.5,
-            angle: PI / 6.0,
-            blade: 1,
-        };
-        let bias = Geonum {
-            length: 0.5,
-            angle: 0.0,
-            blade: 0,
-        };
+        let input = Geonum::new(2.0, 1.0, 3.0); // [2, π/3]
+        let weight = Geonum::new(1.5, 1.0, 6.0); // [1.5, π/6]
+        let bias = Geonum::new(0.5, 0.0, 1.0); // scalar bias
 
         // forward pass
         let forward_result = input.forward_pass(&weight, &bias);
 
-        // verify forward pass computation
+        // test forward pass computation
         let expected_length = input.length * weight.length + bias.length;
         assert!((forward_result.length - expected_length).abs() < EPSILON);
 
         let expected_angle = input.angle + weight.angle;
-        assert!((forward_result.angle - expected_angle).abs() < EPSILON);
+        assert_eq!(forward_result.angle, expected_angle);
 
         // test activation functions
-        let test_input = Geonum {
-            length: 1.0,
-            angle: PI / 4.0,
-            blade: 1,
-        };
+        let test_input = Geonum::new(1.0, 1.0, 4.0); // [1, π/4]
 
         // test ReLU activation
         let relu_result = test_input.activate(Activation::ReLU);
@@ -223,6 +200,6 @@ mod tests {
         let identity_result = test_input.activate(Activation::Identity);
         assert_eq!(identity_result.length, test_input.length);
         assert_eq!(identity_result.angle, test_input.angle);
-        assert_eq!(identity_result.blade, test_input.blade);
+        assert_eq!(identity_result.angle.grade(), test_input.angle.grade());
     }
 }

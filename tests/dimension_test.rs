@@ -41,11 +41,7 @@ fn it_projects_a_geonum_onto_coordinate_axes() {
     let blade = 3; // 3d vector = 3 pi/2 turns
     let fractional_angle = total_angle % (PI / 2.0); // keep within [0, pi/2]
 
-    let unified = Geonum {
-        length: magnitude,
-        angle: fractional_angle,
-        blade: blade,
-    };
+    let unified = Geonum::new_with_blade(magnitude, blade, fractional_angle, PI);
 
     // step 2: decompose geonum back to coordinate projections
     // project unified geometric number onto coordinate axes
@@ -75,11 +71,7 @@ fn it_projects_a_geonum_onto_coordinate_axes() {
 fn it_proves_dimensions_are_observed_from_angles() {
     // create a geometric number without defining any dimensional space
     // this geometric entity exists independently of coordinate systems
-    let geometric_entity = Geonum {
-        length: 2.5, // some arbitrary magnitude
-        angle: 0.8,  // some arbitrary direction (< pi/2)
-        blade: 1,    // vector grade
-    };
+    let geometric_entity = Geonum::new(2.5, 0.8, PI); // vector with 0.8 radians angle
 
     // test: observer can query any dimension without pre-definition
 
@@ -100,10 +92,11 @@ fn it_proves_dimensions_are_observed_from_angles() {
     // that were never defined, declared, or initialized
 
     // compute expected trigonometric values
-    let expected_3 = 2.5 * ((3.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
-    let expected_42 = 2.5 * ((42.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
-    let expected_1000 = 2.5 * ((1000.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
-    let expected_million = 2.5 * ((1_000_000.0 * PI / 2.0) - (PI / 2.0 + 0.8)).cos();
+    let entity_angle = geometric_entity.angle.mod_4_angle();
+    let expected_3 = 2.5 * ((3.0 * PI / 2.0) - entity_angle).cos();
+    let expected_42 = 2.5 * ((42.0 * PI / 2.0) - entity_angle).cos();
+    let expected_1000 = 2.5 * ((1000.0 * PI / 2.0) - entity_angle).cos();
+    let expected_million = 2.5 * ((1_000_000.0 * PI / 2.0) - entity_angle).cos();
 
     assert!(
         (dimension_3 - expected_3).abs() < EPSILON,
@@ -155,21 +148,229 @@ fn it_creates_dimensions_with_standardized_angles() {
     let dim_1000 = Geonum::create_dimension(1.0, 1000);
 
     // test angles are standardized to dimension_index * pi/2
-    assert!((dim_0.angle - 0.0).abs() < EPSILON);
-    assert!((dim_1.angle - PI / 2.0).abs() < EPSILON);
-    assert!((dim_2.angle - PI).abs() < EPSILON);
-    assert!((dim_1000.angle - (1000.0 * PI / 2.0)).abs() < EPSILON);
+    assert!((dim_0.angle.mod_4_angle() - 0.0).abs() < EPSILON);
+    assert!((dim_1.angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+    assert!((dim_2.angle.mod_4_angle() - PI).abs() < EPSILON);
+    // For dimension 1000, the angle wraps around many times
+    // 1000 * π/2 = 500π = 250 * 2π, so mod_4_angle should be 0
+    assert!((dim_1000.angle.mod_4_angle() - 0.0).abs() < EPSILON);
 
     // test blade equals dimension_index
-    assert_eq!(dim_0.blade, 0);
-    assert_eq!(dim_1.blade, 1);
-    assert_eq!(dim_2.blade, 2);
-    assert_eq!(dim_1000.blade, 1000);
+    assert_eq!(dim_0.angle.blade(), 0);
+    assert_eq!(dim_1.angle.blade(), 1);
+    assert_eq!(dim_2.angle.blade(), 2);
+    assert_eq!(dim_1000.angle.blade(), 1000);
 
     // test multivector constructor
     let mv = Multivector::create_dimension(1.0, &[0, 1, 2]);
     assert_eq!(mv.len(), 3);
-    assert_eq!(mv[0].blade, 0);
-    assert_eq!(mv[1].blade, 1);
-    assert_eq!(mv[2].blade, 2);
+    assert_eq!(mv[0].angle.blade(), 0);
+    assert_eq!(mv[1].angle.blade(), 1);
+    assert_eq!(mv[2].angle.blade(), 2);
+}
+
+#[test]
+fn it_proves_grade_decomposition_ignores_angle_addition() {
+    // traditional geometric algebra ignores that multiplication adds angles
+    // when you multiply v1 * v2, the angles add: θ1 + θ2
+    // but traditional GA pretends this angle addition doesnt happen
+
+    // example: multiply two 45° vectors
+    // v1 at 45°, v2 at 45°
+    // v1 * v2 rotates by 45° + 45° = 90°
+
+    // but traditional GA ignores this simple angle addition and instead:
+    // 1. computes a "scalar part" (grade 0)
+    // 2. computes a "bivector part" (grade 2)
+    // 3. stores both in separate memory locations
+    // 4. pretends the 90° rotation is somehow split between them
+
+    // this negligence - ignoring angle addition - forces traditional GA to:
+    // - track 2^n components to handle all possible angle accumulations
+    // - invent "grade decomposition" to duplicate the angle information
+    // - create massive computational overhead for simple rotations
+
+    // geonum acknowledges that multiplication adds angles
+    let v1 = Geonum::new(1.0, 1.0, 4.0); // 45° = π/4
+    let v2 = Geonum::new(1.0, 1.0, 4.0); // 45° = π/4
+
+    let product = v1 * v2;
+
+    // result: 45° + 45° = 90° rotation, stored as single angle
+    assert_eq!(product.length, 1.0);
+    assert_eq!(product.angle.blade(), 1); // 90° rotation (blade 1)
+    assert!(product.angle.value().abs() < EPSILON); // exactly π/2
+
+    // geonum stores the angle addition result directly
+    // no need to decompose into "scalar" and "bivector" parts
+    // no need for 2^n components to track angle accumulations
+
+    // traditional GA creates "grade 0" and "grade 2" components because
+    // it refuses to acknowledge that angles simply added to 90°
+
+    // demonstration: multiply 0° by 90°
+    let x_axis = Geonum::create_dimension(1.0, 0); // 0°
+    let y_axis = Geonum::create_dimension(1.0, 1); // 90°
+
+    let xy_product = x_axis * y_axis;
+
+    // angle addition: 0° + 90° = 90°
+    assert_eq!(xy_product.angle.blade(), 1); // 90° rotation
+    assert!(xy_product.angle.value().abs() < EPSILON);
+
+    // traditional GA would ignore this angle addition and instead:
+    // - compute x·y = 0 (call it "scalar part")
+    // - compute x∧y = 1 (call it "bivector part")
+    // - store both separately
+    // - pretend the 90° rotation is somehow "decomposed"
+
+    // but the 90° rotation hasnt been decomposed - its been ignored!
+    // grade decomposition is what you get when you refuse to track angle addition
+
+    // by ignoring "angles add", traditional GA creates exponential complexity
+    // every possible angle sum needs its own storage location
+    // thats why you get 2^n components - one for each possible accumulation
+
+    // geonum eliminates slack from the geometry by requiring angle addition
+    // no duplication, no exponential blowup, just store the angle sum directly
+}
+
+#[test]
+fn it_proves_vectors_can_never_be_orthogonal() {
+    // traditional math inherited the notion that vectors can be "orthogonal"
+    // this language emerged from "grade decomposition"
+
+    // start with a geometric object pointing along x-axis
+    let x_axis = Geonum::new(1.0, 0.0, 1.0); // [1, 0]
+    assert_eq!(x_axis.angle.blade(), 0); // blade 0 (scalar grade)
+    assert!(x_axis.angle.is_scalar());
+
+    // attempt to create an "orthogonal vector" by rotating PI/2
+    let y_axis = x_axis.rotate(Angle::new(1.0, 2.0)); // rotate by PI/2
+
+    // the rotation changed the geometric grade!
+    assert_eq!(y_axis.angle.blade(), 1); // blade 1 (vector grade)
+    assert!(y_axis.angle.is_vector());
+
+    // rotate again to create what traditional math calls "third orthogonal vector"
+    let z_axis = y_axis.rotate(Angle::new(1.0, 2.0));
+    assert_eq!(z_axis.angle.blade(), 2); // blade 2 (bivector grade)
+    assert!(z_axis.angle.is_bivector());
+
+    // traditional GA negligently claims x, y, z are "three orthogonal vectors"
+    // without noticing theyre three different geometric grades:
+    // - x_axis: blade 0 (scalar grade)
+    // - y_axis: blade 1 (vector grade)
+    // - z_axis: blade 2 (bivector grade)
+
+    // the historical pattern that led here:
+    // 1. basis elements were assigned grade 1 (e1, e2, e3 all "vectors")
+    // 2. their angular relationships scattered across storage locations
+    // 3. 2^n components emerged to accommodate what could be n simple rotations
+
+    // proof: try to create what traditional GA calls "two orthogonal vectors"
+    // both at blade 1 (vector grade)
+    let forced_x = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // blade 1, angle 0
+    let forced_y = Geonum::new_with_blade(1.0, 1, 1.0, 2.0); // attempt blade 1 + π/2
+
+    // but forced_y becomes blade 2!
+    assert_eq!(forced_x.angle.blade(), 1); // vector
+    assert_eq!(forced_y.angle.blade(), 2); // bivector!
+
+    // when we try to add π/2 to a vector, it becomes a bivector
+    // proving that orthogonal rotations inherently change grade
+
+    // the dot product between vector and bivector is zero
+    let dot = forced_x.dot(&forced_y);
+    assert!(dot.length.abs() < 1e-10); // zero
+
+    // but this is because they're different grades, not because
+    // they're "two orthogonal vectors" - one is a vector, one is a bivector
+
+    // the unintended computational pattern this creates:
+    // - 2D requires 4 components (scalar + 2 vectors + bivector)
+    // - 3D requires 8 components (scalar + 3 vectors + 3 bivectors + trivector)
+    // - nD requires 2^n components (exponential growth)
+
+    // all to preserve the inherited notion of "n orthogonal vectors"
+    // when geometrically, orthogonality naturally transforms grade
+
+    // to create two blade 1 vectors, they must have angles within the same π/2 segment
+    let v1 = Geonum::new_with_blade(1.0, 1, 0.0, 4.0); // blade 1, +0
+    let v2 = Geonum::new_with_blade(1.0, 1, 1.0, 4.0); // blade 1, +π/4
+
+    assert_eq!(v1.angle.blade(), 1);
+    assert_eq!(v2.angle.blade(), 1);
+
+    // their dot product cannot be zero because angle diff < π/2
+    let dot_vectors = v1.dot(&v2);
+    assert!(dot_vectors.length > 0.0); // positive, not zero!
+
+    // geonum reveals the underlying pattern: PI/2 rotation changes grade
+    // "orthogonal vectors" emerged from overlooking grade transformation
+    // the angle-blade invariant makes explicit what grade decomposition obscured
+}
+
+#[test]
+fn it_solves_the_exponential_complexity_explosion() {
+    // THE PROBLEM: traditional GA suffers from 2^n explosion
+    // why? it refuses to acknowledge that rotations compose by angle addition
+    // instead, it scatters rotation information across exponentially many components
+
+    // traditional GA component count:
+    // 1D: 2 components (scalar, e1)
+    // 2D: 4 components (scalar, e1, e2, e12)
+    // 3D: 8 components (scalar, e1, e2, e3, e12, e13, e23, e123)
+    // 10D: 1024 components (all possible products of basis vectors)
+    // nD: 2^n components
+
+    // THE SOLUTION: geonum recognizes that a rotation is just [length, angle]
+    // no matter how many dimensions, a 45° rotation is stored as one number
+
+    // proof: represent a 45° rotation
+    let rotation_45 = Geonum::new(1.0, 1.0, 4.0); // [1, π/4]
+
+    // apply this rotation to different objects - always the same operation
+    let x_axis = Geonum::new(1.0, 0.0, 1.0);
+    let rotated = x_axis * rotation_45; // rotate x-axis by 45°
+    assert_eq!(rotated.angle, Angle::new(1.0, 4.0)); // now at 45°
+
+    // this single number works in ANY dimension:
+    // - in 2D: rotates in the xy-plane
+    // - in 3D: rotates in the xy-plane (z unchanged)
+    // - in 10D: rotates in the xy-plane (other 8 dims unchanged)
+
+    // traditional GA cant do this! it needs:
+    // - 2D: distribute across 4 components
+    // - 3D: distribute across 8 components
+    // - 10D: distribute across 1024 components
+    // all to represent the same simple 45° rotation
+
+    // the key insight: multiplication is just angle addition
+    let a = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
+    let b = Geonum::new(3.0, 1.0, 3.0); // [3, π/3]
+    let product = a * b;
+
+    // geonum: O(1) operations
+    assert_eq!(product.length, 6.0); // lengths multiply
+    assert_eq!(product.angle, Angle::new(1.0, 2.0)); // angles add: π/6 + π/3 = π/2
+
+    // traditional GA: O(4^n) operations for the same result!
+    // in 10D: 1024 × 1024 = 1,048,576 component multiplications
+    // of which 99.9% produce zeros that still get computed and stored
+
+    // even worse: chained operations
+    let c = Geonum::new(1.5, 1.0, 4.0); // [1.5, π/4]
+    let chain = a * b * c;
+
+    // geonum: still O(1)
+    assert_eq!(chain.length, 9.0); // 2 × 3 × 1.5
+    assert_eq!(chain.angle, Angle::new(3.0, 4.0)); // π/6 + π/3 + π/4 = 3π/4
+
+    // traditional GA: must expand (a*b) into 2^n components,
+    // then multiply all 2^n by c's 2^n components
+    // the explosion compounds with every operation!
+
+    // geonum solves the 2^n explosion by storing what actually matters:
+    // the total rotation angle, not its decomposition into 2^n pieces
 }

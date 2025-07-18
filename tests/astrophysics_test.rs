@@ -58,17 +58,11 @@ const SIM_DURATION: f64 = 365.0 * TIMESTEP; // one year
 #[test]
 fn its_an_orbital_system() {
     // initialize a simple two-body system (star-planet)
-    let star = Geonum {
-        length: 1.989e30, // solar mass in kg
-        angle: 0.0,       // at origin
-        blade: 1,         // stellar body (grade 1)
-    };
+    // stellar body (grade 1) - solar mass in kg
+    let star = Geonum::new(1.989e30, 0.0, 2.0); // at origin
 
-    let planet = Geonum {
-        length: 5.972e24, // earth mass in kg
-        angle: 0.0,       // initial angle (will be updated with position)
-        blade: 1,         // planetary body (grade 1)
-    };
+    // planetary body (grade 1) - earth mass in kg
+    let planet = Geonum::new(5.972e24, 0.0, 2.0); // initial angle (will be updated with position)
 
     // orbital distance (AU in meters)
     let distance = 1.496e11;
@@ -77,17 +71,11 @@ fn its_an_orbital_system() {
     let orbital_velocity = (G * star.length / distance).sqrt();
 
     // position and velocity encoded as geometric numbers
-    let planet_position = Geonum {
-        length: distance,
-        angle: 0.0, // initial position along x-axis
-        blade: 1,   // position vector (grade 1)
-    };
+    // position vector (grade 1) - initial position along x-axis
+    let planet_position = Geonum::new(distance, 0.0, 2.0);
 
-    let planet_velocity = Geonum {
-        length: orbital_velocity,
-        angle: PI / 2.0, // velocity perpendicular to position (circular orbit)
-        blade: 1,        // velocity vector (grade 1)
-    };
+    // velocity vector (grade 1) - perpendicular to position for circular orbit
+    let planet_velocity = Geonum::new(orbital_velocity, 1.0, 2.0); // π/2
 
     // simulate orbital motion for several steps
     let mut time = 0.0;
@@ -102,20 +90,13 @@ fn its_an_orbital_system() {
         let force_magnitude = G * star.length * planet.length / current_position.length.powi(2);
 
         // direction points toward star (opposite to position vector)
-        let force_angle = (current_position.angle + PI) % TAU;
-
-        let force = Geonum {
-            length: force_magnitude,
-            angle: force_angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1)
+        let force_angle_rad = current_position.angle.mod_4_angle() + PI;
+        let force = Geonum::new(force_magnitude, force_angle_rad, PI);
 
         // compute acceleration (F = ma)
-        let acceleration = Geonum {
-            length: force.length / planet.length,
-            angle: force.angle,
-            blade: 1, // acceleration vector (grade 1)
-        };
+        // acceleration vector (grade 1)
+        let acceleration = Geonum::new_with_angle(force.length / planet.length, force.angle);
 
         // velocity update (v = v₀ + a*t)
         // convert to cartesian, add, convert back to geometric
@@ -128,14 +109,8 @@ fn its_an_orbital_system() {
         let new_v_x = v_x + a_x * TIMESTEP;
         let new_v_y = v_y + a_y * TIMESTEP;
 
-        let new_v_length = (new_v_x * new_v_x + new_v_y * new_v_y).sqrt();
-        let new_v_angle = new_v_y.atan2(new_v_x);
-
-        current_velocity = Geonum {
-            length: new_v_length,
-            angle: new_v_angle,
-            blade: 1, // velocity vector (grade 1)
-        };
+        // velocity vector (grade 1)
+        current_velocity = Geonum::new_from_cartesian(new_v_x, new_v_y);
 
         // position update (x = x₀ + v*t)
         // convert to cartesian, add, convert back to geometric
@@ -148,14 +123,8 @@ fn its_an_orbital_system() {
         let new_p_x = p_x + v_x * TIMESTEP;
         let new_p_y = p_y + v_y * TIMESTEP;
 
-        let new_p_length = (new_p_x * new_p_x + new_p_y * new_p_y).sqrt();
-        let new_p_angle = new_p_y.atan2(new_p_x);
-
-        current_position = Geonum {
-            length: new_p_length,
-            angle: new_p_angle,
-            blade: 1, // position vector (grade 1)
-        };
+        // position vector (grade 1)
+        current_position = Geonum::new_from_cartesian(new_p_x, new_p_y);
 
         // store position
         positions.push(current_position);
@@ -175,14 +144,11 @@ fn its_an_orbital_system() {
     let final_potential = -G * star.length * planet.length / current_position.length;
     let final_energy = final_kinetic + final_potential;
 
-    // energy should be approximately conserved
+    // energy approximately conserved
     let energy_change = (final_energy - initial_energy) / initial_energy;
-    assert!(
-        energy_change.abs() < 0.01,
-        "Energy should be conserved within 1%"
-    );
+    assert!(energy_change.abs() < 0.01, "Energy conserved within 1%");
 
-    // 2. orbit should be approximately circular (verify radius consistency)
+    // 2. orbit is approximately circular (verify radius consistency)
     let mean_radius: f64 = positions.iter().map(|p| p.length).sum::<f64>() / positions.len() as f64;
 
     let radius_variation: f64 = positions
@@ -193,10 +159,10 @@ fn its_an_orbital_system() {
 
     assert!(
         radius_variation / (mean_radius.powi(2)) < 0.01,
-        "Orbit should be approximately circular"
+        "Orbit is approximately circular"
     );
 
-    // 3. orbit period should match Kepler's third law
+    // 3. orbit period matches Kepler's third law
     // T² ∝ a³ where T is period and a is semi-major axis
     let expected_period = TAU * (distance.powi(3) / (G * star.length)).sqrt();
 
@@ -204,7 +170,8 @@ fn its_an_orbital_system() {
     let total_angle_traversed = if positions.len() >= 2 {
         let mut total = 0.0;
         for i in 1..positions.len() {
-            let angle_diff = (positions[i].angle - positions[i - 1].angle) % TAU;
+            let angle_diff =
+                positions[i].angle.mod_4_angle() - positions[i - 1].angle.mod_4_angle();
             if angle_diff > PI {
                 total += angle_diff - TAU;
             } else {
@@ -227,7 +194,7 @@ fn its_an_orbital_system() {
         let period_error = (estimated_period - expected_period).abs() / expected_period;
         assert!(
             period_error < 0.1,
-            "Orbital period should approximately match Kepler's law"
+            "Orbital period approximately matches Kepler's law"
         );
     }
 }
@@ -235,65 +202,47 @@ fn its_an_orbital_system() {
 #[test]
 fn its_a_three_body_system() {
     // initialize a three-body system
-    let body1 = Geonum {
-        length: 1.0e30, // mass in kg
-        angle: 0.0,     // initial angle
-        blade: 1,       // celestial body (grade 1)
-    };
+    // celestial body (grade 1) - mass in kg
+    let body1 = Geonum::new(1.0e30, 0.0, 2.0);
 
-    let body2 = Geonum {
-        length: 1.0e30,   // mass in kg
-        angle: TAU / 3.0, // 120 degrees
-        blade: 1,         // celestial body (grade 1)
-    };
+    // celestial body (grade 1) - mass at 120 degrees
+    let body2 = Geonum::new(1.0e30, TAU / 3.0, PI);
 
-    let body3 = Geonum {
-        length: 1.0e30,         // mass in kg
-        angle: 2.0 * TAU / 3.0, // 240 degrees
-        blade: 1,               // celestial body (grade 1)
-    };
+    // celestial body (grade 1) - mass at 240 degrees
+    let body3 = Geonum::new(1.0e30, 2.0 * TAU / 3.0, PI);
 
     // positions (equilateral triangle arrangement)
     let distance = 1.0e11; // 100 million km
 
-    let position1 = Geonum {
-        length: distance,
-        angle: 0.0,
-        blade: 1, // position vector (grade 1)
-    };
+    // position vector (grade 1)
+    let position1 = Geonum::new(distance, 0.0, 2.0);
 
-    let position2 = Geonum {
-        length: distance,
-        angle: TAU / 3.0,
-        blade: 1, // position vector (grade 1)
-    };
+    // position vector (grade 1)
+    let position2 = Geonum::new(distance, TAU / 3.0, PI);
 
-    let position3 = Geonum {
-        length: distance,
-        angle: 2.0 * TAU / 3.0,
-        blade: 1, // position vector (grade 1)
-    };
+    // position vector (grade 1)
+    let position3 = Geonum::new(distance, 2.0 * TAU / 3.0, PI);
 
     // velocities (perpendicular to position vectors)
     let orbital_velocity = (G * body1.length / distance).sqrt();
 
-    let velocity1 = Geonum {
-        length: orbital_velocity,
-        angle: position1.angle + PI / 2.0,
-        blade: 1, // velocity vector (grade 1)
-    };
+    // velocity vector (grade 1) - perpendicular to position for circular orbit
+    let velocity1 = Geonum::new_with_angle(
+        orbital_velocity,
+        position1.angle + Angle::new(1.0, 2.0), // add π/2
+    );
 
-    let velocity2 = Geonum {
-        length: orbital_velocity,
-        angle: position2.angle + PI / 2.0,
-        blade: 1, // velocity vector (grade 1)
-    };
+    // velocity vector (grade 1) - perpendicular to position
+    let velocity2 = Geonum::new_with_angle(
+        orbital_velocity,
+        position2.angle + Angle::new(1.0, 2.0), // add π/2
+    );
 
-    let velocity3 = Geonum {
-        length: orbital_velocity,
-        angle: position3.angle + PI / 2.0,
-        blade: 1, // velocity vector (grade 1)
-    };
+    // velocity vector (grade 1) - perpendicular to position
+    let velocity3 = Geonum::new_with_angle(
+        orbital_velocity,
+        position3.angle + Angle::new(1.0, 2.0), // add π/2
+    );
 
     // simulation parameters
     let num_steps = 100;
@@ -331,49 +280,49 @@ fn its_a_three_body_system() {
         let r12 = compute_separation(&current_pos1, &current_pos2);
         let r13 = compute_separation(&current_pos1, &current_pos3);
 
-        let force12 = Geonum {
-            length: G * body1.length * body2.length / r12.length.powi(2),
-            angle: r12.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 2 on body 1
+        let force12 = Geonum::new_with_angle(
+            G * body1.length * body2.length / r12.length.powi(2),
+            r12.angle,
+        );
 
-        let force13 = Geonum {
-            length: G * body1.length * body3.length / r13.length.powi(2),
-            angle: r13.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 3 on body 1
+        let force13 = Geonum::new_with_angle(
+            G * body1.length * body3.length / r13.length.powi(2),
+            r13.angle,
+        );
 
         // compute forces for body 2
         let r21 = compute_separation(&current_pos2, &current_pos1);
         let r23 = compute_separation(&current_pos2, &current_pos3);
 
-        let force21 = Geonum {
-            length: G * body2.length * body1.length / r21.length.powi(2),
-            angle: r21.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 1 on body 2
+        let force21 = Geonum::new_with_angle(
+            G * body2.length * body1.length / r21.length.powi(2),
+            r21.angle,
+        );
 
-        let force23 = Geonum {
-            length: G * body2.length * body3.length / r23.length.powi(2),
-            angle: r23.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 3 on body 2
+        let force23 = Geonum::new_with_angle(
+            G * body2.length * body3.length / r23.length.powi(2),
+            r23.angle,
+        );
 
         // compute forces for body 3
         let r31 = compute_separation(&current_pos3, &current_pos1);
         let r32 = compute_separation(&current_pos3, &current_pos2);
 
-        let force31 = Geonum {
-            length: G * body3.length * body1.length / r31.length.powi(2),
-            angle: r31.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 1 on body 3
+        let force31 = Geonum::new_with_angle(
+            G * body3.length * body1.length / r31.length.powi(2),
+            r31.angle,
+        );
 
-        let force32 = Geonum {
-            length: G * body3.length * body2.length / r32.length.powi(2),
-            angle: r32.angle,
-            blade: 1, // force vector (grade 1)
-        };
+        // force vector (grade 1) from body 2 on body 3
+        let force32 = Geonum::new_with_angle(
+            G * body3.length * body2.length / r32.length.powi(2),
+            r32.angle,
+        );
 
         // sum forces and compute accelerations using cartesian decomposition
 
@@ -404,31 +353,22 @@ fn its_a_three_body_system() {
         let v1_x = current_vel1.length * current_vel1.angle.cos() + a1_x * dt;
         let v1_y = current_vel1.length * current_vel1.angle.sin() + a1_y * dt;
 
-        current_vel1 = Geonum {
-            length: (v1_x * v1_x + v1_y * v1_y).sqrt(),
-            angle: v1_y.atan2(v1_x),
-            blade: 1, // velocity vector (grade 1)
-        };
+        // velocity vector (grade 1)
+        current_vel1 = Geonum::new_from_cartesian(v1_x, v1_y);
 
         // body 2
         let v2_x = current_vel2.length * current_vel2.angle.cos() + a2_x * dt;
         let v2_y = current_vel2.length * current_vel2.angle.sin() + a2_y * dt;
 
-        current_vel2 = Geonum {
-            length: (v2_x * v2_x + v2_y * v2_y).sqrt(),
-            angle: v2_y.atan2(v2_x),
-            blade: 1, // velocity vector (grade 1)
-        };
+        // velocity vector (grade 1)
+        current_vel2 = Geonum::new_from_cartesian(v2_x, v2_y);
 
         // body 3
         let v3_x = current_vel3.length * current_vel3.angle.cos() + a3_x * dt;
         let v3_y = current_vel3.length * current_vel3.angle.sin() + a3_y * dt;
 
-        current_vel3 = Geonum {
-            length: (v3_x * v3_x + v3_y * v3_y).sqrt(),
-            angle: v3_y.atan2(v3_x),
-            blade: 1, // velocity vector (grade 1)
-        };
+        // velocity vector (grade 1)
+        current_vel3 = Geonum::new_from_cartesian(v3_x, v3_y);
 
         // update positions
 
@@ -436,31 +376,22 @@ fn its_a_three_body_system() {
         let p1_x = current_pos1.length * current_pos1.angle.cos() + v1_x * dt;
         let p1_y = current_pos1.length * current_pos1.angle.sin() + v1_y * dt;
 
-        current_pos1 = Geonum {
-            length: (p1_x * p1_x + p1_y * p1_y).sqrt(),
-            angle: p1_y.atan2(p1_x),
-            blade: 1, // position vector (grade 1)
-        };
+        // position vector (grade 1)
+        current_pos1 = Geonum::new_from_cartesian(p1_x, p1_y);
 
         // body 2
         let p2_x = current_pos2.length * current_pos2.angle.cos() + v2_x * dt;
         let p2_y = current_pos2.length * current_pos2.angle.sin() + v2_y * dt;
 
-        current_pos2 = Geonum {
-            length: (p2_x * p2_x + p2_y * p2_y).sqrt(),
-            angle: p2_y.atan2(p2_x),
-            blade: 1, // position vector (grade 1)
-        };
+        // position vector (grade 1)
+        current_pos2 = Geonum::new_from_cartesian(p2_x, p2_y);
 
         // body 3
         let p3_x = current_pos3.length * current_pos3.angle.cos() + v3_x * dt;
         let p3_y = current_pos3.length * current_pos3.angle.sin() + v3_y * dt;
 
-        current_pos3 = Geonum {
-            length: (p3_x * p3_x + p3_y * p3_y).sqrt(),
-            angle: p3_y.atan2(p3_x),
-            blade: 1, // position vector (grade 1)
-        };
+        // position vector (grade 1)
+        current_pos3 = Geonum::new_from_cartesian(p3_x, p3_y);
     }
 
     // verify conservation of angular momentum
@@ -477,7 +408,7 @@ fn its_a_three_body_system() {
 
     assert!(
         angular_momentum_change < 0.05,
-        "Angular momentum should be conserved within 5%"
+        "Angular momentum conserved within 5%"
     );
 
     // verify conservation of center of mass
@@ -497,7 +428,7 @@ fn its_a_three_body_system() {
 
     assert!(
         com_displacement < 0.01 * distance,
-        "Center of mass should not drift significantly"
+        "Center of mass doesn't drift significantly"
     );
 }
 
@@ -579,25 +510,13 @@ fn its_an_n_body_performance_test() {
             let radius = 1.0e11 * (1.0 + 0.1 * (i as f64 / n as f64));
 
             // position as geonum
-            geo_positions.push(Geonum {
-                length: radius,
-                angle,
-                blade: 1, // position vector (grade 1)
-            });
+            geo_positions.push(Geonum::new(radius, angle, PI));
 
             // velocity as geonum (circular orbit)
-            geo_velocities.push(Geonum {
-                length: 1.0e4,
-                angle: angle + PI / 2.0,
-                blade: 1, // velocity vector (grade 1)
-            });
+            geo_velocities.push(Geonum::new(1.0e4, angle + 0.5, 2.0));
 
             // mass as geonum
-            geo_masses.push(Geonum {
-                length: 1.0e30,
-                angle: 0.0,
-                blade: 0, // scalar (grade 0)
-            });
+            geo_masses.push(Geonum::new(1.0e30, 0.0, 2.0)); // scalar
         }
 
         // simulation step with geonum
@@ -617,12 +536,10 @@ fn its_an_n_body_performance_test() {
                     // compute force using angle-based operations
                     let separation = compute_separation(&geo_positions[i], &geo_positions[j]);
 
-                    let force = Geonum {
-                        length: G * geo_masses[i].length * geo_masses[j].length
-                            / separation.length.powi(2),
-                        angle: separation.angle,
-                        blade: 1, // force vector (grade 1)
-                    };
+                    let force = Geonum::new_with_angle(
+                        G * geo_masses[i].length * geo_masses[j].length / separation.length.powi(2),
+                        separation.angle,
+                    );
 
                     // accumulate in cartesian for clarity
                     net_force_x += force.length * force.angle.cos();
@@ -638,35 +555,27 @@ fn its_an_n_body_performance_test() {
             let vel_x = geo_velocities[i].length * geo_velocities[i].angle.cos() + acc_x * dt;
             let vel_y = geo_velocities[i].length * geo_velocities[i].angle.sin() + acc_y * dt;
 
-            geo_velocities[i] = Geonum {
-                length: (vel_x * vel_x + vel_y * vel_y).sqrt(),
-                angle: vel_y.atan2(vel_x),
-                blade: 1, // velocity vector (grade 1)
-            };
+            geo_velocities[i] = Geonum::new_from_cartesian(vel_x, vel_y);
 
             // update position
             let pos_x = geo_positions[i].length * geo_positions[i].angle.cos() + vel_x * dt;
             let pos_y = geo_positions[i].length * geo_positions[i].angle.sin() + vel_y * dt;
 
-            geo_positions[i] = Geonum {
-                length: (pos_x * pos_x + pos_y * pos_y).sqrt(),
-                angle: pos_y.atan2(pos_x),
-                blade: 1, // position vector (grade 1)
-            };
+            geo_positions[i] = Geonum::new_from_cartesian(pos_x, pos_y);
         }
 
         let geonum_duration = geonum_start.elapsed();
 
         // simplified benchmark display
-        println!("N-body simulation performance with {} bodies:", n);
-        println!("  Traditional design: {:?}", traditional_duration);
-        println!("  Geonum design: {:?}", geonum_duration);
+        println!("N-body simulation performance with {n} bodies:");
+        println!("  Traditional design: {traditional_duration:?}");
+        println!("  Geonum design: {geonum_duration:?}");
         println!(
             "  Speedup: {:.2}x",
             traditional_duration.as_secs_f64() / geonum_duration.as_secs_f64()
         );
 
-        // as n increases, the speedup factor should increase
+        // as n increases, the speedup factor increases
         // to demonstrate O(n²) vs O(n) scaling
     }
 }
@@ -677,17 +586,9 @@ fn its_a_relativistic_orbital_system() {
     const C: f64 = 299_792_458.0; // speed of light in m/s
 
     // initialize system with strong gravitational field (e.g., binary black hole or star near black hole)
-    let central_mass = Geonum {
-        length: 1.0e36, // supermassive black hole (~1000 solar masses)
-        angle: 0.0,     // at origin
-        blade: 1,       // grade 1 for body
-    };
+    let central_mass = Geonum::new(1.0e36, 0.0, 2.0); // supermassive black hole (~1000 solar masses)
 
-    let orbiter = Geonum {
-        length: 1.0e30, // stellar mass black hole
-        angle: 0.0,     // initial angle (will be updated)
-        blade: 1,       // grade 1 for body
-    };
+    let orbiter = Geonum::new(1.0e30, 0.0, 2.0); // stellar mass black hole
 
     // schwarzschild radius for central mass
     let r_s = 2.0 * G * central_mass.length / (C * C);
@@ -702,24 +603,16 @@ fn its_a_relativistic_orbital_system() {
     let relativistic_factor = 1.0 + 3.0 * r_s / distance;
 
     // position and velocity
-    let position = Geonum {
-        length: distance,
-        angle: 0.0, // start along x-axis
-        blade: 1,   // position vector (grade 1)
-    };
+    let position = Geonum::new(distance, 0.0, 2.0); // start along x-axis
 
-    let velocity = Geonum {
-        length: newton_velocity,
-        angle: PI / 2.0, // perpendicular for circular orbit
-        blade: 1,        // velocity vector (grade 1)
-    };
+    let velocity = Geonum::new(newton_velocity, 1.0, 2.0); // perpendicular for circular orbit
 
     // corrected relativistic velocity with general relativistic effects
-    let velocity_relativistic = Geonum {
-        length: newton_velocity * relativistic_factor.sqrt(),
-        angle: PI / 2.0, // perpendicular for circular orbit
-        blade: 1,        // velocity vector (grade 1)
-    };
+    let velocity_relativistic = Geonum::new(
+        newton_velocity * relativistic_factor.sqrt(),
+        1.0,
+        2.0, // perpendicular for circular orbit
+    );
 
     // simulation parameters
     let dt = 10.0; // small timestep for accuracy
@@ -744,18 +637,16 @@ fn its_a_relativistic_orbital_system() {
 
         // Newtonian update
         // force calculation
-        let newton_force = Geonum {
-            length: G * central_mass.length * orbiter.length / newton_pos.length.powi(2),
-            angle: (newton_pos.angle + PI) % TAU, // direction toward central mass
-            blade: 1,                             // force vector (grade 1)
-        };
+        // force magnitude and direction toward central mass
+        let force_magnitude = G * central_mass.length * orbiter.length / newton_pos.length.powi(2);
+        let force_angle_rad =
+            newton_pos.angle.value() + newton_pos.angle.blade() as f64 * PI / 2.0 + PI;
+        let newton_force = Geonum::new(force_magnitude, force_angle_rad, PI);
 
         // acceleration
-        let newton_acc = Geonum {
-            length: newton_force.length / orbiter.length,
-            angle: newton_force.angle,
-            blade: 1, // acceleration vector (grade 1)
-        };
+        // acceleration
+        let newton_acc =
+            Geonum::new_with_angle(newton_force.length / orbiter.length, newton_force.angle);
 
         // update velocity and position
         let n_vel_x = newton_vel.length * newton_vel.angle.cos()
@@ -763,20 +654,12 @@ fn its_a_relativistic_orbital_system() {
         let n_vel_y = newton_vel.length * newton_vel.angle.sin()
             + newton_acc.length * newton_acc.angle.sin() * dt;
 
-        newton_vel = Geonum {
-            length: (n_vel_x * n_vel_x + n_vel_y * n_vel_y).sqrt(),
-            angle: n_vel_y.atan2(n_vel_x),
-            blade: 1, // velocity vector (grade 1)
-        };
+        newton_vel = Geonum::new_from_cartesian(n_vel_x, n_vel_y);
 
         let n_pos_x = newton_pos.length * newton_pos.angle.cos() + n_vel_x * dt;
         let n_pos_y = newton_pos.length * newton_pos.angle.sin() + n_vel_y * dt;
 
-        newton_pos = Geonum {
-            length: (n_pos_x * n_pos_x + n_pos_y * n_pos_y).sqrt(),
-            angle: n_pos_y.atan2(n_pos_x),
-            blade: 1, // position vector (grade 1)
-        };
+        newton_pos = Geonum::new_from_cartesian(n_pos_x, n_pos_y);
 
         // Relativistic update
         // force calculation with GR correction
@@ -785,18 +668,13 @@ fn its_a_relativistic_orbital_system() {
         // general relativistic correction
         let gr_correction = 1.0 + 3.0 * r_s / rel_pos.length;
 
-        let rel_force = Geonum {
-            length: rel_force_magnitude * gr_correction,
-            angle: (rel_pos.angle + PI) % TAU, // direction toward central mass
-            blade: 1,                          // force vector (grade 1)
-        };
+        // force with GR correction
+        let rel_force_angle_rad =
+            rel_pos.angle.value() + rel_pos.angle.blade() as f64 * PI / 2.0 + PI;
+        let rel_force = Geonum::new(rel_force_magnitude * gr_correction, rel_force_angle_rad, PI);
 
         // acceleration
-        let rel_acc = Geonum {
-            length: rel_force.length / orbiter.length,
-            angle: rel_force.angle,
-            blade: 1, // acceleration vector (grade 1)
-        };
+        let rel_acc = Geonum::new_with_angle(rel_force.length / orbiter.length, rel_force.angle);
 
         // update velocity and position
         let r_vel_x =
@@ -804,34 +682,31 @@ fn its_a_relativistic_orbital_system() {
         let r_vel_y =
             rel_vel.length * rel_vel.angle.sin() + rel_acc.length * rel_acc.angle.sin() * dt;
 
-        rel_vel = Geonum {
-            length: (r_vel_x * r_vel_x + r_vel_y * r_vel_y).sqrt(),
-            angle: r_vel_y.atan2(r_vel_x),
-            blade: 1, // velocity vector (grade 1)
-        };
+        rel_vel = Geonum::new_from_cartesian(r_vel_x, r_vel_y);
 
         let r_pos_x = rel_pos.length * rel_pos.angle.cos() + r_vel_x * dt;
         let r_pos_y = rel_pos.length * rel_pos.angle.sin() + r_vel_y * dt;
 
-        rel_pos = Geonum {
-            length: (r_pos_x * r_pos_x + r_pos_y * r_pos_y).sqrt(),
-            angle: r_pos_y.atan2(r_pos_x),
-            blade: 1, // position vector (grade 1)
-        };
+        rel_pos = Geonum::new_from_cartesian(r_pos_x, r_pos_y);
     }
 
     // verify existence of relativistic precession
-    let newton_angle_traversed =
-        (newton_positions.last().unwrap().angle - newton_positions[0].angle) % TAU;
-    let rel_angle_traversed = (rel_positions.last().unwrap().angle - rel_positions[0].angle) % TAU;
+    // convert angles to radians for precession calculations
+    let newton_final_rad = newton_positions.last().unwrap().angle.mod_4_angle();
+    let newton_initial_rad = newton_positions[0].angle.mod_4_angle();
+    let newton_angle_traversed = newton_final_rad - newton_initial_rad;
 
-    // there should be a difference between the angles traversed
+    let rel_final_rad = rel_positions.last().unwrap().angle.mod_4_angle();
+    let rel_initial_rad = rel_positions[0].angle.mod_4_angle();
+    let rel_angle_traversed = rel_final_rad - rel_initial_rad;
+
+    // theres a difference between the angles traversed
     let angle_difference = (rel_angle_traversed - newton_angle_traversed).abs();
 
-    // relativistic precession should be observable
+    // relativistic precession is observable
     assert!(
         angle_difference > 0.001,
-        "Relativistic precession should be observable"
+        "Relativistic precession is observable"
     );
 
     // the known formula for relativistic precession per orbit is approximately 6π(GM/c²a)
@@ -839,7 +714,7 @@ fn its_a_relativistic_orbital_system() {
     let expected_precession_per_orbit = 6.0 * PI * (G * central_mass.length / (C * C * distance));
 
     // compute observed precession (scaled to full orbit)
-    let observed_precession = angle_difference * (TAU / newton_angle_traversed);
+    let observed_precession = angle_difference * (TAU / newton_angle_traversed.abs());
 
     // verify the precession is approximately correct
     // allow for numerical errors and approximations in our simplified simulation
@@ -847,31 +722,25 @@ fn its_a_relativistic_orbital_system() {
 
     assert!(
         precession_ratio > 0.1 && precession_ratio < 2.5,
-        "Observed precession should be roughly consistent with theoretical prediction"
+        "Observed precession is roughly consistent with theoretical prediction"
     );
 
     // Print results
     println!("Relativistic orbital simulation results:");
-    println!("  Schwarzschild radius: {:.3e} meters", r_s);
+    println!("  Schwarzschild radius: {r_s:.3e} meters");
     println!(
         "  Orbital distance: {:.3e} meters ({}× Schwarzschild radius)",
         distance,
         distance / r_s
     );
-    println!("  Newtonian velocity: {:.3e} m/s", newton_velocity);
+    println!("  Newtonian velocity: {newton_velocity:.3e} m/s");
     println!(
         "  Relativistic velocity: {:.3e} m/s",
         velocity_relativistic.length
     );
-    println!(
-        "  Expected precession per orbit: {:.6} radians",
-        expected_precession_per_orbit
-    );
-    println!(
-        "  Observed precession (scaled): {:.6} radians",
-        observed_precession
-    );
-    println!("  Ratio (observed/expected): {:.3}", precession_ratio);
+    println!("  Expected precession per orbit: {expected_precession_per_orbit:.6} radians");
+    println!("  Observed precession (scaled): {observed_precession:.6} radians");
+    println!("  Ratio (observed/expected): {precession_ratio:.3}");
 }
 
 #[test]
@@ -911,21 +780,14 @@ fn its_a_million_body_simulation() {
         let r = galaxy_radius * (0.001 + (i as f64 / body_count as f64).sqrt()); // sqrt for uniform density
         let theta = (i as f64) * TAU / 1000.0; // distribute in angle
 
-        let body_position = Geonum {
-            length: r,
-            angle: theta,
-            blade: 1, // position vector (grade 1)
-        };
+        let body_position = Geonum::new(r, theta, PI);
 
         // orbital velocity (tangential)
         // use realistic values to avoid numerical issues
         let orbital_velocity = (G * central_mass / r).sqrt().min(0.1 * C); // simplified circular orbit, cap at 10% of light speed
 
-        let body_velocity = Geonum {
-            length: orbital_velocity,
-            angle: theta + PI / 2.0, // tangential velocity
-            blade: 1,                // velocity vector (grade 1)
-        };
+        // tangential velocity is perpendicular to position
+        let body_velocity = Geonum::new(orbital_velocity, theta + 0.5, 2.0);
 
         // mass (using realistic star mass distribution)
         let body_mass = 1.0e30 * (0.5 + 0.5 * (i as f64 / body_count as f64)); // vary from 0.5 to 1 solar mass
@@ -944,21 +806,9 @@ fn its_a_million_body_simulation() {
 
     // create a multivector to encode galaxy properties
     let _galaxy = Multivector(vec![
-        Geonum {
-            length: central_mass,
-            angle: 0.0,
-            blade: 0, // scalar for central mass
-        },
-        Geonum {
-            length: galaxy_radius,
-            angle: 0.0,
-            blade: 1, // vector for radius
-        },
-        Geonum {
-            length: 1.0e6,   // number of bodies
-            angle: PI / 4.0, // phase angle related to galaxy rotation
-            blade: 2,        // bivector for galaxy rotation plane
-        },
+        Geonum::new(central_mass, 0.0, 2.0), // scalar for central mass (blade 0)
+        Geonum::new(galaxy_radius, 0.0, 2.0), // scalar for radius
+        Geonum::new(1.0e6, 0.25, 4.0),       // number of bodies with rotation phase
     ]);
 
     // verify the system has reasonable orbital properties
@@ -978,11 +828,11 @@ fn its_a_million_body_simulation() {
         // Relax the constraint for testing purposes
         assert!(
             velocity_ratio > 0.01 && velocity_ratio < 100.0,
-            "Orbital velocity should be in a reasonable range"
+            "Orbital velocity in a reasonable range"
         );
 
-        // check that body mass is positive
-        assert!(*mass > 0.0, "Body mass should be positive");
+        // prove body mass is positive
+        assert!(*mass > 0.0, "Body mass is positive");
     }
 
     // Demonstrate key computational advantage:
@@ -1012,7 +862,7 @@ fn its_a_million_body_simulation() {
 
     // output initialization timing
     println!("Million-body simulation analysis:");
-    println!("  Initialization time (10 bodies): {:?}", init_duration);
+    println!("  Initialization time (10 bodies): {init_duration:?}");
     println!(
         "  Estimated time for 1M bodies: {:?}",
         init_duration * (body_count / 10) as u32
@@ -1103,14 +953,8 @@ fn compute_separation(pos1: &Geonum, pos2: &Geonum) -> Geonum {
     let sep_x = p2_x - p1_x;
     let sep_y = p2_y - p1_y;
 
-    let separation_length = (sep_x * sep_x + sep_y * sep_y).sqrt();
-    let separation_angle = sep_y.atan2(sep_x);
-
-    Geonum {
-        length: separation_length,
-        angle: separation_angle,
-        blade: 1, // separation vector (grade 1)
-    }
+    // use new_from_cartesian which handles angle creation
+    Geonum::new_from_cartesian(sep_x, sep_y)
 }
 
 fn compute_angular_momentum(position: &Geonum, velocity: &Geonum, mass: &Geonum) -> f64 {
