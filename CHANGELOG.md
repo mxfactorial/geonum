@@ -1,5 +1,24 @@
 # changelog
 
+## 0.6.11 (2025-07-17)
+
+### added
+- project_to_dimension method in src/geonum_mod.rs:440~452 enabling on-demand dimensional queries
+- proved dimensions are computed via trigonometry not predefined spaces
+
+### removed
+- src/dimensions.rs module 
+- Dimensions type from lib.rs exports
+- coordinate scaffolding pattern across 34+ usage sites
+
+### changed  
+- replaced all Dimensions::new() calls with direct geometric number creation
+- updated 9 test files to use Multivector::create_dimension() constructor
+- updated benches/geonum_benchmarks.rs with 12 replacements
+- strengthened dimension_test.rs assertions from weak is_finite() checks to precise trigonometric calculations
+- added educational comments explaining transition from coordinate thinking to geometric thinking
+- refactored "basis vector" abstractions into direct angle-based geometric operations
+
 ## 0.6.10 (2025-06-16)
 
 ### added

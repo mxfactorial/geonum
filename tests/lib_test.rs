@@ -345,11 +345,10 @@ fn it_multiplies_vectors_with_scalars() {
 fn it_computes_ijk_product() {
     // from the spec: ijk = [1, 0 + pi/2] × [1, pi/2 + pi/2] × [1, pi + pi/2] = [1, 3pi] = [1, pi]
 
-    // create a dimensions object with 1 dimension
-    let dims = Dimensions::new(1);
-
-    // create i, j, k vectors using multivector method
-    let vectors = dims.multivector(&[1, 2, 3]);
+    // transition from coordinate scaffolding to direct vector creation
+    // old design: required declaring dimensional "space" before creating vectors
+    // new design: create geometric numbers representing i, j, k directly
+    let vectors = Multivector::create_dimension(1.0, &[1, 2, 3]);
 
     // extract the i, j, k vectors
     let i = vectors[0]; // vector at index 1 = [1, pi/2]
@@ -375,15 +374,16 @@ fn it_operates_in_extreme_dimensions() {
     // this test demonstrates the O(1) complexity of geonum operations
     // regardless of the dimension of the space
 
-    // create a 1 million dimensional space (10⁶ D)
-    // this would be impossible with traditional geometric algebra (2^10⁶ components!)
-    let million_d = Dimensions::new(1_000_000);
+    // transition from coordinate scaffolding to direct high-dimensional creation
+    // old design: required declaring million-dimensional "space" (impossible with traditional GA!)
+    // new design: create geometric numbers at high-dimensional angles directly
+    // this demonstrates O(1) complexity regardless of dimension
 
     // operation start time for performance comparison
     let start = std::time::Instant::now();
 
-    // create two vectors in this extreme-dimensional space
-    let vectors = million_d.multivector(&[0, 1]);
+    // create two vectors in extreme-dimensional space without coordinate scaffolding
+    let vectors = Multivector::create_dimension(1.0, &[0, 1]);
     let v1 = vectors[0]; // first basis vector e₁
     let v2 = vectors[1]; // second basis vector e₂
 
@@ -436,12 +436,13 @@ fn it_operates_in_extreme_dimensions() {
 fn it_uses_multivector_operations() {
     // this test demonstrates how to use the multivector functionality
 
-    // create a 3D space
-    let space = Dimensions::new(3);
+    // transition from coordinate scaffolding to direct multivector creation
+    // old design: required declaring 3D "space" before creating multivectors
+    // new design: create multivectors with geometric numbers directly
 
-    // create basis multivectors
-    let e0 = space.multivector(&[0]); // scalar
-    let e1_e2_e3 = space.multivector(&[1, 2, 3]); // three basis vectors
+    // create multivectors with geometric numbers at standardized angles
+    let e0 = Multivector::create_dimension(1.0, &[0]); // scalar at angle 0
+    let e1_e2_e3 = Multivector::create_dimension(1.0, &[1, 2, 3]); // vectors at angles π/2, π, 3π/2
 
     // create a custom multivector with mixed grades
     let mixed_mv = Multivector(vec![

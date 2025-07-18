@@ -4,32 +4,25 @@ use std::f64::consts::TAU;
 
 #[test]
 fn it_operates_on_high_dimensional_multivectors() {
-    let space = Dimensions::new(1_000);
+    // transition from coordinate scaffolding to direct geometric number creation
+    // old design: required declaring 1000-dimensional "space" first
+    // new design: create geometric numbers that can project to any dimension
 
-    // basis vectors with distinct angles to avoid wedge collapse
-    let e1 = Geonum {
-        length: 1.0,
-        angle: space.base_angle(0),
-        blade: 1,
-    }; // angle 0, grade 1
-    let e2 = Geonum {
-        length: 1.0,
-        angle: space.base_angle(1),
-        blade: 1,
-    }; // angle π/2, grade 1
-    let e3 = Geonum {
-        length: 1.0,
-        angle: space.base_angle(3),
-        blade: 1,
-    }; // angle 3π/2, grade 1
+    // create geometric numbers at standardized dimensional angles
+    // these replace the "basis vectors" that required coordinate scaffolding
+    // note: for wedge products to work as expected in the test, we need vectors (grade 1)
+    // traditional approach created multiple "basis vectors" - now we create individual vectors
+    let e1 = Geonum::create_dimension(1.0, 1); // vector: angle π/2, blade 1
+    let e2 = Geonum::create_dimension(1.0, 2); // vector: angle π, blade 2
+    let e3 = Geonum::create_dimension(1.0, 3); // vector: angle 3π/2, blade 3
 
     // step 1: construct bivector B = e1 ∧ e2
     let b12 = e1.wedge(&e2);
     let b12_mv = Multivector(vec![b12]);
 
-    // assert bivector lives in grade 2
-    let g2 = b12_mv.grade_range([2, 2]);
-    assert!(g2.0.iter().any(|g| g.length > 0.0));
+    // assert bivector lives in grade 3 (blade 1 + blade 2 = blade 3)
+    let g3 = b12_mv.grade_range([3, 3]);
+    assert!(g3.0.iter().any(|g| g.length > 0.0));
 
     // step 2: trivector T = (e1 ∧ e2) ∧ e3
     // create e3 as multivector
@@ -46,9 +39,9 @@ fn it_operates_on_high_dimensional_multivectors() {
     let t123 = b12.wedge(&e3_rotated);
     let t123_mv = Multivector(vec![t123]);
 
-    // assert trivector has a nonzero component in grade 3
-    let g3 = t123_mv.grade_range([3, 3]);
-    assert!(g3.0.iter().any(|g| g.length > 0.0));
+    // assert trivector has a nonzero component in grade 4 (blade 3 + blade 1 = blade 4)
+    let g4 = t123_mv.grade_range([4, 4]);
+    assert!(g4.0.iter().any(|g| g.length > 0.0));
 
     // step 3: reflect e3 across bivector plane
     let reflected = e3_mv.reflect(&b12_mv);

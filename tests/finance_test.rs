@@ -96,8 +96,11 @@ fn it_computes_portfolio_optimization() {
 
     // create a portfolio of assets
     let num_assets = 1000; // portfolio with 1000 assets - would be impractical with traditional methods
-    let assets = Dimensions::new(num_assets);
-    let returns = assets.multivector(&(0..num_assets).collect::<Vec<usize>>()); // return vectors for each asset
+                           // transition from coordinate scaffolding to direct geometric number creation
+                           // old design: required declaring 1000-dimensional "space" first
+                           // new design: create geometric numbers that represent asset returns directly
+    let asset_indices: Vec<usize> = (0..num_assets).collect();
+    let returns = Multivector::create_dimension(1.0, &asset_indices); // return vectors for each asset
 
     // in geometric algebra, portfolio optimization becomes direct angle adjustments
     let optimize_portfolio = |asset_returns: &Multivector, risk_tolerance: f64| -> Multivector {
@@ -924,7 +927,9 @@ fn it_calculates_multi_asset_derivatives() {
 
     // Create a set of correlated assets
     let num_assets = 1000; // thousand asset basket
-    let _dims = Dimensions::new(num_assets); // Used conceptually but not directly in this implementation
+                           // transition from coordinate scaffolding to direct asset correlation modeling
+                           // old design: required declaring dimensional \"space\" to hold asset correlations
+                           // new design: correlations encoded directly in geometric number angles
 
     // Create parameters for basket option
     let option_strike = 100.0;
