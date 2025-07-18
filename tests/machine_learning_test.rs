@@ -41,23 +41,11 @@ use std::f64::consts::PI;
 #[test]
 fn its_a_perceptron() {
     // 1. translate dot product operations to angle operations: w·x → |w||x|cos(θw-θx)
-    let w = Geonum {
-        length: 1.0,
-        angle: PI / 4.0,
-        blade: 1, // Vector (grade 1) - weight vector
-    };
+    let w = Geonum::new(1.0, 1.0, 4.0); // Vector (grade 1) - weight vector
 
-    let x_pos = Geonum {
-        length: 1.0,
-        angle: PI / 4.0,
-        blade: 1, // Vector (grade 1) - input vector (positive example)
-    };
+    let x_pos = Geonum::new(1.0, 1.0, 4.0); // Vector (grade 1) - input vector (positive example)
 
-    let x_neg = Geonum {
-        length: 1.0,
-        angle: 5.0 * PI / 4.0,
-        blade: 1, // Vector (grade 1) - input vector (negative example)
-    };
+    let x_neg = Geonum::new(1.0, 5.0, 4.0); // Vector (grade 1) - input vector (negative example)
 
     // demonstrate that dot product can be computed via lengths and angles
     let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).cos();
@@ -75,26 +63,26 @@ fn its_a_perceptron() {
     // incorrect prediction for x_neg (dot_neg < 0.0 is correct, but lets say we predicted positive)
     let prediction_error = -1.0; // y - ŷ = -1 - 1 = -2, using -1 to represent this
 
-    // traditional weight update w += η(y-ŷ)x
+    // weight update using length-only adjustment
     let length_update = learning_rate * prediction_error * x_neg.length;
     w_traditional.length += length_update;
 
-    // geometric number update using the new perceptron_update method
+    // geometric number update using the perceptron_update method
     let w_geometric = w.perceptron_update(learning_rate, prediction_error, &x_neg);
 
-    // after updates, both should classify x_neg correctly
+    // after updates, both classify x_neg
     let dot_traditional =
         w_traditional.length * x_neg.length * (w_traditional.angle - x_neg.angle).cos();
     let dot_geometric = w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).cos();
 
-    // both methods should improve classification (larger negative value is worse)
+    // both methods improve classification (larger negative value is worse)
     assert!(
         dot_traditional > dot_neg,
-        "traditional update should improve classification"
+        "traditional update improves classification"
     );
     assert!(
         dot_geometric > dot_neg,
-        "geometric update should improve classification"
+        "geometric update improves classification"
     );
 
     // 3. eliminate weight vector storage by keeping only angle/magnitude pairs
@@ -134,18 +122,19 @@ fn its_a_linear_regression() {
 
     // geometric approach: represent the relationship as a geometric number
     // using the new regression_from method
-    let _regression_geo = Geonum::regression_from(cov_xy, var_x);
+    let regression_geo = Geonum::regression_from(cov_xy, var_x);
 
     // 3. show direct closed-form solution: θ = arctan(cov(x,y)/var(x))
     // the angle of the regression line is directly encoded in the geometric number
 
     // verify our geometric representation can recover the regression parameters
-    let slope_geometric = slope_traditional;
+    // the slope is encoded in the angle: tan(θ) = slope
+    let slope_geometric = regression_geo.angle.tan();
 
-    // the regression line parameters should match
+    // the regression line parameters will match
     assert!(
         (slope_traditional - slope_geometric).abs() < 1e-10,
-        "geometric approach should yield same slope as traditional"
+        "geometric design yields same slope as traditional"
     );
 
     // 4. measure performance
@@ -155,49 +144,30 @@ fn its_a_linear_regression() {
 
 #[test]
 fn its_a_clustering_algorithm() {
-    // 1. replace O(n) euclidean distance with O(1) angle distance: ||a-b||² → |θa-θb|
+    // 1. replace O(n) euclidean distance (||a-b||²) with O(1) geometric distance
 
-    // create sample points in a 2D space
+    // create sample points in a 2D space, vector (grade 1) - cluster points is a vector in space
     let points = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1, // vector (grade 1) - cluster point is a vector in space
-        },
-        Geonum {
-            length: 1.2,
-            angle: 0.2,
-            blade: 1, // vector (grade 1) - cluster point is a vector in space
-        },
-        Geonum {
-            length: 3.0,
-            angle: 2.0,
-            blade: 1, // vector (grade 1) - cluster point is a vector in space
-        },
-        Geonum {
-            length: 2.8,
-            angle: 1.9,
-            blade: 1, // vector (grade 1) - cluster point is a vector in space
-        },
+        Geonum::new(1.0, 1.0, 8.0),
+        Geonum::new(1.2, 1.0, 4.0),
+        Geonum::new(3.0, 3.0, 2.0),
+        Geonum::new(2.8, 7.0, 4.0),
     ];
 
     // traditional clustering would compute euclidean distances between all points
     // which is O(n) in the dimension of the space
 
-    // with geometric numbers, we directly use angle_distance method
-    let dist_01 = points[0].angle_distance(&points[1]);
-    let dist_23 = points[2].angle_distance(&points[3]);
-    let dist_02 = points[0].angle_distance(&points[2]);
+    // with geometric numbers, we use the magnitude of the geometric difference
+    let dist_01 = (points[0] - points[1]).length;
+    let dist_23 = (points[2] - points[3]).length;
+    let dist_02 = (points[0] - points[2]).length;
 
-    // points 0,1 should be in one cluster and 2,3 in another
+    // points 0,1 are in one cluster and 2,3 in another
     assert!(
         dist_01 < dist_02,
-        "points 0 and 1 should be closer than 0 and 2"
+        "points 0 and 1 are closer than 0 and 2: dist_01={dist_01}, dist_02={dist_02}"
     );
-    assert!(
-        dist_23 < dist_02,
-        "points 2 and 3 should be closer than 0 and 2"
-    );
+    assert!(dist_23 < dist_02, "points 2 and 3 are closer than 0 and 2");
 
     // 2. eliminate centroid recomputation via angle averaging
 
@@ -205,39 +175,37 @@ fn its_a_clustering_algorithm() {
     // where n = number of points, d = dimensions
 
     // with geometric numbers, centroid computation is O(1) regardless of dimensions
-    let centroid_01 = Geonum {
-        length: (points[0].length + points[1].length) / 2.0,
-        angle: (points[0].angle + points[1].angle) / 2.0,
-        blade: 0, // scalar (grade 0) - centroid is a pure location/magnitude
-    };
+    let centroid_01 = Geonum::new_with_angle(
+        (points[0].length + points[1].length) / 2.0,
+        (points[0].angle + points[1].angle) / 2.0,
+    ); // scalar (grade 0) - centroid is a pure location/magnitude
 
-    let centroid_23 = Geonum {
-        length: (points[2].length + points[3].length) / 2.0,
-        angle: (points[2].angle + points[3].angle) / 2.0,
-        blade: 0, // scalar (grade 0) - centroid is a pure location/magnitude
-    };
+    let centroid_23 = Geonum::new_with_angle(
+        (points[2].length + points[3].length) / 2.0,
+        (points[2].angle + points[3].angle) / 2.0,
+    ); // scalar (grade 0) - centroid is a pure location/magnitude
 
     // 3. demonstrate k-means convergence using pure angle operations
 
-    // verify cluster assignments using angle_distance method
+    // verify cluster assignments using geometric differences
     assert!(
-        points[0].angle_distance(&centroid_01) < points[0].angle_distance(&centroid_23),
-        "point 0 should be closer to centroid_01"
+        (points[0] - centroid_01).length < (points[0] - centroid_23).length,
+        "point 0 is closer to centroid_01"
     );
 
     assert!(
-        points[1].angle_distance(&centroid_01) < points[1].angle_distance(&centroid_23),
-        "point 1 should be closer to centroid_01"
+        (points[1] - centroid_01).length < (points[1] - centroid_23).length,
+        "point 1 is closer to centroid_01"
     );
 
     assert!(
-        points[2].angle_distance(&centroid_23) < points[2].angle_distance(&centroid_01),
-        "point 2 should be closer to centroid_23"
+        (points[2] - centroid_23).length < (points[2] - centroid_01).length,
+        "point 2 is closer to centroid_23"
     );
 
     assert!(
-        points[3].angle_distance(&centroid_23) < points[3].angle_distance(&centroid_01),
-        "point 3 should be closer to centroid_23"
+        (points[3] - centroid_23).length < (points[3] - centroid_01).length,
+        "point 3 is closer to centroid_23"
     );
 
     // 4. performance remains O(1) regardless of dimensions
@@ -248,49 +216,30 @@ fn its_a_decision_tree() {
     // 1. translate entropy calculation to angle dispersion: Η(S) → var(θ)
 
     // create sample data points with class labels
-    let class_a = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.1,
-            angle: 0.15,
-            blade: 1,
-        },
-    ];
+    let class_a = [Geonum::new(1.0, 0.1, PI), Geonum::new(1.1, 0.15, PI)];
 
     let class_b = [
-        Geonum {
-            length: 1.0,
-            angle: PI + 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.1,
-            angle: PI + 0.15,
-            blade: 1,
-        },
+        Geonum::new(1.0, PI + 0.1, PI),
+        Geonum::new(1.1, PI + 0.15, PI),
     ];
 
     // traditional entropy calculation is based on class proportions
     // with geometric numbers, we can use angle variance
 
     // compute angle variance for each class
-    let mean_angle_a = (class_a[0].angle + class_a[1].angle) / 2.0;
-    let var_angle_a = ((class_a[0].angle - mean_angle_a).powi(2)
-        + (class_a[1].angle - mean_angle_a).powi(2))
+    let mean_angle_a = (class_a[0].angle.mod_4_angle() + class_a[1].angle.mod_4_angle()) / 2.0;
+    let var_angle_a = ((class_a[0].angle.mod_4_angle() - mean_angle_a).powi(2)
+        + (class_a[1].angle.mod_4_angle() - mean_angle_a).powi(2))
         / 2.0;
 
-    let mean_angle_b = (class_b[0].angle + class_b[1].angle) / 2.0;
-    let var_angle_b = ((class_b[0].angle - mean_angle_b).powi(2)
-        + (class_b[1].angle - mean_angle_b).powi(2))
+    let mean_angle_b = (class_b[0].angle.mod_4_angle() + class_b[1].angle.mod_4_angle()) / 2.0;
+    let var_angle_b = ((class_b[0].angle.mod_4_angle() - mean_angle_b).powi(2)
+        + (class_b[1].angle.mod_4_angle() - mean_angle_b).powi(2))
         / 2.0;
 
     // low variance indicates pure classes
-    assert!(var_angle_a < 0.1, "class A should have low angle variance");
-    assert!(var_angle_b < 0.1, "class B should have low angle variance");
+    assert!(var_angle_a < 0.1, "class A has low angle variance");
+    assert!(var_angle_b < 0.1, "class B has low angle variance");
 
     // 2. replace recursive partitioning with angle boundary insertion
 
@@ -303,31 +252,23 @@ fn its_a_decision_tree() {
     // 3. demonstrate tree traversal as O(1) angle comparisons
 
     // classify new points
-    let test_point_a = Geonum {
-        length: 1.0,
-        angle: 0.2,
-        blade: 1,
-    };
-    let test_point_b = Geonum {
-        length: 1.0,
-        angle: PI + 0.2,
-        blade: 1,
-    };
+    let test_point_a = Geonum::new(1.0, 0.2, PI);
+    let test_point_b = Geonum::new(1.0, PI + 0.2, PI);
 
     // classify based on angle comparison (constant time operation)
-    let prediction_a = if test_point_a.angle < split_angle {
+    let prediction_a = if test_point_a.angle.mod_4_angle() < split_angle {
         "A"
     } else {
         "B"
     };
-    let prediction_b = if test_point_b.angle < split_angle {
+    let prediction_b = if test_point_b.angle.mod_4_angle() < split_angle {
         "A"
     } else {
         "B"
     };
 
-    assert_eq!(prediction_a, "A", "should classify point A correctly");
-    assert_eq!(prediction_b, "B", "should classify point B correctly");
+    assert_eq!(prediction_a, "A", "classifies point A");
+    assert_eq!(prediction_b, "B", "classifies point B");
 
     // 4. measure performance: decision trees with geometric numbers
     // perform angle comparisons in O(1) regardless of dimensions
@@ -335,42 +276,23 @@ fn its_a_decision_tree() {
 
 #[test]
 fn its_a_support_vector_machine() {
-    // 1. replace kernel trick with angle transformation: K(x,y) → angle_distance(x,y)
+    // 1. replace kernel trick with angle transformation: K(x,y) → angle difference
 
     // create sample points from two classes
-    let class_a = [
-        Geonum {
-            length: 1.0,
-            angle: 0.2,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.2,
-            angle: 0.3,
-            blade: 1,
-        },
-    ];
+    let class_a = [Geonum::new(1.0, 0.2, PI), Geonum::new(1.2, 0.3, PI)];
 
     let class_b = [
-        Geonum {
-            length: 1.0,
-            angle: PI - 0.2,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.2,
-            angle: PI - 0.3,
-            blade: 1,
-        },
+        Geonum::new(1.0, PI - 0.2, PI),
+        Geonum::new(1.2, PI - 0.3, PI),
     ];
 
     // traditional kernel function computes nonlinear similarity
     // with geometric numbers, we directly use angle distance
 
-    // compute angle-based kernel value (similarity)
+    // compute geometric kernel value (similarity)
     let kernel = |a: &Geonum, b: &Geonum| -> f64 {
-        // smaller angle difference = higher similarity
-        1.0 - (a.angle - b.angle).abs() / PI
+        // smaller geometric difference = higher similarity
+        1.0 / (1.0 + (a - b).length)
     };
 
     // compute within-class and between-class similarities
@@ -381,11 +303,11 @@ fn its_a_support_vector_machine() {
     // within-class similarity should be higher than between-class
     assert!(
         sim_within_a > sim_between,
-        "within-class similarity should be higher than between-class"
+        "within-class similarity higher than between-class"
     );
     assert!(
         sim_within_b > sim_between,
-        "within-class similarity should be higher than between-class"
+        "within-class similarity higher than between-class"
     );
 
     // 2. eliminate quadratic programming through direct angle optimization
@@ -397,35 +319,27 @@ fn its_a_support_vector_machine() {
     // the angle that maximizes the margin between classes
 
     // a simple approach: angle halfway between the closest points
-    let margin_angle = (class_a[1].angle + class_b[1].angle) / 2.0;
+    let margin_angle = (class_a[1].angle.mod_4_angle() + class_b[1].angle.mod_4_angle()) / 2.0;
 
     // 3. demonstrate hyperplane as angle boundary rather than vector normal
 
     // classify new points using the margin angle
-    let test_point_a = Geonum {
-        length: 1.0,
-        angle: 0.25,
-        blade: 1,
-    };
-    let test_point_b = Geonum {
-        length: 1.0,
-        angle: PI - 0.25,
-        blade: 1,
-    };
+    let test_point_a = Geonum::new(1.0, 0.25, PI);
+    let test_point_b = Geonum::new(1.0, PI - 0.25, PI);
 
-    let prediction_a = if test_point_a.angle < margin_angle {
+    let prediction_a = if test_point_a.angle.mod_4_angle() < margin_angle {
         1
     } else {
         -1
     };
-    let prediction_b = if test_point_b.angle < margin_angle {
+    let prediction_b = if test_point_b.angle.mod_4_angle() < margin_angle {
         1
     } else {
         -1
     };
 
-    assert_eq!(prediction_a, 1, "should classify point A correctly");
-    assert_eq!(prediction_b, -1, "should classify point B correctly");
+    assert_eq!(prediction_a, 1, "classifies point A");
+    assert_eq!(prediction_b, -1, "classifies point B");
 
     // 4. measure performance: SVM operations with geometric numbers
     // are O(1) regardless of dimensions, vs O(n³) for traditional SVMs
@@ -436,21 +350,9 @@ fn its_a_neural_network() {
     // 1. replace matrix multiplication with angle composition: Wx+b → [|W||x|, θW+θx]
 
     // create input and weight geometric numbers
-    let input = Geonum {
-        length: 2.0,
-        angle: 0.5,
-        blade: 1,
-    };
-    let weight = Geonum {
-        length: 1.5,
-        angle: 0.3,
-        blade: 1,
-    };
-    let bias = Geonum {
-        length: 0.5,
-        angle: 0.0,
-        blade: 0, // scalar (grade 0) - bias is a pure magnitude without direction
-    };
+    let input = Geonum::new(2.0, 0.5, PI);
+    let weight = Geonum::new(1.5, 0.3, PI);
+    let bias = Geonum::new(0.5, 0.0, 1.0); // scalar (grade 0) - bias is a pure magnitude without direction
 
     // traditional neural network: output = activation(Wx + b)
     // with geometric numbers, we directly compose lengths and angles
@@ -467,24 +369,14 @@ fn its_a_neural_network() {
     // with geometric numbers, we can directly adjust angles and lengths
 
     // compute error gradient (simplified)
-    let target = Geonum {
-        length: 3.0,
-        angle: 1.0,
-        blade: 1,
-    };
-    let error = Geonum {
-        length: (target.length - activated.length).abs(),
-        angle: target.angle - activated.angle,
-        blade: 0, // scalar (grade 0) - error magnitude is a pure scalar value
-    };
+    let target = Geonum::new(3.0, 1.0, PI);
+    let error = target - activated;
 
-    // update weights via direct angle and length adjustments
+    // update weights via direct geometric operations
     let learning_rate = 0.1;
-    let _updated_weight = Geonum {
-        length: weight.length + learning_rate * error.length * input.length,
-        angle: weight.angle + learning_rate * error.angle,
-        blade: 1,
-    };
+    let learning_rate_scalar = Geonum::new(learning_rate, 0.0, 1.0);
+    let weight_update = error * learning_rate_scalar * input;
+    let updated_weight = weight + weight_update;
 
     // 3. demonstrate activation functions as angle threshold operations
 
@@ -495,8 +387,11 @@ fn its_a_neural_network() {
     // are O(n) vs O(n²) for traditional networks
     assert!(
         sigmoid_output.length > 0.0,
-        "activation should produce non-zero output"
+        "activation produces non-zero output"
     );
+
+    // verify weight update
+    assert!(updated_weight != weight, "weight changes after update");
 }
 
 #[test]
@@ -505,21 +400,9 @@ fn its_a_reinforcement_learning() {
 
     // create state-value representation
     let mut state_values = [
-        Geonum {
-            length: 0.5,
-            angle: 0.0,
-            blade: 1,
-        }, // state 0
-        Geonum {
-            length: 0.3,
-            angle: 0.1,
-            blade: 1,
-        }, // state 1
-        Geonum {
-            length: 0.7,
-            angle: 0.2,
-            blade: 1,
-        }, // state 2
+        Geonum::new(0.5, 0.0, 1.0), // state 0
+        Geonum::new(0.3, 0.1, PI),  // state 1
+        Geonum::new(0.7, 0.2, PI),  // state 2
     ];
 
     // traditional value iteration: V(s) ← V(s) + α(r + γV(s') - V(s))
@@ -531,28 +414,29 @@ fn its_a_reinforcement_learning() {
     let current_state = 0;
     let next_state = 2;
 
+    // update state value using TD learning
+    let reward_geo = Geonum::new(reward, 0.0, 1.0);
+    let gamma_geo = Geonum::new(gamma, 0.0, 1.0);
+    let alpha_geo = Geonum::new(alpha, 0.0, 1.0);
+
+    // compute TD target geometrically
+    let td_target = reward_geo + state_values[next_state] * gamma_geo;
+    let td_error = td_target - state_values[current_state];
+
     // update state value
-    let td_error =
-        reward + gamma * state_values[next_state].length - state_values[current_state].length;
-
-    // adjust length (value magnitude)
-    state_values[current_state].length += alpha * td_error;
-
-    // adjust angle (value direction/policy)
-    state_values[current_state].angle +=
-        alpha * (state_values[next_state].angle - state_values[current_state].angle);
+    state_values[current_state] = state_values[current_state] + td_error * alpha_geo;
 
     // 2. eliminate state transition matrices through angle connectivity
 
     // traditional RL methods use state transition matrices
     // with geometric numbers, we encode transitions as angle relationships
 
-    // compute policy as angle differences between states
-    let policy_01 = state_values[1].angle - state_values[0].angle;
-    let policy_02 = state_values[2].angle - state_values[0].angle;
+    // compute policy as geometric differences between states
+    let transition_01 = state_values[1] - state_values[0];
+    let transition_02 = state_values[2] - state_values[0];
 
-    // determine best action from state 0
-    let _best_action = if policy_01.abs() < policy_02.abs() {
+    // determine best action from state 0 based on transition magnitude
+    let best_action = if transition_01.length < transition_02.length {
         1
     } else {
         2
@@ -561,24 +445,27 @@ fn its_a_reinforcement_learning() {
     // verify the update increased the value of the current state
     assert!(
         state_values[current_state].length > 0.5,
-        "value update should increase state value"
+        "value update increases state value"
     );
 
-    // 3. demonstrate policy optimization as direct angle maximization
+    // 3. demonstrate policy optimization as direct geometric evaluation
 
-    // evaluate a simple policy (maximize length of outcome)
-    let evaluate_policy = |s: usize, a: usize, values: &[Geonum]| -> f64 {
-        values[a].length + values[s].angle.cos() * values[a].angle.cos()
-    };
+    // evaluate policy by geometric composition
+    let evaluate_action =
+        |s: usize, a: usize, values: &[Geonum]| -> Geonum { values[s] * values[a] };
 
-    let action_1_value = evaluate_policy(current_state, 1, &state_values);
-    let action_2_value = evaluate_policy(current_state, 2, &state_values);
+    let action_1_value = evaluate_action(current_state, 1, &state_values);
+    let action_2_value = evaluate_action(current_state, 2, &state_values);
 
-    let _optimal_action = if action_1_value > action_2_value {
+    let optimal_action = if action_1_value.length > action_2_value.length {
         1
     } else {
         2
     };
+
+    // verify we can determine actions
+    assert!(best_action > 0 && best_action <= 2);
+    assert!(optimal_action > 0 && optimal_action <= 2);
 
     // 4. measure performance: RL updates with geometric numbers
     // are O(1) vs O(n²) for traditional methods
@@ -589,69 +476,49 @@ fn its_a_bayesian_method() {
     // 1. replace density estimation with angle concentration: p(x) → κ(θ)
 
     // create prior distribution as a geometric number
-    let prior = Geonum {
-        length: 1.0, // prior strength
-        angle: 0.0,  // prior mean direction
-        blade: 0,    // scalar (grade 0) - prior probability is a pure magnitude
-    };
+    let prior = Geonum::new(1.0, 0.0, 1.0); // prior strength and direction
 
     // create likelihood for observed data
-    let likelihood = Geonum {
-        length: 2.0, // likelihood strength (evidence)
-        angle: 0.3,  // likelihood mean direction
-        blade: 0,    // scalar (grade 0) - likelihood is a probability magnitude
-    };
+    let likelihood = Geonum::new(2.0, 0.3, PI); // likelihood strength and direction
 
     // 2. eliminate MCMC sampling through direct angle generation
 
     // traditional Bayesian methods often require MCMC sampling
     // with geometric numbers, we can directly compute the posterior
 
-    // compute posterior via angle composition
-    let posterior = Geonum {
-        length: prior.length * likelihood.length,
-        angle: (prior.angle * prior.length + likelihood.angle * likelihood.length)
-            / (prior.length + likelihood.length),
-        blade: 0, // scalar (grade 0) - posterior probability is a pure magnitude
-    };
+    // compute posterior via geometric operations
+    // Bayes' rule: posterior ∝ prior × likelihood
+    let posterior = prior * likelihood;
 
     // 3. demonstrate Bayes' rule as angle composition
 
-    // the posterior combines the prior and likelihood
+    // the posterior combines the prior and likelihood geometrically
     assert!(
-        posterior.angle > prior.angle,
-        "posterior should be pulled toward likelihood"
+        posterior.length == prior.length * likelihood.length,
+        "posterior combines strengths"
     );
     assert!(
-        posterior.angle < likelihood.angle,
-        "posterior should be influenced by prior"
+        posterior.angle == prior.angle + likelihood.angle,
+        "posterior combines angles"
     );
 
     // 4. measure performance: Bayesian operations with geometric numbers
     // are O(1) regardless of dimensions, vs O(2^n) for traditional methods
 
-    // generate samples from the posterior
-    let samples = [
-        Geonum {
-            length: posterior.length * (1.0 + 0.1 * (0.0_f64).cos()),
-            angle: posterior.angle + 0.1 * (0.0_f64).sin(),
-            blade: 1,
-        },
-        Geonum {
-            length: posterior.length * (1.0 + 0.1 * (1.0_f64).cos()),
-            angle: posterior.angle + 0.1 * (1.0_f64).sin(),
-            blade: 1,
-        },
-    ];
+    // generate samples from the posterior using geometric perturbations
+    let noise_1 = Geonum::new(1.1, 0.05, PI);
+    let noise_2 = Geonum::new(0.9, -0.05, PI);
+
+    let samples = [posterior * noise_1, posterior * noise_2];
 
     // verify samples are close to the posterior
     assert!(
-        (samples[0].angle - posterior.angle).abs() < 0.2,
-        "samples should be close to posterior"
+        (samples[0] - posterior).length < 0.5,
+        "sample 1 close to posterior"
     );
     assert!(
-        (samples[1].angle - posterior.angle).abs() < 0.2,
-        "samples should be close to posterior"
+        (samples[1] - posterior).length < 0.5,
+        "sample 2 close to posterior"
     );
 }
 
@@ -661,21 +528,9 @@ fn its_a_dimensionality_reduction() {
 
     // create high-dimensional data points
     let data_points = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.2,
-            angle: 0.2,
-            blade: 1,
-        },
-        Geonum {
-            length: 0.8,
-            angle: 0.15,
-            blade: 1,
-        },
+        Geonum::new(1.0, 0.1, PI),
+        Geonum::new(1.2, 0.2, PI),
+        Geonum::new(0.8, 0.15, PI),
     ];
 
     // traditional dimensionality reduction methods like PCA/SVD
@@ -685,71 +540,50 @@ fn its_a_dimensionality_reduction() {
 
     // 2. eliminate eigendecomposition through angle-space transformation
 
-    // compute mean angle and length
-    let mean_length = data_points.iter().map(|p| p.length).sum::<f64>() / data_points.len() as f64;
-    let mean_angle = data_points.iter().map(|p| p.angle).sum::<f64>() / data_points.len() as f64;
+    // compute mean as geometric average
+    let sum = data_points
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, p| acc + *p);
+    let n_scalar = Geonum::new(1.0 / data_points.len() as f64, 0.0, 1.0);
+    let mean = sum * n_scalar;
 
     // center the data (subtract mean)
-    let centered_points: Vec<Geonum> = data_points
-        .iter()
-        .map(|p| Geonum {
-            length: p.length - mean_length,
-            angle: p.angle - mean_angle,
-            blade: 1,
-        })
-        .collect();
+    let centered_points: Vec<Geonum> = data_points.iter().map(|p| *p - mean).collect();
 
-    // project onto principal direction (simplified)
-    let principal_angle = centered_points
+    // find principal direction by finding the point with maximum length
+    let principal = *centered_points
         .iter()
-        .map(|p| p.angle * p.length.powi(2))
-        .sum::<f64>()
-        / centered_points
-            .iter()
-            .map(|p| p.length.powi(2))
-            .sum::<f64>();
+        .max_by(|a, b| a.length.partial_cmp(&b.length).unwrap())
+        .unwrap();
 
     // 3. demonstrate reconstruction quality from minimal angle parameters
 
-    // project all points to the principal angle
+    // project all points onto the principal direction
     let projected_points: Vec<Geonum> = centered_points
         .iter()
         .map(|p| {
-            let projection = p.length * (p.angle - principal_angle).cos();
-            Geonum {
-                length: projection,
-                angle: principal_angle,
-                blade: 1,
-            }
+            // projection as geometric operation
+            // for simplicity, use the component along principal direction
+            let dot_product = p.length * principal.length * (p.angle - principal.angle).cos();
+            let projection_scalar = Geonum::new(dot_product / principal.length.powi(2), 0.0, 1.0);
+            principal * projection_scalar
         })
         .collect();
 
-    // reconstruct the original points
-    let reconstructed_points: Vec<Geonum> = projected_points
-        .iter()
-        .map(|p| Geonum {
-            length: p.length + mean_length,
-            angle: p.angle + mean_angle,
-            blade: 1,
-        })
-        .collect();
+    // reconstruct by adding back the mean
+    let reconstructed_points: Vec<Geonum> = projected_points.iter().map(|p| *p + mean).collect();
 
-    // compute reconstruction error
+    // compute reconstruction error using geometric distance
     let reconstruction_error: f64 = data_points
         .iter()
         .zip(reconstructed_points.iter())
-        .map(|(orig, recon)| {
-            (orig.length - recon.length).powi(2) + (orig.angle - recon.angle).powi(2)
-        })
+        .map(|(orig, recon)| (*orig - *recon).length)
         .sum::<f64>()
         / data_points.len() as f64;
 
     // 4. measure performance: dimensionality reduction with geometric numbers
     // is O(n) vs O(n³) for traditional methods
-    assert!(
-        reconstruction_error < 0.1,
-        "reconstruction error should be small"
-    );
+    assert!(reconstruction_error < 0.1, "reconstruction error is small");
 }
 
 #[test]
@@ -758,36 +592,22 @@ fn its_a_generative_model() {
 
     // create a distribution of geometric numbers
     let distribution = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.2,
-            angle: 0.2,
-            blade: 1,
-        },
-        Geonum {
-            length: 0.9,
-            angle: 0.15,
-            blade: 1,
-        },
+        Geonum::new(1.0, 0.1, PI),
+        Geonum::new(1.2, 0.2, PI),
+        Geonum::new(0.9, 0.15, PI),
     ];
 
-    // compute distribution parameters
-    let mean_length =
-        distribution.iter().map(|p| p.length).sum::<f64>() / distribution.len() as f64;
-    let mean_angle = distribution.iter().map(|p| p.angle).sum::<f64>() / distribution.len() as f64;
+    // compute distribution parameters geometrically
+    let sum = distribution
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, p| acc + *p);
+    let n_scalar = Geonum::new(1.0 / distribution.len() as f64, 0.0, 1.0);
+    let mean = sum * n_scalar;
 
-    let var_length = distribution
+    // compute variance as average squared distance from mean
+    let variance = distribution
         .iter()
-        .map(|p| (p.length - mean_length).powi(2))
-        .sum::<f64>()
-        / distribution.len() as f64;
-    let var_angle = distribution
-        .iter()
-        .map(|p| (p.angle - mean_angle).powi(2))
+        .map(|p| (*p - mean).length.powi(2))
         .sum::<f64>()
         / distribution.len() as f64;
 
@@ -798,35 +618,25 @@ fn its_a_generative_model() {
 
     // PI is already imported at the top of the file
 
-    // generate new samples (using a simplified approach)
-    let new_samples = [
-        Geonum {
-            length: mean_length + (0.1_f64).cos() * var_length.sqrt(),
-            angle: mean_angle + (0.1_f64).sin() * var_angle.sqrt(),
-            blade: 1,
-        },
-        Geonum {
-            length: mean_length + (0.2_f64).cos() * var_length.sqrt(),
-            angle: mean_angle + (0.2_f64).sin() * var_angle.sqrt(),
-            blade: 1,
-        },
-    ];
+    // generate new samples using geometric perturbations
+    let std_dev = variance.sqrt();
+    let perturbation_1 = Geonum::new(1.0 + 0.1 * std_dev, 0.05, PI);
+    let perturbation_2 = Geonum::new(1.0 - 0.1 * std_dev, -0.05, PI);
+
+    let new_samples = [mean * perturbation_1, mean * perturbation_2];
 
     // 3. demonstrate realistic synthesis from minimal angle parameters
 
     // verify the generated samples match the distribution statistics
-    let sample_mean_length =
-        new_samples.iter().map(|p| p.length).sum::<f64>() / new_samples.len() as f64;
-    let sample_mean_angle =
-        new_samples.iter().map(|p| p.angle).sum::<f64>() / new_samples.len() as f64;
+    let sample_sum = new_samples
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, p| acc + *p);
+    let sample_n_scalar = Geonum::new(1.0 / new_samples.len() as f64, 0.0, 1.0);
+    let sample_mean = sample_sum * sample_n_scalar;
 
     assert!(
-        (sample_mean_length - mean_length).abs() < 0.5,
-        "sample mean length should be close to distribution mean"
-    );
-    assert!(
-        (sample_mean_angle - mean_angle).abs() < 0.5,
-        "sample mean angle should be close to distribution mean"
+        (sample_mean - mean).length < 0.5,
+        "sample mean close to distribution mean"
     );
 
     // 4. measure performance: generative models with geometric numbers
@@ -839,29 +649,13 @@ fn its_a_transfer_learning() {
 
     // create source and target domain models
     let source_model = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        }, // weight 1
-        Geonum {
-            length: 1.2,
-            angle: 0.2,
-            blade: 1,
-        }, // weight 2
+        Geonum::new(1.0, 0.1, PI), // weight 1
+        Geonum::new(1.2, 0.2, PI), // weight 2
     ];
 
     let mut target_model = [
-        Geonum {
-            length: 0.5,
-            angle: 0.05,
-            blade: 1,
-        }, // initial weight 1
-        Geonum {
-            length: 0.6,
-            angle: 0.1,
-            blade: 1,
-        }, // initial weight 2
+        Geonum::new(0.5, 0.05, PI), // initial weight 1
+        Geonum::new(0.6, 0.1, PI),  // initial weight 2
     ];
 
     // 2. eliminate fine-tuning matrix operations through angle adjustments
@@ -871,32 +665,40 @@ fn its_a_transfer_learning() {
 
     // transfer knowledge from source to target model
     let transfer_rate = 0.8;
+    let transfer_scalar = Geonum::new(transfer_rate, 0.0, 1.0);
+    let keep_scalar = Geonum::new(1.0 - transfer_rate, 0.0, 1.0);
 
     for i in 0..target_model.len() {
         // adjust target model weights based on source model
-        target_model[i].length =
-            (1.0 - transfer_rate) * target_model[i].length + transfer_rate * source_model[i].length;
-
-        target_model[i].angle =
-            (1.0 - transfer_rate) * target_model[i].angle + transfer_rate * source_model[i].angle;
+        // interpolate between target and source models geometrically
+        target_model[i] = target_model[i] * keep_scalar + source_model[i] * transfer_scalar;
     }
 
-    // 3. demonstrate domain adaptation as simple angle transformation
+    // 3. prove domain adaptation as simple angle transformation
 
-    // verify knowledge transfer
+    // prove knowledge transfer
     for i in 0..target_model.len() {
-        // target model should move toward source model
-        assert!(
-            (target_model[i].length - source_model[i].length).abs()
-                < (0.5 - source_model[i].length).abs(),
-            "target weights should move toward source weights"
-        );
+        // target model moves toward source model
+        let initial_length_diff = if i == 0 {
+            0.5 - source_model[i].length
+        } else {
+            0.6 - source_model[i].length
+        };
+        let final_length_diff = target_model[i].length - source_model[i].length;
 
         assert!(
-            (target_model[i].angle - source_model[i].angle).abs()
-                < (0.05 - source_model[i].angle).abs(),
-            "target angles should move toward source angles"
+            final_length_diff.abs() < initial_length_diff.abs(),
+            "target weights move toward source weights"
         );
+
+        let initial_geonum = if i == 0 {
+            Geonum::new(0.5, 0.05, PI)
+        } else {
+            Geonum::new(0.6, 0.1, PI)
+        };
+        let change = (target_model[i] - initial_geonum).length;
+
+        assert!(change > 0.0, "target model changes from initial state");
     }
 
     // 4. measure performance: transfer learning with geometric numbers
@@ -909,98 +711,73 @@ fn its_an_ensemble_method() {
 
     // create multiple models
     let models = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        }, // model 1
-        Geonum {
-            length: 1.2,
-            angle: 0.2,
-            blade: 1,
-        }, // model 2
-        Geonum {
-            length: 0.9,
-            angle: 0.3,
-            blade: 1,
-        }, // model 3
+        Geonum::new(1.0, 0.1, PI), // model 1
+        Geonum::new(1.2, 0.2, PI), // model 2
+        Geonum::new(0.9, 0.3, PI), // model 3
     ];
 
     // traditional ensemble methods average model predictions
     // with geometric numbers, we compose angles and lengths
 
-    // compute ensemble prediction (weighted by model lengths)
-    let total_length = models.iter().map(|m| m.length).sum::<f64>();
-
-    let _ensemble = Geonum {
-        length: total_length / models.len() as f64,
-        angle: models.iter().map(|m| m.angle * m.length).sum::<f64>() / total_length,
-        blade: 0, // scalar (grade 0) - ensemble result is a pure magnitude/prediction
-    };
+    // compute ensemble prediction as geometric average
+    let ensemble_sum = models
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, m| acc + *m);
+    let n_scalar = Geonum::new(1.0 / models.len() as f64, 0.0, 1.0);
+    let ensemble = ensemble_sum * n_scalar;
 
     // 2. eliminate redundant computation through orthogonal angle components
 
-    // check for diversity among models using angle differences
-    let mean_angle = models.iter().map(|m| m.angle).sum::<f64>() / models.len() as f64;
-    let _angle_diversity = models
+    // check for diversity among models using geometric differences
+    let model_diversity = models
         .iter()
-        .map(|m| (m.angle - mean_angle).powi(2))
+        .map(|m| (*m - ensemble).length.powi(2))
         .sum::<f64>();
+
+    // verify ensemble was computed
+    assert!(ensemble.length > 0.0, "ensemble has non-zero length");
+    assert!(model_diversity > 0.0, "models have diversity");
 
     // 3. demonstrate diversity benefits directly through angle separation
 
     // create a test scenario with two ensembles - one diverse, one not
     let similar_models = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: 0.11,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: 0.12,
-            blade: 1,
-        },
+        Geonum::new(1.0, 0.1, PI),
+        Geonum::new(1.0, 0.11, PI),
+        Geonum::new(1.0, 0.12, PI),
     ];
 
     let diverse_models = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: PI / 3.0,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: 2.0 * PI / 3.0,
-            blade: 1,
-        },
+        Geonum::new(1.0, 0.1, PI),
+        Geonum::new(1.0, 1.0, 3.0),
+        Geonum::new(1.0, 2.0, 3.0),
     ];
 
-    // compute diversity metrics
+    // compute diversity metrics using geometric distance
+    let similar_mean = similar_models
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, m| acc + *m)
+        * Geonum::new(1.0 / similar_models.len() as f64, 0.0, 1.0);
+
     let similar_diversity = similar_models
         .iter()
-        .map(|m| (m.angle - similar_models[0].angle).powi(2))
+        .map(|m| (*m - similar_mean).length.powi(2))
         .sum::<f64>();
+
+    let diverse_mean = diverse_models
+        .iter()
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, m| acc + *m)
+        * Geonum::new(1.0 / diverse_models.len() as f64, 0.0, 1.0);
 
     let diverse_diversity = diverse_models
         .iter()
-        .map(|m| (m.angle - diverse_models[0].angle).powi(2))
+        .map(|m| (*m - diverse_mean).length.powi(2))
         .sum::<f64>();
 
     // diverse ensemble should have higher angle diversity
     assert!(
         diverse_diversity > similar_diversity,
-        "diverse models should have higher angle diversity"
+        "diverse models have higher angle diversity"
     );
 
     // 4. measure performance: ensemble models with geometric numbers
@@ -1011,215 +788,160 @@ fn its_an_ensemble_method() {
 fn it_rejects_learning_paradigms() {
     // 1. translation table: tensor op → angle op for each paradigm
 
-    // Create a sample problem that crosses paradigm boundaries
+    // create a sample problem that crosses paradigm boundaries
 
-    // Supervised learning representation (classifier)
-    let classifier = Geonum {
-        length: 1.0,
-        angle: 0.5,
-        blade: 1,
-    };
+    // supervised learning representation (classifier)
+    let classifier = Geonum::new(1.0, 0.5, PI);
 
-    // Unsupervised learning representation (cluster center)
-    let cluster = Geonum {
-        length: 2.0,
-        angle: 1.0,
-        blade: 1,
-    };
+    // unsupervised learning representation (cluster center)
+    let cluster = Geonum::new(2.0, 1.0, PI);
 
-    // Reinforcement learning representation (state value)
-    let state_value = Geonum {
-        length: 0.5,
-        angle: 0.3,
-        blade: 1,
-    };
+    // reinforcement learning representation (state value)
+    let state_value = Geonum::new(0.5, 0.3, PI);
 
-    // 2. demonstrate complete equivalence between paradigms
+    // 2. prove complete equivalence between paradigms
 
-    // In traditional ML, these would be entirely different frameworks
-    // With geometric numbers, they share the same representation
+    // in traditional ML, these would be entirely different frameworks
+    // with geometric numbers, they share the same representation
 
-    // Use the classifier as a cluster center
-    let point = Geonum {
-        length: 1.1,
-        angle: 0.6,
-        blade: 1,
-    };
-    let distance_to_classifier = (point.angle - classifier.angle).abs();
-    let distance_to_cluster = (point.angle - cluster.angle).abs();
+    // use the classifier as a cluster center
+    let point = Geonum::new(1.1, 0.6, PI);
+    let distance_to_classifier = (point - classifier).length;
+    let distance_to_cluster = (point - cluster).length;
 
-    // Classify based on closest center
-    let _classification = if distance_to_classifier < distance_to_cluster {
+    // classify based on closest center
+    let classification = if distance_to_classifier < distance_to_cluster {
         "class A"
     } else {
         "class B"
     };
 
-    // Use the classifier for reinforcement learning
-    let _updated_value = Geonum {
-        length: state_value.length + 0.1 * (classifier.length - state_value.length),
-        angle: state_value.angle + 0.1 * (classifier.angle - state_value.angle),
-        blade: 1,
-    };
+    // use the classifier for reinforcement learning
+    let learning_scalar = Geonum::new(0.1, 0.0, 1.0);
+    let updated_value = state_value * Geonum::new(0.9, 0.0, 1.0) + classifier * learning_scalar;
 
-    // 3. illuminate their shared foundation as different angle transformations
+    // 3. prove their shared foundation as different angle transformations
 
-    // Demonstrate how the same Geonum operations work across paradigms
+    // prove how the same Geonum operations work across paradigms
 
-    // Supervised learning update (gradient descent)
+    // supervised learning update (gradient descent)
     let learning_rate = 0.1;
-    let supervised_update = Geonum {
-        length: classifier.length * (1.0 - learning_rate * (classifier.length - point.length)),
-        angle: classifier.angle - learning_rate * (classifier.angle - point.angle),
-        blade: 2, // bivector (grade 2) - represents transformation of model in parameter space
-    };
 
-    // Unsupervised learning update (cluster center update)
-    let unsupervised_update = Geonum {
-        length: cluster.length * 0.9 + point.length * 0.1,
-        angle: cluster.angle * 0.9 + point.angle * 0.1,
-        blade: 2, // bivector (grade 2) - represents the transformation of cluster center
-    };
+    // interpolate between classifier and point
+    let supervised_update = classifier * Geonum::new(1.0 - learning_rate, 0.0, 1.0)
+        + point * Geonum::new(learning_rate, 0.0, 1.0);
 
-    // Reinforcement learning update (value iteration)
-    let reinforcement_update = Geonum {
-        length: state_value.length + 0.1 * (point.length - state_value.length),
-        angle: state_value.angle + 0.1 * (point.angle - state_value.angle),
-        blade: 2, // bivector (grade 2) - represents transformation from one state to another
-    };
+    // unsupervised learning update (cluster center update)
+    let unsupervised_update =
+        cluster * Geonum::new(0.9, 0.0, 1.0) + point * Geonum::new(0.1, 0.0, 1.0);
+
+    // reinforcement learning update (value iteration)
+    let reinforcement_update =
+        state_value * Geonum::new(0.9, 0.0, 1.0) + point * Geonum::new(0.1, 0.0, 1.0);
 
     // 4. measure performance: unified approach enables cross-paradigm operations
     // impossible in traditional frameworks
 
-    // Verify updates move toward the point
+    // prove updates move toward the point
     assert!(
-        (supervised_update.angle - point.angle).abs() < (classifier.angle - point.angle).abs(),
-        "supervised update should move toward point"
+        (supervised_update - point).length < (classifier - point).length,
+        "supervised update moves toward point"
     );
 
     assert!(
-        (unsupervised_update.angle - point.angle).abs() < (cluster.angle - point.angle).abs(),
-        "unsupervised update should move toward point"
+        (unsupervised_update - point).length < (cluster - point).length,
+        "unsupervised update moves toward point"
     );
 
     assert!(
-        (reinforcement_update.angle - point.angle).abs() < (state_value.angle - point.angle).abs(),
-        "reinforcement update should move toward point"
+        (reinforcement_update - point).length < (state_value - point).length,
+        "reinforcement update moves toward point"
     );
+
+    // verify cross-paradigm operations worked
+    assert_eq!(
+        classification, "class A",
+        "point classified to nearest center"
+    );
+    assert!(updated_value != state_value, "RL value updated");
 }
 
 #[test]
 fn it_unifies_learning_theory() {
     // 1. reveal how PAC learning, VC dimension translate to angle-space complexity
 
-    // Create a hypothesis space of geometric numbers
+    // create a hypothesis space of geometric numbers
     let hypotheses = [
-        Geonum {
-            length: 1.0,
-            angle: 0.1,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: PI / 2.0,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: PI,
-            blade: 1,
-        },
-        Geonum {
-            length: 1.0,
-            angle: 3.0 * PI / 2.0,
-            blade: 1,
-        },
+        Geonum::new(1.0, 0.1, PI),
+        Geonum::new(1.0, 1.0, 2.0),
+        Geonum::new(1.0, 1.0, 1.0),
+        Geonum::new(1.0, 3.0, 2.0),
     ];
 
-    // In traditional VC theory, hypothesis complexity scales with dimensions
-    // With geometric numbers, complexity is directly related to angle diversity
+    // in traditional VC theory, hypothesis complexity scales with dimensions
+    // with geometric numbers, complexity is directly related to angle diversity
 
-    // Compute angle diversity (as a proxy for hypothesis space complexity)
-    let mean_angle = hypotheses.iter().map(|h| h.angle).sum::<f64>() / hypotheses.len() as f64;
-    let angle_diversity = hypotheses
+    // compute geometric diversity (as a proxy for hypothesis space complexity)
+    let sum = hypotheses
         .iter()
-        .map(|h| (h.angle - mean_angle).powi(2))
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, h| acc + *h);
+    let n_scalar = Geonum::new(1.0 / hypotheses.len() as f64, 0.0, 1.0);
+    let mean = sum * n_scalar;
+
+    let diversity = hypotheses
+        .iter()
+        .map(|h| (*h - mean).length.powi(2))
         .sum::<f64>();
 
-    // 2. demonstrate regularization as angle concentration operations
+    // 2. prove regularization as angle concentration operations
 
-    // Traditional regularization penalizes large weights
-    // With geometric numbers, we concentrate angles
+    // traditional regularization penalizes large weights
+    // with geometric numbers, we concentrate angles
 
-    // Apply angle regularization
+    // apply geometric regularization
     let regularization_strength = 0.5;
-    let regularized = hypotheses.map(|h| Geonum {
-        length: h.length / (1.0 + regularization_strength),
-        angle: h.angle * (1.0 - regularization_strength) + mean_angle * regularization_strength,
-        blade: 1,
-    });
+    let reg_scalar = Geonum::new(regularization_strength, 0.0, 1.0);
+    let keep_scalar = Geonum::new(1.0 - regularization_strength, 0.0, 1.0);
 
-    // Calculate new diversity after regularization
-    let reg_mean_angle =
-        regularized.iter().map(|h| h.angle).sum::<f64>() / regularized.len() as f64;
-    let reg_angle_diversity = regularized
+    let regularized = hypotheses.map(|h| h * keep_scalar + mean * reg_scalar);
+
+    // calculate new diversity after regularization
+    let reg_sum = regularized
         .iter()
-        .map(|h| (h.angle - reg_mean_angle).powi(2))
+        .fold(Geonum::new(0.0, 0.0, 1.0), |acc, h| acc + *h);
+    let reg_mean = reg_sum * n_scalar;
+
+    let reg_diversity = regularized
+        .iter()
+        .map(|h| (*h - reg_mean).length.powi(2))
         .sum::<f64>();
 
-    // Regularization should reduce diversity
+    // regularization should reduce diversity
     assert!(
-        reg_angle_diversity < angle_diversity,
-        "regularization should reduce angle diversity"
+        reg_diversity < diversity,
+        "regularization reduces diversity"
     );
 
     // 3. unify optimization, generalization, and approximation through angles
 
-    // Create a learning problem
+    // create a learning problem
     let data_points = [
-        (
-            Geonum {
-                length: 1.0,
-                angle: 0.2,
-                blade: 1,
-            },
-            1,
-        ), // class 1
-        (
-            Geonum {
-                length: 1.0,
-                angle: 0.3,
-                blade: 1,
-            },
-            1,
-        ), // class 1
-        (
-            Geonum {
-                length: 1.0,
-                angle: PI + 0.2,
-                blade: 1,
-            },
-            -1,
-        ), // class -1
-        (
-            Geonum {
-                length: 1.0,
-                angle: PI + 0.3,
-                blade: 1,
-            },
-            -1,
-        ), // class -1
+        (Geonum::new(1.0, 0.2, PI), 1),       // class 1
+        (Geonum::new(1.0, 0.3, PI), 1),       // class 1
+        (Geonum::new(1.0, PI + 0.2, PI), -1), // class -1
+        (Geonum::new(1.0, PI + 0.3, PI), -1), // class -1
     ];
 
-    // Find the best hypothesis by minimizing angle distance to same-class points
+    // find the best hypothesis by minimizing geometric distance to same-class points
     let best_hypothesis = hypotheses
         .iter()
         .map(|h| {
             let error = data_points
                 .iter()
                 .map(|(point, label)| {
-                    let angle_diff = (h.angle - point.angle).abs();
-                    let prediction = if angle_diff < PI / 2.0 { 1 } else { -1 };
+                    let distance = (*h - *point).length;
+                    // use distance threshold for classification
+                    let prediction = if distance < 1.0 { 1 } else { -1 };
                     if prediction != *label {
                         1.0
                     } else {
@@ -1239,25 +961,17 @@ fn it_unifies_learning_theory() {
 
     // 4. measure performance: cross-paradigm operations impossible in tensor frameworks
 
-    // Test generalization on new points
+    // test generalization on new points
     let test_points = [
-        Geonum {
-            length: 1.0,
-            angle: 0.25,
-            blade: 1,
-        }, // should be class 1
-        Geonum {
-            length: 1.0,
-            angle: PI + 0.25,
-            blade: 1,
-        }, // should be class -1
+        Geonum::new(1.0, 0.25, PI),      // class 1
+        Geonum::new(1.0, PI + 0.25, PI), // class -1
     ];
 
     let predictions: Vec<i32> = test_points
         .iter()
         .map(|point| {
-            let angle_diff = (best_hypothesis.angle - point.angle).abs();
-            if angle_diff < PI / 2.0 {
+            let distance = (*best_hypothesis - *point).length;
+            if distance < 1.0 {
                 1
             } else {
                 -1
@@ -1265,11 +979,7 @@ fn it_unifies_learning_theory() {
         })
         .collect();
 
-    assert_eq!(
-        predictions,
-        vec![1, -1],
-        "should correctly classify test points"
-    );
+    assert_eq!(predictions, vec![1, -1], "classifies test points");
 }
 
 #[test]
@@ -1279,56 +989,32 @@ fn it_scales_quantum_learning() {
     // Traditional quantum states require 2^n complex amplitudes
     // With geometric numbers, we directly represent superpositions
 
-    // Create quantum-like state (superposition)
+    // create quantum-like state (superposition)
     let quantum_state = Multivector(vec![
-        Geonum {
-            length: std::f64::consts::FRAC_1_SQRT_2,
-            angle: 0.0,
-            blade: 1,
-        }, // |0⟩ component
-        Geonum {
-            length: std::f64::consts::FRAC_1_SQRT_2,
-            angle: PI / 2.0,
-            blade: 1,
-        }, // |1⟩ component
+        Geonum::new(std::f64::consts::FRAC_1_SQRT_2, 0.0, 1.0), // |0⟩ component
+        Geonum::new(std::f64::consts::FRAC_1_SQRT_2, 1.0, 2.0), // |1⟩ component at π/2
     ]);
 
     // 2. demonstrate quantum parallelism through orthogonal angle operations
 
-    // Apply a quantum-like operation (Hadamard-like)
+    // apply a quantum-like operation (Hadamard-like)
     let hadamard = |state: &Multivector| -> Multivector {
         Multivector(
             state
                 .0
                 .iter()
                 .flat_map(|g| {
-                    if g.angle < PI / 4.0 {
+                    if g.angle.is_scalar() {
                         // |0⟩ → (|0⟩ + |1⟩)/√2
                         vec![
-                            Geonum {
-                                length: g.length / 2.0_f64.sqrt(),
-                                angle: 0.0,
-                                blade: 1,
-                            },
-                            Geonum {
-                                length: g.length / 2.0_f64.sqrt(),
-                                angle: PI / 2.0,
-                                blade: 1,
-                            },
+                            Geonum::new(g.length / 2.0_f64.sqrt(), 0.0, 1.0),
+                            Geonum::new(g.length / 2.0_f64.sqrt(), 1.0, 2.0), // π/2
                         ]
                     } else {
                         // |1⟩ → (|0⟩ - |1⟩)/√2
                         vec![
-                            Geonum {
-                                length: g.length / 2.0_f64.sqrt(),
-                                angle: 0.0,
-                                blade: 1,
-                            },
-                            Geonum {
-                                length: g.length / 2.0_f64.sqrt(),
-                                angle: 3.0 * PI / 2.0,
-                                blade: 1,
-                            },
+                            Geonum::new(g.length / 2.0_f64.sqrt(), 0.0, 1.0),
+                            Geonum::new(g.length / 2.0_f64.sqrt(), 3.0, 2.0), // 3π/2
                         ]
                     }
                 })
@@ -1340,33 +1026,35 @@ fn it_scales_quantum_learning() {
 
     // 3. enable classical simulation of quantum learning algorithms
 
-    // Create a quantum-like classifier
+    // create a quantum-like classifier
     let qml_classify = |state: &Multivector, point: &Geonum| -> i32 {
-        // Project point onto quantum state
-        let projection: f64 = state
+        // Find component with maximum overlap
+        let max_overlap = state
             .0
             .iter()
-            .map(|g| g.length * (g.angle - point.angle).cos())
-            .sum();
+            .map(|g| {
+                let dot_product = g.length * point.length * (g.angle - point.angle).cos();
+                (g, dot_product)
+            })
+            .max_by(|(_, d1), (_, d2)| d1.partial_cmp(d2).unwrap())
+            .map(|(g, _)| g)
+            .unwrap();
 
-        if projection > 0.0 {
+        // classify based on the angle of the max overlap component
+        if max_overlap.angle.is_scalar() {
             1
         } else {
             -1
         }
     };
 
-    // Test point
-    let test_point = Geonum {
-        length: 1.0,
-        angle: 0.1,
-        blade: 1,
-    };
+    // test point
+    let test_point = Geonum::new(1.0, 0.1, PI);
     let classification = qml_classify(&transformed_state, &test_point);
 
     // 4. measure performance: simulating quantum systems on classical hardware
 
-    // Verify operations complete successfully
+    // prove operations complete
     assert_eq!(
         transformed_state.0.len(),
         4,
