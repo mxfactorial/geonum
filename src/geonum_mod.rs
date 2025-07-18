@@ -142,22 +142,6 @@ impl Geonum {
         }
     }
 
-    /// creates a geometric number at a standardized dimensional angle
-    ///
-    /// # args
-    /// * `length` - magnitude component  
-    /// * `dimension_index` - which dimension (sets angle = dimension_index * PI/2)
-    ///
-    /// # returns
-    /// geometric number with blade = dimension_index and angle = dimension_index * PI/2
-    pub fn create_dimension(length: f64, dimension_index: usize) -> Self {
-        Self {
-            length,
-            angle: (dimension_index as f64) * (PI / 2.0),
-            blade: dimension_index,
-        }
-    }
-
     /// creates a new geonum with blade count incremented by 1
     /// geometrically equivalent to rotating by π/2
     ///
@@ -396,20 +380,6 @@ impl Geonum {
         let angle_diff =
             target_axis_angle - (self.angle.grade() as f64 * PI / 2.0 + self.angle.value());
         self.length * angle_diff.cos()
-    }
-
-    /// projects this geometric number onto a specified dimension
-    /// enables querying any dimension without predefined spaces
-    ///
-    /// # arguments
-    /// * `dimension_index` - target dimension to project onto
-    ///
-    /// # returns
-    /// scalar projection component in the specified dimension
-    pub fn project_to_dimension(&self, dimension_index: usize) -> f64 {
-        let target_axis_angle = (dimension_index as f64) * (PI / 2.0);
-        let current_total_angle = (self.blade as f64) * (PI / 2.0) + self.angle;
-        self.length * (target_axis_angle - current_total_angle).cos()
     }
 
     /// computes the wedge product of two geometric numbers
@@ -1686,32 +1656,52 @@ mod tests {
     }
 
     #[test]
-    fn it_projects_to_arbitrary_dimensions() {
-        // test the new project_to_dimension method
-        let geonum = Geonum {
-            length: 2.0,
-            angle: PI / 4.0, // 45 degrees
-            blade: 1,
-        };
+    fn it_creates_dimension_geonums() {
+        // test create_dimension for various dimensions
 
-        // project onto dimension 0 (x-axis)
-        let proj_0 = geonum.project_to_dimension(0);
-        // compute expected: length * cos(0 - (1 * PI/2 + PI/4)) = 2 * cos(-3PI/4)
-        let expected_0 = 2.0 * (0.0 - (PI / 2.0 + PI / 4.0)).cos();
-        assert!((proj_0 - expected_0).abs() < EPSILON);
+        // dimension 0 (x-axis)
+        let dim0 = Geonum::create_dimension(2.0, 0);
+        assert_eq!(dim0.length, 2.0);
+        assert_eq!(dim0.angle.blade(), 0);
+        assert!(dim0.angle.value().abs() < EPSILON);
 
-        // project onto dimension 1 (y-axis at PI/2)
-        let proj_1 = geonum.project_to_dimension(1);
-        let expected_1 = 2.0 * (PI / 2.0 - (PI / 2.0 + PI / 4.0)).cos();
-        assert!((proj_1 - expected_1).abs() < EPSILON);
+        // dimension 1 (y-axis)
+        let dim1 = Geonum::create_dimension(3.0, 1);
+        assert_eq!(dim1.length, 3.0);
+        assert_eq!(dim1.angle.blade(), 1);
+        assert!(dim1.angle.value().abs() < EPSILON);
 
-        // test high dimensional projection (dimension 1000)
-        let proj_1000 = geonum.project_to_dimension(1000);
-        let expected_1000 = 2.0 * ((1000.0 * PI / 2.0) - (PI / 2.0 + PI / 4.0)).cos();
-        assert!(
-            proj_1000.is_finite(),
-            "projection to dimension 1000 is finite"
-        );
-        assert!((proj_1000 - expected_1000).abs() < EPSILON);
+        // dimension 2 (z-axis)
+        let dim2 = Geonum::create_dimension(1.5, 2);
+        assert_eq!(dim2.length, 1.5);
+        assert_eq!(dim2.angle.blade(), 2);
+        assert!(dim2.angle.value().abs() < EPSILON);
+
+        // high dimension (dimension 1000)
+        let dim1000 = Geonum::create_dimension(5.0, 1000);
+        assert_eq!(dim1000.length, 5.0);
+        assert_eq!(dim1000.angle.blade(), 1000);
+        assert!(dim1000.angle.value().abs() < EPSILON);
+
+        // verify orthogonality between dimensions
+        let x = Geonum::create_dimension(1.0, 0);
+        let y = Geonum::create_dimension(1.0, 1);
+        assert!(x.is_orthogonal(&y), "x and y axes are orthogonal");
+
+        // verify angle calculation
+        // dimension_index * π/2 should give the total angle
+        let dim3 = Geonum::create_dimension(1.0, 3);
+        // 3 * π/2 = 3π/2, which is blade=3, value=0
+        assert_eq!(dim3.angle.blade(), 3);
+        assert!(dim3.angle.value().abs() < EPSILON);
+
+        // test that create_dimension produces unit-length basis vectors when length=1
+        let basis_vectors: Vec<_> = (0..4).map(|i| Geonum::create_dimension(1.0, i)).collect();
+
+        for (i, basis) in basis_vectors.iter().enumerate() {
+            assert_eq!(basis.length, 1.0);
+            assert_eq!(basis.angle.blade(), i);
+            assert!(basis.angle.value().abs() < EPSILON);
+        }
     }
 }
