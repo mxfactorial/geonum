@@ -34,10 +34,12 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 
 ```rs
 /// a geometric number
-pub struct Geonum {
-    pub length: f64, // multiply
-    pub angle: f64,  // add
-    pub blade: usize // count π/2 angle turns
+struct Geonum {
+    length: f64,      // multiply
+    angle: Angle {    // add
+        blade: usize,     // counts π/2 rotations and enables projection
+        value: f64        // angle within current π/2 segment [0, π/2)
+    }
 }
 ```
 
@@ -97,6 +99,8 @@ geonum performs all major multivector operations with exceptional efficiency in 
 - dot product, wedge product, geometric product
 - inverse, division, normalization
 - million-dimension geometric algebra with O(1) complexity
+- conformal geometric algebra without 32-component vectors
+- projective geometric algebra without homogeneous coordinates
 - multivector support and trivector operations
 - rotations, reflections, projections, rejections
 - exponential, interior product, dual operations
@@ -105,15 +109,14 @@ geonum performs all major multivector operations with exceptional efficiency in 
 - anti-commutator product
 - grade involution and clifford conjugate
 - grade extraction
-- section for pseudoscalar (extracting components for which a given pseudoscalar is the pseudoscalar)
+- duality operations without pseudoscalars (blade arithmetic replaces I = e₁∧...∧eₙ)
 - square root operation for multivectors
 - undual operation (complement to the dual operation)
 - regressive product (alternative method for computing the meet of subspaces)
 - automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
-- transforms category theory abstractions into simple angle transformations
-- unifies discrete and continuous math through a common geometric framework
-- provides physical geometric interpretations for abstract mathematical concepts
-- automates away unnecessary mathematical formalism using length-angle representation
+- replaces category theory abstractions with angle relationships
+- unifies discrete and continuous operations through angle arithmetic
+- eliminates abstract mathematical formalism with geometric operations
 - enables scaling precision in statistical modeling through direct angle quantization
 - supports time evolution via simple angle rotation (angle += energy * time)
 - provides statistical methods for angle distributions (arithmetic/circular means, variance, expectation values)
@@ -122,7 +125,7 @@ geonum performs all major multivector operations with exceptional efficiency in 
 - replaces tensor-based neural network operations with direct angle transformations
 - enables scaling to millions of dimensions with constant-time ML computations
 - eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
-- angle-encoded data paths for O(1) structure traversal vs O(depth) conventional methods
+- manifold navigation through angle-encoded paths
 - optical transformations via direct angle operations (refraction, aberration, OTF)
 - Manifold trait for collection operations with lens-like path transformations
 
@@ -227,8 +230,6 @@ geometric numbers build dimensions by rotating—not stacking
 
     read tests/dimension_test.rs
 
-    read tests/multivector_test.rs
-
     read tests/machine_learning_test.rs
 
     read tests/em_field_theory_test.rs
@@ -236,8 +237,6 @@ geometric numbers build dimensions by rotating—not stacking
     run 'grep "pub fn" ./src/angle.rs' to learn the angle module
 
     run 'grep "pub fn" ./src/geonum_mod.rs' to learn the geonum module
-
-    run 'grep "pub fn" ./src/multivector.rs' to learn the multivector module
 
     now run 'touch tests/my_test.rs'
 
