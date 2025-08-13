@@ -39,8 +39,8 @@ fn it_operates_on_high_dimensional_multivectors() {
     assert!(!reflected.0.is_empty());
 
     // step 4: compute dual of trivector and test result
-    let pseudo = Multivector(vec![Geonum::new_with_blade(1.0, 1000, 1.0, 2.0)]); // dummy pseudoscalar with high dimension
-    let dual = t123_mv.dual(&pseudo);
+    // geonum doesn't need pseudoscalars - dual is direct π rotation
+    let dual = t123_mv.dual();
     assert!(dual.0.iter().any(|g| g.length > 0.0));
 
     // step 5: rotate a vector using bivector rotor
