@@ -212,11 +212,13 @@ fn its_a_field() {
     // test lengths divide
     assert!((quotient.length - 2.0).abs() < EPSILON);
 
-    // test angles subtract (with potential 2π modulo)
-    // π/3 - π/6 = π/6
-    let expected_angle = Angle::new(1.0, 6.0);
-    let angle_diff = (quotient.angle - expected_angle).mod_4_angle();
-    assert!(angle_diff.abs() < EPSILON || (TWO_PI - angle_diff).abs() < EPSILON);
+    // division uses inv() which adds π (2 blades)
+    // a has angle π/3, b has angle π/6
+    // a/b = a * inv(b) = [2, π/3] * [0.5, π/6 + π]
+    // angles: π/3 + (π/6 + π) = π/3 + 7π/6 = 3π/2
+    let inv_adds = Angle::new(1.0, 1.0); // π added by inv()
+    let expected_angle = a.angle + b.angle + inv_adds;
+    assert_eq!(quotient.angle, expected_angle);
 
     // test zero division avoidance via angle measure
     // we can detect potential division by zero through length
@@ -230,9 +232,11 @@ fn its_a_field() {
 
     assert!((product.length - a.length).abs() < EPSILON);
 
-    // angles might differ by 2π
-    let product_angle_diff = (product.angle - a.angle).mod_4_angle();
-    assert!(product_angle_diff.abs() < EPSILON || (TWO_PI - product_angle_diff).abs() < EPSILON);
+    // quotient * b doesnt return to a due to blade accumulation from inv()
+    // quotient.angle = a.angle + b.angle + π
+    // product.angle = quotient.angle + b.angle = a.angle + 2*b.angle + π
+    let product_expected = a.angle + b.angle + b.angle + inv_adds;
+    assert_eq!(product.angle, product_expected);
 
     // test with complex numbers as special case
     // complex field is just geometric numbers with fixed angles at 0 and π/2

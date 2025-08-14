@@ -399,7 +399,9 @@ fn its_a_rational_number() {
 
     // test result is 3/4 = 0.75
     assert!((division.length - 0.75).abs() < EPSILON);
-    assert_eq!(division.angle, Angle::new(0.0, 1.0));
+    // division uses inv() which adds π (2 blades)
+    let expected_angle = Angle::new(0.0, 1.0) + Angle::new(1.0, 1.0); // 0 + π = blade 2
+    assert_eq!(division.angle, expected_angle);
 
     // test addition of fractions (3/4 + 1/2)
     let rational2 = Multivector(vec![
@@ -677,8 +679,9 @@ fn its_a_quadrature() {
 
     // the length is 1/3
     assert!((result.length - exact_result).abs() < EPSILON);
-    // and the angle is at blade 3 (3π/2) from the integration rotation
-    assert_eq!(result.angle.blade(), 3);
+    // integrate() adds 3 blades, so blade 0 → blade 3 for x³/3
+    // then another integrate() adds 3 more: blade 3 → blade 5
+    assert_eq!(result.angle.blade(), 5);
 
     // demonstrate the quadrature relationship between a function and its derivative
     let x = Geonum::new(0.5, 0.0, 1.0); // Sample point x = 0.5
@@ -904,10 +907,14 @@ fn its_a_eulers_identity() {
     let one = Geonum::new(1.0, 0.0, 1.0);
     let multiplicative_inverse = one / e_to_ipi;
 
-    // verify the multiplicative inverse equals the original (self-inverse)
+    // verify the multiplicative inverse
     // [1, π] is its own inverse because (-1)^(-1) = -1
+    // but in history-preserving, forward-only geometry,
+    // inv() explicitly adds a π rotation instead of obscuring
+    // it with a scalar sign flip: [1, π].inv() = [1, 2π]
     assert_eq!(multiplicative_inverse.length, e_to_ipi.length);
-    assert_eq!(multiplicative_inverse.angle, e_to_ipi.angle);
+    let expected_inv_angle = e_to_ipi.angle + Angle::new(1.0, 1.0); // π + π = 2π (blade 4)
+    assert_eq!(multiplicative_inverse.angle, expected_inv_angle);
 
     // STEP 5: Verify the multiplicative inverse property
     // [1, π] × [1, π] = [1×1, π+π] = [1, 2π] = [1, 0] = 1

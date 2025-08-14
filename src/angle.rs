@@ -75,7 +75,8 @@ impl Angle {
         // remainder within current π/2 segment
         let value = normalized_total % quarter_pi;
 
-        Self { value, blade }
+        let angle = Self { value, blade };
+        angle.normalize_boundaries()
     }
 
     /// creates a new angle with additional blade count
@@ -105,17 +106,12 @@ impl Angle {
     /// angle struct representing the direction from origin to (x, y)
     pub fn new_from_cartesian(x: f64, y: f64) -> Self {
         let angle_radians = y.atan2(x);
-        // atan2 returns radians directly, not pi radians
-        // need to normalize to positive angle first
-        let normalized = if angle_radians < 0.0 {
-            angle_radians + 2.0 * PI
-        } else {
-            angle_radians
-        };
-        // decompose into blade and value
-        let blade = (normalized / (PI / 2.0)) as usize;
-        let value = normalized % (PI / 2.0);
-        Self { blade, value }
+        // convert radians to pi_radians for Angle::new
+        // which handles all normalization and decomposition
+        let pi_radians = angle_radians / PI;
+        // Angle::new expects (pi_radians * divisor, divisor)
+        // so for direct pi_radians, use divisor = 1
+        Self::new(pi_radians, 1.0)
     }
 
     /// rotates this angle by a given amount
@@ -150,6 +146,17 @@ impl Angle {
     ///
     /// # returns
     /// geometric algebra grade: 0=scalar, 1=vector, 2=bivector, 3=trivector
+    ///
+    /// all geometric objects exhibit one of 4 behavioral patterns that repeat with π/2 periodicity
+    /// * Grade 0 behavior (scalar-like): blades 0, 4, 8, 12, 1000, ...
+    /// * Grade 1 behavior (vector-like): blades 1, 5, 9, 13, 1001, ...
+    /// * Grade 2 behavior (bivector-like): blades 2, 6, 10, 14, 1002, ...
+    /// * Grade 3 behavior (trivector-like): blades 3, 7, 11, 15, 1003, ...
+    ///
+    /// this 4-fold periodicity emerges from the fundamental quadrature relationship
+    /// sin(θ+π/2) = cos(θ), which creates a natural cycle through geometric grades
+    /// the blade count preserves full dimensional information while the grade
+    /// determines the geometric behavior (how it transforms under operations)
     pub fn grade(&self) -> usize {
         self.mod_4_blade()
     }
@@ -182,6 +189,66 @@ impl Angle {
         self.blade % 4
     }
 
+    /// returns this angle with blade count reset to base for its grade
+    ///
+    /// blade accumulation is geometrically primitive - operations like reflection
+    /// fundamentally work through blade arithmetic (2 + 2 = 4 blades for double
+    /// reflection). however, control loops and iterative algorithms may need
+    /// geometric consistency without unbounded blade growth
+    ///
+    /// this method preserves the angles grade (blade % 4) while resetting the
+    /// blade count to its minimum value for that grade:
+    /// - grade 0 (scalar): blade = 0
+    /// - grade 1 (vector): blade = 1  
+    /// - grade 2 (bivector): blade = 2
+    /// - grade 3 (trivector): blade = 3
+    ///
+    /// # example
+    /// ```
+    /// use geonum::Angle;
+    /// let angle = Angle::new_with_blade(1000, 1.0, 4.0); // blade 1000, grade 0
+    /// let normalized = angle.base_angle(); // blade 0, grade 0 (same angle)
+    /// ```
+    pub fn base_angle(&self) -> Angle {
+        Angle {
+            blade: self.grade(), // reset to base blade for grade
+            value: self.value,   // preserve fractional angle
+        }
+    }
+
+    /// normalizes this angle when value is at or exceeds π/2 boundaries
+    fn normalize_boundaries(&self) -> Self {
+        let quarter_pi = PI / 2.0;
+
+        // handle floating point precision near π/2
+        const EPSILON: f64 = 1e-10;
+        if (self.value - quarter_pi).abs() < EPSILON {
+            return Self {
+                blade: self.blade + 1,
+                value: 0.0,
+            };
+        }
+
+        // handle values >= π/2
+        if self.value >= quarter_pi {
+            let additional_blades = (self.value / quarter_pi) as usize;
+            let final_value = self.value % quarter_pi;
+            // check again for precision at boundary after modulo
+            if (final_value - quarter_pi).abs() < EPSILON {
+                return Self {
+                    blade: self.blade + additional_blades + 1,
+                    value: 0.0,
+                };
+            }
+            return Self {
+                blade: self.blade + additional_blades,
+                value: final_value,
+            };
+        }
+
+        *self
+    }
+
     /// internal geometric addition preserving blade progression and π/2 boundary invariants
     fn geometric_add(&self, other: &Self) -> Self {
         // step 1: add full blade counts (preserve semantic meaning)
@@ -207,20 +274,13 @@ impl Angle {
             };
         }
 
-        // step 3: handle π/2 boundary crossings that change geometric grade
-        // when value exceeds π/2, we cross into the next geometric grade
-        // multiple crossings possible when both angles near π/2 limit
-        let additional_crossings = (total_value / quarter_pi) as usize;
-        let final_value = total_value % quarter_pi;
+        // step 3: create angle with combined blade and value, then normalize
+        let combined = Self {
+            blade: total_blade,
+            value: total_value,
+        };
 
-        // step 4: compute final blade count including boundary crossings
-        // preserves full semantic blade count
-        let final_blade = total_blade + additional_crossings;
-
-        Self {
-            blade: final_blade,
-            value: final_value,
-        }
+        combined.normalize_boundaries()
     }
 
     /// internal geometric subtraction preserving blade progression and π/2 boundary invariants
@@ -245,7 +305,7 @@ impl Angle {
         }
 
         // handle negative value: borrow from blade count
-        let (final_blade, final_value) = if value_diff < 0.0 {
+        let (intermediate_blade, intermediate_value) = if value_diff < 0.0 {
             let quarter_pi = PI / 2.0;
             let final_value = value_diff + quarter_pi;
             let final_blade = blade_diff - 1;
@@ -255,17 +315,20 @@ impl Angle {
         };
 
         // handle negative blade count: normalize to positive
-        let normalized_blade = if final_blade < 0 {
-            let four_rotations = ((-final_blade + 3) / 4) * 4; // round up to multiple of 4
-            (final_blade + four_rotations) as usize
+        let normalized_blade = if intermediate_blade < 0 {
+            let four_rotations = ((-intermediate_blade + 3) / 4) * 4; // round up to multiple of 4
+            (intermediate_blade + four_rotations) as usize
         } else {
-            final_blade as usize
+            intermediate_blade as usize
         };
 
-        Self {
+        // create angle and normalize boundaries
+        let result = Self {
             blade: normalized_blade,
-            value: final_value,
-        }
+            value: intermediate_value,
+        };
+
+        result.normalize_boundaries()
     }
 
     /// returns the angle offset for the current grade
@@ -322,61 +385,34 @@ impl Angle {
         blade_diff == 2 && values_match
     }
 
-    /// computes the rotation needed for the dual operation
+    /// dual operation that adds π rotation
     ///
-    /// # arguments
-    /// * `pseudoscalar_blade` - the blade count of the pseudoscalar
+    /// adds 2 to blade count (π rotation) flattening the traditional GA grade map
+    /// from n+1 grade levels (0 through n) to just 2 involutive pairs:
+    /// - pair 1: grade 0 ↔ grade 2 (scalar ↔ bivector)
+    /// - pair 2: grade 1 ↔ grade 3 (vector ↔ trivector)
     ///
-    /// # returns
-    /// the angle to rotate by for the dual
-    pub fn dual_rotation_for_blade(&self, pseudoscalar_blade: usize) -> Angle {
-        // dual maps grade k to grade (pseudo_grade - k) mod 4
-        // we need to rotate within the current 4-blade cycle
-
-        let current_grade = self.mod_4_blade();
-        let pseudo_grade = pseudoscalar_blade % 4;
-
-        // compute target grade
-        let target_grade = (pseudo_grade + 4 - current_grade) % 4;
-
-        // compute minimal rotation within current cycle
-        // from current_grade to target_grade
-        let grade_diff = (target_grade + 4 - current_grade) % 4;
-
-        // return rotation angle
-        Angle::new(grade_diff as f64, 2.0)
+    /// this works in any dimension because grades cycle modulo 4
+    /// so grade 1000000 in million-D space is just grade 0 (1000000 % 4 = 0)
+    /// eliminating dimension-specific k→(n-k) duality formulas
+    pub fn dual(&self) -> Angle {
+        // add π rotation (2 blade counts)
+        *self + Angle::new_with_blade(2, 0.0, 1.0)
     }
 
-    /// computes the rotation needed for the undual operation
+    /// computes the undual operation (inverse of dual)
     ///
-    /// # arguments
-    /// * `pseudoscalar_blade` - the blade count of the pseudoscalar
-    ///
-    /// # returns
-    /// the angle to rotate by for the undual (inverse dual)
-    pub fn undual_rotation_for_blade(&self, pseudoscalar_blade: usize) -> Angle {
-        // undual reverses the dual operation
-        // we need to compute the forward rotation that brings us back
+    /// in geonum's 4-cycle blade structure, undual is the same as dual
+    /// because the grade mapping 0↔0, 1↔3, 2↔2, 3↔1 is self-inverse
+    pub fn undual(&self) -> Angle {
+        self.dual()
+    }
 
-        let current_grade = self.mod_4_blade();
-        let pseudo_grade = pseudoscalar_blade % 4;
-
-        // find what grade we came from before dual
-        // if dual maps original → current via (pseudo - original) % 4 = current
-        // then original = (pseudo - current) % 4
-        let original_grade = (pseudo_grade + 4 - current_grade) % 4;
-
-        // now compute forward rotation from current back to original
-        // we want the minimal positive rotation
-        let forward_rotation = if original_grade >= current_grade {
-            // simple forward rotation within same cycle
-            original_grade - current_grade
-        } else {
-            // need to go forward through a full cycle
-            (4 - current_grade) + original_grade
-        };
-
-        Angle::new(forward_rotation as f64, 2.0)
+    /// conjugate for complex representation: negates the angle
+    /// if angle represents e^(iθ), conjugate represents e^(-iθ)
+    /// negation is adding π
+    pub fn conjugate(&self) -> Angle {
+        *self + Angle::new(1.0, 1.0)
     }
 
     /// returns the angle in radians within [0, 2π)
@@ -389,6 +425,15 @@ impl Angle {
     /// angle in radians as f64 within [0, 2π)
     pub fn mod_4_angle(&self) -> f64 {
         self.mod_4_blade() as f64 * PI / 2.0 + self.value
+    }
+
+    /// negates this angle by adding π rotation (2 blades)
+    ///
+    /// negation is forward rotation by 180 degrees, not backwards motion
+    /// this fundamental operation appears throughout geometry as sign flips,
+    /// vector opposites, and complex conjugation
+    pub fn negate(&self) -> Angle {
+        *self + Angle::new(1.0, 1.0) // add π (2 blades)
     }
 }
 
@@ -998,83 +1043,84 @@ mod tests {
     }
 
     #[test]
-    fn it_computes_dual_rotation_for_blade() {
-        // test dual rotations for 2D (pseudoscalar blade 2)
-        let e1 = Angle::new(0.0, 1.0); // blade 0
-        let rotation_e1 = e1.dual_rotation_for_blade(2);
-        assert_eq!(rotation_e1.blade(), 2); // rotates by π (grade 0 to grade 2)
-        assert!(rotation_e1.value().abs() < EPSILON);
+    fn it_computes_dual_angle() {
+        // test dual operation using π-rotation (adds 2 blades)
+        // this creates grade transformations: 0→2, 1→3, 2→0, 3→1
 
-        let e2 = Angle::new(1.0, 2.0); // blade 1
-        let rotation_e2 = e2.dual_rotation_for_blade(2);
-        assert_eq!(rotation_e2.blade(), 0); // no rotation (grade 1 stays at grade 1)
-        assert!(rotation_e2.value().abs() < EPSILON);
+        // scalar (blade 0) → bivector (blade 2)
+        let scalar = Angle::new(0.0, 1.0); // blade 0
+        let dual_scalar = scalar.dual();
+        assert_eq!(dual_scalar.grade(), 2);
+        assert_eq!(dual_scalar.blade(), 2); // blade 0 + 2 = blade 2
 
+        // vector (blade 1) → trivector (blade 3)
+        let vector = Angle::new(1.0, 2.0); // blade 1
+        let dual_vector = vector.dual();
+        assert_eq!(dual_vector.grade(), 3);
+        assert_eq!(dual_vector.blade(), 3); // blade 1 + 2 = blade 3
+
+        // bivector (blade 2) → scalar (blade 4 = 0 mod 4)
         let bivector = Angle::new(2.0, 2.0); // blade 2
-        let rotation_biv = bivector.dual_rotation_for_blade(2);
-        // bivector to scalar: grade 2 to grade 0
-        // target = (2 - 2) % 4 = 0, rotation = (0 - 2 + 4) % 4 = 2
-        assert_eq!(rotation_biv.blade() % 4, 2); // π rotation
-        assert!(rotation_biv.value().abs() < EPSILON);
+        let dual_bivector = bivector.dual();
+        assert_eq!(dual_bivector.grade(), 0);
+        assert_eq!(dual_bivector.blade(), 4); // blade 2 + 2 = blade 4
 
-        // test 3D (pseudoscalar blade 3)
-        let e1_3d = Angle::new(0.0, 1.0); // blade 0
-        let rotation_3d = e1_3d.dual_rotation_for_blade(3);
-        // in 3D: e1 → e2∧e3 (blade 0 → blade 3)
-        assert_eq!(rotation_3d.blade(), 3);
+        // trivector (blade 3) → vector (blade 5 = 1 mod 4)
+        let trivector = Angle::new(3.0, 2.0); // blade 3
+        let dual_trivector = trivector.dual();
+        assert_eq!(dual_trivector.grade(), 1);
+        assert_eq!(dual_trivector.blade(), 5); // blade 3 + 2 = blade 5
 
-        // test higher dimensions - verify full transformation
-        let e1_10d = Angle::new(0.0, 1.0); // blade 0 (grade 0)
-        let rotation_10d = e1_10d.dual_rotation_for_blade(10); // pseudoscalar blade 10
+        // prove involution property: dual(dual(x)) returns to original grade
+        let scalar_double = scalar.dual().dual();
+        assert_eq!(scalar_double.grade(), scalar.grade());
+        assert_eq!(scalar_double.value(), scalar.value());
 
-        // apply the rotation to get the dual
-        let dual_e1_10d = e1_10d + rotation_10d;
+        let vector_double = vector.dual().dual();
+        assert_eq!(vector_double.grade(), vector.grade());
+        assert_eq!(vector_double.value(), vector.value());
 
-        // in 10D with pseudoscalar grade 2, e1 (grade 0) maps to grade 2
-        assert_eq!(dual_e1_10d.blade(), 2); // blade 0 + 2 = blade 2
-        assert_eq!(dual_e1_10d.grade(), 2); // grade 2 (bivector)
+        let bivector_double = bivector.dual().dual();
+        assert_eq!(bivector_double.grade(), bivector.grade());
+        assert_eq!(bivector_double.value(), bivector.value());
 
-        // test with a vector in 10D
-        let e3_10d = Angle::new(5.0, 2.0); // blade 5 (grade 1)
-        let rotation_e3 = e3_10d.dual_rotation_for_blade(10);
-        let dual_e3_10d = e3_10d + rotation_e3;
+        let trivector_double = trivector.dual().dual();
+        assert_eq!(trivector_double.grade(), trivector.grade());
+        assert_eq!(trivector_double.value(), trivector.value());
 
-        // grade 1 with pseudoscalar grade 2 maps to grade 1
-        assert_eq!(dual_e3_10d.blade(), 5); // stays at blade 5
-        assert_eq!(dual_e3_10d.grade(), 1); // stays at grade 1
+        // test high blade numbers still follow the pattern
+        let high_blade = Angle::new_with_blade(1001, 0.0, 1.0); // blade 1001, grade 1
+        let dual_high = high_blade.dual();
+        assert_eq!(dual_high.grade(), 3); // grade 1 → grade 3
+        assert_eq!(dual_high.blade(), 1003); // blade 1001 + 2 = blade 1003
+
+        // π-rotation dual creates grade pairs: 0↔2, 1↔3
+        // applying twice adds 4 blades (2π rotation) returning to original grade
     }
 
     #[test]
-    fn it_computes_undual_rotation_for_blade() {
-        // test undual rotation computation
-        // note: undual in geonum_mod.rs directly computes original blade
-        // this tests the angle method which computes forward rotation
-
-        // 2D case: after dual, compute rotation to return
-        let after_dual = Angle::new(3.0, 2.0); // blade 3 (grade 3)
-        let pseudo_2d = 4; // blade 4 (grade 0 pseudoscalar)
-
-        // undual rotation to get back to grade 1
-        let undual_rot = after_dual.undual_rotation_for_blade(pseudo_2d);
-
-        // from grade 3 to grade 1 requires forward rotation
-        // original grade = (0 - 3) % 4 = 1
-        // forward rotation = (4 - 3) + 1 = 2
-        assert_eq!(undual_rot.blade(), 2);
-        assert!(undual_rot.value().abs() < EPSILON);
-
-        // test different grades
-        let test_cases = vec![
-            (0, 0), // grade 0 stays at grade 0
-            (1, 2), // grade 1 came from grade 3, needs 2 forward to reach it
-            (2, 0), // grade 2 came from grade 2, needs 0 forward (stays same)
-            (3, 2), // grade 3 came from grade 1, needs 2 forward to reach it
+    fn it_proves_undual_equals_dual() {
+        // undual is the same as dual because the k → (4-k) % 4 mapping is self-inverse
+        let test_angles = vec![
+            Angle::new(0.0, 1.0),                 // grade 0
+            Angle::new(1.0, 2.0),                 // grade 1
+            Angle::new(2.0, 2.0),                 // grade 2
+            Angle::new(3.0, 2.0),                 // grade 3
+            Angle::new_with_blade(100, 1.0, 3.0), // high blade
         ];
 
-        for (start_grade, expected_rotation) in test_cases {
-            let angle = Angle::new(start_grade as f64, 2.0);
-            let rotation = angle.undual_rotation_for_blade(0); // grade 0 pseudoscalar
-            assert_eq!(rotation.blade(), expected_rotation);
+        for angle in test_angles {
+            let dual = angle.dual();
+            let undual = angle.undual();
+
+            // dual and undual are the same operation
+            assert_eq!(dual.blade(), undual.blade());
+            assert_eq!(dual.value(), undual.value());
+
+            // applying dual twice returns to original grade
+            let double_dual = angle.dual().dual();
+            assert_eq!(double_dual.grade(), angle.grade());
+            assert_eq!(double_dual.value(), angle.value());
         }
     }
 
@@ -1152,5 +1198,268 @@ mod tests {
 
         let angle9 = Angle::new(1001.0, 2.0); // blade 1001 -> blade 1
         assert!((angle9.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+    }
+
+    #[test]
+    fn it_adds_two_blades_when_dualizing_bivector() {
+        // π-rotation dual adds 2 blades
+
+        let bivector_angle = Angle::new_with_blade(2, 0.0, 1.0); // blade 2, grade 2
+        let dual_angle = bivector_angle.dual();
+
+        // bivector → scalar (grade 2 → grade 0)
+        assert_eq!(dual_angle.grade(), 0);
+
+        // blade 2 + 2 = blade 4
+        assert_eq!(dual_angle.blade(), 4);
+    }
+
+    #[test]
+    fn it_negates_angle() {
+        // test angle negation (complex conjugation)
+        // if angle represents e^(iθ), negated angle represents e^(-iθ)
+
+        // test π/3 angle
+        let angle = Angle::new(1.0, 3.0); // π/3
+
+        // negate by subtracting from zero
+        let zero = Angle::new(0.0, 1.0);
+        let negated = zero - angle;
+
+        // -π/3 = 2π - π/3 = 5π/3
+        let expected_neg = Angle::new(5.0, 3.0); // 5π/3
+        assert_eq!(negated, expected_neg);
+
+        // test with π/2 (blade 1)
+        let right_angle = Angle::new(1.0, 2.0); // π/2
+        let neg_right = zero - right_angle;
+
+        // -π/2 = 2π - π/2 = 3π/2
+        let expected_neg_right = Angle::new(3.0, 2.0); // 3π/2
+        assert_eq!(neg_right, expected_neg_right);
+
+        // test full rotation
+        let full = Angle::new(2.0, 1.0); // 2π
+        let neg_full = zero - full;
+
+        // -2π = 0
+        assert_eq!(neg_full, zero);
+
+        // test conjugate method adds π (forward rotation)
+        let angle_conj = angle.conjugate();
+        assert_eq!(
+            angle_conj.blade() - angle.blade(),
+            2,
+            "conjugate adds 2 blades"
+        );
+
+        let right_conj = right_angle.conjugate();
+        assert_eq!(
+            right_conj.blade() - right_angle.blade(),
+            2,
+            "conjugate adds π"
+        );
+    }
+
+    #[test]
+    fn it_resets_angle_blade_to_minimum() {
+        // test grade preservation with blade reset
+        let angle_high_blade = Angle::new_with_blade(1000, 1.0, 4.0); // blade 1000, grade 0
+        let normalized = angle_high_blade.base_angle();
+        assert_eq!(normalized.blade(), 0, "grade 0 resets to blade 0");
+        assert_eq!(
+            normalized.value(),
+            angle_high_blade.value(),
+            "angle value preserved"
+        );
+
+        // test each grade resets to minimum blade
+        let grade1 = Angle::new_with_blade(101, 0.0, 1.0); // blade 101, grade 1
+        assert_eq!(grade1.base_angle().blade(), 1, "grade 1 resets to blade 1");
+
+        let grade2 = Angle::new_with_blade(102, 0.0, 1.0); // blade 102, grade 2
+        assert_eq!(grade2.base_angle().blade(), 2, "grade 2 resets to blade 2");
+
+        let grade3 = Angle::new_with_blade(103, 0.0, 1.0); // blade 103, grade 3
+        assert_eq!(grade3.base_angle().blade(), 3, "grade 3 resets to blade 3");
+
+        // test already minimal blade unchanged
+        let minimal = Angle::new(1.0, 2.0); // π/2, blade 1
+        assert_eq!(minimal.base_angle(), minimal, "minimal blade unchanged");
+
+        // test that base_angle and dual operations have consistent grade results
+        let high_blade = Angle::new_with_blade(101, 1.0, 4.0); // blade 101, grade 1
+        let dual_then_base = high_blade.dual().base_angle();
+        let base_then_dual = high_blade.base_angle().dual();
+
+        // both should end at same grade (operations dont commute in blade, but do in grade)
+        assert_eq!(
+            dual_then_base.grade(),
+            base_then_dual.grade(),
+            "both orders reach same grade"
+        );
+    }
+
+    #[test]
+    fn it_negates_angle_with_forward_rotation() {
+        // test basic negation adds π (2 blades)
+        let angle = Angle::new(1.0, 4.0); // π/4
+        let negated = angle.negate();
+
+        assert_eq!(
+            negated.blade() - angle.blade(),
+            2,
+            "negation adds 2 blades (π rotation)"
+        );
+        assert_eq!(negated.value(), angle.value(), "fractional angle preserved");
+
+        // test double negation adds 4 blades (2π rotation)
+        let double_neg = negated.negate();
+        assert_eq!(
+            double_neg.blade() - angle.blade(),
+            4,
+            "double negation adds 4 blades"
+        );
+
+        // after base_angle(), double negation returns to original grade
+        assert_eq!(
+            double_neg.base_angle().grade(),
+            angle.grade(),
+            "double negation preserves grade after reset"
+        );
+
+        // test negation of each grade
+        let scalar = Angle::new_with_blade(0, 1.0, 3.0); // grade 0
+        let vector = Angle::new_with_blade(1, 1.0, 3.0); // grade 1
+        let bivector = Angle::new_with_blade(2, 1.0, 3.0); // grade 2
+        let trivector = Angle::new_with_blade(3, 1.0, 3.0); // grade 3
+
+        assert_eq!(scalar.negate().blade(), 2, "scalar → bivector (0+2=2)");
+        assert_eq!(vector.negate().blade(), 3, "vector → trivector (1+2=3)");
+        assert_eq!(
+            bivector.negate().blade(),
+            4,
+            "bivector → next scalar (2+2=4)"
+        );
+        assert_eq!(
+            trivector.negate().blade(),
+            5,
+            "trivector → next vector (3+2=5)"
+        );
+
+        // test grade transformations under negation
+        assert_eq!(
+            scalar.negate().grade(),
+            2,
+            "scalar negates to bivector grade"
+        );
+        assert_eq!(
+            vector.negate().grade(),
+            3,
+            "vector negates to trivector grade"
+        );
+        assert_eq!(
+            bivector.negate().grade(),
+            0,
+            "bivector negates to scalar grade"
+        );
+        assert_eq!(
+            trivector.negate().grade(),
+            1,
+            "trivector negates to vector grade"
+        );
+
+        // test negation preserves forward-only rotation principle
+        let original = Angle::new(3.0, 4.0); // 3π/4
+        let neg_once = original.negate();
+        let neg_twice = neg_once.negate();
+
+        // blades only accumulate forward, never backwards
+        assert!(
+            neg_once.blade() > original.blade(),
+            "first negation increases blade"
+        );
+        assert!(
+            neg_twice.blade() > neg_once.blade(),
+            "second negation increases blade further"
+        );
+
+        // test negation at blade boundaries
+        let at_boundary = Angle::new(1.0, 2.0); // exactly π/2, blade 1
+        let neg_boundary = at_boundary.negate();
+        assert_eq!(
+            neg_boundary.blade(),
+            3,
+            "negation from blade 1 goes to blade 3"
+        );
+        assert_eq!(
+            neg_boundary.value(),
+            0.0,
+            "value at exact boundary becomes 0"
+        );
+    }
+
+    #[test]
+    fn it_normalizes_angles_exceeding_pi_2_to_next_blade() {
+        // geometric_sub now normalizes values >= π/2 to next blade
+
+        let angle1 = Angle::new(0.0, 1.0); // 0 radians
+        let angle2 = Angle::new(1.0, 2.0); // π/2 radians (already normalized to blade 1)
+
+        let diff = angle2 - angle1;
+
+        // π/2 difference is blade 1, value 0
+        assert_eq!(diff.blade(), 1, "π/2 difference is blade 1");
+        assert!(diff.value().abs() < 1e-10, "blade 1 has value ~0");
+    }
+
+    #[test]
+    fn test_normalize_boundaries() {
+        use std::f64::consts::PI;
+
+        // test value very close to π/2 normalizes to next blade
+        let angle_near_pi_2 = Angle {
+            blade: 2,
+            value: PI / 2.0 - 1e-11,
+        };
+        let normalized = angle_near_pi_2.normalize_boundaries();
+        assert_eq!(normalized.blade(), 3);
+        assert_eq!(normalized.value(), 0.0);
+
+        // test value exactly π/2 normalizes to next blade
+        let angle_at_pi_2 = Angle {
+            blade: 1,
+            value: PI / 2.0,
+        };
+        let normalized = angle_at_pi_2.normalize_boundaries();
+        assert_eq!(normalized.blade(), 2);
+        assert_eq!(normalized.value(), 0.0);
+
+        // test value > π/2 normalizes blade and reduces value
+        let angle_over_pi_2 = Angle {
+            blade: 0,
+            value: PI * 0.75, // 3π/4
+        };
+        let normalized = angle_over_pi_2.normalize_boundaries();
+        assert_eq!(normalized.blade(), 1);
+        assert!((normalized.value() - PI / 4.0).abs() < 1e-10);
+
+        // test small positive value stays unchanged
+        let angle_small = Angle {
+            blade: 5,
+            value: 0.1,
+        };
+        let normalized = angle_small.normalize_boundaries();
+        assert_eq!(normalized.blade(), 5);
+        assert_eq!(normalized.value(), 0.1);
+
+        // test value that's 2π normalizes to blade 4 value 0
+        let angle_2pi = Angle {
+            blade: 0,
+            value: 2.0 * PI,
+        };
+        let normalized = angle_2pi.normalize_boundaries();
+        assert_eq!(normalized.blade(), 4);
+        assert_eq!(normalized.value(), 0.0);
     }
 }
