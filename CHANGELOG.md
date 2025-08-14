@@ -1,5 +1,15 @@
 # changelog
 
+## 0.7.1 (2025-08-13)
+
+### added
+- projective and conformal geometric algebra test suites
+- dual and forward only geometry tests in dimensions test suite
+
+### changed
+- dual as pi rotation setting involutive grade map
+- gravity as angle correlation in astrophysics test suite
+
 ## 0.7.0 (2025-07-18)
 
 ### added
