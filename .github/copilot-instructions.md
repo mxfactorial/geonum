@@ -25,3 +25,5 @@ to get started developing this project, install rust then git clone https://gith
 except for `cargo bench` which consumes a lot of time, ask to run test commands listed in README.md tests section before finishing a code task
 
 avoid the word "ensure"
+
+avoid saying "you're right" in responses

@@ -61,8 +61,4 @@ jobs:
       - name: install llvm-cov
         run: cargo install cargo-llvm-cov
       - name: run and save coverage
-        run: cargo llvm-cov --lcov --output-path lcov.info
-      - name: publish coverage
-        uses: coverallsapp/github-action@v2
-        with:
-          file: lcov.info
+        run: cargo llvm-cov
