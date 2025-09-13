@@ -20,11 +20,10 @@
 // say goodbye to `∩`
 
 use geonum::*;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 
 // small value for floating-point comparisons
 const EPSILON: f64 = 1e-10;
-const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn its_a_naive_set() {
@@ -44,7 +43,9 @@ fn its_a_naive_set() {
     // test dimension extension vs set membership
     // instead of saying "a ∈ S", we create geometric numbers at standardized angles
     // dimension 0 → angle 0, dimension 1 → angle π/2
-    let elements = Multivector::create_dimension(1.0, &[0, 1]);
+    let dim_0 = Geonum::create_dimension(1.0, 0);
+    let dim_1 = Geonum::create_dimension(1.0, 1);
+    let elements = GeoCollection::from(vec![dim_0, dim_1]);
 
     // test elements in the space
     assert_eq!(elements[0].angle, Angle::new(0.0, 1.0));
@@ -56,7 +57,10 @@ fn its_a_naive_set() {
 
     // test combining dimensions through direct geometric number creation
     // dimension 0 → angle 0, dimension 1 → angle π/2, dimension 2 → angle π
-    let combined_elements = Multivector::create_dimension(1.0, &[0, 1, 2]);
+    let dim_0 = Geonum::create_dimension(1.0, 0);
+    let dim_1 = Geonum::create_dimension(1.0, 1);
+    let dim_2 = Geonum::create_dimension(1.0, 2);
+    let combined_elements = GeoCollection::from(vec![dim_0, dim_1, dim_2]);
     assert_eq!(combined_elements[0].angle, Angle::new(0.0, 1.0));
     assert_eq!(combined_elements[1].angle, Angle::new(1.0, 2.0));
     assert_eq!(combined_elements[2].angle, Angle::new(2.0, 2.0));
@@ -69,7 +73,7 @@ fn its_a_naive_set() {
     assert!(dot_product.length.abs() < EPSILON); // orthogonal = no overlap
 
     // test geometric union as angle combination in multivector
-    let union = Multivector(vec![a, b]);
+    let union = GeoCollection::from(vec![a, b]);
     assert_eq!(union.len(), 2);
 
     // test we measure relationships instead of asserting them
@@ -119,7 +123,7 @@ fn its_a_group() {
     // product is identity (angle 0)
     assert!(
         product.angle.mod_4_angle() < EPSILON
-            || (TWO_PI - product.angle.mod_4_angle()).abs() < EPSILON
+            || (TAU - product.angle.mod_4_angle()).abs() < EPSILON
     );
 }
 
@@ -184,7 +188,7 @@ fn its_a_ring() {
 
     // angles might differ by 2π
     let angle_diff = (left_side.angle - right_side.angle).mod_4_angle();
-    assert!(angle_diff.abs() < EPSILON || (TWO_PI - angle_diff).abs() < EPSILON);
+    assert!(angle_diff.abs() < EPSILON || (TAU - angle_diff).abs() < EPSILON);
 
     // test commutativity as physical rotation invariance
     // for scalars (angle 0 or π), rotation order doesn't matter
@@ -240,17 +244,16 @@ fn its_a_field() {
 
     // test with complex numbers as special case
     // complex field is just geometric numbers with fixed angles at 0 and π/2
-    let complex_a = Multivector(vec![
-        Geonum::new(3.0, 0.0, 1.0), // real part
-        Geonum::new(4.0, 1.0, 2.0), // imaginary part (π/2)
-    ]);
+    // 3 + 4i computed through operators
+    let real = Geonum::scalar(3.0);
+    let imag = Geonum::new(4.0, 1.0, 2.0); // 4i at π/2
+    let complex_a = real + imag; // addition computes complex number
 
     // test field properties apply to this special case
-    assert_eq!(complex_a.len(), 2);
+    assert_eq!(complex_a.length, 5.0); // |3+4i| = 5
 
     // test norm computation matches complex numbers
-    let norm_squared = complex_a[0].length.powi(2) + complex_a[1].length.powi(2);
-    assert_eq!(norm_squared, 25.0); // |3+4i|² = 3² + 4² = 25
+    assert_eq!(complex_a.length * complex_a.length, 25.0); // |3+4i|² = 25
 }
 
 #[test]
@@ -263,12 +266,12 @@ fn its_a_vector_space() {
     let e2 = Geonum::new(1.0, 1.0, 2.0); // second basis vector (π/2)
 
     // create vectors as linear combinations
-    let v = Multivector(vec![
+    let v = GeoCollection::from(vec![
         Geonum::new(3.0, 0.0, 1.0), // 3 * e1
         Geonum::new(4.0, 1.0, 2.0), // 4 * e2
     ]);
 
-    let w = Multivector(vec![
+    let w = GeoCollection::from(vec![
         Geonum::new(1.0, 0.0, 1.0), // 1 * e1
         Geonum::new(2.0, 1.0, 2.0), // 2 * e2
     ]);
@@ -296,7 +299,9 @@ fn its_a_vector_space() {
     // a dimension is just an angle direction in space - no scaffolding needed
     // create geometric numbers directly at standardized angles without "space" intermediary
     // dimension 0 → angle 0, dimension 1 → angle π/2
-    let basis = Multivector::create_dimension(1.0, &[0, 1]);
+    let e1 = Geonum::create_dimension(1.0, 0);
+    let e2 = Geonum::create_dimension(1.0, 1);
+    let basis = GeoCollection::from(vec![e1, e2]);
 
     assert_eq!(basis[0].angle, Angle::new(0.0, 1.0));
     assert_eq!(basis[1].angle, Angle::new(1.0, 2.0));
@@ -333,13 +338,19 @@ fn its_an_algebra() {
     // dimension of algebra is directly related to angles, not "basis vectors"
     // create geometric numbers directly without coordinate scaffolding
     // dimension 0 → angle 0, dimension 1 → angle π/2, dimension 2 → angle π
-    let basis = Multivector::create_dimension(1.0, &[0, 1, 2]);
+    let e1 = Geonum::create_dimension(1.0, 0);
+    let e2 = Geonum::create_dimension(1.0, 1);
+    let e3 = Geonum::create_dimension(1.0, 2);
+    let basis = GeoCollection::from(vec![e1, e2, e3]);
 
     assert_eq!(basis.len(), 3);
 
     // test matrices as special case
     // matrices can be represented directly using geometric numbers
-    let matrix = Multivector(vec![
+    // identity matrix is just no rotation
+    let _identity = Geonum::scalar(1.0); // angle 0, no transformation
+                                         // for demonstration, show matrix components as collection
+    let matrix = GeoCollection::from(vec![
         Geonum::new(1.0, 0.0, 1.0), // component (0,0)
         Geonum::new(0.0, 0.0, 1.0), // component (0,1)
         Geonum::new(0.0, 0.0, 1.0), // component (1,0)
@@ -509,7 +520,7 @@ fn its_a_metric_space() {
     // define distance as minimum angle between points (on the circle)
     let d = |a: &Geonum, b: &Geonum| -> f64 {
         let angle_diff = (a.angle - b.angle).mod_4_angle();
-        angle_diff.min(TWO_PI - angle_diff)
+        angle_diff.min(TAU - angle_diff)
     };
 
     // test distance properties
@@ -666,7 +677,9 @@ fn it_rejects_set_theory() {
 
     // test we can work with "everything" without contradiction
     // create geometric numbers directly at standardized angles
-    let universe = Multivector::create_dimension(1.0, &[0, 1]);
+    let elem_0 = Geonum::create_dimension(1.0, 0);
+    let elem_1 = Geonum::create_dimension(1.0, 1);
+    let universe = GeoCollection::from(vec![elem_0, elem_1]);
     assert_eq!(universe.len(), 2);
 
     // test consistency from universe consistency
@@ -781,7 +794,7 @@ fn it_models_computing_structures() {
 
     // test data structures as geometric entities
     // an array is a multivector with indexed elements
-    let array = Multivector(vec![
+    let array = GeoCollection::from(vec![
         Geonum::new(10.0, 0.0, 1.0),
         Geonum::new(20.0, 0.0, 1.0),
         Geonum::new(30.0, 0.0, 1.0),
@@ -793,7 +806,8 @@ fn it_models_computing_structures() {
     assert_eq!(array[2].length, 30.0);
 
     // test a simple tree data structure using geometric representation
-    let tree = Multivector(vec![
+    // tree structure - collection of nodes:
+    let tree = GeoCollection::from(vec![
         Geonum::new(1.0, 0.0, 1.0), // root
         Geonum::new(2.0, 1.0, 3.0), // left child
         Geonum::new(3.0, 2.0, 3.0), // right child

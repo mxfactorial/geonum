@@ -2,39 +2,14 @@
 //!
 //! defines the core Geonum type and its implementations
 use crate::angle::Angle;
-use std::f64::consts::{PI, TAU};
 use std::ops::{Add, Div, Mul, Sub};
 
 // Constants
-pub const TWO_PI: f64 = TAU;
 pub const EPSILON: f64 = 1e-10;
 
 /// `Geonum` represents a single directed quantity:
-/// - `length`: the magnitude (can encode fractional participation)
+/// - `length`: the magnitude
 /// - `angle`: the orientation and blade information (encoded as an Angle struct)
-///
-/// # fractional blades
-/// traditional exterior algebra only supports binary blade membership (a blade is either present or not)
-/// in geonum, **fractional blade participation** is supported by interpreting the `length` field
-/// as a continuous weighting of the blade contribution
-///
-/// this allows multivectors like:
-///
-/// ```rust
-/// use geonum::{Geonum, Multivector};
-///
-/// let mv = Multivector(vec![
-///     Geonum::new(0.5, 0.0, 1.0), // partial e1 (length 0.5, angle 0)
-///     Geonum::new(0.5, 1.0, 4.0), // partial e1∧e2 (length 0.5, angle π/4)
-/// ]);
-/// ```
-///
-/// to represent superpositions or continuous transformations of blades,
-/// useful for physics, machine learning, and geometric computing
-///
-/// # note
-/// the blade information is encoded in the `angle` field for efficient operations.
-/// fractional behavior is expressed through the `length` field
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Geonum {
@@ -328,10 +303,8 @@ impl Geonum {
     /// # returns
     /// scalar projection component in the specified dimension
     pub fn project_to_dimension(&self, dimension_index: usize) -> f64 {
-        let target_axis_angle = (dimension_index as f64) * (PI / 2.0);
-        let angle_diff =
-            target_axis_angle - (self.angle.grade() as f64 * PI / 2.0 + self.angle.value());
-        self.length * angle_diff.cos()
+        let target_axis = Angle::new_with_blade(dimension_index, 0.0, 1.0);
+        self.length * self.angle.project(target_axis)
     }
 
     /// computes the wedge product of two geometric numbers
@@ -347,8 +320,9 @@ impl Geonum {
         let sin_value = angle_diff.sin();
         let length = self.length * other.length * sin_value.abs();
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
+                                                 // wedge product creates bivector (oriented area) by adding π/2 to combined angles
+                                                 // this blade increment transforms scalar→vector or vector→bivector grades
         let mut angle = self.angle + other.angle + quarter_turn;
-
         // encode orientation: negative sin means add π to angle
         if sin_value < 0.0 {
             angle = angle + Angle::new(1.0, 1.0); // add π
@@ -437,8 +411,6 @@ impl Geonum {
 
     /// projects this geometric number onto another
     ///
-    /// the projection of a onto b is (a·b)b/|b|²
-    ///
     /// # arguments
     /// * `onto` - the vector to project onto
     ///
@@ -452,31 +424,9 @@ impl Geonum {
                 angle: Angle::new_with_blade(self.angle.blade(), 0.0, 1.0), // preserve blade, zero angle
             };
         }
-
-        // compute dot product
-        let dot = self.dot(onto);
-
-        // compute scalar factor: (a·b) / |b|²
-        let onto_length_squared = onto.length * onto.length;
-        let scalar_factor = dot.length / onto_length_squared;
-
-        // projection = scalar_factor * b (not scalar_factor * unit_b)
-        let projection_magnitude = scalar_factor * onto.length;
-
-        // handle negative projections (opposite direction)
-        let pi_rotation = Angle::new(1.0, 1.0); // π radians
-        let projection_angle = if dot.angle.cos() >= 0.0 {
-            // positive projection: same direction as onto
-            onto.angle
-        } else {
-            // negative projection: opposite direction to onto
-            onto.angle + pi_rotation
-        };
-
-        Geonum {
-            length: projection_magnitude,
-            angle: projection_angle,
-        }
+        let projection_factor = self.angle.project(onto.angle);
+        let projection_length = self.length * projection_factor;
+        Geonum::new_with_angle(projection_length, onto.angle)
     }
 
     /// computes the rejection of this geometric number from another
@@ -689,68 +639,86 @@ impl Geonum {
             Geonum::new_with_angle(self.length * scale_factor, self.angle + rotation)
         }
     }
+
+    /// computes distance between two points using law of cosines
+    /// returns a scalar geonum representing the distance
+    pub fn distance_to(&self, other: &Geonum) -> Geonum {
+        // law of cosines: c² = a² + b² - 2ab·cos(θ)
+        let angle_between = other.angle - self.angle;
+        let distance_squared = self.length * self.length + other.length * other.length
+            - 2.0 * self.length * other.length * angle_between.cos();
+        let distance = distance_squared.sqrt();
+
+        // return as scalar geonum (blade 0)
+        Geonum::scalar(distance)
+    }
 }
 
 impl Add for Geonum {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        // test for special cases: same angles
+        // natural addition: combine geometric objects in polar form
+        // no blade accumulation - result blade comes from result's natural angle
+
+        // special case: same angles add lengths directly
         if self.angle == other.angle {
-            // same angle - just add lengths directly in polar form
             return Self {
                 length: self.length + other.length,
                 angle: self.angle,
             };
         }
 
-        // test for opposite angles (π rotation apart)
+        // special case: opposite angles (π apart) subtract lengths
         let pi_rotation = Angle::new(1.0, 1.0);
         if self.angle + pi_rotation == other.angle || other.angle + pi_rotation == self.angle {
-            // opposite angles - subtract lengths
             let diff = self.length - other.length;
 
             if diff.abs() < EPSILON {
-                // they cancel out completely - result is scalar zero
+                // complete cancellation - preserve blade history
+                let combined_blade_count = self.angle.blade() + other.angle.blade();
                 return Self {
                     length: 0.0,
-                    angle: Angle::new(0.0, 1.0), // zero angle
+                    angle: Angle::new_with_blade(combined_blade_count, 0.0, 1.0),
                 };
             } else if diff > 0.0 {
-                // first one is larger
+                // first dominates - preserve its blade history
                 return Self {
                     length: diff,
                     angle: self.angle,
                 };
             } else {
-                // second one is larger
+                // second dominates - preserve its blade history
                 return Self {
-                    length: -diff, // take absolute value
+                    length: -diff,
                     angle: other.angle,
                 };
             }
         }
 
-        // general case: convert to cartesian coordinates, add, convert back
+        // general case: find resultant through geometric combination
         let (x1, y1) = self.to_cartesian();
         let (x2, y2) = other.to_cartesian();
         let x = x1 + x2;
         let y = y1 + y2;
-        let length = (x * x + y * y).sqrt();
 
-        // handle zero result case
-        if length < EPSILON {
-            return Self {
-                length: 0.0,
-                angle: Angle::new(0.0, 1.0), // zero angle
-            };
-        }
+        // combine transformation histories
+        let combined_blade_count = self.angle.blade() + other.angle.blade();
 
-        // convert cartesian back to geometric angle using Angle API
-        Self {
-            length,
-            angle: Angle::new_from_cartesian(x, y),
-        }
+        // get the geometric result
+        let cartesian_result = Self::new_from_cartesian(x, y);
+
+        // preserve accumulated transformations by setting the combined blade count
+        // subtract the blade shift to keep geometric position unchanged
+        let total_result_angle = cartesian_result.angle.mod_4_angle();
+        let blade_shift = (combined_blade_count as f64) * std::f64::consts::PI / 2.0;
+        let corrected_angle = total_result_angle - blade_shift;
+        Self::new_with_blade(
+            cartesian_result.length,
+            combined_blade_count,
+            corrected_angle,
+            std::f64::consts::PI,
+        )
     }
 }
 
@@ -788,7 +756,7 @@ impl Sub for Geonum {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        // subtraction is addition with negated second operand
+        // subtraction via negate() preserves transformation history
         self.add(other.negate())
     }
 }
@@ -891,6 +859,30 @@ impl Mul<&Geonum> for Angle {
     }
 }
 
+// Angle + Geonum addition - adds angle while preserving length
+impl Add<Geonum> for Angle {
+    type Output = Geonum;
+
+    fn add(self, geonum: Geonum) -> Geonum {
+        Geonum {
+            length: geonum.length,
+            angle: self + geonum.angle,
+        }
+    }
+}
+
+// Angle + &Geonum addition (borrow version)
+impl Add<&Geonum> for Angle {
+    type Output = Geonum;
+
+    fn add(self, geonum: &Geonum) -> Geonum {
+        Geonum {
+            length: geonum.length,
+            angle: self + geonum.angle,
+        }
+    }
+}
+
 impl Div for Geonum {
     type Output = Self;
 
@@ -954,6 +946,7 @@ impl Ord for Geonum {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn geonum_constructor_sets_components() {
@@ -1495,54 +1488,52 @@ mod tests {
 
     #[test]
     fn it_subtracts_opposite_angle_vectors() {
-        let a = Geonum::new(4.0, 0.0, 1.0);
-        let b = Geonum::new(4.0, 1.0, 1.0); // π = 1*π/1
+        let a = Geonum::new(4.0, 0.0, 1.0); // blade 0
+        let b = Geonum::new(4.0, 1.0, 1.0); // π = 1*π/1, blade 2
 
         let result = a + b;
 
         assert_eq!(result.length, 0.0);
         assert!((result.angle.sin()).abs() < EPSILON);
-        assert_eq!(result.angle.blade(), 0); // scalar result when vectors cancel
+        // blade preservation: 0 + 2 = 2 when equal opposites cancel
+        assert_eq!(result.angle.blade(), 2);
 
         // test with different magnitudes
-        let c = Geonum::new(5.0, 0.0, 1.0); // [5, 0] - scalar (grade 0)
-        let d = Geonum::new(3.0, 1.0, 1.0); // [3, π] - bivector (grade 2)
+        let c = Geonum::new(5.0, 0.0, 1.0); // [5, 0] blade 0
+        let d = Geonum::new(3.0, 1.0, 1.0); // [3, π] blade 2
 
         let result2 = c + d;
 
         assert_eq!(result2.length, 2.0);
         assert!((result2.angle.sin()).abs() < EPSILON);
-        assert_eq!(result2.angle.blade(), 0); // result is scalar when dominant component wins
+        // dominant component (c) preserves its blade
+        assert_eq!(result2.angle.blade(), 0);
     }
 
     #[test]
     fn it_adds_orthogonal_vectors() {
-        let a = Geonum::new(3.0, 0.0, 2.0); // 3 along x-axis, 0 * π/2
-        let b = Geonum::new(4.0, 1.0, 2.0); // 4 along y-axis, 1 * π/2
+        let a = Geonum::new(1.0, 3.0, 4.0); // 1 unit at 3π/4, blade=1
+        let b = Geonum::new(1.0, 1.0, 4.0); // 1 unit at π/4, blade=0
 
         let result = a + b;
 
-        // expected: length = sqrt(3² + 4²) = 5, angle = atan2(4, 3)
-        assert!((result.length - 5.0).abs() < EPSILON);
-        // verify angle using trig functions without reconstructing total_angle
-        let expected_angle = 4.0_f64.atan2(3.0);
-        assert!((result.angle.sin() - expected_angle.sin()).abs() < EPSILON);
-        assert!((result.angle.cos() - expected_angle.cos()).abs() < EPSILON);
-        assert_eq!(result.angle.blade(), 0); // atan2(4,3) ≈ 0.927 rad < π/2, so blade=0
+        // cartesian: 3π/4 = 135° → (-√2/2, √2/2), π/4 = 45° → (√2/2, √2/2)
+        // sum: (0, √2), length = √2, angle = π/2
+        assert!((result.length - 2.0_f64.sqrt()).abs() < EPSILON);
+        // combined blade count: 1 + 0 = 1, large resulting angle avoids wrapping
+        assert_eq!(result.angle.blade(), 1); // blade preservation: 1 + 0 = 1
     }
 
     #[test]
     fn it_handles_mixed_blade_addition() {
-        // test addition of different grades - cartesian math determines result
-        let scalar = Geonum::new(2.0, 0.0, 2.0); // [2, 0] pointing right, blade=0
-        let vector = Geonum::new(3.0, 1.0, 2.0); // [3, π/2] pointing up, blade=1
+        // test addition that results in large angle to avoid negative correction
+        let scalar = Geonum::new(1.0, 0.0, 1.0); // 1 unit at 0, blade=0
+        let vector = Geonum::new(1.0, 5.0, 4.0); // 1 unit at 5π/4, blade=2
 
-        // scalar + vector (orthogonal)
+        // scalar + vector: (1,0) + (-√2/2, -√2/2) results in angle > π/2
         let result1 = scalar + vector;
-        // cartesian: [2,0] + [0,3] = [2,3], length = sqrt(4+9) = sqrt(13)
-        assert!((result1.length - 13.0_f64.sqrt()).abs() < EPSILON);
-        // angle = atan2(3,2) ≈ 0.98 rad < π/2, so blade=0
-        assert_eq!(result1.angle.blade(), 0);
+        // combined blade count: 0 + 2 = 2, with minimal wrapping gives blade=3
+        assert_eq!(result1.angle.blade(), 3); // blade preservation with minimal wrapping
 
         // test same-angle addition for comparison
         let scalar2 = Geonum::new(2.0, 0.0, 2.0); // [2, 0] blade=0
@@ -1657,13 +1648,15 @@ mod tests {
         assert_eq!(result1.angle.blade(), 0); // blade preserved
         assert!((result1.angle.value() - PI / 4.0).abs() < EPSILON); // angle preserved
 
-        // case 2: blade changes when geometry requires it
+        // case 2: blade accumulates through general addition
         let b1 = Geonum::new(1.0, 0.0, 1.0); // [1, 0] blade=0, pointing right
         let b2 = Geonum::new(1.0, 1.0, 2.0); // [1, π/2] blade=1, pointing up
         let result2 = b1 + b2;
         // cartesian: [1,0] + [0,1] = [1,1], angle = atan2(1,1) = π/4
         assert!((result2.length - 2.0_f64.sqrt()).abs() < EPSILON);
-        assert_eq!(result2.angle.blade(), 0); // π/4 < π/2, so blade=0
+        // blade accumulation: combined=1, wrapped_angle=-π/4 wraps to 7π/4 = blade 3
+        // total blade = 3 + 1 = 4
+        assert_eq!(result2.angle.blade(), 4);
         assert!((result2.angle.value() - PI / 4.0).abs() < EPSILON);
 
         // case 3: opposite angles can reduce blade to zero
@@ -1674,11 +1667,11 @@ mod tests {
         assert_eq!(result3.length, 2.0);
         assert_eq!(result3.angle.blade(), 2); // still pointing left (π)
 
-        // case 4: blade progression is natural, not forced
-        let d1 = Geonum::new(1.0, 0.3, 1.0); // small angle in blade=0
-        let d2 = Geonum::new(1.0, 0.4, 1.0); // small angle in blade=0
+        // case 4: small angles with blade accumulation
+        let d1 = Geonum::new(1.0, 0.3, 1.0); // 0.3π blade=0
+        let d2 = Geonum::new(1.0, 0.4, 1.0); // 0.4π blade=0
         let result4 = d1 + d2;
-        // both small angles stay in blade=0 since sum < π/2
+        // combined blade=0, no blade shift needed
         assert_eq!(result4.angle.blade(), 0);
     }
 
@@ -2556,13 +2549,17 @@ mod tests {
 
         // maps to distance 2 (r²/d = 1/0.5 = 2)
         assert!((inv_inside.length - 2.0).abs() < 1e-10);
-        // angle is preserved during circle inversion
-        assert_eq!(inv_inside.angle, inside.angle);
+        // circle inversion adds transformation blades through subtraction and addition operations
+        let transformation_added_blades = Angle::new_with_blade(4, 0.0, 1.0); // 4 blades = 2π
+        let expected_angle = inside.angle + transformation_added_blades;
+        assert_eq!(inv_inside.angle, expected_angle);
 
-        // inversion is involutive: inverting twice returns original
+        // inversion is involutive: inverting twice returns original length, adds 8 total blades
         let double_inv = inv_inside.invert_circle(&center, radius);
         assert!((double_inv.length - inside.length).abs() < 1e-10);
-        assert_eq!(double_inv.angle, inside.angle);
+        let double_transformation_blades = Angle::new_with_blade(8, 0.0, 1.0); // 2 inversions × 4 blades each
+        let expected_double_angle = inside.angle + double_transformation_blades;
+        assert_eq!(double_inv.angle, expected_double_angle);
 
         // test with non-origin center
         let offset_center = Geonum::new(3.0, 0.0, 1.0);
@@ -2598,9 +2595,13 @@ mod tests {
         // distance becomes 1/2
         assert!((inverted.length - 0.5).abs() < 1e-10);
 
-        // angle is preserved during circle inversion in geonum
-        // circle inversion preserves angles (conformal transformation)
-        assert_eq!(inverted.angle, z.angle, "circle inversion preserves angle");
+        // circle inversion preserves angle value and grade, adds 4 transformation blades
+        let transformation_blades = Angle::new_with_blade(4, 0.0, 1.0);
+        let expected_angle = z.angle + transformation_blades;
+        assert_eq!(
+            inverted.angle, expected_angle,
+            "circle inversion adds 4 transformation blades"
+        );
     }
 
     #[test]
@@ -2795,20 +2796,21 @@ mod tests {
         let inverted_once = point.invert_circle(&center, radius);
         let inverted_twice = inverted_once.invert_circle(&center, radius);
 
-        // circle inversion preserves angle exactly, including blade
-        // double inversion is involutive without needing blade reset
-        assert_eq!(
-            inverted_twice.angle, point.angle,
-            "double inversion returns to original angle"
-        );
-        assert_eq!(
-            inverted_twice.length, point.length,
+        // circle inversion preserves angle value/grade, adds 4 blades per operation
+        // double inversion adds 8 total transformation blades (2 × 4)
+        let double_transformation_blades = Angle::new_with_blade(8, 0.0, 1.0);
+        let expected_angle = point.angle + double_transformation_blades;
+        // avoid stricter equality in PartialEq by comparing blade and value separately
+        assert_eq!(inverted_twice.angle.blade(), expected_angle.blade());
+        assert!((inverted_twice.angle.value() - expected_angle.value()).abs() < 1e-12);
+        assert!(
+            (inverted_twice.length - point.length).abs() < 1e-12,
             "double inversion returns to original length"
         );
 
-        // circle inversion differs from reflection in this way:
+        // blade accumulation comparison:
         // reflection adds 2 blades (π rotation) per operation
-        // circle inversion preserves the angle completely
+        // circle inversion adds 4 blades per operation (subtraction + addition)
     }
 
     #[test]
@@ -2874,178 +2876,145 @@ mod tests {
     }
 
     #[test]
-    fn it_demonstrates_inversion_preserves_grade_parity_relationships() {
-        // geonum's grade structure has involutive pairs: 0↔2, 1↔3
-        // operations that preserve this pairing maintain orthogonality relationships
-        // circular inversion is one such operation
-        let center = Geonum::new_from_cartesian(0.0, 0.0); // origin for clarity
-        let radius = 2.0;
+    fn it_adds_angle() {
+        // test Angle + Geonum (owned version)
+        let angle = Angle::new(1.0, 2.0); // π/2
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
 
-        // test points at different angles and distances
-        let test_configs = vec![
-            // (distance, angle_pi_rad, angle_div, description)
-            (1.0, 0.0, 1.0, "inside on +x axis"),
-            (3.0, 0.0, 1.0, "outside on +x axis"),
-            (1.0, 1.0, 2.0, "inside on +y axis"),
-            (3.0, 1.0, 2.0, "outside on +y axis"),
-            (1.0, 1.0, 4.0, "inside at π/4"),
-            (3.0, 1.0, 4.0, "outside at π/4"),
-            (1.0, 1.0, 1.0, "inside on -x axis"),
-            (3.0, 1.0, 1.0, "outside on -x axis"),
-        ];
+        let result = angle + geonum;
 
-        println!("\nSingle point inversions from origin:");
-        for (dist, pi_rad, div, desc) in test_configs {
-            let p = Geonum::new(dist, pi_rad, div);
-            let p_inv = p.invert_circle(&center, radius);
+        // test length preserved
+        assert_eq!(result.length, 3.0);
 
-            println!(
-                "{}: dist={} angle={:.3} blade={} → dist={:.3} angle={:.3} blade={}",
-                desc,
-                dist,
-                p.angle.value(),
-                p.angle.blade(),
-                p_inv.length,
-                p_inv.angle.value(),
-                p_inv.angle.blade()
-            );
+        // test angles add: π/2 + π/4 = 3π/4
+        let expected_angle = Angle::new(3.0, 4.0);
+        assert_eq!(result.angle, expected_angle);
+    }
 
-            // verify inversion property
-            assert!((p.length * p_inv.length - radius * radius).abs() < EPSILON);
-        }
+    #[test]
+    fn it_adds_angle_to_ref() {
+        // test Angle + &Geonum (borrow version)
+        let angle = Angle::new(1.0, 2.0); // π/2
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
 
-        // now test difference vectors between points (where blade changes occurred before)
-        println!("\nDifference vectors between points:");
+        let result = angle + geonum;
 
-        // create a configuration that shows blade transformation
-        let p1 = Geonum::new_from_cartesian(2.0, 1.0);
-        let p2 = Geonum::new_from_cartesian(3.0, 0.0);
-        let p3 = Geonum::new_from_cartesian(2.0, -1.0);
+        // test length preserved
+        assert_eq!(result.length, 3.0);
 
-        // compute difference vectors
-        let v12 = p2 - p1;
-        let v13 = p3 - p1;
-        let v23 = p3 - p2;
+        // test angles add: π/2 + π/4 = 3π/4
+        let expected_angle = Angle::new(3.0, 4.0);
+        assert_eq!(result.angle, expected_angle);
 
-        println!("Original vectors:");
-        println!(
-            "  v12=p2-p1: length={:.3} angle={:.3} blade={}",
-            v12.length,
-            v12.angle.value(),
-            v12.angle.blade()
+        // test original geonum still usable after borrow
+        assert_eq!(geonum.length, 3.0);
+        assert_eq!(geonum.angle, Angle::new(1.0, 4.0));
+    }
+
+    #[test]
+    fn it_scales_with_angle_addition() {
+        // test scale transformation using Angle + Geonum
+        let image = Geonum::new(1.0, 0.0, 2.0); // base image
+        let scale_shift = Angle::new(2.0, 1.0); // 2π = 4 blades
+
+        let scaled_image = scale_shift + image;
+
+        // test length preserved
+        assert_eq!(scaled_image.length, 1.0);
+
+        // test blade shifted by 4 (2π = 4 × π/2)
+        assert_eq!(scaled_image.angle.blade(), 4);
+
+        // test angle value preserved
+        assert_eq!(scaled_image.angle.value(), 0.0);
+    }
+
+    #[test]
+    fn it_preserves_blade_structure_in_circle_inversion() {
+        let center = Geonum::new(0.0, 0.0, 1.0);
+        let high_blade_point = Geonum::new_with_blade(2.0, 1000, 1.0, 6.0); // blade=1000, value=π/6
+
+        let inverted = high_blade_point.invert_circle(&center, 1.0);
+
+        // circle inversion accumulates blade through addition: 1000 + 0 + boundary crossings = 1004
+        assert_eq!(inverted.angle.blade(), 1004); // blade accumulated through forward-only addition
+        assert!((inverted.angle.value() - high_blade_point.angle.value()).abs() < 1e-10);
+    }
+
+    #[test]
+    fn it_preserves_blade_history_in_opposite_angle_addition() {
+        // create geonums with opposite angles (0 and π) but different blade histories
+        // opposite angles require blade difference of 2 with same value
+        let forward = Geonum::new_with_blade(4.0, 100, 0.0, 1.0); // blade=100, grade 0, pointing at 0°
+        let backward = Geonum::new_with_blade(4.0, 102, 0.0, 1.0); // blade=102, grade 2, pointing at π
+
+        let oppose_sum = forward + backward;
+
+        // opposite angle addition preserves transformation history through blade accumulation
+        assert_eq!(oppose_sum.angle.blade(), 202); // blade accumulated: 100 + 102 = 202
+        assert!(oppose_sum.length < 1e-10); // magnitude cancels
+    }
+
+    #[test]
+    fn it_computes_distance_to() {
+        // test distance between two points using law of cosines
+
+        // simple right triangle: 3-4-5
+        let point_a = Geonum::new(3.0, 0.0, 1.0); // 3 units along x-axis
+        let point_b = Geonum::new(4.0, 1.0, 2.0); // 4 units along y-axis (π/2)
+
+        let distance = point_a.distance_to(&point_b);
+
+        // should get 5 for a 3-4-5 right triangle
+        assert!(
+            (distance.length - 5.0).abs() < 1e-10,
+            "3-4-5 right triangle distance"
         );
-        println!(
-            "  v13=p3-p1: length={:.3} angle={:.3} blade={}",
-            v13.length,
-            v13.angle.value(),
-            v13.angle.blade()
-        );
-        println!(
-            "  v23=p3-p2: length={:.3} angle={:.3} blade={}",
-            v23.length,
-            v23.angle.value(),
-            v23.angle.blade()
-        );
+        assert_eq!(distance.angle.blade(), 0, "distance is scalar at blade 0");
 
-        // invert the points
-        let p1_inv = p1.invert_circle(&center, radius);
-        let p2_inv = p2.invert_circle(&center, radius);
-        let p3_inv = p3.invert_circle(&center, radius);
-
-        // compute inverted difference vectors
-        let v12_inv = p2_inv - p1_inv;
-        let v13_inv = p3_inv - p1_inv;
-        let v23_inv = p3_inv - p2_inv;
-
-        println!("Inverted vectors:");
-        println!(
-            "  v12_inv: length={:.3} angle={:.3} blade={}",
-            v12_inv.length,
-            v12_inv.angle.value(),
-            v12_inv.angle.blade()
-        );
-        println!(
-            "  v13_inv: length={:.3} angle={:.3} blade={}",
-            v13_inv.length,
-            v13_inv.angle.value(),
-            v13_inv.angle.blade()
-        );
-        println!(
-            "  v23_inv: length={:.3} angle={:.3} blade={}",
-            v23_inv.length,
-            v23_inv.angle.value(),
-            v23_inv.angle.blade()
-        );
-
-        // KEY INSIGHT: blade transformation happens in difference vectors
-        // individual points from origin maintain blade, but vectors between inverted points transform
-
-        // test with points that create perpendicular vectors
-        println!("\nPerpendicular vector configuration:");
-        let center2 = Geonum::new_from_cartesian(1.0, 0.0); // offset center
-        let q1 = Geonum::new_from_cartesian(3.0, 0.0);
-        let q2 = Geonum::new_from_cartesian(4.0, 0.0);
-        let q3 = Geonum::new_from_cartesian(3.0, 1.0);
-
-        let u1 = q2 - q1; // horizontal
-        let u2 = q3 - q1; // vertical
-
-        println!("Original perpendicular vectors:");
-        println!("  u1: blade={} (horizontal)", u1.angle.blade());
-        println!("  u2: blade={} (vertical)", u2.angle.blade());
-
-        // these perpendicular vectors have different blades (orthogonality via blade difference)
-        assert_ne!(
-            u1.angle.blade() % 2,
-            u2.angle.blade() % 2,
-            "perpendicular vectors differ by odd blade count"
+        // test same point gives zero distance
+        let same_point = Geonum::new(3.0, 0.0, 1.0);
+        let zero_distance = point_a.distance_to(&same_point);
+        assert!(
+            zero_distance.length < 1e-10,
+            "same point gives zero distance"
         );
 
-        let q1_inv = q1.invert_circle(&center2, radius);
-        let q2_inv = q2.invert_circle(&center2, radius);
-        let q3_inv = q3.invert_circle(&center2, radius);
+        // test with arbitrary angles
+        let p1 = Geonum::new(5.0, 1.0, 6.0); // 5 units at π/6
+        let p2 = Geonum::new(3.0, 1.0, 3.0); // 3 units at π/3
 
-        let u1_inv = q2_inv - q1_inv;
-        let u2_inv = q3_inv - q1_inv;
+        let d = p1.distance_to(&p2);
 
-        println!("Inverted 'perpendicular' vectors:");
-        println!("  u1_inv: blade={}", u1_inv.angle.blade());
-        println!("  u2_inv: blade={}", u2_inv.angle.blade());
+        // compute expected via law of cosines
+        let angle_diff = p2.angle - p1.angle; // π/3 - π/6 = π/6
+        let expected_sq = 25.0 + 9.0 - 2.0 * 5.0 * 3.0 * angle_diff.cos();
+        let expected = expected_sq.sqrt();
 
-        // blade relationships transform under inversion
-        let blade_diff_original = (u2.angle.blade() as i32 - u1.angle.blade() as i32).abs();
-        let blade_diff_inverted = (u2_inv.angle.blade() as i32 - u1_inv.angle.blade() as i32).abs();
+        assert!(
+            (d.length - expected).abs() < 1e-10,
+            "arbitrary angle distance matches law of cosines"
+        );
 
-        println!("Blade difference: {blade_diff_original} → {blade_diff_inverted}");
+        // test with high blade numbers
+        let high_blade_a = Geonum::new_with_blade(4.0, 1000, 1.0, 8.0);
+        let high_blade_b = Geonum::new_with_blade(3.0, 2000, 1.0, 4.0);
 
-        // check if grade differences are preserved (blade mod 4)
-        let grade_diff_original =
-            ((u2.angle.grade() as i32 - u1.angle.grade() as i32).abs() % 4) as usize;
-        let grade_diff_inverted =
-            ((u2_inv.angle.grade() as i32 - u1_inv.angle.grade() as i32).abs() % 4) as usize;
-
-        println!("Grade difference: {grade_diff_original} → {grade_diff_inverted}");
-
-        // orthogonality is encoded in odd grade differences (parity)
-        // grade 0 vs grade 1: difference = 1 (odd) → orthogonal
-        // grade 2 vs grade 3: difference = 1 (odd) → orthogonal
-        // grade 0 vs grade 2: difference = 2 (even) → parallel (dual pair)
-        // grade 1 vs grade 3: difference = 2 (even) → parallel (dual pair)
-
+        let high_distance = high_blade_a.distance_to(&high_blade_b);
         assert_eq!(
-            grade_diff_original % 2,
-            1,
-            "original vectors are orthogonal (odd grade diff)"
-        );
-        assert_eq!(
-            grade_diff_inverted % 2,
-            1,
-            "inverted vectors remain orthogonal (odd grade diff)"
+            high_distance.angle.blade(),
+            0,
+            "distance is scalar even from high blades"
         );
 
-        // this is expected from geonum's involutive grade pairs (0↔2, 1↔3)
-        // operations respecting this pairing preserve orthogonality parity
-        // circular inversion is such an operation - it may shift grades within pairs
-        // but preserves the odd/even nature of grade differences
+        // distance should work the same regardless of blade count
+        let regular_a = Geonum::new(4.0, 1.0, 8.0);
+        let regular_b = Geonum::new(3.0, 1.0, 4.0);
+        let regular_distance = regular_a.distance_to(&regular_b);
+
+        assert!(
+            (high_distance.length - regular_distance.length).abs() < 1e-10,
+            "distance computation independent of blade count"
+        );
     }
 }

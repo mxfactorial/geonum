@@ -20,11 +20,10 @@
 // say goodbye to O(n log n)
 
 use geonum::*;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 
 // small value for floating-point comparisons
 const EPSILON: f64 = 1e-10;
-const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn its_a_constant_time_operation() {
@@ -252,8 +251,8 @@ fn its_a_graph_algorithm() {
             let a_diff = (a.angle - start_geonum.angle).value().abs();
             let b_diff = (b.angle - start_geonum.angle).value().abs();
             // handle circular distance
-            let a_diff = a_diff.min(TWO_PI - a_diff);
-            let b_diff = b_diff.min(TWO_PI - b_diff);
+            let a_diff = a_diff.min(TAU - a_diff);
+            let b_diff = b_diff.min(TAU - b_diff);
             a_diff.partial_cmp(&b_diff).unwrap()
         });
         result
@@ -487,7 +486,7 @@ fn its_a_distributed_algorithm() {
             let distance = total_diff.abs();
 
             // handle circular distance (shorter path around circle)
-            let distance = distance.min(TWO_PI - distance);
+            let distance = distance.min(TAU - distance);
 
             if distance < min_distance {
                 min_distance = distance;
@@ -541,10 +540,7 @@ fn its_a_distributed_algorithm() {
 
         // compute angle distance using Angle arithmetic
         let angle_diff = node.angle - consensus_geonum.angle;
-        let distance = angle_diff
-            .value()
-            .abs()
-            .min(TWO_PI - angle_diff.value().abs());
+        let distance = angle_diff.value().abs().min(TAU - angle_diff.value().abs());
 
         assert!(distance <= PI);
     }
@@ -667,7 +663,7 @@ fn its_a_data_structure() {
             // convert angle to bucket index
             let total_angle =
                 angle_geonum.angle.blade() as f64 * PI / 2.0 + angle_geonum.angle.value();
-            (total_angle * self.bucket_count as f64 / TWO_PI) as usize % self.bucket_count
+            (total_angle * self.bucket_count as f64 / TAU) as usize % self.bucket_count
         }
 
         fn insert(&mut self, key: String, value: i32) {

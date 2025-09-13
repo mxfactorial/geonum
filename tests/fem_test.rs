@@ -1,9 +1,8 @@
 use geonum::*;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 
 // small value for floating-point comparisons
 const EPSILON: f64 = 1e-10;
-const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn its_a_shape_function() {
@@ -93,7 +92,7 @@ fn its_a_shape_function() {
         let phi = if r > EPSILON { (z / r).acos() } else { 0.0 };
 
         // convert angle to Angle struct
-        let angle_radians = theta * phi / TWO_PI;
+        let angle_radians = theta * phi / TAU;
         Geonum::new(r * r * (3.0 - 2.0 * r), angle_radians, PI)
     };
 
@@ -111,7 +110,7 @@ fn its_a_shape_function() {
     // angle should be theta * phi / (2π) ≈ 0.0378 radians
     let expected_theta = 0.5_f64.atan2(0.5);
     let expected_phi = (0.5 / expected_r).acos();
-    let expected_angle_value = expected_theta * expected_phi / TWO_PI;
+    let expected_angle_value = expected_theta * expected_phi / TAU;
     assert!((high_order_value.angle.value() - expected_angle_value).abs() < EPSILON);
     assert_eq!(high_order_value.angle.blade(), 0); // small angle, so blade is 0
 }

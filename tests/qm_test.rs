@@ -45,42 +45,50 @@ const EPSILON: f64 = 1e-10;
 
 #[test]
 fn its_a_state_vector() {
-    // in quantum mechanics, state vectors live in abstract hilbert space
-    // in geometric numbers, we replace this with direct angle orientation
-
-    // create a "state vector" as a geometric number
+    // quantum state as single geonum with amplitude and phase
     let state = Geonum::new(1.0, 1.0, 4.0); // length 1, angle π/4
 
-    // test direct geometric representation vs abstract hilbert space
-    assert_eq!(state.length, 1.0); // normalized state
-    assert!((state.angle.mod_4_angle() - PI / 4.0).abs() < EPSILON); // specific phase angle
+    // test direct geometric representation
+    assert_eq!(state.length, 1.0); // normalized amplitude
+    assert!((state.angle.mod_4_angle() - PI / 4.0).abs() < EPSILON); // phase π/4
 
-    // test superposition through angle combinations
-    // |ψ⟩ = α|0⟩ + β|1⟩ becomes direct geometric combination
-    let basis0 = Geonum::new(1.0, 0.0, 1.0); // |0⟩ basis state at 0°
-    let basis1 = Geonum::new(1.0, 1.0, 2.0); // |1⟩ basis state at π/2
+    // superposition |ψ⟩ = α|0⟩ + β|1⟩ as single geonum from cartesian
+    // equal probability superposition: (|0⟩ + |1⟩)/√2
+    let alpha = 1.0 / 2.0_f64.sqrt();
+    let beta = 1.0 / 2.0_f64.sqrt();
+    let superposition = Geonum::new_from_cartesian(alpha, beta);
 
-    // create superposition with equal probability (1/√2 amplitude for each component)
-    let coeff = 1.0 / 2.0_f64.sqrt();
-    let superposition = Multivector(vec![
-        Geonum::new_with_angle(coeff, basis0.angle),
-        Geonum::new_with_angle(coeff, basis1.angle),
-    ]);
+    // test superposition amplitude and phase
+    assert!((superposition.length - 1.0).abs() < EPSILON); // normalized
+    assert_eq!(superposition.angle, Angle::new(1.0, 4.0)); // 45° phase
 
-    // test probability through angle projection instead of abstract inner product
-    // probability of measuring |0⟩ = |⟨0|ψ⟩|² becomes projection onto angle 0
-    let prob_basis0 = superposition[0].length.powi(2);
-    assert!((prob_basis0 - 0.5).abs() < EPSILON); // equal superposition = 0.5 probability
+    // measurement as angle projection
+    let basis0 = Geonum::new(1.0, 0.0, 1.0); // |0⟩ at angle 0
+    let basis1 = Geonum::new(1.0, 1.0, 2.0); // |1⟩ at angle π/2
 
-    // test measurement through angle alignment instead of "collapse"
-    // when measured, the state aligns with one of the basis angles
-    let measurement_angle = basis0.angle; // measure in the |0⟩ basis
+    // probability through born rule: |⟨ψ|basis⟩|² = cos²(angle_diff)
+    let angle_diff0 = state.angle - basis0.angle;
+    let prob0 = state.length.powi(2) * angle_diff0.cos().powi(2);
+    assert!((prob0 - 0.5).abs() < EPSILON); // cos²(π/4) = 0.5
 
-    // probability of result depends on angular alignment
-    let angle_diff = state.angle - measurement_angle;
-    let probability = state.length * state.length * angle_diff.cos().powi(2);
-    assert!(probability <= 1.0);
-    assert!(probability >= 0.0);
+    let angle_diff1 = state.angle - basis1.angle;
+    let prob1 = state.length.powi(2) * angle_diff1.cos().powi(2);
+    assert!((prob1 - 0.5).abs() < EPSILON); // cos²(π/4 - π/2) = cos²(-π/4) = 0.5
+
+    // total probability
+    assert!((prob0 + prob1 - 1.0).abs() < EPSILON);
+
+    // measurement alignment - no mysterious "collapse", just angle alignment
+    let measurement_result = if prob0 > 0.5 { basis0 } else { basis1 };
+    let alignment_check = (measurement_result.angle - basis0.angle)
+        .mod_4_angle()
+        .abs()
+        < EPSILON
+        || (measurement_result.angle - basis1.angle)
+            .mod_4_angle()
+            .abs()
+            < EPSILON;
+    assert!(alignment_check);
 }
 
 #[test]
@@ -798,95 +806,119 @@ fn it_unifies_quantum_and_classical() {
 }
 
 #[test]
-fn it_analyzes_angle_statistics() {
-    // quantum analysis often requires statistical methods
-    // geometric numbers provide direct statistical interpretations
+fn it_eliminates_statistical_collections() {
+    // traditional quantum mechanics treats superposition as probability distribution
+    // requiring statistical analysis across basis components
+    // geonum shows this is unnecessary - quantum states are unified geometric objects
 
-    // create quantum state distribution using multivector
-    let state_mv = Multivector(vec![
-        Geonum::new(0.1_f64.sqrt(), 0.0, 1.0), // 10% probability
-        Geonum::new(0.2_f64.sqrt(), 1.0, 8.0), // 20% probability at π/8
-        Geonum::new(0.4_f64.sqrt(), 1.0, 4.0), // 40% probability at π/4
-        Geonum::new(0.2_f64.sqrt(), 3.0, 8.0), // 20% probability at 3π/8
-        Geonum::new(0.1_f64.sqrt(), 1.0, 2.0), // 10% probability at π/2
-    ]);
+    // WRONG: quantum state as probability collection needing statistics
+    // let state_collection = vec![
+    //     (0.1, |0⟩), (0.2, |π/8⟩), (0.4, |π/4⟩), (0.2, |3π/8⟩), (0.1, |π/2⟩)
+    // ];
+    // compute_weighted_mean(state_collection);
+    // compute_variance(state_collection);
 
-    // verify normalization (probabilities sum to 1.0)
-    let norm_squared: f64 = state_mv.0.iter().map(|g| g.length.powi(2)).sum();
-    assert!((norm_squared - 1.0).abs() < EPSILON);
+    // RIGHT: quantum state as single geometric number
+    // mixed state with dominant π/4 component can be represented as single geonum
+    // with length encoding certainty and angle encoding the dominant phase
+    let certainty = 0.8; // 80% certainty based on distribution concentration
+    let dominant_phase = PI / 4.0; // π/4 is the 40% weight center
+    let unified_state = Geonum::new(certainty, dominant_phase, PI);
 
-    // use multivector's weighted mean method
-    let mean_geonum = state_mv.weighted_mean();
-    let mean_angle = mean_geonum.angle;
+    // test unified representation eliminates collection overhead
+    assert_eq!(unified_state.length, 0.8);
+    assert_eq!(unified_state.angle, Angle::new(1.0, 4.0)); // π/4
 
-    // for comparison with theoretical mean, we need to use the library's weighting scheme
-    // which uses raw lengths, not squared lengths
-    let total_weight: f64 = state_mv.0.iter().map(|g| g.length).sum();
-    let weighted_sin_sum: f64 = state_mv.0.iter().map(|g| g.length * g.angle.sin()).sum();
-    let weighted_cos_sum: f64 = state_mv.0.iter().map(|g| g.length * g.angle.cos()).sum();
-    let theoretical_mean = Angle::new_from_cartesian(
-        weighted_cos_sum / total_weight,
-        weighted_sin_sum / total_weight,
+    // measurement statistics come from angle geometry, not component averaging
+    let measurement_basis = Geonum::new(1.0, 1.0, 4.0); // π/4 measurement
+    let measurement_probability = unified_state.dot(&measurement_basis).length.powi(2);
+
+    // high probability for aligned measurement
+    assert!(measurement_probability > 0.6);
+
+    // WRONG: expectation values through weighted collection iteration
+    // let expectation = collection.iter()
+    //     .map(|(prob, state)| prob * observable(state))
+    //     .sum();
+
+    // RIGHT: expectation values through direct geometric projection
+    let energy_observable = Geonum::new(1.0, 0.0, 1.0); // energy at angle 0
+    let energy_expectation = unified_state.dot(&energy_observable).length;
+
+    // expectation value is direct projection, not statistical average
+    assert!(energy_expectation.is_finite());
+    assert!(energy_expectation >= 0.0);
+
+    // WRONG: variance through deviation calculations across components
+    // let variance = collection.iter()
+    //     .map(|(prob, state)| prob * (state.angle - mean_angle).powi(2))
+    //     .sum();
+
+    // RIGHT: uncertainty through geometric area (wedge product)
+    let momentum_observable = Geonum::new(1.0, 1.0, 2.0); // momentum at π/2
+    let position_observable = Geonum::new(1.0, 0.0, 1.0); // position at 0
+    let uncertainty = position_observable.wedge(&momentum_observable).length;
+
+    // uncertainty from geometry, not statistical variance
+    assert!(uncertainty >= 0.5); // uncertainty principle
+
+    // pure quantum states have no "statistical dispersion"
+    // they're geometric objects with definite amplitude and phase
+    let pure_state = Geonum::new_from_cartesian(0.6, 0.8); // |ψ⟩ = 0.6|0⟩ + 0.8|1⟩
+
+    // no variance to compute - pure state has definite geometric properties
+    assert_eq!(pure_state.length, 1.0); // normalized
+                                        // phase is definite, not statistical
+    let expected_phase = (0.8_f64).atan2(0.6);
+    assert!((pure_state.angle.mod_4_angle() - expected_phase).abs() < EPSILON);
+
+    // measurement outcomes from projection geometry, not probability sampling
+    let measurement_axis = Geonum::new(1.0, 0.0, 1.0); // |0⟩ basis
+    let projection_strength = pure_state.dot(&measurement_axis).length;
+    let outcome_probability = projection_strength.powi(2);
+
+    // born rule from geometry: |⟨0|ψ⟩|² = |0.6|² = 0.36
+    assert!((outcome_probability - 0.36).abs() < EPSILON);
+
+    // entangled states also eliminate statistical collections
+    // Bell state |Φ⁺⟩ = (|00⟩ + |11⟩)/√2 as single correlated geonum
+    let bell_amplitude = 1.0; // normalized
+    let bell_correlation = 0.0; // |00⟩ + |11⟩ = perfect correlation at 0°
+    let bell_state = Geonum::new(bell_amplitude, bell_correlation, 1.0);
+
+    // no statistical ensemble - just correlated geometry
+    assert_eq!(bell_state.length, 1.0);
+    assert_eq!(bell_state.angle, Angle::new(0.0, 1.0)); // 0° correlation
+
+    // quantum field states eliminate field component collections
+    // instead of statistical ensemble of field operators: Σ aₖ†aₖ |0⟩
+    // unified field state encodes all excitations in single geometric object
+    let field_excitation_count = 3.0_f64; // 3 quanta
+    let field_mode_phase = PI / 3.0; // π/3 mode phase
+    let quantum_field = Geonum::new(field_excitation_count.sqrt(), field_mode_phase, PI);
+
+    // field properties from geometry, not statistical mechanics
+    assert_eq!(quantum_field.length, 3.0_f64.sqrt());
+    assert_eq!(quantum_field.angle, Angle::new(1.0, 3.0)); // π/3
+
+    // time evolution eliminates component-wise propagation
+    let time_step = 1.0;
+    let hamiltonian_frequency = PI / 4.0;
+    let evolution_angle = hamiltonian_frequency * time_step;
+
+    // evolve unified state directly
+    let evolved_state = pure_state.rotate(Angle::new(evolution_angle, PI));
+
+    // evolution preserves amplitude, rotates phase
+    assert_eq!(evolved_state.length, pure_state.length);
+    assert_eq!(
+        evolved_state.angle,
+        pure_state.angle + Angle::new(evolution_angle, PI)
     );
 
-    // compare angles using sin/cos since direct angle comparison can have wraparound issues
-    assert!((mean_angle.sin() - theoretical_mean.sin()).abs() < EPSILON);
-    assert!((mean_angle.cos() - theoretical_mean.cos()).abs() < EPSILON);
-
-    // use multivector's weighted variance method
-    let variance = state_mv.weighted_angle_variance();
-    assert!(variance > 0.0); // non-zero variance for mixed states
-
-    // compute standard deviation
-    let std_dev = variance.sqrt();
-    assert!(std_dev > 0.0);
-
-    // use multivector's circular mean method
-    let circular_mean = state_mv.weighted_circular_mean_angle();
-
-    // circular mean should be close to arithmetic mean for this example
-    // since our angles are in a limited range
-    // compare using sin/cos to handle angle wraparound
-    assert!((circular_mean.sin() - mean_angle.sin()).abs() < 0.1);
-    assert!((circular_mean.cos() - mean_angle.cos()).abs() < 0.1);
-
-    // test expectation value of an observable
-    // define an observable as a function that maps angle to a value
-    let energy = |angle: Angle| -> f64 {
-        // example: energy proportional to cos(angle)
-        angle.cos()
-    };
-
-    // use the library method directly with Angle parameter
-    let library_expectation = state_mv.weighted_expect_angle(energy);
-
-    // compute expected value manually for verification
-    let total_weight = state_mv.0.iter().map(|g| g.length).sum::<f64>();
-    let manual_expectation = state_mv
-        .0
-        .iter()
-        .map(|g| g.length * g.angle.cos())
-        .sum::<f64>()
-        / total_weight;
-
-    // verify library calculation matches our manual calculation
-    assert!((library_expectation - manual_expectation).abs() < EPSILON);
-
-    // demonstrate how angle distributions represent wave functions
-    // compute probability of finding state in certain angle range
-    let lower_angle = Angle::new(1.0, 8.0); // π/8
-    let upper_angle = Angle::new(3.0, 8.0); // 3π/8
-
-    // calculate probability by summing squared lengths of states in range
-    let probability_in_range: f64 = state_mv
-        .0
-        .iter()
-        .filter(|g| g.angle >= lower_angle && g.angle <= upper_angle)
-        .map(|g| g.length.powi(2))
-        .sum();
-
-    // verify equals expected 80% (20% + 40% + 20%)
-    assert!((probability_in_range - 0.8).abs() < EPSILON);
+    // this proves quantum mechanics needs no statistical collections
+    // all quantum phenomena emerge from unified geometric states
+    // statistical methods on collections are artifacts of decomposed thinking
 }
 
 #[test]
@@ -948,180 +980,133 @@ fn it_explains_quantum_computing() {
 
 #[test]
 fn it_evolves_through_time() {
-    // in quantum mechanics, time evolution uses complex exponentiation
-    // in geometric numbers, its just angle rotation
-
-    // create a quantum state
+    // single quantum state time evolution
     let state = Geonum::new(1.0, 0.0, 1.0);
 
-    // create time evolution function
+    // time evolution as direct angle rotation: E*t
     let evolve = |state: &Geonum, time: f64, energy: f64| -> Geonum {
-        // energy * time gives rotation in radians
         let rotation = Angle::new(energy * time, PI);
         state.rotate(rotation)
     };
 
-    // test time evolution by stepping through time
-    let energy = PI / 2.0; // example energy value
+    let energy = PI / 2.0;
 
     // evolve to time=0.5
-    let evolved_0_5 = evolve(&state, 0.5, energy);
-    assert_eq!(evolved_0_5.length, state.length); // probability preserved
-    let expected_angle_0_5 = state.angle + Angle::new(0.5 * energy, PI);
-    assert_eq!(evolved_0_5.angle, expected_angle_0_5);
+    let evolved_05 = evolve(&state, 0.5, energy);
+    assert_eq!(evolved_05.length, state.length); // probability preserved
+    let expected_angle = state.angle + Angle::new(0.5 * energy, PI);
+    assert_eq!(evolved_05.angle, expected_angle);
 
     // evolve to time=1.0
-    let evolved_1_0 = evolve(&state, 1.0, energy);
-    assert_eq!(evolved_1_0.length, state.length); // probability preserved
-    let expected_angle_1_0 = state.angle + Angle::new(1.0 * energy, PI);
-    assert_eq!(evolved_1_0.angle, expected_angle_1_0);
+    let evolved_10 = evolve(&state, 1.0, energy);
+    assert_eq!(evolved_10.length, state.length);
+    let expected_angle = state.angle + Angle::new(1.0 * energy, PI);
+    assert_eq!(evolved_10.angle, expected_angle);
 
-    // test superposition evolution
-    let superposition = Multivector(vec![
-        Geonum::new(1.0 / 2.0_f64.sqrt(), 0.0, 1.0),
-        Geonum::new(1.0 / 2.0_f64.sqrt(), 1.0, 2.0), // π/2
-    ]);
+    // superposition state as single geonum: |ψ⟩ = (|0⟩ + |1⟩)/√2
+    // amplitude = 1, phase = π/4 (45° superposition)
+    let superposition = Geonum::new_from_cartesian(1.0 / 2.0_f64.sqrt(), 1.0 / 2.0_f64.sqrt());
 
-    // evolve superposition
-    let evolved_superposition = Multivector(
-        superposition
-            .0
-            .iter()
-            .map(|g| evolve(g, 1.0, energy))
-            .collect(),
-    );
+    // evolve superposition state
+    let evolved_superposition = evolve(&superposition, 1.0, energy);
 
-    // test each component evolves correctly
-    let expected_angle_0 = superposition.0[0].angle + Angle::new(energy, PI);
-    let expected_angle_1 = superposition.0[1].angle + Angle::new(energy, PI);
-    assert_eq!(evolved_superposition.0[0].angle, expected_angle_0);
-    assert_eq!(evolved_superposition.0[1].angle, expected_angle_1);
+    // amplitude preserved
+    assert_eq!(evolved_superposition.length, superposition.length);
 
-    // test multi-particle system evolution
-    let particles = [
-        Geonum::new(1.0, 0.0, 1.0), // particle 1
-        Geonum::new(1.0, 1.0, 4.0), // particle 2 at π/4
-        Geonum::new(1.0, 1.0, 2.0), // particle 3 at π/2
-    ];
+    // phase evolved by energy*time
+    let expected_superposition_angle = superposition.angle + Angle::new(energy, PI);
+    assert_eq!(evolved_superposition.angle, expected_superposition_angle);
+
+    // multi-particle system as individual geonums (not collections)
+    let particle1 = Geonum::new(1.0, 0.0, 1.0);
+    let particle2 = Geonum::new(1.0, 1.0, 4.0); // π/4
+    let particle3 = Geonum::new(1.0, 1.0, 2.0); // π/2
+
     let energies = [PI / 2.0, PI / 4.0, PI / 8.0];
 
-    // evolve each particle with its own energy
-    let evolved_particles: Vec<Geonum> = particles
-        .iter()
-        .zip(energies.iter())
-        .map(|(particle, &energy)| evolve(particle, 1.0, energy))
-        .collect();
+    // evolve each particle independently
+    let evolved_p1 = evolve(&particle1, 1.0, energies[0]);
+    let evolved_p2 = evolve(&particle2, 1.0, energies[1]);
+    let evolved_p3 = evolve(&particle3, 1.0, energies[2]);
 
-    // test each particle evolved correctly
-    for i in 0..particles.len() {
-        assert_eq!(evolved_particles[i].length, particles[i].length);
-        let expected = particles[i].angle + Angle::new(energies[i], PI);
-        assert_eq!(evolved_particles[i].angle, expected);
-    }
+    // test independent evolution
+    assert_eq!(evolved_p1.length, particle1.length);
+    assert_eq!(
+        evolved_p1.angle,
+        particle1.angle + Angle::new(energies[0], PI)
+    );
+
+    assert_eq!(evolved_p2.length, particle2.length);
+    assert_eq!(
+        evolved_p2.angle,
+        particle2.angle + Angle::new(energies[1], PI)
+    );
+
+    assert_eq!(evolved_p3.length, particle3.length);
+    assert_eq!(
+        evolved_p3.angle,
+        particle3.angle + Angle::new(energies[2], PI)
+    );
+
+    // entangled system as correlated angle relationship
+    // Bell state |Φ⁺⟩ = (|00⟩ + |11⟩)/√2 encoded as angle correlation
+    let entangled_amplitude = 1.0; // normalized
+    let entangled_phase = 0.0; // |00⟩ + |11⟩ correlation at 0° phase
+    let entangled_system = Geonum::new(entangled_amplitude, entangled_phase, 1.0);
+
+    // evolve entangled system
+    let evolved_entangled = evolve(&entangled_system, 1.0, energy);
+
+    // correlation preserved through evolution
+    assert_eq!(evolved_entangled.length, entangled_system.length);
+    let expected_entangled_angle = entangled_system.angle + Angle::new(energy, PI);
+    assert_eq!(evolved_entangled.angle, expected_entangled_angle);
 }
 
 #[test]
 fn it_preserves_unitary_transformation() {
-    // in quantum mechanics, unitary transformations preserve probability
-    // in geometric numbers, this happens automatically through angle operations
+    // quantum state |ψ⟩ = 0.6|0⟩ + 0.8|1⟩ as single geonum
+    // amplitude = √(0.6² + 0.8²) = 1.0 (normalized)
+    // phase = atan2(0.8, 0.6) ≈ 0.927 radians
+    let state = Geonum::new_from_cartesian(0.6, 0.8);
 
-    // create a quantum state as a multivector
-    let state = Multivector(vec![
-        Geonum::new(0.6, 0.0, 1.0), // |0⟩ component
-        Geonum::new(0.8, 1.0, 2.0), // |1⟩ component at π/2
-    ]);
+    // test normalized
+    assert!((state.length - 1.0).abs() < EPSILON);
 
-    // verify initial state is normalized
-    let initial_norm_squared = state.0.iter().map(|g| g.length.powi(2)).sum::<f64>();
-    assert!((initial_norm_squared - 1.0).abs() < EPSILON);
+    // unitary transformation: rotate by π/4
+    let transformed = state.rotate(Angle::new(1.0, 4.0));
 
-    // create a unitary transformation as a rotation
-    let unitary_transform = |mv: &Multivector| -> Multivector {
-        // apply phase rotation to each component
-        Multivector(
-            mv.0.iter()
-                .map(|g| g.rotate(Angle::new(1.0, 4.0))) // rotate by π/4
-                .collect(),
-        )
-    };
+    // amplitude preserved (unitarity)
+    assert!((transformed.length - state.length).abs() < EPSILON);
 
-    // apply transformation
-    let transformed = unitary_transform(&state);
+    // phase changed by π/4
+    let expected_angle = state.angle + Angle::new(1.0, 4.0);
+    assert_eq!(transformed.angle, expected_angle);
 
-    // test normalization preservation
-    let final_norm_squared = transformed.0.iter().map(|g| g.length.powi(2)).sum::<f64>();
-    assert!((final_norm_squared - 1.0).abs() < EPSILON);
-
-    // test probability conservation
-    let initial_probs: Vec<f64> = state.0.iter().map(|g| g.length.powi(2)).collect();
-    let final_probs: Vec<f64> = transformed.0.iter().map(|g| g.length.powi(2)).collect();
-
-    for i in 0..initial_probs.len() {
-        assert!((initial_probs[i] - final_probs[i]).abs() < EPSILON);
-    }
-
-    // create a spinor using a pair of geometric numbers
-    let spinor = (
-        Geonum::new(0.7, 1.0, 6.0), // π/6
-        Geonum::new(0.7, 1.0, 3.0), // π/3
-    );
-
-    // spinor normalization check
-    let spinor_norm = spinor.0.length.powi(2) + spinor.1.length.powi(2);
-    assert!((spinor_norm - 0.98).abs() < 0.01); // approximately normalized
-
-    // test unitary transformation on spinor
-    let transform_spinor = |(s1, s2): &(Geonum, Geonum)| -> (Geonum, Geonum) {
-        // rotation matrix equivalent: [[cos(θ), -sin(θ)], [sin(θ), cos(θ)]]
-        let theta = PI / 3.0;
-        let cos_t = theta.cos();
-        let sin_t = theta.sin();
-
-        // compute linear combination while preserving total probability
-        let new_length1 =
-            (cos_t.powi(2) * s1.length.powi(2) + sin_t.powi(2) * s2.length.powi(2)).sqrt();
-        let new_angle1 = if cos_t >= 0.0 {
-            s1.angle
-        } else {
-            s1.angle + Angle::new(2.0, 2.0) // add π
-        };
-
-        let new_length2 =
-            (sin_t.powi(2) * s1.length.powi(2) + cos_t.powi(2) * s2.length.powi(2)).sqrt();
-        let new_angle2 = if sin_t >= 0.0 {
-            s2.angle
-        } else {
-            s2.angle + Angle::new(2.0, 2.0) // add π
-        };
-
-        (
-            Geonum::new_with_angle(new_length1, new_angle1),
-            Geonum::new_with_angle(new_length2, new_angle2),
-        )
-    };
-
-    // apply transformation to spinor
-    let transformed_spinor = transform_spinor(&spinor);
-
-    // verify norm preservation for spinor
-    let new_norm = transformed_spinor.0.length.powi(2) + transformed_spinor.1.length.powi(2);
-    assert!((new_norm - spinor_norm).abs() < 0.01);
-
-    // test preservation of quantum information through transformation
-    // inner product magnitude should be preserved under unitary transformations
-
-    // create two states
+    // quantum inner product preservation
     let state_a = Geonum::new(1.0, 1.0, 6.0); // π/6
     let state_b = Geonum::new(1.0, 1.0, 3.0); // π/3
 
-    // compute inner product magnitude
-    let inner_product_mag = state_a.dot(&state_b).length.abs();
+    let inner_product = state_a.dot(&state_b);
 
-    // apply same unitary transformation to both states
-    let rotated_a = state_a.rotate(Angle::new(1.0, 2.0)); // rotate by π/2
-    let rotated_b = state_b.rotate(Angle::new(1.0, 2.0)); // rotate by π/2
+    // apply same transformation
+    let rotated_a = state_a.rotate(Angle::new(1.0, 2.0));
+    let rotated_b = state_b.rotate(Angle::new(1.0, 2.0));
 
-    // inner product magnitude should be preserved
-    let rotated_inner_product_mag = rotated_a.dot(&rotated_b).length.abs();
-    assert!((inner_product_mag - rotated_inner_product_mag).abs() < EPSILON);
+    let rotated_inner_product = rotated_a.dot(&rotated_b);
+
+    // inner product preserved under unitary transformation
+    assert!((inner_product.length - rotated_inner_product.length).abs() < EPSILON);
+
+    // spinor as single geonum instead of pair
+    // traditional spinor (a, b) → geonum with length = ||(a,b)|| and angle encoding ratio
+    let spinor_magnitude = (0.7_f64.powi(2) + 0.7_f64.powi(2)).sqrt();
+    let spinor_phase = (1.0 / 3.0 - 1.0 / 6.0) * PI; // π/3 - π/6 = π/6 phase difference
+    let spinor = Geonum::new(spinor_magnitude, spinor_phase, PI);
+
+    // spinor rotation as angle operation
+    let rotated_spinor = spinor.rotate(Angle::new(1.0, 3.0)); // π/3 rotation
+
+    // magnitude preserved
+    assert!((rotated_spinor.length - spinor.length).abs() < EPSILON);
 }

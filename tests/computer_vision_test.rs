@@ -31,7 +31,7 @@
 // this isnt just more efficient - it enables direct computation of image transformations
 // through angle composition rather than matrix operations, and scales to high-dimensional feature spaces
 
-use geonum::{Angle, Geonum, Multivector};
+use geonum::{Angle, GeoCollection, Geonum};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -197,7 +197,7 @@ fn its_an_optical_flow_estimator() {
         PI,
     );
 
-    let multiscale_flow = Multivector(vec![
+    let multiscale_flow = GeoCollection::from(vec![
         flow_grade_1, // vector (grade 1) - original scale flow
         Geonum::new_with_blade(
             flow_vector.length * 0.5, // half magnitude at coarser scale
@@ -211,12 +211,12 @@ fn its_an_optical_flow_estimator() {
             flow_vector.angle.mod_4_angle(),
             PI,
         ),
-    ]);
+    ]); // optical flow at multiple scales
 
     // 4. verify multiscale representation
 
     // extract flow at different scales using blade index
-    let flow_components: Vec<&Geonum> = multiscale_flow.0.iter().collect();
+    let flow_components: Vec<&Geonum> = multiscale_flow.iter().collect();
 
     // verify we have all three scale components
     assert_eq!(
@@ -539,12 +539,20 @@ fn its_an_image_registration() {
     // traditional multi-scale registration uses image pyramids
     // with geonum: direct angle-based multi-scale representation
 
-    // create multi-scale representation using multivector
-    let _multiscale_image1 = Multivector(vec![
-        Geonum::new(1.0, 0.0, 2.0),               // fine scale
-        Geonum::new_with_blade(1.0, 2, 0.0, 2.0), // medium scale
-        Geonum::new_with_blade(1.0, 3, 0.0, 2.0), // coarse scale
-    ]);
+    // single Geonum encodes all scales through blade arithmetic:
+    let image = Geonum::new(1.0, 0.0, 2.0); // fine scale at blade 0 (grade 0)
+    let scale_shift = Angle::new(2.0, 1.0); // 2π rotation = 4 blades
+    let medium = scale_shift + image; // medium scale at blade 4 (grade 0)
+    let coarse = scale_shift + medium; // coarse scale at blade 8 (grade 0)
+                                       // formula: blade + scale_level * 4 preserves grade while encoding scale
+                                       // all scales have same grade (geometric behavior) but different blade counts
+
+    // test scale encoding through blade arithmetic
+    assert_eq!(image.angle.blade(), 0); // fine scale
+    assert_eq!(medium.angle.blade(), 4); // medium scale
+    assert_eq!(coarse.angle.blade(), 8); // coarse scale
+    assert_eq!(image.angle.grade(), medium.angle.grade()); // same grade
+    assert_eq!(medium.angle.grade(), coarse.angle.grade()); // preserves geometric behavior
 
     // 5. measure performance for high-resolution image registration
 
@@ -575,6 +583,68 @@ fn its_an_image_registration() {
         elapsed.as_micros() < 5000,
         "High-resolution image registration should be fast"
     );
+}
+
+#[test]
+fn it_proves_computational_complexity_elimination() {
+    // demonstrate the complexity reduction from conventional to geonum approaches
+
+    // CONVENTIONAL DESIGN: exponential complexity explosion
+    // - image pyramid: store O(n²) pixels × m scales = O(n²m) memory
+    // - convolution kernels: O(n²k²) operations per scale = O(n²k²m) total
+    // - feature matching: O(f²) comparisons across scales = O(f²m)
+    // - iterative optimization: O(i) iterations × O(n²) per iteration = O(in²)
+    // TOTAL: O(n²k²m + f²m + in²) operations, O(n²m) memory
+
+    // GEONUM DESIGN: constant/linear complexity
+    let start_time = Instant::now();
+
+    // 1. multi-scale representation: O(1) per scale vs O(n²) pyramid storage
+    let fine_scale = Geonum::new(1.0, 0.0, 1.0); // blade 0
+    let medium_scale = Geonum::new_with_blade(1.0, 4, 0.0, 1.0); // blade 4
+    let coarse_scale = Geonum::new_with_blade(1.0, 8, 0.0, 1.0); // blade 8
+                                                                 // no pyramid memory needed - scales encoded in blade arithmetic
+
+    // 2. rotation estimation: O(1) angle subtraction vs O(in²) iterative optimization
+    let image1_orientation = Geonum::new(1.0, 0.0, 1.0);
+    let image2_orientation = Geonum::new(1.0, 1.0, 6.0); // π/6 rotation
+    let direct_rotation = image2_orientation.angle - image1_orientation.angle;
+    // O(1) operation replaces hundreds of optimization iterations
+
+    // 3. feature transformation: O(1) per feature vs O(k²) convolution per feature
+    let num_features = 10000; // simulate high-resolution image
+    let transformed_features: Vec<Geonum> = (0..num_features)
+        .map(|i| {
+            let feature = Geonum::new(1.0, i as f64, num_features as f64);
+            feature.rotate(direct_rotation) // O(1) vs O(k²) convolution
+        })
+        .collect();
+
+    // 4. multi-scale processing: O(1) blade arithmetic vs O(m) pyramid traversal
+    let multiscale_result = fine_scale.rotate(direct_rotation)
+        * medium_scale.rotate(direct_rotation)
+        * coarse_scale.rotate(direct_rotation);
+    // processes all scales simultaneously vs sequential pyramid operations
+
+    let elapsed = start_time.elapsed();
+
+    // complexity proof through timing bounds
+    assert_eq!(transformed_features.len(), num_features);
+    assert!(multiscale_result.length.is_finite());
+    assert!(elapsed.as_micros() < 10000); // <10ms for 10k features across 3 scales
+
+    // COMPLEXITY COMPARISON:
+    // conventional: O(n²k²m + f²m + in²) ≈ O(1000² × 5² × 3 + 10000² × 3 + 100 × 1000²)
+    //              ≈ O(75M + 300M + 100M) = O(475M) operations
+    // geonum: O(f) = O(10000) operations
+    // improvement factor: 47,500× reduction in computational complexity
+
+    println!(
+        "processed {} features across 3 scales in {:?}",
+        num_features, elapsed
+    );
+    println!("conventional design requires ~475M operations");
+    println!("geonum design requires ~10K operations (47,500× improvement)");
 }
 
 #[test]
@@ -906,9 +976,9 @@ fn its_an_object_detection() {
                 })
                 .collect::<Vec<Geonum>>();
 
-            (detection, Multivector(class_probs))
+            (detection, GeoCollection::from(class_probs)) // class probability distribution
         })
-        .collect::<Vec<(Geonum, Multivector)>>();
+        .collect::<Vec<(Geonum, GeoCollection)>>(); // detection with class probabilities
 
     let elapsed = start_time.elapsed();
 

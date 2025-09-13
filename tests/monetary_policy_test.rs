@@ -10,7 +10,7 @@
 // eliminating systemic default risk eliminates monetary inflation
 
 use geonum::Geonum;
-use std::f64::consts::{PI, TAU as TWO_PI};
+use std::f64::consts::{PI, TAU};
 use std::time::Instant;
 
 #[test]
@@ -62,7 +62,7 @@ fn it_models_causal_transaction_structure() {
         |amount: &Geonum, creditor_angle: f64, debitor_angle: f64| -> Geonum {
             // bivector representation: creditor ∧ debitor
             // anticommutative: creditor ∧ debitor = -(debitor ∧ creditor)
-            let transaction_angle = (creditor_angle - debitor_angle) % TWO_PI;
+            let transaction_angle = (creditor_angle - debitor_angle) % TAU;
 
             // return transaction bivector
             // convert angle to geometric representation
@@ -139,7 +139,7 @@ fn it_models_causal_transaction_structure() {
 
         // create a geometric number that encodes both the spatial (angle) and
         // temporal (time difference) aspects of the transaction
-        let transaction_angle = (creditor_angle - debitor_angle) % TWO_PI;
+        let transaction_angle = (creditor_angle - debitor_angle) % TAU;
         Geonum::new_with_blade(
             amount * (1.0 + time_difference), // magnitude increases with time delay
             2,                 // bivector (grade 2) representing the transaction plane

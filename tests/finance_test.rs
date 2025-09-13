@@ -98,50 +98,51 @@ fn it_computes_portfolio_optimization() {
                            // old design: required declaring 1000-dimensional "space" first
                            // new design: create geometric numbers that represent asset returns directly
     let asset_indices: Vec<usize> = (0..num_assets).collect();
-    let returns = Multivector::create_dimension(1.0, &asset_indices); // return vectors for each asset
+    let returns: Vec<Geonum> = asset_indices
+        .iter()
+        .map(|&i| Geonum::create_dimension(1.0, i))
+        .collect();
+    let returns = GeoCollection::from(returns);
 
     // in geometric algebra, portfolio optimization becomes direct angle adjustments
-    let optimize_portfolio = |asset_returns: &Multivector, risk_tolerance: f64| -> Multivector {
-        // traditional portfolio optimization requires complex quadratic programming
-        // with geonum, optimal weights come from angle adjustments
+    let optimize_portfolio =
+        |_asset_returns: &GeoCollection, risk_tolerance: f64| -> GeoCollection {
+            // traditional portfolio optimization requires complex quadratic programming
+            // with geonum, optimal weights come from angle adjustments
 
-        // extract expected returns (grades 0-1) and covariance (grade 2)
-        // manually combine grade 0 and grade 1 components
-        let mut expected_returns_vec = asset_returns.grade(0).0;
-        expected_returns_vec.extend(asset_returns.grade(1).0);
-        let expected_returns = Multivector(expected_returns_vec);
+            // portfolio positions: value as length, correlation as angle
+            let positions = GeoCollection::from(vec![
+                Geonum::new(10000.0, 0.0, 1.0), // bonds at angle 0
+                Geonum::new(15000.0, 1.0, 4.0), // stocks at π/4
+                Geonum::new(5000.0, 1.0, 2.0),  // commodities at π/2
+            ]);
 
-        // in geometric algebra, risk is encoded in higher grades
-        let _risk_components = asset_returns.grade(2); // risk components for future use
+            // optimal weights balance return and risk through angle transformation
+            // the risk_tolerance parameter controls the angle of rotation
+            let risk_angle = PI / 2.0 * (1.0 - risk_tolerance); // maps 0-1 to π/2-0
 
-        // optimal weights balance return and risk through angle transformation
-        // the risk_tolerance parameter controls the angle of rotation
-        let risk_angle = PI / 2.0 * (1.0 - risk_tolerance); // maps 0-1 to π/2-0
+            // apply risk adjustment to portfolio allocation
+            let optimal_allocation = GeoCollection::from(
+                positions
+                    .iter()
+                    .map(|g| {
+                        let risk_rotation = Angle::new(risk_angle, PI);
+                        Geonum::new_with_angle(g.length, g.angle - risk_rotation)
+                    })
+                    .collect::<Vec<_>>(),
+            );
 
-        // rotate returns by risk angle to incorporate risk preference
-        let optimal_allocation = Multivector(
-            expected_returns
-                .0
-                .iter()
-                .map(|g| {
-                    let risk_rotation = Angle::new(risk_angle, PI);
-                    Geonum::new_with_angle(g.length, g.angle - risk_rotation)
-                })
-                .collect(),
-        );
+            // normalize weights to sum to 1.0
+            let total_weight = optimal_allocation.iter().map(|g| g.length).sum::<f64>();
+            let normalized_weights = GeoCollection::from(
+                optimal_allocation
+                    .iter()
+                    .map(|g| Geonum::new_with_angle(g.length / total_weight, g.angle))
+                    .collect::<Vec<_>>(),
+            );
 
-        // normalize weights to sum to 1.0
-        let total_weight = optimal_allocation.0.iter().map(|g| g.length).sum::<f64>();
-        let normalized_weights = Multivector(
-            optimal_allocation
-                .0
-                .iter()
-                .map(|g| Geonum::new_with_angle(g.length / total_weight, g.angle))
-                .collect(),
-        );
-
-        normalized_weights
-    };
+            normalized_weights
+        };
 
     // Set risk tolerance (0 = most risk-averse, 1 = most risk-seeking)
     let risk_tolerance = 0.5; // balanced portfolio
@@ -158,7 +159,7 @@ fn it_computes_portfolio_optimization() {
     );
 
     // verify weights sum approximately to 1.0
-    let weight_sum: f64 = weights.0.iter().map(|g| g.length).sum();
+    let weight_sum: f64 = weights.iter().map(|g| g.length).sum();
     assert!(
         (weight_sum - 1.0).abs() < 1e-10,
         "portfolio weights sum to 1.0"

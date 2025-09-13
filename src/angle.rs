@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 /// Angle struct that maintains the angle-blade invariant
 ///
-/// Encapsulates the fundamental geometric number constraint:
+/// encapsulates the fundamental geometric number constraint:
 /// - angle value stays within [0, π/2)
 /// - blade counts π/2 rotations
 #[derive(Debug, Clone, Copy)]
@@ -123,7 +123,7 @@ impl Angle {
     /// # returns
     /// new angle with rotation applied
     pub fn rotate(self, delta: Angle) -> Self {
-        self.geometric_add(&delta)
+        self + delta
     }
 
     /// returns the angle value within current π/2 segment
@@ -435,6 +435,13 @@ impl Angle {
     pub fn negate(&self) -> Angle {
         *self + Angle::new(1.0, 1.0) // add π (2 blades)
     }
+
+    /// projects this angle onto another angle direction
+    /// returns the cosine of the angle difference
+    pub fn project(&self, onto: Angle) -> f64 {
+        let angle_diff = onto - *self;
+        angle_diff.mod_4_angle().cos()
+    }
 }
 
 impl PartialEq for Angle {
@@ -616,7 +623,7 @@ impl Ord for Angle {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.blade.cmp(&other.blade) {
             std::cmp::Ordering::Equal => {
-                // values are always finite in valid Angles, so unwrap is safe
+                // only finite values in Angles, so unwrap is safe
                 self.value.partial_cmp(&other.value).unwrap()
             }
             other => other,
@@ -1461,5 +1468,38 @@ mod tests {
         let normalized = angle_2pi.normalize_boundaries();
         assert_eq!(normalized.blade(), 4);
         assert_eq!(normalized.value(), 0.0);
+    }
+
+    #[test]
+    fn it_projects() {
+        // project angle onto itself
+        let angle = Angle::new(1.0, 4.0); // π/4
+        let self_proj = angle.project(angle);
+        assert!((self_proj - 1.0).abs() < 1e-10); // cos(0) = 1
+
+        // project onto perpendicular angle
+        let perp = Angle::new(1.0, 2.0); // π/2
+        let perp_proj = angle.project(perp);
+        assert!((perp_proj - (PI / 4.0).cos()).abs() < 1e-10); // cos(π/2 - π/4) = cos(π/4)
+
+        // project onto opposite angle
+        let opposite = angle + Angle::new(1.0, 1.0); // π/4 + π
+        let opp_proj = angle.project(opposite);
+        assert!((opp_proj + 1.0).abs() < 1e-10); // cos(π) = -1
+
+        // test grade cycling
+        let high_blade = Angle::new_with_blade(1000, 1.0, 4.0); // blade 1000, π/4 remainder
+        let low_blade = Angle::new(1.0, 4.0); // blade 0, π/4
+        let cycle_proj = high_blade.project(low_blade);
+        assert!((cycle_proj - 1.0).abs() < 1e-10); // equivalent angles project to 1
+
+        // test angle wrapping via geometric_sub negative blade handling
+        let small_angle = Angle::new(1.0, 8.0); // π/8, blade 0, value π/8
+        let large_angle = Angle::new_with_blade(5, 1.0, 4.0); // blade 5, π/4
+        let wrapped_diff = large_angle - small_angle;
+        // large_angle - small_angle = blade 5 - blade 0 = blade 5, value π/4 - π/8 = π/8
+        assert_eq!(wrapped_diff.blade(), 5);
+        assert!((wrapped_diff.value() - PI / 8.0).abs() < 1e-10);
+        assert!((wrapped_diff.mod_4_angle() - 1.9634954084936207).abs() < 1e-10);
     }
 }
