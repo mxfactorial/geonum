@@ -35,7 +35,7 @@
 //
 // the pathway to unbounded ai intelligence lies through geometric numbers
 
-use geonum::{Activation, Geonum, MachineLearning, Multivector};
+use geonum::{Activation, GeoCollection, Geonum, MachineLearning};
 use std::f64::consts::PI;
 
 #[test]
@@ -990,7 +990,7 @@ fn it_scales_quantum_learning() {
     // With geometric numbers, we directly represent superpositions
 
     // create quantum-like state (superposition)
-    let quantum_state = Multivector(vec![
+    let quantum_state = GeoCollection::from(vec![
         Geonum::new(std::f64::consts::FRAC_1_SQRT_2, 0.0, 1.0), // |0⟩ component
         Geonum::new(std::f64::consts::FRAC_1_SQRT_2, 1.0, 2.0), // |1⟩ component at π/2
     ]);
@@ -998,10 +998,9 @@ fn it_scales_quantum_learning() {
     // 2. demonstrate quantum parallelism through orthogonal angle operations
 
     // apply a quantum-like operation (Hadamard-like)
-    let hadamard = |state: &Multivector| -> Multivector {
-        Multivector(
+    let hadamard = |state: &GeoCollection| -> GeoCollection {
+        GeoCollection::from(
             state
-                .0
                 .iter()
                 .flat_map(|g| {
                     if g.angle.is_scalar() {
@@ -1018,7 +1017,7 @@ fn it_scales_quantum_learning() {
                         ]
                     }
                 })
-                .collect(),
+                .collect::<Vec<_>>(),
         )
     };
 
@@ -1027,10 +1026,9 @@ fn it_scales_quantum_learning() {
     // 3. enable classical simulation of quantum learning algorithms
 
     // create a quantum-like classifier
-    let qml_classify = |state: &Multivector, point: &Geonum| -> i32 {
+    let qml_classify = |state: &GeoCollection, point: &Geonum| -> i32 {
         // Find component with maximum overlap
         let max_overlap = state
-            .0
             .iter()
             .map(|g| {
                 let dot_product = g.length * point.length * (g.angle - point.angle).cos();
@@ -1056,7 +1054,7 @@ fn it_scales_quantum_learning() {
 
     // prove operations complete
     assert_eq!(
-        transformed_state.0.len(),
+        transformed_state.len(),
         4,
         "should have 4 components after Hadamard"
     );

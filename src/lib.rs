@@ -17,20 +17,18 @@
 
 // mod declarations first - these tell Rust about the module structure
 mod angle;
+mod geocollection;
 mod geonum_mod; // avoids name collision with crate
-mod multivector;
 pub mod traits;
 
 // re-export all primary types
 pub use angle::Angle;
-pub use geonum_mod::{Geonum, EPSILON, TWO_PI};
-pub use multivector::{Grade, Multivector};
+pub use geocollection::GeoCollection;
+pub use geonum_mod::{Geonum, EPSILON};
 
 // re-export all traits based on features
 #[cfg(feature = "em")]
 pub use traits::Electromagnetics;
-#[cfg(feature = "manifold")]
-pub use traits::Manifold;
 #[cfg(feature = "optics")]
 pub use traits::Optics;
 #[cfg(feature = "projection")]
