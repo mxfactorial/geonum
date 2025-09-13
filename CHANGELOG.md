@@ -1,5 +1,25 @@
 # changelog
 
+## 0.8.0 (2025-09-11)
+
+### added
+- src/geocollection.rs with GeoCollection struct for domain-specific geometric object collections
+- Angle::project() method for angle projection operations
+- Angle + Geonum operator overloading for direct angle addition to geometric numbers
+- angle_arithmetic_test.rs comprehensive angle blade arithmetic test suite
+- linear_algebra_test.rs proving geonum eliminates angle slack from scalar decomposition
+- mechanics_test.rs classical mechanics without coordinate systems
+- geocollection_test.rs test suite for collection operations
+
+### removed
+- src/multivector.rs replaced with GeoCollection interface
+- Multivector type from lib.rs exports
+
+### changed
+- replaced Multivector usage throughout codebase with GeoCollection
+- updated all test files to use GeoCollection instead of Multivector
+- strengthened test assertions replacing weak is_finite() checks with precise value tests
+
 ## 0.7.1 (2025-08-13)
 
 ### added
@@ -145,7 +165,7 @@
 - fixed high-dimension multivector operations that were failing due to angle normalization
 - eliminated angle-based grade inference which was unreliable in high dimensions
 - fixed geometric product rule for vector*bivector operations to maintain consistent blade grades
-- fixed Clifford conjugate to avoid angle normalizations with TWO_PI
+- fixed Clifford conjugate to avoid angle normalizations with TAU
 - fixed Geonum initialization in Dimensions::multivector to set blade grades by index
 
 ## 0.5.0 (2025-04-10)
