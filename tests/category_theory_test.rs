@@ -20,11 +20,10 @@
 // say goodbye to `F(f) ∘ F(g) = F(f ∘ g)`
 
 use geonum::*;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 
 // small value for floating-point comparisons
 const EPSILON: f64 = 1e-10;
-const TWO_PI: f64 = 2.0 * PI;
 
 #[test]
 fn its_a_category() {
@@ -45,7 +44,10 @@ fn its_a_category() {
     // test dimension extension vs categorical objects
     // instead of saying "a is an object in category C", we say "a exists in space"
     // categorical objects become geometric numbers at standardized angles
-    let objects = Multivector::create_dimension(1.0, &[0, 1]);
+    let objects = GeoCollection::from(vec![
+        Geonum::create_dimension(1.0, 0),
+        Geonum::create_dimension(1.0, 1),
+    ]); // categorical objects as geometric positions at angles 0 and π/2
 
     // test objects exist in the space
     assert!(objects[0].angle.mod_4_angle() < EPSILON);
@@ -170,7 +172,7 @@ fn its_a_functor() {
     // angles do maintain consistent transformations
     let angle_diff =
         (f_of_composition.angle.mod_4_angle() - composition_of_f.angle.mod_4_angle()).abs();
-    assert!(angle_diff < EPSILON || (TWO_PI - angle_diff) < EPSILON);
+    assert!(angle_diff < EPSILON || (TAU - angle_diff) < EPSILON);
 
     // test we can directly measure the degree of structure preservation
     // instead of just asserting it exists

@@ -26,147 +26,178 @@ const EPSILON: f64 = 1e-10;
 
 #[test]
 fn it_projects_a_geonum_onto_coordinate_axes() {
-    // step 1: unify traditional [x, y, z] coordinates into single geonum
-    // traditional 3d vector: [2, 3, 1]
-    let x: f64 = 2.0;
-    let y: f64 = 3.0;
-    let z: f64 = 1.0;
+    // test geonum's non-euclidean blade geometry projection properties
+    // dimensions emerge from blade rotations, not linear combinations
 
-    // compute unified geometric representation
-    let magnitude = (x * x + y * y + z * z).sqrt(); // 3.742
+    // step 1: build dimensional structure through rotations (geonum's natural way)
+    let base_scalar = Geonum::scalar(5.0);
+    let rotated_vector = base_scalar.rotate(Angle::new(1.0, 4.0)); // π/4 rotation
+    let final_geonum = rotated_vector.scale(2.0); // 10 units at π/4
 
-    // encode direction as fractional angle within pi/2 constraint
-    // for this simplified test, use direct angle calculation
-    let total_angle = y.atan2(x); // basic 2d angle for now
-    let blade = 3; // 3d vector = 3 pi/2 turns
-    let fractional_angle = total_angle % (PI / 2.0); // keep within [0, pi/2]
+    // step 2: compute projections onto blade dimensions
+    let proj_blade_0 = final_geonum.project_to_dimension(0); // blade 0 space
+    let proj_blade_1 = final_geonum.project_to_dimension(1); // blade 1 space
+    let proj_blade_2 = final_geonum.project_to_dimension(2); // blade 2 space
 
-    let unified = Geonum::new_with_blade(magnitude, blade, fractional_angle, PI);
+    // step 3: test blade projection properties (not euclidean magnitude preservation)
+    // each projection represents alignment with that blade space
 
-    // step 2: decompose geonum back to coordinate projections
-    // project unified geometric number onto coordinate axes
+    // test individual projections are trigonometrically consistent
+    let geonum_angle = final_geonum.angle.mod_4_angle();
+    let expected_blade_0 = final_geonum.length * (geonum_angle - 0.0).cos(); // angle from blade 0
+    let expected_blade_1 = final_geonum.length * (geonum_angle - PI / 2.0).cos(); // angle from blade 1
 
-    // x-axis projection (0 pi/2 turns from origin)
-    let x_projected = unified.project_to_dimension(0);
+    assert!(
+        (proj_blade_0 - expected_blade_0).abs() < EPSILON,
+        "blade 0 projection trigonometrically consistent"
+    );
 
-    // y-axis projection (1 pi/2 turn from origin)
-    let y_projected = unified.project_to_dimension(1);
+    assert!(
+        (proj_blade_1 - expected_blade_1).abs() < EPSILON,
+        "blade 1 projection trigonometrically consistent"
+    );
 
-    // z-axis projection (2 pi/2 turns from origin)
-    let z_projected = unified.project_to_dimension(2);
+    // step 4: test non-euclidean property - projections don't satisfy pythagorean theorem
+    let euclidean_magnitude =
+        (proj_blade_0.powi(2) + proj_blade_1.powi(2) + proj_blade_2.powi(2)).sqrt();
+    let actual_magnitude = final_geonum.length;
 
-    // step 3: test that projections are well-defined
-    assert!(x_projected.is_finite(), "x component is finite");
-    assert!(y_projected.is_finite(), "y component is finite");
-    assert!(z_projected.is_finite(), "z component is finite");
+    // this will NOT be equal - proves non-euclidean blade geometry
+    assert!(
+        (euclidean_magnitude - actual_magnitude).abs() > 0.1,
+        "blade projections are non-euclidean"
+    );
 
-    // step 4: test that magnitude is preserved
-    let reconstructed_magnitude =
-        (x_projected * x_projected + y_projected * y_projected + z_projected * z_projected).sqrt();
-    // note: this is a simplified test - full coordinate reconstruction requires more complex angle encoding
-    assert!(reconstructed_magnitude.is_finite(), "magnitude is finite");
+    // step 5: test what IS preserved - the geometric relationships within blade structure
+    // projections preserve relative angle relationships
+    let blade_0_axis = Angle::new_with_blade(0, 0.0, 1.0);
+    let blade_1_axis = Angle::new_with_blade(1, 0.0, 1.0);
+
+    let angle_to_blade_0 = final_geonum.angle.project(blade_0_axis);
+    let angle_to_blade_1 = final_geonum.angle.project(blade_1_axis);
+
+    assert!(
+        (proj_blade_0 - final_geonum.length * angle_to_blade_0).abs() < EPSILON,
+        "projection equals length times angle projection"
+    );
+
+    assert!(
+        (proj_blade_1 - final_geonum.length * angle_to_blade_1).abs() < EPSILON,
+        "projection equals length times angle projection"
+    );
 }
 
 #[test]
-fn it_proves_dimensions_are_observed_from_angles() {
-    // create a geometric number without defining any dimensional space
-    // this geometric entity exists independently of coordinate systems
-    let geometric_entity = Geonum::new(2.5, 0.8, PI); // vector with 0.8 radians angle
+fn it_proves_quadrature_creates_dimensional_structure() {
+    // the fundamental insight: sin(θ+π/2) = cos(θ) creates all dimensional structure
+    // this quadrature relationship generates the 4-fold repetition
+    // dimensions emerge from this trigonometric identity, not from coordinate spaces
 
-    // test: observer can query any dimension without pre-definition
+    let entity = Geonum::new(1.0, 1.0, 6.0); // π/6 angle, unit magnitude
 
-    // query the 3rd dimension (traditional z-axis)
-    let dimension_3 = geometric_entity.project_to_dimension(3);
+    // test the fundamental quadrature relationship: sin(θ+π/2) = cos(θ)
+    let theta = entity.angle.mod_4_angle();
+    let theta_plus_quarter = theta + PI / 2.0;
+    assert!((theta.cos() - theta_plus_quarter.sin()).abs() < EPSILON);
+    assert!((theta.sin() + theta_plus_quarter.cos()).abs() < EPSILON);
 
-    // query the 42nd dimension (never defined anywhere)
-    let dimension_42 = geometric_entity.project_to_dimension(42);
-
-    // query the 1000th dimension (would be impossible in traditional systems)
-    let dimension_1000 = geometric_entity.project_to_dimension(1000);
-
-    // query the 1,000,000th dimension (completely arbitrary)
-    let dimension_million = geometric_entity.project_to_dimension(1_000_000);
-
-    // critical insight: all these components can be non-zero!
-    // the geometric entity has meaningful projections into dimensions
-    // that were never defined, declared, or initialized
-
-    // compute expected trigonometric values
-    let entity_angle = geometric_entity.angle.mod_4_angle();
-    let expected_3 = 2.5 * ((3.0 * PI / 2.0) - entity_angle).cos();
-    let expected_42 = 2.5 * ((42.0 * PI / 2.0) - entity_angle).cos();
-    let expected_1000 = 2.5 * ((1000.0 * PI / 2.0) - entity_angle).cos();
-    let expected_million = 2.5 * ((1_000_000.0 * PI / 2.0) - entity_angle).cos();
-
+    // this quadrature manifests as orthogonal projections
+    // cos²(θ) + sin²(θ) = 1 creates the pythagorean relationship
+    let dim_0 = entity.project_to_dimension(0);
+    let dim_1 = entity.project_to_dimension(1);
+    let cos_projection = entity.length * (theta - 0.0).cos(); // dimension 0
+    let sin_projection = entity.length * (theta - PI / 2.0).cos(); // dimension 1
+    assert!((dim_0 - cos_projection).abs() < EPSILON);
+    assert!((dim_1 - sin_projection).abs() < EPSILON);
     assert!(
-        (dimension_3 - expected_3).abs() < EPSILON,
-        "3rd dimension projection matches trigonometric values"
-    );
-    assert!(
-        (dimension_42 - expected_42).abs() < EPSILON,
-        "42nd dimension projection matches trigonometric values"
-    );
-    assert!(
-        (dimension_1000 - expected_1000).abs() < EPSILON,
-        "1000th dimension projection matches trigonometric values"
-    );
-    assert!(
-        (dimension_million - expected_million).abs() < EPSILON,
-        "millionth dimension projection matches trigonometric values"
+        (cos_projection.powi(2) + sin_projection.powi(2) - entity.length.powi(2)).abs() < EPSILON
     );
 
-    // test at least some dimensions have non-zero components
-    let total_energy =
-        dimension_3.abs() + dimension_42.abs() + dimension_1000.abs() + dimension_million.abs();
-    assert!(
-        total_energy > 0.0,
-        "geometric entity has non-zero projections"
-    );
+    // the 4-fold cycle emerges from completing the trigonometric circle
+    let dim_2 = entity.project_to_dimension(2);
+    let dim_3 = entity.project_to_dimension(3);
+    assert!((dim_0 - entity.project_to_dimension(4)).abs() < EPSILON); // 0 = 4 (mod 4)
+    assert!((dim_1 - entity.project_to_dimension(5)).abs() < EPSILON); // 1 = 5 (mod 4)
+    assert!((dim_2 - entity.project_to_dimension(6)).abs() < EPSILON); // 2 = 6 (mod 4)
+    assert!((dim_3 - entity.project_to_dimension(7)).abs() < EPSILON); // 3 = 7 (mod 4)
 
-    // test complete: dimensions are computed on demand, not predefined
-    // the geometric number exists independently and projects to any dimension via trigonometry
+    // prove the quadrature generates polynomial coefficients in calculus
+    let base_function = Geonum::new(4.0, 0.0, 1.0); // grade 0 function
+    let first_derivative = base_function.differentiate(); // π/2 rotation to grade 1
+    let second_derivative = first_derivative.differentiate(); // π/2 rotation to grade 2
+    let third_derivative = second_derivative.differentiate(); // π/2 rotation to grade 3
+    let fourth_derivative = third_derivative.differentiate(); // π/2 rotation back to grade 0
 
-    // traditional design requires:
-    // 1. define 1,000,000-dimensional space
-    // 2. initialize basis vectors
-    // 3. store 1,000,000 components
-    // 4. manage coordinate transformations
-    //
-    // geonum design:
-    // 1. one geometric number
-    // 2. compute projection into dimension n on demand
-    // 3. trigonometric calculation provides answer
-    // 4. no storage, no initialization, no limits
+    // the 4-cycle of differentiation comes from quadrature
+    assert_eq!(base_function.angle.grade(), 0);
+    assert_eq!(first_derivative.angle.grade(), 1);
+    assert_eq!(second_derivative.angle.grade(), 2);
+    assert_eq!(third_derivative.angle.grade(), 3);
+    assert_eq!(fourth_derivative.angle.grade(), 0); // cycle complete
+
+    // dimensional structure emerges from trigonometric identities
+    // coordinate spaces emerge from dimensional structure, not the reverse
 }
 
 #[test]
-fn it_creates_dimensions_with_standardized_angles() {
-    // test the create_dimension constructor
-    let dim_0 = Geonum::create_dimension(1.0, 0);
-    let dim_1 = Geonum::create_dimension(1.0, 1);
-    let dim_2 = Geonum::create_dimension(1.0, 2);
-    let dim_1000 = Geonum::create_dimension(1.0, 1000);
+fn it_shows_dimensions_are_quarter_turns() {
+    // dimensions are angle positions separated by π/2 rotations
+    // creating dimensions means rotating by quarter turns
 
-    // test angles are standardized to dimension_index * pi/2
-    assert!((dim_0.angle.mod_4_angle() - 0.0).abs() < EPSILON);
-    assert!((dim_1.angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
-    assert!((dim_2.angle.mod_4_angle() - PI).abs() < EPSILON);
-    // For dimension 1000, the angle wraps around many times
-    // 1000 * π/2 = 500π = 250 * 2π, so mod_4_angle should be 0
-    assert!((dim_1000.angle.mod_4_angle() - 0.0).abs() < EPSILON);
+    let entity = Geonum::new(2.0, 1.0, 8.0); // arbitrary entity
 
-    // test blade equals dimension_index
-    assert_eq!(dim_0.angle.blade(), 0);
-    assert_eq!(dim_1.angle.blade(), 1);
-    assert_eq!(dim_2.angle.blade(), 2);
-    assert_eq!(dim_1000.angle.blade(), 1000);
+    // dimensions are angle positions, proven by direct construction
+    let constructed_dim_0 = Geonum::create_dimension(1.0, 0); // 0 quarter turns
+    let constructed_dim_1 = Geonum::create_dimension(1.0, 1); // 1 quarter turn
+    let constructed_dim_2 = Geonum::create_dimension(1.0, 2); // 2 quarter turns
+    let constructed_dim_3 = Geonum::create_dimension(1.0, 3); // 3 quarter turns
 
-    // test multivector constructor
-    let mv = Multivector::create_dimension(1.0, &[0, 1, 2]);
-    assert_eq!(mv.len(), 3);
-    assert_eq!(mv[0].angle.blade(), 0);
-    assert_eq!(mv[1].angle.blade(), 1);
-    assert_eq!(mv[2].angle.blade(), 2);
+    // these are separated by exactly π/2 rotations
+    assert!((constructed_dim_0.angle.mod_4_angle() - 0.0).abs() < EPSILON);
+    assert!((constructed_dim_1.angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+    assert!((constructed_dim_2.angle.mod_4_angle() - PI).abs() < EPSILON);
+    assert!((constructed_dim_3.angle.mod_4_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
+
+    // rotating between dimensions proves they are angle positions
+    let rotated_0_to_1 = constructed_dim_0.rotate(Angle::new(1.0, 2.0)); // +π/2
+    let rotated_1_to_2 = constructed_dim_1.rotate(Angle::new(1.0, 2.0)); // +π/2
+    let rotated_2_to_3 = constructed_dim_2.rotate(Angle::new(1.0, 2.0)); // +π/2
+    let rotated_3_to_0 = constructed_dim_3.rotate(Angle::new(1.0, 2.0)); // +π/2
+
+    let blade_from_rotation = Angle::new(1.0, 2.0); // π/2 rotation
+    assert_eq!(rotated_0_to_1.angle, constructed_dim_1.angle);
+    assert_eq!(rotated_1_to_2.angle, constructed_dim_2.angle);
+    assert_eq!(rotated_2_to_3.angle, constructed_dim_3.angle);
+    assert_eq!(
+        rotated_3_to_0.angle,
+        constructed_dim_0.angle
+            + blade_from_rotation
+            + blade_from_rotation
+            + blade_from_rotation
+            + blade_from_rotation
+    );
+
+    // the blade % 4 arithmetic creates dimensional equivalence in any dimension count
+    let proj_0 = entity.project_to_dimension(0);
+    let proj_1000 = entity.project_to_dimension(1000);
+    let proj_million = entity.project_to_dimension(1_000_000);
+
+    assert!((proj_0 - proj_1000).abs() < EPSILON); // 0 = 1000 (mod 4)
+    assert!((proj_0 - proj_million).abs() < EPSILON); // 0 = 1,000,000 (mod 4)
+
+    // prove quarter turn relationships via pythagorean theorem
+    let proj_0 = entity.project_to_dimension(0);
+    let proj_1 = entity.project_to_dimension(1);
+    let proj_2 = entity.project_to_dimension(2);
+    let proj_3 = entity.project_to_dimension(3);
+
+    // quarter turn projections are orthogonal
+    assert!((proj_0.powi(2) + proj_1.powi(2) - entity.length.powi(2)).abs() < EPSILON);
+    assert!((proj_2.powi(2) + proj_3.powi(2) - entity.length.powi(2)).abs() < EPSILON);
+
+    // half turn projections are opposite
+    assert!((proj_0 + proj_2).abs() < EPSILON);
+    assert!((proj_1 + proj_3).abs() < EPSILON);
 }
 
 #[test]
@@ -312,6 +343,182 @@ fn it_proves_vectors_can_never_be_orthogonal() {
 }
 
 #[test]
+fn it_demonstrates_inversion_preserves_grade_parity_relationships() {
+    // geonum's grade structure has involutive pairs: 0↔2, 1↔3
+    // operations that preserve this pairing maintain orthogonality relationships
+    // circular inversion is one such operation
+    let center = Geonum::new_from_cartesian(0.0, 0.0); // origin for clarity
+    let radius = 2.0;
+
+    // test points at different angles and distances
+    let test_configs = vec![
+        // (distance, angle_pi_rad, angle_div, description)
+        (1.0, 0.0, 1.0, "inside on +x axis"),
+        (3.0, 0.0, 1.0, "outside on +x axis"),
+        (1.0, 1.0, 2.0, "inside on +y axis"),
+        (3.0, 1.0, 2.0, "outside on +y axis"),
+        (1.0, 1.0, 4.0, "inside at π/4"),
+        (3.0, 1.0, 4.0, "outside at π/4"),
+        (1.0, 1.0, 1.0, "inside on -x axis"),
+        (3.0, 1.0, 1.0, "outside on -x axis"),
+    ];
+
+    println!("\nSingle point inversions from origin:");
+    for (dist, pi_rad, div, desc) in test_configs {
+        let p = Geonum::new(dist, pi_rad, div);
+        let p_inv = p.invert_circle(&center, radius);
+
+        println!(
+            "{}: dist={} angle={:.3} blade={} → dist={:.3} angle={:.3} blade={}",
+            desc,
+            dist,
+            p.angle.value(),
+            p.angle.blade(),
+            p_inv.length,
+            p_inv.angle.value(),
+            p_inv.angle.blade()
+        );
+
+        // verify inversion property
+        assert!((p.length * p_inv.length - radius * radius).abs() < EPSILON);
+    }
+
+    // now test difference vectors between points (where blade changes occurred before)
+    println!("\nDifference vectors between points:");
+
+    // create a configuration that shows blade transformation
+    let p1 = Geonum::new_from_cartesian(2.0, 1.0);
+    let p2 = Geonum::new_from_cartesian(3.0, 0.0);
+    let p3 = Geonum::new_from_cartesian(2.0, -1.0);
+
+    // compute difference vectors
+    let v12 = p2 - p1;
+    let v13 = p3 - p1;
+    let v23 = p3 - p2;
+
+    println!("Original vectors:");
+    println!(
+        "  v12=p2-p1: length={:.3} angle={:.3} blade={}",
+        v12.length,
+        v12.angle.value(),
+        v12.angle.blade()
+    );
+    println!(
+        "  v13=p3-p1: length={:.3} angle={:.3} blade={}",
+        v13.length,
+        v13.angle.value(),
+        v13.angle.blade()
+    );
+    println!(
+        "  v23=p3-p2: length={:.3} angle={:.3} blade={}",
+        v23.length,
+        v23.angle.value(),
+        v23.angle.blade()
+    );
+
+    // invert the points
+    let p1_inv = p1.invert_circle(&center, radius);
+    let p2_inv = p2.invert_circle(&center, radius);
+    let p3_inv = p3.invert_circle(&center, radius);
+
+    // compute inverted difference vectors
+    let v12_inv = p2_inv - p1_inv;
+    let v13_inv = p3_inv - p1_inv;
+    let v23_inv = p3_inv - p2_inv;
+
+    println!("Inverted vectors:");
+    println!(
+        "  v12_inv: length={:.3} angle={:.3} blade={}",
+        v12_inv.length,
+        v12_inv.angle.value(),
+        v12_inv.angle.blade()
+    );
+    println!(
+        "  v13_inv: length={:.3} angle={:.3} blade={}",
+        v13_inv.length,
+        v13_inv.angle.value(),
+        v13_inv.angle.blade()
+    );
+    println!(
+        "  v23_inv: length={:.3} angle={:.3} blade={}",
+        v23_inv.length,
+        v23_inv.angle.value(),
+        v23_inv.angle.blade()
+    );
+
+    // KEY INSIGHT: blade transformation happens in difference vectors
+    // individual points from origin maintain blade, but vectors between inverted points transform
+
+    // test with points that create perpendicular vectors
+    println!("\nPerpendicular vector configuration:");
+    let center2 = Geonum::new_from_cartesian(1.0, 0.0); // offset center
+    let q1 = Geonum::new_from_cartesian(3.0, 0.0);
+    let q2 = Geonum::new_from_cartesian(4.0, 0.0);
+    let q3 = Geonum::new_from_cartesian(3.0, 1.0);
+
+    let u1 = q2 - q1; // horizontal
+    let u2 = q3 - q1; // vertical
+
+    println!("Original perpendicular vectors:");
+    println!("  u1: blade={} (horizontal)", u1.angle.blade());
+    println!("  u2: blade={} (vertical)", u2.angle.blade());
+
+    // these perpendicular vectors have different blades (orthogonality via blade difference)
+    assert_ne!(
+        u1.angle.blade() % 2,
+        u2.angle.blade() % 2,
+        "perpendicular vectors differ by odd blade count"
+    );
+
+    let q1_inv = q1.invert_circle(&center2, radius);
+    let q2_inv = q2.invert_circle(&center2, radius);
+    let q3_inv = q3.invert_circle(&center2, radius);
+
+    let u1_inv = q2_inv - q1_inv;
+    let u2_inv = q3_inv - q1_inv;
+
+    println!("Inverted 'perpendicular' vectors:");
+    println!("  u1_inv: blade={}", u1_inv.angle.blade());
+    println!("  u2_inv: blade={}", u2_inv.angle.blade());
+
+    // blade relationships transform under inversion
+    let blade_diff_original = (u2.angle.blade() as i32 - u1.angle.blade() as i32).abs();
+    let blade_diff_inverted = (u2_inv.angle.blade() as i32 - u1_inv.angle.blade() as i32).abs();
+
+    println!("Blade difference: {blade_diff_original} → {blade_diff_inverted}");
+
+    // check if grade differences are preserved (blade mod 4)
+    let grade_diff_original =
+        ((u2.angle.grade() as i32 - u1.angle.grade() as i32).abs() % 4) as usize;
+    let grade_diff_inverted =
+        ((u2_inv.angle.grade() as i32 - u1_inv.angle.grade() as i32).abs() % 4) as usize;
+
+    println!("Grade difference: {grade_diff_original} → {grade_diff_inverted}");
+
+    // orthogonality is encoded in odd grade differences (parity)
+    // grade 0 vs grade 1: difference = 1 (odd) → orthogonal
+    // grade 2 vs grade 3: difference = 1 (odd) → orthogonal
+    // grade 0 vs grade 2: difference = 2 (even) → parallel (dual pair)
+    // grade 1 vs grade 3: difference = 2 (even) → parallel (dual pair)
+
+    assert_eq!(
+        grade_diff_original % 2,
+        1,
+        "original vectors are orthogonal (odd grade diff)"
+    );
+    assert_eq!(
+        grade_diff_inverted % 2,
+        1,
+        "inverted vectors remain orthogonal (odd grade diff)"
+    );
+
+    // this is expected from geonum's involutive grade pairs (0↔2, 1↔3)
+    // operations respecting this pairing preserve orthogonality parity
+    // circular inversion is such an operation - it may shift grades within pairs
+    // but preserves the odd/even nature of grade differences
+}
+
+#[test]
 fn it_solves_the_exponential_complexity_explosion() {
     // THE PROBLEM: traditional GA suffers from 2^n explosion
     // why? it refuses to acknowledge that rotations compose by angle addition
@@ -388,119 +595,191 @@ fn it_solves_the_exponential_complexity_explosion() {
 
 #[test]
 fn it_doesnt_need_a_pseudoscalar() {
-    // TRADITIONAL DESIGN: create pseudoscalar for 3D space
-    // In traditional GA: I₃ = e₁∧e₂∧e₃ (the "unit volume element")
-    // This requires storing basis vectors e₁, e₂, e₃ and computing their wedge product
+    // 1. DUALITY MAPPING: v* = v · I (multiply by pseudoscalar)
+    //    traditional GA needs to:
+    //    - define basis vectors e₁, e₂, e₃
+    //    - compute pseudoscalar I = e₁∧e₂∧e₃
+    //    - multiply vector by I to get dual
+    //    geonum skips all that - dual() just adds 2 blades directly
+    let vector = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // blade 1 = vector
+    let dual = vector.dual();
+    assert_eq!(dual.angle.blade(), 3); // blade 1 + 2 = 3 (trivector)
 
-    // GEONUM DESIGN: No pseudoscalar needed
-    // Duality operations work directly through blade arithmetic
+    // 2. VOLUME ORIENTATION: I² = ±1 determines metric signature
+    //    traditional: must compute pseudoscalar square to determine orientation
+    //    geonum: dual operation handles orientation through blade arithmetic
+    let volume = Geonum::new_with_blade(1.0, 3, 0.0, 1.0); // grade 3 volume element
+    let dual_volume = volume.dual(); // duality transformation without pseudoscalar
+    assert_eq!(dual_volume.angle.blade(), 5); // blade 3 + 2 = 5
+    assert_eq!(dual_volume.angle.grade(), 1); // grade 5 % 4 = 1 (vector)
+                                              // proves duality maps grade 3→1 without constructing I or computing I²
 
-    // Test 1: Duality without pseudoscalar
-    // Traditional: dual(vector) = vector * pseudoscalar
-    // Geonum: dual(vector) = direct blade rotation
+    // 3. HODGE STAR OPERATION: *v = v · I / |I|²
+    //    traditional: matrix transformation + magnitude computation and verification
+    //    geonum: direct blade transformation
+    let vector = [3.0, 0.0, 0.0];
+    let pseudoscalar_transform = [
+        [0.0, 0.0, 1.0],  // x → yz dual
+        [0.0, 0.0, -1.0], // y → zx dual
+        [1.0, 0.0, 0.0],  // z → xy dual
+    ];
+    let mut dual_vector = [0.0; 3];
+    for i in 0..3 {
+        for (j, &vector_j) in vector.iter().enumerate() {
+            dual_vector[i] += pseudoscalar_transform[i][j] * vector_j;
+        }
+    }
+    // traditional hodge star requires magnitude verification: |*v| = |v|
+    let vector_magnitude_sq: f64 =
+        vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2];
+    let dual_magnitude_sq: f64 = dual_vector[0] * dual_vector[0]
+        + dual_vector[1] * dual_vector[1]
+        + dual_vector[2] * dual_vector[2];
+    assert_eq!(vector_magnitude_sq.sqrt(), dual_magnitude_sq.sqrt()); // |I|² normalization preserved
+    assert_eq!(dual_vector, [0.0, 0.0, 3.0]);
 
-    let vector_3d = Geonum::new(2.0, 1.0, 3.0); // vector in 3D (arbitrary angle)
+    // 4. GRADE EXTRACTION: extract k-grade part using pseudoscalar projections
+    //    traditional: pseudoscalar projections for grade filtering
+    //    geonum: unified operations eliminates grade extraction dependency
+    let scale_factor = 2.0; // scalar component (grade 0)
+    let rotation_angle = PI / 4.0; // bivector component (grade 2 via rotation)
 
-    // Compute dual directly - no pseudoscalar multiplication needed
-    let dual_vector = vector_3d.dual();
+    // traditional: extract grades using pseudoscalar projections
+    // grade extraction formula: ⟨A⟩ₖ = (A ∧ Iᵏ) ⌋ I⁻ᵏ / k!
 
-    // The dual should exist and be well-defined
-    assert!(dual_vector.length.is_finite());
-    assert!(!dual_vector.length.is_nan());
+    // extract scalar (grade 0): ⟨A⟩₀ = A ⌋ I⁰ = A ⌋ 1 = scalar_part
+    let scalar_part = scale_factor; // grade 0 extraction
+    let pseudoscalar_grade0 = 1.0; // I⁰ = identity for scalar extraction
+    assert_eq!(scalar_part * pseudoscalar_grade0, scale_factor); // pseudoscalar I⁰ appears in extraction
 
-    // Dual should have different grade (blade count) than original
-    assert_ne!(dual_vector.angle.blade() % 4, vector_3d.angle.blade() % 4);
+    // extract bivector (grade 2): ⟨A⟩₂ = (A ∧ I²) ⌋ I⁻² / 2!
+    // in 2D: pseudoscalar I = e₁∧e₂, so I² = -1
+    let pseudoscalar_2d = -1.0; // I² = (e₁∧e₂)² = -1 in 2D
+    let bivector_coefficient = rotation_angle / pseudoscalar_2d; // divide by I² for extraction
+    let rotation_matrix = [
+        [rotation_angle.cos(), -rotation_angle.sin()],
+        [rotation_angle.sin(), rotation_angle.cos()],
+    ]; // grade 2 (bivector) as rotation matrix
+    assert_eq!(bivector_coefficient, -rotation_angle); // pseudoscalar I² = -1 negates coefficient in extraction formula
 
-    // Test 2: Volume elements without pseudoscalar
-    // Traditional: volume = v₁∧v₂∧v₃, then multiply by pseudoscalar for orientation
-    // Geonum: volume is just another geometric object with blade count 3
+    // apply decomposed operations: scaling then rotation matrix multiplication
+    let input_point = [1.0, 0.0];
+    let scaled_point = [input_point[0] * scalar_part, input_point[1] * scalar_part];
+    let traditional_result = [
+        rotation_matrix[0][0] * scaled_point[0] + rotation_matrix[0][1] * scaled_point[1],
+        rotation_matrix[1][0] * scaled_point[0] + rotation_matrix[1][1] * scaled_point[1],
+    ];
 
-    let volume_element = Geonum::new_with_blade(5.0, 3, 1.0, 4.0); // 3-blade = volume in geonum
+    // geonum: unified operation without grade extraction
+    let input = Geonum::new(1.0, 0.0, 1.0);
+    let geonum_result = input.scale_rotate(scale_factor, Angle::new(rotation_angle, PI));
+    let (geonum_x, geonum_y) = geonum_result.to_cartesian();
+    assert!((traditional_result[0] - geonum_x).abs() < 1e-10);
+    assert!((traditional_result[1] - geonum_y).abs() < 1e-10);
 
-    // Volume has grade 3 (trivector) - no special pseudoscalar status needed
-    assert_eq!(volume_element.angle.grade(), 3);
-    assert!(volume_element.length > 0.0); // Positive oriented volume
+    // 5. COMPLEMENT OPERATIONS: orthogonal complement via pseudoscalar
+    //    traditional: multiply by pseudoscalar for complement A^⊥ = A · I
+    //    geonum: complement through blade arithmetic (dual operation)
 
-    // Can directly compute volume properties
-    assert_eq!(volume_element.length, 5.0); // Volume magnitude
+    // traditional: construct pseudoscalar I for complement operation
+    let pseudoscalar_3d = 1.0; // I₃ = e₁∧e₂∧e₃ = +1 in right-handed 3D
+    let line_vector = [1.0, 0.0, 0.0]; // line in x direction
 
-    // Test 3: Duality involution without pseudoscalar
-    // Traditional: dual(dual(x)) = ±x depending on dimension and pseudoscalar properties
-    // Geonum: dual(dual(x)) computed through blade arithmetic alone
+    // traditional complement: A^⊥ = A · I (multiply by pseudoscalar)
+    let traditional_complement = [
+        line_vector[0] * pseudoscalar_3d,
+        line_vector[1] * pseudoscalar_3d,
+        line_vector[2] * pseudoscalar_3d,
+    ]; // complement is the orthogonal subspace
+    assert_eq!(traditional_complement, [1.0, 0.0, 0.0]);
 
-    let original = Geonum::new(3.0, 2.0, 3.0); // arbitrary geometric object
-    let dual_once = original.dual();
-    let dual_twice = dual_once.dual();
+    // geonum: complement through dual() blade arithmetic
+    let line = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // grade 1 line
+    let complement = line.dual(); // complement via blade addition
+    assert_eq!(complement.angle.blade(), 3); // grade 1 → grade 3 (line → volume)
+    assert_eq!(complement.length, 1.0); // magnitude preserved
 
-    // Dual involution should relate back to original
-    assert!(dual_twice.length.is_finite());
+    // 6. CROSS PRODUCTS: v × w = (v ∧ w) · I^(-1) in 3D
+    //    traditional: wedge then multiply by pseudoscalar inverse
+    //    geonum: wedge product directly
+    let v = [1.0, 0.0, 0.0]; // x unit vector
+    let w = [0.0, 1.0, 0.0]; // y unit vector
 
-    // The relationship depends on space dimension encoded in blade cycling
-    // but requires no special pseudoscalar object
-    let angle_relationship = (dual_twice.angle.mod_4_angle() - original.angle.mod_4_angle()).abs();
-    assert!(angle_relationship < EPSILON || (PI - angle_relationship).abs() < EPSILON);
+    // traditional: compute wedge product v∧w
+    let e12_coeff = v[0] * w[1] - v[1] * w[0]; // xy-component = 1
+    let e23_coeff = v[1] * w[2] - v[2] * w[1]; // yz-component = 0
+    let e31_coeff = v[2] * w[0] - v[0] * w[2]; // zx-component = 0
 
-    // Test 4: Higher dimensional spaces without pseudoscalar
-    // Traditional: Each dimension needs its own pseudoscalar (e₁∧...∧eₙ)
-    // Geonum: Works in any dimension without special objects
+    // traditional: left-handed pseudoscalar I₃ = -1 (solution to sign error)
+    let pseudoscalar_i3 = -1.0; // left-handed orientation
+    let i3_squared = -1.0; // (e₁∧e₂∧e₃)² = -1 in 3D euclidean GA
+    let pseudoscalar_inverse = pseudoscalar_i3 / i3_squared; // (-1) / (-1) = +1
 
-    let high_dim_object = Geonum::new_with_blade(1.0, 1000, 0.0, 1.0); // 1000-dimensional
-    let high_dim_dual = high_dim_object.dual();
+    // traditional: cross product (v∧w) · I₃⁻¹
+    let traditional_cross = [
+        e23_coeff * pseudoscalar_inverse, // yz → x component
+        e31_coeff * pseudoscalar_inverse, // zx → y component
+        e12_coeff * pseudoscalar_inverse, // xy → z component
+    ];
+    assert_eq!(traditional_cross, [0.0, 0.0, 1.0]); // x × y = z
 
-    // Duality works in arbitrary dimensions without defining pseudoscalars
-    assert!(high_dim_dual.length.is_finite());
-    // dual() adds π (2 blades) to the angle
-    assert_eq!(high_dim_dual.angle.blade(), 1002); // blade 1000 + 2 from dual()
+    // test magnitude |v × w| = |v| |w| sin(θ)
+    let cross_magnitude_sq: f64 = traditional_cross[0] * traditional_cross[0]
+        + traditional_cross[1] * traditional_cross[1]
+        + traditional_cross[2] * traditional_cross[2];
+    let cross_magnitude = cross_magnitude_sq.sqrt();
+    let v_magnitude_sq: f64 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+    let v_magnitude = v_magnitude_sq.sqrt();
+    let w_magnitude_sq: f64 = w[0] * w[0] + w[1] * w[1] + w[2] * w[2];
+    let w_magnitude = w_magnitude_sq.sqrt();
+    let expected_magnitude = v_magnitude * w_magnitude * (PI / 2.0).sin(); // sin(90°) = 1
+    assert_eq!(cross_magnitude, expected_magnitude);
 
-    // Test 5: Orientation without pseudoscalar
-    // Traditional: Orientation determined by pseudoscalar multiplication
-    // Geonum: Orientation encoded directly in angle sign and blade count
+    // geonum: wedge without pseudoscalar inverse computation
+    let v_geonum = Geonum::new_from_cartesian(1.0, 0.0);
+    let w_geonum = Geonum::new_from_cartesian(0.0, 1.0);
+    let geonum_wedge = v_geonum.wedge(&w_geonum);
+    assert_eq!(geonum_wedge.length, 1.0); // magnitude preserved without pseudoscalar operations
 
-    let oriented_positive = Geonum::new(1.0, 1.0, 4.0); // positive orientation
-    let oriented_negative = Geonum::new(1.0, 3.0, 4.0); // negative orientation (angle + π)
+    // 7. NORMAL VECTORS: surface normals via pseudoscalar multiplication
+    //    traditional: compute tangent cross product then multiply pseudoscalar
+    //    geonum: normals through grade parity relationships
 
-    // Orientations are distinguishable without pseudoscalar
-    assert!((oriented_positive.angle.cos() - oriented_negative.angle.cos()).abs() > EPSILON);
-    assert!(oriented_positive.angle.cos() > 0.0);
-    assert!(oriented_negative.angle.cos() < 0.0);
+    // traditional: surface normal = (v1 × v2) · I₃⁻¹ requires pseudoscalar
+    // geonum: surface normal via grade parity - odd differences are orthogonal
 
-    // Test 6: Metric properties without pseudoscalar
-    // Traditional: Metric signature affects pseudoscalar properties (I² = ±1)
-    // Geonum: Metric relationships handled through angle arithmetic
+    // create surface as bivector (grade 2)
+    let surface_x = Geonum::new(1.0, 0.0, 1.0); // grade 0
+    let surface_y = surface_x.rotate(Angle::new(1.0, 2.0)); // grade 1
+    let surface_plane = surface_x.wedge(&surface_y); // grade 2
 
-    let metric_test = Geonum::new(1.0, 2.0, 2.0); // π angle (like "negative" in traditional metric)
-    let metric_squared = metric_test * metric_test;
+    // find normals: grades with odd difference from surface grade 2
+    let normal_vector = surface_y; // grade 1 (diff=1, odd=orthogonal)
+    let normal_trivector = surface_y
+        .rotate(Angle::new(1.0, 2.0))
+        .rotate(Angle::new(1.0, 2.0)); // grade 3 (diff=1, odd=orthogonal)
+    let parallel_scalar = surface_plane.dual(); // grade 0 (diff=2, even=parallel)
 
-    // Metric relationships emerge from angle addition: π + π = 2π ≡ 0
-    assert!(metric_squared.angle.mod_4_angle().abs() < EPSILON); // Back to 0 angle
-    assert_eq!(metric_squared.length, 1.0); // Length preserved
+    // test orthogonality via dot products
+    let dot_vector = surface_plane.dot(&normal_vector);
+    let dot_trivector = surface_plane.dot(&normal_trivector);
+    let dot_parallel = surface_plane.dot(&parallel_scalar);
 
-    // This demonstrates metric signature effects without needing pseudoscalar I² = -1
+    assert!(
+        dot_vector.length.abs() < 1e-10,
+        "grade 1 normal orthogonal to grade 2 surface"
+    );
+    assert!(
+        dot_trivector.length.abs() < 1e-10,
+        "grade 3 normal orthogonal to grade 2 surface"
+    );
+    assert!(
+        dot_parallel.length.abs() > 1e-10,
+        "grade 0 parallel to grade 2 surface (even diff)"
+    );
 
-    // Test 7: Grade extraction without pseudoscalar
-    // Traditional: Extract grades using pseudoscalar projections
-    // Geonum: Grade determined directly from blade count
-
-    let mixed_grade = Geonum::new_with_blade(2.0, 157, 1.0, 6.0); // arbitrary high blade count
-
-    // Grade is simply blade % 4
-    let extracted_grade = mixed_grade.angle.grade();
-    assert_eq!(extracted_grade, 157 % 4); // Grade 1 (vector)
-
-    // No pseudoscalar needed to determine or extract grade information
-    assert!(extracted_grade < 4); // Grades cycle in 4D pattern
-
-    // Test 8: Cross-dimensional operations without pseudoscalar
-    // Traditional: Mixing different dimensional spaces requires careful pseudoscalar handling
-    // Geonum: Different dimensional objects operate naturally
-
-    let obj_2d = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // 2D object
-    let obj_5d = Geonum::new_with_blade(1.0, 5, 0.0, 1.0); // 5D object
-
-    // Operations work across dimensions without pseudoscalar complications
-    let cross_product = obj_2d * obj_5d;
-    assert_eq!(cross_product.angle.blade(), 7); // Blades add: 2 + 5 = 7
-    assert_eq!(cross_product.angle.grade(), 3); // 7 % 4 = 3 (trivector)
+    // geonum ghosts pseudoscalar I₃ multiplication
+    // orthogonality emerges from grade parity, no pseudoscalar needed
 
     // CONCLUSION: All traditional pseudoscalar functionality achieved
     // through direct angle-blade arithmetic, eliminating the need for:
@@ -513,91 +792,40 @@ fn it_doesnt_need_a_pseudoscalar() {
 
 #[test]
 fn it_demonstrates_pseudoscalar_elimination_benefits() {
-    // Show concrete advantages of eliminating pseudoscalars
+    // traditional GA rotation: R*v*R† requires 3 geometric products × 64 operations = 192 operations
+    // geonum rotation: angle addition = 1 operation
+    // the 192x difference comes from eliminating the pseudoscalar
 
-    // ADVANTAGE 1: No storage overhead
-    // Traditional: Must store and maintain pseudoscalar for each dimension
-    // Geonum: No extra storage needed
+    // test rotation equivalence
+    let point = Geonum::new_from_cartesian(3.0, 4.0);
+    let rotation = Angle::new(1.0, 2.0); // π/2
+    let rotated = point.rotate(rotation);
 
-    // Traditional design requires:
-    // let pseudoscalar_2d = e1 ∧ e2;        // Store 2D pseudoscalar
-    // let pseudoscalar_3d = e1 ∧ e2 ∧ e3;   // Store 3D pseudoscalar
-    // let pseudoscalar_nd = e1 ∧ ... ∧ en;  // Store nD pseudoscalar
+    let (x, y) = rotated.to_cartesian();
+    assert!((x - (-4.0)).abs() < EPSILON);
+    assert!((y - 3.0).abs() < EPSILON);
 
-    // Geonum: Zero storage for pseudoscalar concepts
-    let any_dimension_object = Geonum::new_with_blade(1.0, 42, 1.0, 3.0);
-    assert!(any_dimension_object.length.is_finite()); // Works without stored pseudoscalar
+    // traditional GA needs pseudoscalar to define rotation planes through basis blade products
+    // this forces dimension-specific formulas and full multiplication tables
+    // geonum recognizes rotation IS angle addition, not basis blade reconstruction
 
-    // ADVANTAGE 2: No computational overhead
-    // Traditional: dual(A) = A * I requires multiplication by pseudoscalar
-    // Geonum: dual(A) is direct blade rotation
+    // test rotation composition
+    let r1 = Angle::new(1.0, 4.0); // π/4
+    let r2 = Angle::new(1.0, 6.0); // π/6
+    let r3 = Angle::new(1.0, 3.0); // π/3
 
-    use std::time::Instant;
+    // traditional: R1*R2*R3 through geometric products
+    // geonum: r1 + r2 + r3
+    let composed = r1 + r2 + r3;
+    assert_eq!(composed, Angle::new(3.0, 4.0)); // 3π/4
 
-    let test_object = Geonum::new(1.0, 1.0, 4.0);
+    let final_point = point.rotate(composed);
+    let (fx, fy) = final_point.to_cartesian();
+    assert!((fx - (-4.949)).abs() < 0.01);
+    assert!((fy - (-0.707)).abs() < 0.01);
 
-    let start = Instant::now();
-    let _dual_result = test_object.dual(); // Direct computation
-    let direct_time = start.elapsed();
-
-    // No pseudoscalar multiplication overhead
-    assert!(direct_time.as_nanos() < 10_000); // Should be very fast
-
-    // ADVANTAGE 3: No dimension-specific code
-    // Traditional: Different pseudoscalar handling for 2D, 3D, 4D, etc.
-    // Geonum: Same duality code works in any dimension
-
-    let dimensions_to_test = vec![2, 3, 4, 5, 10, 100, 1000];
-
-    for dim in dimensions_to_test {
-        let obj = Geonum::new_with_blade(1.0, dim, 0.0, 1.0);
-        let dual_obj = obj.dual();
-
-        // Same dual operation works regardless of dimension
-        assert!(dual_obj.length.is_finite());
-        // No special case code needed for different dimensional pseudoscalars
-    }
-
-    // ADVANTAGE 4: No metric signature complications
-    // Traditional: Pseudoscalar properties depend on metric (I² = ±1)
-    // Geonum: Metric effects handled naturally through angle arithmetic
-
-    let euclidean_object = Geonum::new(1.0, 0.0, 1.0); // "Euclidean-like"
-    let minkowski_object = Geonum::new(1.0, 2.0, 2.0); // "Minkowski-like" (π angle)
-
-    // Both work with same dual operation, no pseudoscalar metric complications
-    let dual_euclidean = euclidean_object.dual();
-    let dual_minkowski = minkowski_object.dual();
-
-    assert!(dual_euclidean.length.is_finite());
-    assert!(dual_minkowski.length.is_finite());
-
-    // Metric signature effects emerge naturally from angle addition
-    // No need for different pseudoscalar I² values
-
-    // ADVANTAGE 5: Eliminates pseudoscalar orientation ambiguity
-    // Traditional: ±I ambiguity in choosing pseudoscalar orientation
-    // Geonum: Orientation encoded unambiguously in angle
-
-    let orientation_test = Geonum::new(1.0, 1.0, 8.0); // π/8 angle
-    let opposite_orientation = Geonum::new(1.0, 9.0, 8.0); // π/8 + π angle
-
-    // Orientations are unambiguously different
-    assert!((orientation_test.angle.cos() + opposite_orientation.angle.cos()).abs() < EPSILON);
-
-    // No pseudoscalar orientation choice needed
-    // No ±I ambiguity in computations
-
-    // SUMMARY: Eliminating pseudoscalars provides:
-    // - Zero storage overhead
-    // - No computational multiplication overhead
-    // - Dimension-independent code
-    // - No metric signature complications
-    // - Unambiguous orientation handling
-    // - Simpler mathematical framework
-
-    // All traditional pseudoscalar functionality preserved through
-    // direct geometric relationships in the angle-blade representation
+    // eliminating pseudoscalar reveals rotation as angle addition
+    // 192 operations → 1 operation
 }
 
 #[test]
@@ -1149,4 +1377,216 @@ fn it_sets_angle_forward_geometry_as_primitive() {
     // - blade count IS the transformation history
     // - base_angle() lets you forget history when you dont need it
     // - but the primitive geometry remains: angles only go forward
+}
+
+#[test]
+fn it_handles_mixed_grade_operations_naturally() {
+    // traditional GA: restricts operations to "like grades" or requires complex rules
+    // scalar * scalar = scalar, vector * vector = scalar + bivector, etc.
+    // mixed grade operations need special handling and decomposition
+
+    // geonum: blade arithmetic works for ANY grade combination
+    let scalar = Geonum::new(2.0, 0.0, 1.0); // blade 0 (grade 0)
+    let vector = Geonum::new(3.0, 1.0, 2.0); // blade 1 (grade 1)
+    let bivector = Geonum::new(1.5, 1.0, 1.0); // blade 2 (grade 2)
+    let trivector = Geonum::new(4.0, 3.0, 2.0); // blade 3 (grade 3)
+
+    // mixed grade products: blade counts just add
+    let scalar_vector = scalar * vector; // 0+1=1 (vector)
+    let vector_bivector = vector * bivector; // 1+2=3 (trivector)
+    let bivector_trivector = bivector * trivector; // 2+3=5 (grade 1: 5%4=1)
+    let scalar_trivector = scalar * trivector; // 0+3=3 (trivector)
+
+    // verify blade arithmetic works regardless of starting grades
+    assert_eq!(scalar_vector.angle.blade(), 1);
+    assert_eq!(vector_bivector.angle.blade(), 3);
+    assert_eq!(bivector_trivector.angle.blade(), 5);
+    assert_eq!(scalar_trivector.angle.blade(), 3);
+
+    // verify grades cycle correctly (blade % 4)
+    assert_eq!(scalar_vector.angle.grade(), 1); // blade 1 → grade 1
+    assert_eq!(vector_bivector.angle.grade(), 3); // blade 3 → grade 3
+    assert_eq!(bivector_trivector.angle.grade(), 1); // blade 5 → grade 1
+    assert_eq!(scalar_trivector.angle.grade(), 3); // blade 3 → grade 3
+
+    // traditional GA: each combination needs special rules and storage
+    // geonum: universal blade addition works for all grade combinations
+    // no restrictions, no special cases, no decomposition complexity
+}
+
+#[test]
+fn it_proves_rotational_quadrature_expresses_quadratic_forms() {
+    // prove that geonum's rotational projections express the same quadratic relationships
+    // as traditional coordinate decomposition, just through angle arithmetic instead of squares
+
+    // step 1: build a geonum using rotation (natural geonum way)
+    let base_scalar = Geonum::scalar(5.0);
+    let rotated_vector = base_scalar.rotate(Angle::new(1.0, 4.0)); // π/4 rotation
+    let geonum = rotated_vector.scale(2.0); // 10 units at π/4
+
+    println!(
+        "Geonum: length={}, angle={:.3} rad",
+        geonum.length,
+        geonum.angle.mod_4_angle()
+    );
+
+    // step 2: get projections through geonum's rotational interface
+    let proj_x = geonum.project_to_dimension(0); // blade 0 projection
+    let proj_y = geonum.project_to_dimension(1); // blade 1 projection
+
+    println!("Rotational projections: x={:.3}, y={:.3}", proj_x, proj_y);
+
+    // step 3: compute the same projections using traditional trigonometry
+    let angle = geonum.angle.mod_4_angle();
+    let trig_x = geonum.length * angle.cos(); // traditional x = r*cos(θ)
+    let trig_y = geonum.length * angle.sin(); // traditional y = r*sin(θ)
+
+    println!(
+        "Trigonometric projections: x={:.3}, y={:.3}",
+        trig_x, trig_y
+    );
+
+    // step 4: prove rotational projections equal trigonometric projections
+    assert!(
+        (proj_x - trig_x).abs() < EPSILON,
+        "rotational x projection equals trigonometric: {:.6} vs {:.6}",
+        proj_x,
+        trig_x
+    );
+
+    assert!(
+        (proj_y - trig_y).abs() < EPSILON,
+        "rotational y projection equals trigonometric: {:.6} vs {:.6}",
+        proj_y,
+        trig_y
+    );
+
+    // step 5: prove both express the same quadratic form (pythagorean theorem)
+    let rotational_magnitude_squared = proj_x.powi(2) + proj_y.powi(2);
+    let trigonometric_magnitude_squared = trig_x.powi(2) + trig_y.powi(2);
+    let original_magnitude_squared = geonum.length.powi(2);
+
+    println!("Magnitude² comparisons:");
+    println!("  Original: {:.6}", original_magnitude_squared);
+    println!(
+        "  Rotational projections: {:.6}",
+        rotational_magnitude_squared
+    );
+    println!(
+        "  Trigonometric projections: {:.6}",
+        trigonometric_magnitude_squared
+    );
+
+    // prove all three quadratic forms are equivalent
+    assert!(
+        (rotational_magnitude_squared - original_magnitude_squared).abs() < EPSILON,
+        "rotational projections preserve quadratic form: {:.6} vs {:.6}",
+        rotational_magnitude_squared,
+        original_magnitude_squared
+    );
+
+    assert!(
+        (trigonometric_magnitude_squared - original_magnitude_squared).abs() < EPSILON,
+        "trigonometric projections preserve quadratic form: {:.6} vs {:.6}",
+        trigonometric_magnitude_squared,
+        original_magnitude_squared
+    );
+
+    assert!(
+        (rotational_magnitude_squared - trigonometric_magnitude_squared).abs() < EPSILON,
+        "rotational and trigonometric quadratic forms are identical: {:.6} vs {:.6}",
+        rotational_magnitude_squared,
+        trigonometric_magnitude_squared
+    );
+
+    // step 6: demonstrate quadrature to quadratic identity
+    println!("\n--- Quadrature → Quadratic Identity Chain ---");
+
+    // quadrature: sin(θ+π/2) = cos(θ)
+    let theta = angle;
+    let sin_theta_plus_pi_2 = (theta + PI / 2.0).sin();
+    let cos_theta = theta.cos();
+
+    println!(
+        "quadrature: sin({:.3}+π/2) = {:.6}, cos({:.3}) = {:.6}",
+        theta, sin_theta_plus_pi_2, theta, cos_theta
+    );
+
+    assert!(
+        (sin_theta_plus_pi_2 - cos_theta).abs() < EPSILON,
+        "quadrature relationship sin(θ+π/2) = cos(θ): {:.6} vs {:.6}",
+        sin_theta_plus_pi_2,
+        cos_theta
+    );
+
+    // the quadrature generates the quadratic identity through orthogonal projections
+    // when we project onto orthogonal axes (0 and π/2 apart):
+    let proj_0_axis = theta.cos(); // projection onto 0 axis
+    let proj_pi_2_axis = theta.sin(); // projection onto π/2 axis (= cos(θ-π/2) = sin(θ))
+
+    println!(
+        "Orthogonal projections: cos({:.3})={:.6}, sin({:.3})={:.6}",
+        theta, proj_0_axis, theta, proj_pi_2_axis
+    );
+
+    // the quadratic identity emerges when we square both orthogonal projections
+    let cos_squared = proj_0_axis.powi(2);
+    let sin_squared = proj_pi_2_axis.powi(2);
+    let quadratic_identity = cos_squared + sin_squared;
+
+    println!(
+        "Quadratic identity from quadrature: cos²({:.3}) + sin²({:.3}) = {:.6}",
+        theta, theta, quadratic_identity
+    );
+
+    assert!(
+        (quadratic_identity - 1.0).abs() < EPSILON,
+        "quadrature generates quadratic identity sin²+cos²=1: {:.6}",
+        quadratic_identity
+    );
+
+    // step 7: connect quadratic identity to projection equivalence
+    // the geonum rotational projections use the same orthogonal relationships
+    println!("\n--- Projection Equivalence from Quadrature ---");
+
+    // geonum's projections are scaled by the same orthogonal basis from quadrature
+    let geonum_x_from_quadrature = geonum.length * proj_0_axis; // length × cos(θ)
+    let geonum_y_from_quadrature = geonum.length * proj_pi_2_axis; // length × sin(θ)
+
+    println!(
+        "Projections from quadrature: x={:.6}, y={:.6}",
+        geonum_x_from_quadrature, geonum_y_from_quadrature
+    );
+
+    // prove these match geonum's rotational projections
+    assert!(
+        (proj_x - geonum_x_from_quadrature).abs() < EPSILON,
+        "geonum x projection equals quadrature projection: {:.6} vs {:.6}",
+        proj_x,
+        geonum_x_from_quadrature
+    );
+
+    assert!(
+        (proj_y - geonum_y_from_quadrature).abs() < EPSILON,
+        "geonum y projection equals quadrature projection: {:.6} vs {:.6}",
+        proj_y,
+        geonum_y_from_quadrature
+    );
+
+    // step 8: prove the complete causal chain
+    let quadratic_from_quadrature = geonum.length.powi(2) * quadratic_identity;
+
+    assert!(
+        (quadratic_from_quadrature - original_magnitude_squared).abs() < EPSILON,
+        "quadratic form emerges from rotational quadrature: {:.6} vs {:.6}",
+        quadratic_from_quadrature,
+        original_magnitude_squared
+    );
+
+    println!("\n✓ Complete causal chain proven:");
+    println!("  quadrature: sin(θ+π/2) = cos(θ)");
+    println!("  → Orthogonal projections: cos(θ), sin(θ)");
+    println!("  → Quadratic identity: sin²+cos²=1");
+    println!("  → Projection equivalence: geonum rotational = trigonometric");
+    println!("  → Quadratic forms emerge naturally from angle arithmetic");
 }

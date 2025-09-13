@@ -16,14 +16,29 @@
 
 removing an explicit angle from numbers in the name of "pure" math throws away primitive geometric information
 
-once you amputate the angle from a number to create a "scalar", youve thrown away its compass and condemned it to hobble through a mountain of "scalars" known as "matrix" and "tensor" operations—where every step requires expensive dot & cross product computations to reconstruct the simple detail of *which direction your number is facing*
+once you amputate the angle from a number to create a "scalar", you throw away its compass
 
-setting a metric with euclidean and squared norms between "scalars" creates a `k^n` component orthogonality search problem for transforming vectors
+computing angles when they deserve to be static forces math into a cave where numbers must be cast from linearly combined shadows
 
-and supporting traditional geometric algebra operations require `2^n` components to represent multivectors in `n` dimensions
+you start by creating a massive artificial "scalar" superstructure of "dimensions" to store **every possible position** where your scalar vector component can appear—and as a "linear combination" of the dimensions it "spans" with other scalars called "basis vectors"
 
-geonum reduces `k^n(2^n)` to 2
+this brute force scalar alchemy explodes into scalars **everywhere**
 
+with most requiring "sparsity" to conceal how many explicit zeros appear declaring *nothing changed*
+
+the omission of geometry is so extreme at this point its suspicious
+
+now your number must hobble through a prison of complicated "matrix" and "tensor" operations computing expensive dot & cross products in a scalar-dimension chain gang with other "linearly independent" scalars—only to reconstruct the simple detail of the direction its facing
+
+and if you want to change its rate of motion, it must freeze all other scalar dimensions in a "partial derivative" with even more zeros
+
+### protect your numbers
+
+setting a metric with euclidean and squared norms between "linearly combined scalars" creates an n-dimensional, rank-k (`n^k`) component orthogonality search problem for transforming vectors
+
+and supporting traditional geometric algebra operations requires `2^n` components to represent multivectors in `n` dimensions
+
+geonum reduces `n^k(2^n)` to 2
 geonum dualizes (⋆) components inside algebra's most general form
 
 setting the metric from the quadrature's bivector shields it from entropy with the `log2(4)` bit minimum:
@@ -33,15 +48,21 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 - 1 bivector, `sin(θ+π/2) = cos(θ)`
 
 ```rs
-/// a geometric number
+/// dimension-free, geometric number
 struct Geonum {
     length: f64,      // multiply
     angle: Angle {    // add
-        blade: usize,     // counts π/2 rotations and enables projection
-        value: f64        // angle within current π/2 segment [0, π/2)
+        blade: usize,     // counts π/2 rotations
+        value: f64        // current [0, π/2) angle
     }
 }
 ```
+
+* dimensions = blade, how many dimensions the angle spans
+* project(onto: Angle) -> angle_diff.cos() into any dimension without defining it first
+* dual() = blade + 2, duality operation adds π rotation and involutively maps grades (0 ↔ 2, 1 ↔ 3)
+* grade() = blade % 4, geometric grade
+* replaces "pseudoscalar" with blade arithmetic
 
 ### use
 
@@ -49,85 +70,145 @@ struct Geonum {
 cargo add geonum
 ```
 
+### example
+
+compute components and length with angle.project — dimension free
+
+```rust
+use geonum::*;
+
+// origin is an angle
+let origin = Angle::new(0.0, 1.0);
+
+// endpoint 7 at pi/6 from origin phase
+let end_angle = origin + Angle::new(1.0, 6.0);
+let end = Geonum::new_with_angle(7.0, end_angle);
+
+// init axes to assert traditional math:
+let ex = Angle::new(0.0, 1.0);
+let ey = Angle::new(1.0, 2.0); // +pi/2
+
+// compute projections via angle.project
+let px = end.length * end_angle.project(ex); // 7·cos
+let py = end.length * end_angle.project(ey); // 7·sin
+
+// quadratic identity: px² + py² = L²
+assert!(((px * px + py * py) - end.length * end.length).abs() < 1e-12);
+
+// dimension free: blade 1 vs 1_000_001 identical
+let p_small = end.length * end_angle.project(Angle::new(1.0, 2.0));
+let p_huge = end.length * end_angle.project(Angle::new(1_000_001.0, 2.0));
+assert!((p_small - p_huge).abs() < 1e-12);
+```
+
+rotation creates dimensional relationships on demand - no coordinate system scaffolding required
+
 see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
 
 ### benches
 
-#### rank-3 tensor comparison
+#### tensor operations: O(n³) vs O(1)
 
-| implementation | size | time |
-|----------------|------|------|
-| tensor (O(n³)) | 2 | 1.01 µs |
-| tensor (O(n³)) | 3 | 2.29 µs |
-| tensor (O(n³)) | 4 | 4.04 µs |
-| tensor (O(n³)) | 8 | 8.50 µs |
-| tensor (O(n³)) | 16 | 71.33 µs |
-| geonum (O(1)) | any | 19.73 ns |
+| implementation | size | time | speedup |
+|----------------|------|------|---------|
+| tensor (O(n³)) | 2 | 358 ns | baseline |
+| tensor (O(n³)) | 3 | 788 ns | baseline |
+| tensor (O(n³)) | 4 | 1.41 µs | baseline |
+| tensor (O(n³)) | 8 | 7.95 µs | baseline |
+| geonum (O(1)) | all | 17 ns | 21-468× |
 
-geonum achieves constant O(1) time complexity regardless of problem size, 205× faster than tensor operations at size 4 and 3615× faster at size 16, eliminating cubic scaling of traditional tensor implementations
+geonum achieves constant 17ns regardless of size, while tensor operations scale cubically from 358ns to 7.95µs
 
-#### extreme dimension comparison
+#### extreme dimensions
 
-| implementation | dimensions | time | storage complexity |
-|----------------|------------|------|-------------------|
-| traditional ga | 10 | 682.87 ns (partial) | O(2^n) = 1024 components |
-| traditional ga | 30 | theoretical only | O(2^n) = 1 billion+ components |
-| traditional ga | 1000 | impossible | O(2^1000) ≈ 10^301 components |
-| traditional ga | 1,000,000 | impossible | O(2^1000000) components |
-| geonum (O(1)) | 10 | 37.53 ns | O(1) = 2 components |
-| geonum (O(1)) | 30 | 38.67 ns | O(1) = 2 components |
-| geonum (O(1)) | 1000 | 37.73 ns | O(1) = 2 components |
-| geonum (O(1)) | 1,000,000 | 37.29 ns | O(1) = 2 components |
+| implementation | dimensions | time | storage |
+|----------------|------------|------|---------|
+| traditional GA | 10 | 7.95 µs | 2^10 = 1024 components |
+| traditional GA | 30+ | impossible | 2^30 = 1B+ components |
+| traditional GA | 1000+ | impossible | 2^1000 > atoms in universe |
+| geonum | 10 | 31 ns | 2 values |
+| geonum | 30 | 35 ns | 2 values |
+| geonum | 1000 | 31 ns | 2 values |
+| geonum | 1,000,000 | 31 ns | 2 values |
 
-geonum enables geometric algebra in million-dimensional spaces with constant time operations, achieving whats physically impossible with traditional implementations (requires more storage than atoms in the universe)
+geonum enables million-dimensional geometric algebra with constant-time operations
 
-#### multivector ops
+#### operation benchmarks
 
-| operation | dimensions | time | traditional ga complexity |
-|-----------|------------|------|---------------------------|
-| grade extraction | 1,000,000 | 158.80 ns | O(2^n) |
-| grade involution | 1,000,000 | 167.10 ns | O(2^n) |
-| clifford conjugate | 1,000,000 | 99.35 ns | O(2^n) |
-| contractions | 1,000,000 | 275.60 ns | O(2^n) |
-| anti-commutator | 1,000,000 | 165.84 ns | O(2^n) |
-| all ops combined | 1,000 | 732.82 ns | impossible at high dimensions |
+| operation | traditional | geonum | speedup |
+|-----------|------------|--------|---------|
+| jacobian (10×10) | 1.32 µs | 24 ns | 55× |
+| jacobian (100×100) | 98.5 µs | 24 ns | 4100× |
+| rotation 2D | 4.6 ns | 39 ns | comparable |
+| rotation 3D | 21 ns | 21 ns | equivalent |
+| rotation 10D | matrix O(n²) | 21 ns | constant |
+| geometric product | decomposition | 17 ns | direct |
+| wedge product 2D | 1.9 ns | 60 ns | trigonometric |
+| wedge product 10D | 45 components | 60 ns | constant |
+| dual operation | pseudoscalar mult | 10 ns | universal |
+| differentiation | numerical approx | 11 ns | exact π/2 rotation |
+| inversion | matrix ops | 10 ns | direct reciprocal |
+| projection | dot products | 15 ns | trigonometric |
 
-geonum performs all major multivector operations with exceptional efficiency in million-dimensional spaces, maintaining sub-microsecond performance for grade-specific operations that would require exponential time and memory in traditional geometric algebra implementations
+all geonum operations maintain constant time regardless of dimension, eliminating exponential scaling of traditional approaches
 
 ### features
 
-- dot product, wedge product, geometric product
-- inverse, division, normalization
+#### core operations
+- dot product `.dot()`, wedge product `.wedge()`, geometric product `.geo()` and `*`
+- inverse `.inv()`, division `.div()` and `/`, normalization `.normalize()`
+- rotations `.rotate()`, reflections `.reflect()`, projections `.project()`, rejections `.reject()`
+- scale `.scale()`, scale-rotate `.scale_rotate()`, negate `.negate()`
+- differentiation `.differentiate()` via π/2 rotation, integration `.integrate()` via -π/2 rotation
+- meet `.meet()` for subspace intersection with geonum's π-rotation incidence structure
+- orthogonality test `.is_orthogonal()`, distance `.distance_to()`, length difference `.length_diff()`
+
+#### angle-blade architecture
+- blade count tracks π/2 rotations: 0→scalar, 1→vector, 2→bivector, 3→trivector
+- grade = blade % 4 determines geometric behavior regardless of dimension
+- `.blade()` returns full transformation history, `.grade()` returns geometric grade
+- `.base_angle()` resets blade to minimum for grade (memory optimization)
+- `.increment_blade()` and `.decrement_blade()` for direct blade manipulation
+- `.copy_blade()` transfers blade structure between geonums
+
+#### dimension handling
 - million-dimension geometric algebra with O(1) complexity
-- conformal geometric algebra without 32-component vectors
+- `.project_to_dimension(n)` computes projection to any dimension on demand
+- `.create_dimension(length, n)` creates standardized n-dimensional basis element
+- dimensions emerge from angle arithmetic, no predefined basis vectors needed
+- conformal geometric algebra without 32-component storage
 - projective geometric algebra without homogeneous coordinates
-- multivector support and trivector operations
-- rotations, reflections, projections, rejections
-- exponential, interior product, dual operations
-- meet and join, commutator product, sandwich product
-- left-contraction, right-contraction
-- anti-commutator product
-- grade involution and clifford conjugate
-- grade extraction
-- duality operations without pseudoscalars (blade arithmetic replaces I = e₁∧...∧eₙ)
-- square root operation for multivectors
-- undual operation (complement to the dual operation)
-- regressive product (alternative method for computing the meet of subspaces)
-- automatic differentiation through angle rotation (v' = [r, θ + π/2]) (differential geometric calculus)
-- replaces category theory abstractions with angle relationships
-- unifies discrete and continuous operations through angle arithmetic
-- eliminates abstract mathematical formalism with geometric operations
-- enables scaling precision in statistical modeling through direct angle quantization
-- supports time evolution via simple angle rotation (angle += energy * time)
-- provides statistical methods for angle distributions (arithmetic/circular means, variance, expectation values)
-- enables O(1) machine learning operations that would otherwise require O(n²) or O(2^n) complexity
-- implements perceptron learning, regression modeling, neural networks and activation functions 
-- replaces tensor-based neural network operations with direct angle transformations
-- enables scaling to millions of dimensions with constant-time ML computations
-- eliminates the "orthogonality search" bottleneck in traditional tensor based machine learning implementations
-- manifold navigation through angle-encoded paths
-- optical transformations via direct angle operations (refraction, aberration, OTF)
-- Manifold trait for collection operations with lens-like path transformations
+
+#### duality without pseudoscalars
+- `.dual()` adds π rotation (2 blades), maps grades 0↔2, 1↔3
+- `.undual()` identical to dual in 4-cycle structure  
+- `.conjugate()` for clifford conjugation
+- universal k→(k+2)%4 duality replaces dimension-specific k→(n-k) formulas
+- eliminates I = e₁∧...∧eₙ pseudoscalar and its 2^n storage requirement
+
+#### automatic calculus
+- differentiation through π/2 rotation eliminates limit computation
+- polynomial coefficients emerge from quadrature sin(θ+π/2) = cos(θ)
+- grade cycling: f→f'→f''→f'''→f with grades 0→1→2→3→0
+- no symbolic manipulation, no numerical approximation
+
+#### constructors
+- `Geonum::new(length, pi_radians, divisor)` - basic constructor
+- `Geonum::new_with_angle(length, angle)` - from angle struct
+- `Geonum::new_from_cartesian(x, y)` - from cartesian coordinates
+- `Geonum::new_with_blade(length, blade, pi_radians, divisor)` - explicit blade
+- `Geonum::scalar(value)` - scalar at grade 0
+- `Angle::new(pi_radians, divisor)` - angle from π fractions
+- `Angle::new_with_blade(blade, pi_radians, divisor)` - angle with blade offset
+- `Angle::new_from_cartesian(x, y)` - angle from coordinates
+
+#### special operations
+- `.pow(n)` for exponentiation preserving angle-length relationship
+- `.invert_circle(center, radius)` for conformal inversions
+- `.to_cartesian()` converts to (x, y) coordinates
+- angle predicates: `.is_scalar()`, `.is_vector()`, `.is_bivector()`, `.is_trivector()`
+- angle functions: `.sin()`, `.cos()`, `.tan()`, `.is_opposite()`
+- `.mod_4_angle()` returns angle within current π/2 segment
 
 ### tests
 ```

@@ -14,11 +14,6 @@ pub mod projection;
 #[cfg(feature = "projection")]
 pub use projection::Projection;
 
-#[cfg(feature = "manifold")]
-pub mod manifold;
-#[cfg(feature = "manifold")]
-pub use manifold::Manifold;
-
 #[cfg(feature = "ml")]
 pub mod machine_learning;
 #[cfg(feature = "ml")]

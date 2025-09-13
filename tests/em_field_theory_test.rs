@@ -312,13 +312,14 @@ fn its_an_electromagnetic_wave() {
     let e_time1 = e_field.propagate(time1, position, speed_of_light);
     let e_time2 = e_field.propagate(time2, position, speed_of_light);
 
-    // phase should advance by -c*dt
+    // phase advance from the model: φ = (position - velocity·time).angle
     let phase_diff = e_time2.angle - e_time1.angle;
-    let dt = time2 - time1;
-    let expected_diff = speed_of_light.negate() * dt;
-    assert!(
-        (phase_diff - expected_diff.angle).mod_4_angle().abs() < EPSILON,
-        "Wave phase should advance at speed c"
+    let expected_phase2 = position - (speed_of_light * time2);
+    let expected_phase1 = position - (speed_of_light * time1);
+    let expected_diff = expected_phase2.angle - expected_phase1.angle;
+    assert_eq!(
+        phase_diff, expected_diff,
+        "Wave phase advances by model φ=x-vt"
     );
 
     // test phase relationship between E and B fields

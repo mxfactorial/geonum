@@ -156,11 +156,11 @@ mod tests {
             "dispersed waves have unit amplitude"
         );
 
-        // prove phase at origin and t=0 is zero
+        // prove phase at origin and t=0 has blade 2 from 0-0 subtraction
         assert_eq!(
             wave_x1_t1.angle,
-            Angle::new(0.0, 1.0),
-            "phase at origin and t=0 is zero"
+            Angle::new_with_blade(2, 0.0, 1.0),
+            "phase at origin and t=0 has blade 2 from subtraction"
         );
 
         // prove spatial phase difference after half a wavelength

@@ -34,7 +34,7 @@
 //
 // the pathway to efficient projective computing lies through geometric numbers
 
-use geonum::{Angle, Geonum, Multivector};
+use geonum::{Angle, Geonum};
 use std::f64::consts::PI;
 
 const EPSILON: f64 = 1e-10;
@@ -477,28 +477,24 @@ fn it_handles_line_representations() {
     // - or a collection of points with same angular constraint
 
     // create two points to define a line
-    let p1 = Multivector(vec![
-        Geonum::new_from_cartesian(1.0, 0.0), // point at (1, 0)
-    ]);
+    let p1 = Geonum::new_from_cartesian(1.0, 0.0); // point at (1, 0)
 
-    let p2 = Multivector(vec![
-        Geonum::new_from_cartesian(3.0, 2.0), // point at (3, 2)
-    ]);
+    let p2 = Geonum::new_from_cartesian(3.0, 2.0); // point at (3, 2)
 
-    // the line through p1 and p2 is their join
-    let line = p1.join(&p2);
+    // the line through p1 and p2 is their wedge product (join in geonum)
+    let line = p1.wedge(&p2);
 
-    // prove the line has expected properties
-    assert!(!line.0.is_empty(), "line must exist");
+    // line from p1(1,0) to p2(3,2) has specific geometric properties
+    assert!((line.length - 2.0).abs() < 1e-10);
+    assert_eq!(line.angle.grade(), 1); // wedge produces grade-1 object (line)
+    assert!((line.angle.value() - 0.5880026035463774).abs() < 1e-10);
+    assert_eq!(line.angle.blade(), 1);
 
     // parametric points on the line: p(t) = (1-t)p1 + t*p2
     let parametric_point = |t: f64| -> Geonum {
-        let p1_g = &p1.0[0];
-        let p2_g = &p2.0[0];
-
         // linear interpolation in cartesian
-        let (x1, y1) = p1_g.to_cartesian();
-        let (x2, y2) = p2_g.to_cartesian();
+        let (x1, y1) = p1.to_cartesian();
+        let (x2, y2) = p2.to_cartesian();
 
         let x = (1.0 - t) * x1 + t * x2;
         let y = (1.0 - t) * y1 + t * y2;
@@ -712,15 +708,13 @@ fn it_handles_duality() {
 
     // line self-duality in 2D
     // in 2D projective space, lines are self-dual
-    let line = Multivector(vec![
-        Geonum::new(1.5, 1.0, 4.0), // line with length 1.5, angle π/4
-    ]);
+    let line = Geonum::new(1.5, 1.0, 4.0); // line with length 1.5, angle π/4
 
     let line_dual = line.dual();
 
     // in 2D, line duality involves π/2 rotation
     // this naturally emerges from the geometric structure
-    assert!(!line_dual.0.is_empty(), "dual line exists");
+    assert!(line_dual.length > 0.0, "dual line exists");
 
     // duality for collections (pencils)
     let pencil_center = Geonum::new_from_cartesian(1.0, 1.0);
@@ -1230,8 +1224,12 @@ fn it_computes_line_through_two_points() {
     assert!(vdx.abs() < EPSILON); // no x change
     assert!((vdy - 3.0).abs() < EPSILON); // y changes by 3
 
-    // vertical line has angle π/2
-    assert_eq!(vertical_direction.angle, Angle::new(1.0, 2.0));
+    // vertical line has angle π/2 with blade history
+    // adds 4 blades from subtraction history
+    assert_eq!(
+        vertical_direction.angle,
+        Angle::new(1.0, 2.0) + Angle::new_with_blade(4, 0.0, 1.0)
+    );
 
     // horizontal line case
     let h1 = Geonum::new_from_cartesian(1.0, 3.0);
@@ -1243,8 +1241,12 @@ fn it_computes_line_through_two_points() {
     assert!((hdx - 4.0).abs() < EPSILON); // x changes by 4
     assert!(hdy.abs() < EPSILON); // no y change
 
-    // horizontal line has angle 0
-    assert_eq!(horizontal_direction.angle, Angle::new(0.0, 1.0));
+    // horizontal line has angle 0 with blade history
+    // adds 4 blades from subtraction history
+    assert_eq!(
+        horizontal_direction.angle,
+        Angle::new(0.0, 1.0) + Angle::new_with_blade(4, 0.0, 1.0)
+    );
 
     // line through origin
     let origin = Geonum::new_from_cartesian(0.0, 0.0);
@@ -1252,19 +1254,20 @@ fn it_computes_line_through_two_points() {
 
     let origin_line = point - origin; // same as point itself
 
-    // prove it equals the point
+    // prove it equals the point with explicit blade history
+    // adds 4 blades from subtraction history
     assert_eq!(origin_line.length, point.length);
-    assert_eq!(origin_line.angle, point.angle);
+    assert_eq!(
+        origin_line.angle,
+        point.angle + Angle::new_with_blade(4, 0.0, 1.0)
+    );
 
     // for PGA enthusiasts: show how join operation works in geonum
-    let p1_mv = Multivector(vec![p1]);
-    let p2_mv = Multivector(vec![p2]);
-
     // join creates the subspace containing both points
-    let line_join = p1_mv.join(&p2_mv);
+    let line_join = p1.wedge(&p2);
 
     // prove join exists and represents the line
-    assert!(!line_join.0.is_empty(), "join creates line representation");
+    assert!(line_join.length > 0.0, "join creates line representation");
 
     // the key insight: no plücker coordinates needed
     // line is fully characterized by:

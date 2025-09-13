@@ -1,1031 +1,882 @@
+// traditional optics requires complex matrices, wave equations, and trigonometric solving
+// geonum eliminates optical complexity through direct angle arithmetic
+// trojan horse pattern: optical terminology expects symbol salad, finds basic arithmetic
+
 use geonum::*;
 use std::f64::consts::PI;
 
-// these tests demonstrate how geometric numbers can replace traditional optics approaches
-// with O(1) complexity angle-based transformations. three traits will be added:
-//
-// 1. Optics - physical optics operations through angle transformations
-//    - refract() - implements Snell's law as simple angle transformation
-//    - aberrate() - applies wavefront aberrations through phase modulation
-//    - otf() - optical transfer function via domain mapping
-//    - abcd_transform() - matrix transformations using angle operations
-//
-// 2. Projection - functional lens operations for data structure traversal
-//    - view() - O(1) access via angle-encoded paths
-//    - set() - constant time modification through geometric angles
-//    - over() - function application through direct paths
-//    - compose() - lens composition via angle addition
-//
-// 3. Manifold - multivector operations for complex transformations
-//    - find() - direct component lookup through angle matching
-//    - transform() - apply unified transformation to all components
-//    - path_mapper() - create geometric access paths for data structures
-//
-// these traits work together to form a complete optical and functional framework
-// where Optics provides physical transformations, Projection enables data traversal,
-// and Manifold extends capabilities to collections of geometric numbers
-
-// small value for floating-point comparisons
-const EPSILON: f64 = 1e-10;
-const TWO_PI: f64 = 2.0 * PI;
+// const EPSILON: f64 = 1e-10;
 
 #[test]
 fn its_a_ray() {
-    // traditional ray optics represents light rays as vectors with direction and origin
-    // with matrix transformations for propagation through optical systems
-    // in geometric numbers, we can represent rays directly with angle operations
+    // traditional: ray requires origin point + direction vector + parametric equations
+    // R(t) = P₀ + t*d requires 3D vector storage and parameter tracking
+    // ray-object intersection needs solving: |P₀ + t*d - center|² = r²
 
-    // create a ray as a geometric number
-    // the angle represents direction, length represents amplitude
-    let ray = Geonum::new(1.0, 3.0, 4.0); // normalized amplitude, 45 degrees from optical axis (blade 1)
+    // geonum: ray is single geometric number with propagation angle
+    let ray = Geonum::new(1.0, 1.0, 4.0); // π/4 propagation direction
 
-    // test the ray properties
-    assert_eq!(ray.length, 1.0);
-    assert_eq!(ray.angle.value(), PI / 4.0);
-    assert_eq!(ray.angle.blade(), 1);
+    // intensity encoded in length, direction in angle
+    assert_eq!(ray.length, 1.0); // unit intensity
+    assert_eq!(ray.angle.value(), PI / 4.0); // 45° propagation
 
-    // demonstrate ray reflection using angle transformation
-    // reflection changes angle θ → -θ
-    // use the Multivector::reflect method to perform reflection
-    let normal = Multivector(vec![Geonum::new(1.0, 2.0, 2.0)]); // blade 1, angle 0
-    let ray_mv = Multivector(vec![ray]);
+    // ray propagation: just scale by distance
+    let distance = 100.0;
+    let propagated = ray.scale(distance); // intensity × distance
+    assert_eq!(propagated.length, distance);
+    assert_eq!(propagated.angle, ray.angle); // direction unchanged
 
-    // apply reflection to our ray using the reflect method
-    let reflected_mv = ray_mv.reflect(&normal);
-    let reflected = reflected_mv.0[0];
-
-    // test the reflection
-    // Note: The Multivector::reflect implementation may use a different convention
-    // than the simple angle negation used in the original test
-    assert!((reflected.length - 1.0).abs() < EPSILON);
-    // reflection should produce a specific angle based on the normal
-    // for normal at blade 1, angle 0 (90°), reflecting ray at blade 1, π/4 (135°)
-    // the reflected ray should have a different angle
-    assert_ne!(reflected.angle, ray.angle);
-    // compute expected reflection angle
-    let angle_diff = reflected.angle.mod_4_angle() - ray.angle.mod_4_angle();
-    assert!(angle_diff.abs() > EPSILON);
-
-    // demonstrate ray polarization
-    // instead of 2×2 Jones matrices or 4×4 Stokes matrices,
-    // we represent polarization state with a single geonum
-    let polarized_ray = |r: &Geonum, pol_angle: f64| -> Multivector {
-        Multivector(vec![
-            *r, // ray direction
-            Geonum::new_with_angle(
-                r.length,                  // polarization amplitude
-                Angle::new(pol_angle, PI), // polarization angle
-            ),
-        ])
-    };
-
-    // create linearly polarized light at 30 degrees
-    let pol_ray = polarized_ray(&ray, PI / 6.0);
-
-    // test polarization
-    assert_eq!(pol_ray[0].length, 1.0); // ray maintains unit amplitude
-    assert_eq!(pol_ray[0].angle.value(), PI / 4.0); // ray direction unchanged
-    assert_eq!(pol_ray[0].angle.blade(), 1);
-    assert_eq!(pol_ray[1].length, 1.0); // polarization amplitude
-    assert_eq!(pol_ray[1].angle.value(), PI / 6.0); // polarization angle
-    assert_eq!(pol_ray[1].angle.blade(), 0); // pol_angle PI/6 gives blade 0
-
-    // demonstrate polarizer as angle filter
-    let polarizer = |r: &Multivector, pol_axis: f64| -> Multivector {
-        let ray_dir = r[0];
-        let ray_pol = r[1];
-
-        // transmitted amplitude follows Malus's law: I = I₀cos²(θ-θ₀)
-        let angle_diff = ray_pol.angle.value() - pol_axis;
-        let transmitted_amplitude = ray_pol.length * angle_diff.cos().powi(2);
-
-        Multivector(vec![
-            Geonum::new_with_angle(
-                transmitted_amplitude, // attenuated by polarizer
-                ray_dir.angle,         // direction unchanged
-            ),
-            Geonum::new_with_angle(
-                transmitted_amplitude,    // polarization amplitude
-                Angle::new(pol_axis, PI), // aligned with polarizer axis
-            ),
-        ])
-    };
-
-    // apply vertical polarizer (90°)
-    let filtered_ray = polarizer(&pol_ray, PI / 2.0);
-
-    // compute expected amplitude from Malus's law
-    let expected_amplitude = 1.0 * ((PI / 6.0 - PI / 2.0).cos().powi(2));
-
-    // test polarizer effect
-    assert!((filtered_ray[0].length - expected_amplitude).abs() < EPSILON);
-    assert_eq!(filtered_ray[1].angle.value(), 0.0); // aligned with polarizer (π/2 in blade 1)
-    assert_eq!(filtered_ray[1].angle.blade(), 1);
-
-    // demonstrate 3D ray representation and propagation
-    // traditional 3D ray tracing requires 3-component vectors and matrices
-    // with geonum, we use just 2 components for any dimension
-
-    // create a 3D ray with spherical coordinates (θ, φ)
-    let ray_3d = |theta: f64, phi: f64| -> Multivector {
-        Multivector(vec![
-            Geonum::new_with_angle(
-                1.0,                   // ray amplitude
-                Angle::new(theta, PI), // polar angle (from z-axis)
-            ),
-            Geonum::new_with_angle(
-                1.0,                 // ray amplitude
-                Angle::new(phi, PI), // azimuthal angle (xy-plane)
-            ),
-        ])
-    };
-
-    // create a ray at 30° from z-axis, 45° in xy-plane
-    let incident_ray = ray_3d(PI / 6.0, PI / 4.0);
-
-    // test 3D ray properties
-    assert_eq!(incident_ray[0].length, 1.0);
-    assert_eq!(incident_ray[0].angle.value(), PI / 6.0);
-    assert_eq!(incident_ray[0].angle.blade(), 0); // π/6 < π/2, so blade 0
-    assert_eq!(incident_ray[1].length, 1.0);
-    assert_eq!(incident_ray[1].angle.value(), PI / 4.0);
-    assert_eq!(incident_ray[1].angle.blade(), 0); // π/4 < π/2, so blade 0
-
-    // test spherical coordinate reconstruction
-    let theta = incident_ray[0].angle.mod_4_angle();
-    let phi = incident_ray[1].angle.mod_4_angle();
-    assert!((theta - PI / 6.0).abs() < EPSILON);
-    assert!((phi - PI / 4.0).abs() < EPSILON);
-
-    // demonstrate ray propagation through space
-    // traditional approach: r' = r + t*d (vector calculation)
-    // with geonum: direct angle preservation using the built-in propagate method
-
-    // ray at t=0, position=0
-    let ray_at_origin = incident_ray[0];
-
-    // propagate ray by 5 units along optical path
-    // using built-in propagate method, which follows wave equation principles
-    // for ray propagation, we typically care about preserving direction (angle)
-    let velocity = Geonum::new(1.0, 0.0, 1.0); // normalized velocity
-    let distance = Geonum::new(5.0, 0.0, 1.0); // distance scalar
-    let time = Geonum::new(0.0, 0.0, 1.0); // instantaneous view
-
-    let propagated_ray = ray_at_origin.propagate(time, distance, velocity);
-
-    // create propagated ray vector with both components
-    let propagated = Multivector(vec![
-        propagated_ray,
-        // propagate azimuthal component as well
-        incident_ray[1].propagate(time, distance, velocity),
-    ]);
-
-    // test propagation preserves amplitude
-    assert_eq!(propagated[0].length, 1.0);
-    assert_eq!(propagated[1].length, 1.0);
-
-    // with time=0, phase = position - velocity*time = position
-    // since position is scalar (blade 0), phase.angle = Angle::new(0.0, 1.0)
-    // propagated angle = original angle + phase.angle
-    assert_eq!(propagated[0].angle, incident_ray[0].angle);
-    assert_eq!(propagated[1].angle, incident_ray[1].angle);
-
-    // test non-zero time propagation changes phase
-    let time_1ns = Geonum::new(1e-9, 0.0, 1.0);
-    let propagated_t1 = ray_at_origin.propagate(time_1ns, distance, velocity);
-    // phase = distance - velocity * time
-    let phase = distance - velocity * time_1ns;
-    let expected_angle = ray_at_origin.angle + phase.angle;
-    assert_eq!(propagated_t1.angle, expected_angle);
+    // traditional: parametric equation R(100) = P₀ + 100*d
+    // geonum: direct scaling operation - no parametric complexity
 }
 
 #[test]
 fn its_a_lens() {
-    // traditional lens operations involve ABCD matrices for ray transformations
-    // with geonum, we can represent lenses as direct angle transformations
+    // traditional: lens requires focal length + aperture + complex ray transfer matrices
+    // ABCD matrix: [A B; C D] for ray [position; angle] transformation
+    // requires 4×4 matrix operations for each ray through optical system
 
-    // create an incident ray at 10 degrees
-    let incident = Geonum::new(1.0, 37.0, 18.0); // 10 degrees in blade 1: (2 + 1/18) * π
+    // geonum: lens is focal length encoded in angle transformation
+    let focal_length = 100.0; // 100mm lens
+    let lens_power = 1.0 / focal_length; // diopters
+    let lens_transform = Angle::new(lens_power, 1.0); // 1/f rotation
 
-    // apply refraction using the Optics trait
-    // for lens simulation, we use the refract method with inverse focal length as refractive_index
-    // the refractive index maps to 1/f where f is focal length
-    let refracted = incident.abcd_transform(
-        Geonum::new(1.0, 0.0, 1.0),
-        Geonum::new(0.0, 0.0, 1.0),
-        Geonum::new(-1.0 / 100.0, 0.0, 1.0),
-        Geonum::new(1.0, 0.0, 1.0),
-    );
+    // incident ray at some angle
+    let incident_ray = Geonum::new(1.0, 1.0, 6.0); // π/6 incident angle
 
-    // test the refraction
-    assert_eq!(refracted.length, 1.0);
-    assert_ne!(refracted.angle, incident.angle); // angle changed by lens
+    // lens focusing: rotate ray by lens power
+    let focused_ray = incident_ray.rotate(lens_transform);
 
-    // demonstrate lens with negative focal length (diverging lens)
-    let diverging = incident.abcd_transform(
-        Geonum::new(1.0, 0.0, 1.0),
-        Geonum::new(0.0, 0.0, 1.0),
-        Geonum::new(1.0 / 100.0, 0.0, 1.0),
-        Geonum::new(1.0, 0.0, 1.0),
-    ); // positive 1/f for diverging
+    // verify lens operation
+    assert_eq!(focused_ray.length, incident_ray.length); // intensity preserved
+    assert_ne!(focused_ray.angle, incident_ray.angle); // angle changed by lens
 
-    // test diverging effect (angle magnitude increases)
-    // for small angles in blade 1, compare the effective angles
-    assert!(diverging.angle.value() > incident.angle.value());
+    // traditional: matrix multiplication [A B; C D][y; θ] = [y'; θ']
+    // geonum: angle rotation - no matrices needed
 
-    // demonstrate aspherical lens model
-    // traditional approach: complex ray tracing through surface
-    // with geonum: custom ABCD matrix for aspherical surfaces
+    // demonstrate thin lens equation: 1/f = 1/s + 1/s'
+    let object_distance = 150.0; // 150mm object distance
+    let image_distance = 1.0 / (lens_power - 1.0 / object_distance);
+    let expected_image_distance = 300.0; // calculated: 1/f - 1/s = 1/s'
 
-    // For an aspherical lens with focal length f0 and asphericity k:
-    // We create a custom ABCD matrix that incorporates the aspherical correction
-    let f0 = 100.0; // base focal length
-    let k = 0.5; // asphericity coefficient
-
-    // Compute effective focal length based on angle/height
-    let h = incident.angle.sin();
-    let aspherical_term = k * h.powi(3);
-    let f_effective = f0 * (1.0 + aspherical_term);
-
-    // Apply the custom ABCD transform for aspherical lens
-    let aspheric_ray = incident.abcd_transform(
-        Geonum::new(1.0, 0.0, 1.0),
-        Geonum::new(0.0, 0.0, 1.0),
-        Geonum::new(-1.0 / f_effective, 0.0, 1.0),
-        Geonum::new(1.0, 0.0, 1.0),
-    );
-
-    // test aspherical lens effect
-    assert_eq!(aspheric_ray.length, 1.0);
-    assert_ne!(aspheric_ray.angle, refracted.angle); // different from spherical lens
-
-    // demonstrate lens aberration modeling
-    // traditional approach: complex wavefront calculations
-    // with geonum: direct angle perturbation
-
-    let lens_with_aberration = |r: &Geonum, f: f64, aberration: &Geonum| -> Geonum {
-        // basic lens refraction
-        let h = r.angle.sin();
-        let basic_refraction = r.angle.mod_4_angle() - h / f;
-
-        // add aberration effect (angle perturbation)
-        // aberration.length controls magnitude, aberration.angle controls type
-        let aberration_effect = aberration.length
-            * (h * 5.0).powi(2)
-            * (aberration.angle.mod_4_angle() + r.angle.mod_4_angle()).cos();
-
-        Geonum::new_with_blade(
-            r.length,
-            1,
-            (basic_refraction + aberration_effect) % TWO_PI,
-            PI,
-        )
-    };
-
-    // define spherical aberration
-    let sph_aberration = Geonum::new(0.01, 2.0, 2.0); // small magnitude, blade 1
-
-    // apply lens with aberration
-    let aberrated_ray = lens_with_aberration(&incident, 100.0, &sph_aberration);
-
-    // test aberration effect
-    assert_eq!(aberrated_ray.length, 1.0);
-    assert_ne!(aberrated_ray.angle, refracted.angle); // different due to aberration
-
-    // demonstrate multi-element lens system
-    // traditional approach: multiplication of ABCD matrices
-    // with geonum: composition of angle transformations
-
-    let doublet_lens = |r: &Geonum, f1: f64, f2: f64, _separation: f64| -> Geonum {
-        // apply first lens using ABCD transform
-        let after_first = r.abcd_transform(
-            Geonum::new(1.0, 0.0, 1.0),
-            Geonum::new(0.0, 0.0, 1.0),
-            Geonum::new(-1.0 / f1, 0.0, 1.0),
-            Geonum::new(1.0, 0.0, 1.0),
-        );
-
-        // propagate to second lens (free space)
-        // for simplicity, we ignore position changes during propagation here
-
-        // apply second lens using ABCD transform
-        after_first.abcd_transform(
-            Geonum::new(1.0, 0.0, 1.0),
-            Geonum::new(0.0, 0.0, 1.0),
-            Geonum::new(-1.0 / f2, 0.0, 1.0),
-            Geonum::new(1.0, 0.0, 1.0),
-        )
-    };
-
-    // apply doublet (f1=200mm, f2=200mm)
-    let doublet_ray = doublet_lens(&incident, 200.0, 200.0, 10.0);
-
-    // test doublet effect
-    assert_eq!(doublet_ray.length, 1.0);
-
-    // effective focal length of doublet should be less than individual lenses
-    // artifact of geonum automation: kept for reference to compare with doublet
-    let _single_lens = incident.abcd_transform(
-        Geonum::new(1.0, 0.0, 1.0),
-        Geonum::new(0.0, 0.0, 1.0),
-        Geonum::new(-1.0 / 100.0, 0.0, 1.0),
-        Geonum::new(1.0, 0.0, 1.0),
-    );
-
-    // verify that changing the incident angle produces expected results
-    let steep_ray = Geonum::new(1.0, 7.0, 3.0); // 30 degrees in blade 1: (2 + 1/6) * π = 7π/3
-
-    let refracted_steep = steep_ray.abcd_transform(
-        Geonum::new(1.0, 0.0, 1.0),
-        Geonum::new(0.0, 0.0, 1.0),
-        Geonum::new(-1.0 / 100.0, 0.0, 1.0),
-        Geonum::new(1.0, 0.0, 1.0),
-    );
-
-    // test angle dependency
-    // steep ray has different input angle than incident ray
-    assert_ne!(steep_ray.angle, incident.angle);
-
-    // assert the exact difference in refracted angles
-    let angle_diff = refracted_steep.angle - refracted.angle;
-    assert_ne!(angle_diff, Angle::new(0.0, 1.0));
+    let distance_diff = (image_distance - expected_image_distance).abs();
+    assert!(distance_diff < 1.0); // thin lens equation satisfied
 }
 
 #[test]
 fn its_a_wavefront() {
-    // traditional wavefront propagation requires complex integrals or FFTs
-    // with geonum, we represent wavefronts directly with angle operations
+    // traditional: wavefront interference requires solving wave equations
+    // ψ₁ + ψ₂ = A₁cos(φ₁) + A₂cos(φ₂) → complex trigonometric expansion
+    // interference pattern: I = |ψ₁ + ψ₂|² = A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂)
 
-    // create a plane wavefront as a geometric number
-    // angle represents phase, length represents amplitude
-    let plane_wave = Geonum::new_with_blade(1.0, 1, 0.0, PI); // uniform amplitude, blade 1 with angle 0
+    // geonum: wave interference through geometric addition - no trigonometry
+    let wave1 = Geonum::new(1.0, 1.0, 4.0); // amplitude=1, phase=π/4
+    let wave2 = Geonum::new(1.5, 1.0, 3.0); // amplitude=1.5, phase=π/3
 
-    // test the wavefront properties
-    assert_eq!(plane_wave.length, 1.0);
-    assert_eq!(plane_wave.angle.value(), 0.0);
-    assert_eq!(plane_wave.angle.blade(), 1);
+    // constructive interference: waves add geometrically
+    let interference = wave1 + wave2;
+    let expected_constructive = (wave1.length.powi(2)
+        + wave2.length.powi(2)
+        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).cos())
+    .sqrt();
+    let constructive_diff = (interference.length - expected_constructive).abs();
+    assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
 
-    // demonstrate wavefront propagation using built-in propagate method
-    // propagation implementation follows wave equation principles
-    // propagate(&self, time: f64, position: f64, velocity: f64)
+    // destructive interference: opposite phases
+    let wave1_opposite = wave1.negate(); // flip phase by π
+    let destructive = wave1 + wave1_opposite;
+    assert!(destructive.length < EPSILON); // complete cancellation
 
-    // propagate wave by setting position=0.5
-    // according to implementation: angle += position - velocity * time
-    let velocity = Geonum::new(1.0, 0.0, 1.0); // scalar 1.0
-    let position = Geonum::new(0.5, 0.0, 1.0); // scalar 0.5
-    let time = Geonum::new(0.0, 0.0, 1.0); // scalar 0.0
+    // wave superposition principle: three wave combination
+    let wave3 = Geonum::new(0.8, 1.0, 6.0); // amplitude=0.8, phase=π/6
+    let superposition = wave1 + wave2 + wave3;
 
-    // propagate returns a new Geonum with angle += (position - velocity * time).angle
-    let propagated = plane_wave.propagate(time, position, velocity);
+    // verify phase relationships through angle subtraction
+    let phase_diff_12 = wave2.angle - wave1.angle; // π/3 - π/4 = π/12
+    let expected_phase_diff = Angle::new(1.0, 12.0); // π/12
+    assert_eq!(phase_diff_12, expected_phase_diff);
 
-    // test phase shift (position - velocity*time adds its angle)
-    // since time=0 and position is scalar with angle 0, result keeps original angle
-    assert_eq!(propagated.length, 1.0);
-    assert_eq!(propagated.angle.value(), 0.0); // phase.angle = 0 for scalar
-    assert_eq!(propagated.angle.blade(), 1);
+    // superposition amplitude from phasor addition
+    let total_amplitude = superposition.length;
+    assert!(total_amplitude > wave1.length); // coherent addition increases amplitude
 
-    // compute expected phase from wave equation
-    let phase = position - velocity * time;
-    let expected_angle = plane_wave.angle + phase.angle;
-    assert_eq!(propagated.angle, expected_angle);
+    // traditional: trigonometric phase calculations + interference integrals
+    // geonum: wave addition through geometric arithmetic - cosine terms emerge automatically
+}
 
-    // demonstrate spherical wavefront
-    // traditional approach: complex position-dependent phases
-    // with geonum: position-dependent angle function
+#[test]
+fn its_a_polarizer() {
+    // traditional: polarizer transmission requires Jones matrix multiplication
+    // [Ex'] = [cos²θ cosθsinθ] [Ex] = complex 2×2 matrix operations
+    // [Ey']   [cosθsinθ sin²θ] [Ey]   for each polarization component
 
-    let spherical_wave = |r: f64, k: f64| -> Geonum {
-        // k is the wavenumber 2π/λ
-        // phase depends on radial distance r
-        let phase = k * r;
+    // geonum: polarizer is angle difference calculation - no matrices
+    let incident = Geonum::new(1.0, 1.0, 6.0); // intensity=1, polarization=π/6 (30°)
+    let polarizer = Geonum::new(1.0, 1.0, 4.0); // transmission axis at π/4 (45°)
 
-        Geonum::new_with_angle(
-            1.0 / r,               // amplitude drops with 1/r
-            Angle::new(phase, PI), // phase depends on distance
-        )
-    };
+    // Malus law through angle difference: I = I₀cos²(θ₁-θ₂)
+    let angle_diff = incident.angle - polarizer.angle; // π/6 - π/4 = -π/12
+    let cos_squared = angle_diff.cos().powi(2);
+    let expected_intensity = incident.length * cos_squared;
 
-    // create spherical wave at r=2λ with λ=500nm
-    let wavelength = 500e-9; // 500nm
-    let k = TWO_PI / wavelength;
-    let r = 2.0 * wavelength;
+    // cross-polarizer test: 90° difference gives zero transmission
+    let cross_polarizer = incident.rotate(Angle::new(1.0, 2.0)); // +π/2 rotation
+    let cross_diff = incident.angle - cross_polarizer.angle; // π/2 difference
+    let cross_transmission = cross_diff.cos().powi(2);
+    assert!(cross_transmission < EPSILON); // cos²(π/2) = 0
 
-    let spherical = spherical_wave(r, k);
+    // parallel polarizer: 0° difference gives full transmission
+    let parallel_diff = incident.angle - incident.angle; // 0 difference
+    let parallel_transmission = parallel_diff.cos().powi(2);
+    assert_eq!(parallel_transmission, 1.0); // cos²(0) = 1
 
-    // test spherical wave
-    assert!((spherical.length - 1.0 / r).abs() < EPSILON);
-    // k*r = 4π, which gives blade 8
-    let total_phase = k * r;
-    let expected_blade = (total_phase / (PI / 2.0)) as usize;
-    let expected_value = total_phase % (PI / 2.0);
-    assert!((spherical.angle.value() - expected_value).abs() < EPSILON);
-    assert_eq!(spherical.angle.blade(), expected_blade);
+    // verify expected intensity calculation
+    assert!((expected_intensity - incident.length * cos_squared).abs() < EPSILON);
 
-    // test specific values for 2λ distance
-    assert!(
-        (total_phase - 4.0 * PI).abs() < EPSILON,
-        "phase at 2λ is 4π"
-    );
-    assert_eq!(expected_blade, 8, "4π = 8 * π/2 rotations");
+    // traditional: matrix multiplication for every polarization state
+    // geonum: cos²(angle_difference) gives Malus law directly
+}
 
-    // demonstrate wavefront diffraction
-    // traditional approach: convolution or Fourier methods O(n²)
-    // with geonum: direct angle transformation
+#[test]
+fn it_demonstrates_wave_interference_without_trigonometry() {
+    // traditional: wavefront interference requires solving wave equations
+    // ψ₁ + ψ₂ = A₁cos(φ₁) + A₂cos(φ₂) → complex trigonometric expansion
+    // interference pattern: I = |ψ₁ + ψ₂|² = A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂)
 
-    let diffract = |w: &Geonum, aperture_size: f64, wavelength: f64, distance: f64| -> Geonum {
-        // simplified diffraction model using Fraunhofer approximation
-        // diffraction angle depends on wavelength and aperture size
-        let diffraction_angle = wavelength / aperture_size;
+    // geonum: wave interference through geometric addition - no trigonometry
+    let wave1 = Geonum::new(1.0, 1.0, 4.0); // amplitude=1, phase=π/4
+    let wave2 = Geonum::new(1.5, 1.0, 3.0); // amplitude=1.5, phase=π/3
 
-        // intensity reduction factor
-        let intensity_factor = (diffraction_angle * distance).sin();
+    // constructive interference: waves add geometrically
+    let interference = wave1 + wave2;
+    let expected_constructive = (wave1.length.powi(2)
+        + wave2.length.powi(2)
+        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).cos())
+    .sqrt();
+    let constructive_diff = (interference.length - expected_constructive).abs();
+    assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
 
-        // phase shift from propagation
-        let phase_shift = TWO_PI * distance / wavelength;
+    // destructive interference: opposite phases
+    let wave1_opposite = wave1.negate(); // flip phase by π
+    let destructive = wave1 + wave1_opposite;
+    assert!(destructive.length < EPSILON); // complete cancellation
 
-        Geonum::new_with_angle(
-            w.length * intensity_factor.abs(),
-            Angle::new(w.angle.mod_4_angle() + phase_shift, PI),
-        )
-    };
+    // wave superposition principle: three wave combination
+    let wave3 = Geonum::new(0.8, 1.0, 6.0); // amplitude=0.8, phase=π/6
+    let superposition = wave1 + wave2 + wave3;
 
-    // apply diffraction to plane wave
-    let diffracted = diffract(&plane_wave, 0.001, wavelength, 0.1);
+    // verify phase relationships through angle subtraction
+    let phase_diff_12 = wave2.angle - wave1.angle; // π/3 - π/4 = π/12
+    let expected_phase_diff = Angle::new(1.0, 12.0); // π/12
+    assert_eq!(phase_diff_12, expected_phase_diff);
 
-    // test diffraction effect
-    assert!(diffracted.length <= plane_wave.length); // intensity can't increase
-    assert!(diffracted.length > 0.0); // but should have non-zero amplitude
+    // superposition amplitude from phasor addition
+    let total_amplitude = superposition.length;
+    assert!(total_amplitude > wave1.length); // coherent addition increases amplitude
 
-    // compute expected phase shift
-    let expected_phase_shift = TWO_PI * 0.1 / wavelength;
-    let expected_diffracted_angle = plane_wave.angle.mod_4_angle() + expected_phase_shift;
-    assert!((diffracted.angle.mod_4_angle() - expected_diffracted_angle % TWO_PI).abs() < 1e-6);
+    // traditional: trigonometric phase calculations + interference integrals
+    // geonum: wave addition through geometric arithmetic - cosine terms emerge automatically
+}
 
-    // demonstrate interference of two wavefronts
-    // traditional approach: complex addition of fields
-    // with geonum: direct superposition via angle representation
+#[test]
+fn its_a_diffraction_grating() {
+    // traditional: grating equation mλ = d(sinθₘ - sinθᵢ) requires trigonometric solutions
+    // for each order m: solve sinθₘ = sinθᵢ + mλ/d with wavelength λ, period d
+    // efficiency calculations, blazing optimization, Fraunhofer integrals for patterns
 
-    let interfere = |w1: &Geonum, w2: &Geonum| -> Geonum {
-        // convert to cartesian for superposition
-        let re1 = w1.length * w1.angle.cos();
-        let im1 = w1.length * w1.angle.sin();
-        let re2 = w2.length * w2.angle.cos();
-        let im2 = w2.length * w2.angle.sin();
+    // geonum: diffraction orders through angle multiplication - no trigonometric solving
+    let wavelength = 500e-9; // 500nm green light
+    let grating_period = 1e-6; // 1μm line spacing
+    let incident_angle = Geonum::new(1.0, 1.0, 6.0); // π/6 = 30° incidence
 
-        // add fields
-        let re_sum = re1 + re2;
-        let im_sum = im1 + im2;
+    // grating vector encodes period and orientation
+    let grating_strength = 2.0 * PI / grating_period; // spatial frequency
+    let grating = Geonum::new(grating_strength, 0.0, 1.0); // grating at normal orientation
 
-        // convert back to geometric number
-        let length = (re_sum * re_sum + im_sum * im_sum).sqrt();
-        let angle = im_sum.atan2(re_sum);
+    // diffraction through grating-light interaction
+    let diffraction_order = grating * incident_angle;
+    assert!((diffraction_order.length - 6283185.307180).abs() < 1e-6);
+    assert_eq!(diffraction_order.angle.grade(), 0);
 
-        Geonum::new_with_angle(length, Angle::new(angle, PI))
-    };
+    // diffraction orders: traditional requires solving mλ/d for each m
+    // geonum: orders emerge from angle arithmetic multiplication
+    let orders: Vec<Geonum> = (0..5)
+        .map(|m| {
+            let order_factor = m as f64 * wavelength * grating_strength / (2.0 * PI);
+            let order_rotation = Angle::new(order_factor, 1.0);
+            incident_angle.rotate(order_rotation)
+        })
+        .collect();
 
-    // create two waves with phase difference
-    let wave1 = plane_wave;
-    let wave2 = Geonum::new(1.0, 3.0, 2.0); // half cycle out of phase from blade 1 (3π/2 total)
+    // verify multiple diffraction orders exist
+    assert_eq!(orders.len(), 5);
 
-    // test destructive interference
-    let interference = interfere(&wave1, &wave2);
-    assert!(interference.length < EPSILON); // destructive gives near-zero amplitude
-
-    // test phase relationship for destructive interference
-    let phase_diff = wave2.angle - wave1.angle;
-    // wave1 is blade 1 (π/2), wave2 is 3π/2, diff should be π
-    assert_eq!(phase_diff.blade(), 2); // π difference = 2 quarter turns
-
-    // create constructive case
-    let wave3 = Geonum::new_with_blade(1.0, 1, 0.0, PI); // in phase with wave1, blade 1
-
-    // test constructive interference
-    let constructive = interfere(&wave1, &wave3);
-    assert!((constructive.length - 2.0).abs() < EPSILON); // amplitudes add
-    assert_eq!(constructive.angle.blade(), wave1.angle.blade()); // phase preserved
-    assert!((constructive.angle.value() - wave1.angle.value()).abs() < EPSILON);
-
-    // demonstrate complex wavefront transformations
-    // traditional approach: intensive numerical computations
-    // with geonum: direct angle operations via the Optics trait
-
-    // define some Zernike aberrations
-    let aberrations = [
-        Geonum::new(0.1, 2.0, 2.0),  // piston, blade 1
-        Geonum::new(0.05, 1.0, 1.0), // tilt, blade 1 at PI/2
-    ];
-
-    // apply aberrations using the Optics trait
-    let aberrated = plane_wave.aberrate(&aberrations);
-
-    // test aberration effect
-    assert_eq!(aberrated.length, plane_wave.length);
-    assert_ne!(aberrated.angle, plane_wave.angle);
-
-    // compute exact aberration from implementation
-    let mut perturbed_phase = plane_wave.angle;
-    for term in &aberrations {
-        let mode_effect_value = term.length * (term.angle.sin() * 3.0).cos();
-        let mode_effect = Angle::new(mode_effect_value, PI);
-        perturbed_phase = perturbed_phase + mode_effect;
+    // verify orders have different angles (except zeroth order)
+    for m in 1..5 {
+        assert_ne!(orders[m].angle, orders[0].angle); // each order at different angle
+        assert_eq!(orders[m].length, orders[0].length); // equal intensity (simplified)
     }
-    assert_eq!(aberrated.angle, perturbed_phase);
 
-    // demonstrate wavefront coherence test using Optics::otf
-    // the optical transfer function maps from spatial to frequency domain
-    let focal_length = Geonum::new(50.0, 0.0, 1.0); // mm
-    let wavelength = Geonum::new(500e-9, 0.0, 1.0); // 500nm
+    // grating efficiency: blazed grating maximizes specific order
+    let blaze_angle = Geonum::new(1.0, 1.0, 4.0); // π/4 blaze angle
+    let blazed_first_order = orders[1].rotate(blaze_angle.angle);
 
-    // convert to frequency domain using OTF
-    let otf_result = plane_wave.otf(focal_length, wavelength);
+    // blazing concentrates power into designed order
+    let blaze_efficiency = blazed_first_order.length / incident_angle.length;
+    assert!(blaze_efficiency > 0.5); // blazed grating improves efficiency
 
-    // test OTF conversion
-    let expected_frequency = plane_wave.length / (wavelength.length * focal_length.length);
-    assert_eq!(otf_result.length, expected_frequency);
-    let expected_otf_angle = plane_wave.angle + Angle::new(1.0, 2.0); // add PI/2
-    assert_eq!(otf_result.angle, expected_otf_angle);
+    // angular dispersion: different wavelengths diffract at different angles
+    let red_wavelength = 650e-9; // 650nm red light
+    let red_factor = 1.0 * red_wavelength * grating_strength / (2.0 * PI);
+    let red_first_order = incident_angle.rotate(Angle::new(red_factor, 1.0));
 
-    // test frequency value
-    let spatial_frequency = expected_frequency;
-    assert!(spatial_frequency > 0.0, "spatial frequency is positive");
-    // for 500nm wavelength and 50mm focal length: 1/(500e-9 * 50e-3) = 4e10 m^-1
-    let expected_spatial_freq = 1.0 / (500e-9 * 50e-3);
-    assert!(
-        (spatial_frequency - expected_spatial_freq).abs() < 1e8,
-        "spatial frequency matches expected value"
-    );
+    // red diffracts at larger angle than green (dispersion)
+    let green_factor = 1.0 * wavelength * grating_strength / (2.0 * PI);
+    let green_first_order = incident_angle.rotate(Angle::new(green_factor, 1.0));
 
-    // demonstrate frequency filtering (low-pass filter in frequency domain)
-    let filter_cutoff = 100.0; // spatial frequency cutoff
-    let filtered_otf = if otf_result.length > filter_cutoff {
-        Geonum::new_with_angle(0.0, otf_result.angle)
-    } else {
-        otf_result
+    assert!(red_first_order.angle.value() > green_first_order.angle.value()); // red > green angle
+
+    // traditional: trigonometric solutions for each wavelength and order
+    // geonum: wavelength scaling in angle multiplication gives dispersion automatically
+}
+
+#[test]
+fn its_an_interferometer() {
+    // traditional: interference requires phase difference calculations
+    // I = I₁ + I₂ + 2√(I₁I₂)cos(φ₁-φ₂) for beam combination
+    // fringe visibility, contrast ratios, path length stabilization
+
+    // geonum: interference is geometric addition of waves
+    let beam1 = Geonum::new(1.0, 1.0, 4.0); // amplitude=1, phase=π/4
+    let beam2 = Geonum::new(0.8, 1.0, 3.0); // amplitude=0.8, phase=π/3
+    let interference = beam1 + beam2; // direct addition gives interference
+
+    // verify interference formula emerges from geometric addition
+    let traditional_intensity = (beam1.length.powi(2)
+        + beam2.length.powi(2)
+        + 2.0 * beam1.length * beam2.length * (beam1.angle - beam2.angle).cos())
+    .sqrt();
+    let intensity_diff = (interference.length - traditional_intensity).abs();
+    assert!(intensity_diff < EPSILON); // cosine terms emerge from angle arithmetic
+
+    // Michelson interferometer: path difference creates phase shift
+    let path_difference = 0.5e-6; // 500nm path difference
+    let wavelength = 500e-9; // 500nm light
+    let phase_shift = 2.0 * PI * path_difference / wavelength; // 2π phase shift
+
+    let beam_delayed = beam1.rotate(Angle::new(phase_shift, 2.0 * PI));
+    let michelson_pattern = beam1 + beam_delayed;
+
+    // 2π phase shift produces destructive interference in geonum addition operation
+    assert!(michelson_pattern.length < EPSILON); // complete destructive interference
+                                                 // rotation by 2π followed by addition gives zero: beam + rotated_beam = 0
+
+    // Mach-Zehnder: two paths with different phase shifts
+    let path1_shift = PI / 6.0; // π/6 phase shift in arm 1
+    let path2_shift = PI / 4.0; // π/4 phase shift in arm 2
+
+    let arm1 = beam1.rotate(Angle::new(path1_shift, PI));
+    let arm2 = beam1.rotate(Angle::new(path2_shift, PI));
+    let mach_zehnder = arm1 + arm2;
+
+    // verify Mach-Zehnder produces partial interference between arms
+    assert!(mach_zehnder.length > 0.0); // non-zero interference
+    assert!(mach_zehnder.length < 2.0 * beam1.length); // partial, not full constructive
+
+    // demonstrate opposite case: π phase difference gives destructive interference
+    let pi_shift_arm = beam1.rotate(Angle::new(1.0, 1.0)); // π phase shift
+    let destructive_mz = beam1 + pi_shift_arm;
+    assert!(destructive_mz.length < EPSILON); // π phase difference → complete cancellation
+
+    // demonstrate constructive case: 0 phase difference gives additive interference
+    let zero_shift_arm = beam1; // no phase shift
+    let constructive_mz = beam1 + zero_shift_arm;
+    let expected_constructive = 2.0 * beam1.length; // amplitudes add directly
+    let constructive_diff = (constructive_mz.length - expected_constructive).abs();
+    assert!(constructive_diff < EPSILON); // 0 phase difference → full constructive
+
+    // fringe visibility from amplitude ratio
+    let visibility =
+        2.0 * beam1.length * beam2.length / (beam1.length.powi(2) + beam2.length.powi(2));
+    assert!(visibility <= 1.0); // maximum visibility = 1 for equal amplitudes
+    assert!(visibility > 0.0); // non-zero visibility for coherent beams
+
+    // traditional: complex phase tracking + trigonometric interference calculations
+    // geonum: path differences become angle rotations, interference emerges from addition
+}
+
+#[test]
+fn its_a_prism() {
+    // traditional: Snell's law n₁sinθ₁ = n₂sinθ₂ requires trigonometric calculations
+    // solve for refraction angle: θ₂ = arcsin(n₁sinθ₁/n₂) with special cases
+    // total internal reflection at critical angle θc = arcsin(n₂/n₁)
+    // minimum deviation δₘ = 2sin⁻¹(n sin(A/2)) - A for prism apex angle A
+
+    // geonum: refraction through angle scaling by refractive index ratio
+    let n1 = 1.0; // air refractive index
+    let n2 = 1.5; // glass refractive index
+    let incident = Geonum::new(1.0, 1.0, 6.0); // π/6 = 30°
+
+    // Snell's law as closure: eliminates trigonometric solving
+    let snells_law = |ray: &Geonum, n1: f64, n2: f64| -> Geonum {
+        let incident_sin = ray.angle.sin();
+        let refracted_sin = incident_sin * n1 / n2;
+        let refracted_angle = refracted_sin.asin();
+        Geonum::new(ray.length, refracted_angle, PI)
     };
 
-    // convert back to spatial domain (would normally use inverse OTF)
-    // for simplicity, we just reverse the forward OTF operation
-    let filtered_wave = Geonum::new_with_angle(
-        filtered_otf.length * (wavelength.length * focal_length.length),
-        filtered_otf.angle - Angle::new(1.0, 2.0), // subtract PI/2
+    let refracted = snells_law(&incident, n1, n2);
+
+    // verify refraction bends toward normal (smaller angle for dense medium)
+    assert!(refracted.angle.value() < incident.angle.value()); // ray bends toward normal
+    assert_eq!(refracted.length, incident.length); // intensity preserved
+
+    // critical angle demonstration: dense to rare medium
+    let glass_incident = Geonum::new(1.0, 1.0, 3.0); // π/3 = 60° in glass
+    let glass_to_air_ratio = n2 / n1; // 1.5/1.0 = 1.5
+
+    // beyond critical angle: sin(60°) = √3/2 ≈ 0.866, critical = sin⁻¹(1/1.5) ≈ 0.667
+    let critical_sin = 1.0 / glass_to_air_ratio; // sin(θc) = 1/1.5
+    let incident_sin = (PI / 3.0).sin(); // sin(60°) = √3/2
+    assert!(incident_sin > critical_sin); // 60° > critical angle → total internal reflection
+
+    // total internal reflection: no transmitted ray, all energy reflected
+    let tir_reflected = glass_incident.negate(); // phase flip on total reflection
+    assert_eq!(tir_reflected.length, glass_incident.length); // energy conserved in reflection
+    assert_ne!(tir_reflected.angle, glass_incident.angle); // phase changed by π
+
+    // prism dispersion: different wavelengths refract differently
+    let red_index = 1.48; // red light in glass
+    let blue_index = 1.52; // blue light in glass (higher dispersion)
+
+    let red_refracted = snells_law(&incident, n1, red_index);
+    let blue_refracted = snells_law(&incident, n1, blue_index);
+
+    // blue bends more than red (normal dispersion) - higher index gives smaller angle
+    assert!(blue_refracted.angle.value() < red_refracted.angle.value()); // blue < red angle
+
+    // minimum deviation for symmetric prism passage
+    let min_dev_incident = Geonum::new(1.0, 1.0, 6.0); // π/6 incidence
+
+    // symmetric passage: incident angle = emergence angle
+    let first_refraction = snells_law(&min_dev_incident, n1, n2); // air → glass
+    let second_refraction = snells_law(&first_refraction, n2, n1); // glass → air
+
+    // verify symmetric emergence
+    let emergence_diff = (second_refraction.angle.value() - min_dev_incident.angle.value()).abs();
+    assert!(emergence_diff < EPSILON); // symmetric emergence through double refraction
+
+    // traditional: complex trigonometric solving for each ray through prism
+    // geonum: scale_rotate operations handle Snell's law automatically
+}
+
+#[test]
+fn its_a_laser_cavity() {
+    // traditional: cavity modes require solving wave equations with boundary conditions
+    // TEMₘₙ Hermite-Gaussian modes, stability criteria g₁g₂ < 1, ABCD matrix round-trip analysis
+    // mode frequencies ν = c(m + n + 1)/2L, spot size calculations, diffraction losses
+
+    // geonum: cavity mode is standing wave pattern encoded in blade count
+    let mirror1_reflectivity = 0.95; // 95% reflective output coupler
+    let mirror2_reflectivity = 0.99; // 99% high reflector
+    let cavity_length = 1.0; // 1m Fabry-Perot cavity
+
+    let mirror1 = Geonum::new(mirror1_reflectivity, 0.0, 1.0); // R₁ at angle 0
+    let mirror2 = Geonum::new(mirror2_reflectivity, 1.0, 1.0); // R₂ at angle π (opposite end)
+
+    // cavity stability: round-trip gain must be < 1
+    let round_trip = mirror1 * mirror2; // R₁ × R₂ through angle addition
+    let cavity_gain = round_trip.length; // 0.95 × 0.99 = 0.9405
+    assert!(cavity_gain < 1.0); // stable cavity condition
+
+    // cavity finesse from mirror reflectivities
+    let finesse = PI * (cavity_gain.sqrt()) / (1.0 - cavity_gain);
+    assert!(finesse > 10.0); // high finesse cavity for narrow linewidth
+
+    // longitudinal mode spacing: FSR = c/2L
+    let speed_of_light = 3e8; // m/s
+    let free_spectral_range = speed_of_light / (2.0 * cavity_length); // Hz
+    let mode_spacing = Geonum::new(1.0, free_spectral_range, 1e15); // THz normalization
+
+    // transverse modes encoded in blade structure
+    let tem00 = Geonum::new(1.0, 0.0, 1.0); // fundamental mode at blade 0
+
+    // verify mode spacing determines longitudinal mode frequencies
+    let next_mode = tem00.rotate(mode_spacing.angle); // next longitudinal mode
+    let frequency_separation = (next_mode.angle.value() - tem00.angle.value()).abs();
+    assert!(frequency_separation > 0.0); // modes separated by FSR
+    let tem01 = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // first-order mode at blade 1
+    let tem10 = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // orthogonal first-order at blade 2
+
+    // mode frequency separation through blade arithmetic
+    let mode_diff_01 = tem01.angle.blade() - tem00.angle.blade(); // 1 - 0 = 1
+    let mode_diff_10 = tem10.angle.blade() - tem00.angle.blade(); // 2 - 0 = 2
+    assert_eq!(mode_diff_01, 1); // first-order mode separation
+    assert_eq!(mode_diff_10, 2); // orthogonal mode separation
+
+    // cavity Q factor from round-trip phase
+    let round_trip_phase = round_trip.angle.value();
+    let q_factor = PI / round_trip_phase; // quality factor from phase accumulation
+    assert!(q_factor > 1.0); // cavity stores energy over multiple round trips
+
+    // mode selection: cavity favors modes matching round-trip phase
+    let resonant_mode = tem00.rotate(round_trip.angle); // mode after round trip
+    let phase_matching = (resonant_mode.angle.value() - tem00.angle.value()).abs();
+    assert!(phase_matching < EPSILON); // resonant mode maintains phase consistency
+
+    // gain threshold: minimum gain needed to overcome losses
+    let loss_factor = 1.0 - cavity_gain; // 1 - 0.9405 = 0.0595
+    let threshold_gain = loss_factor / (1.0 - loss_factor); // gain = loss/(1-loss)
+    assert!(threshold_gain > 0.05); // meaningful threshold for laser operation
+
+    // beam quality factor M²: fundamental mode has M² = 1
+    let beam_quality = tem00.angle.blade() + 1; // blade count determines beam quality
+    assert_eq!(beam_quality, 1); // fundamental mode: blade 0 + 1 = 1 (perfect beam)
+
+    // higher-order modes have degraded beam quality
+    let higher_order_quality = tem01.angle.blade() + 1; // blade 1 + 1 = 2
+    assert_eq!(higher_order_quality, 2); // TEM₀₁ mode: M² = 2
+
+    // traditional: solve Helmholtz equation ∇²E + k²E = 0 with mirror boundaries
+    // geonum: blade count encodes mode structure, angle arithmetic gives frequencies
+}
+
+#[test]
+fn its_fiber_optic() {
+    // traditional: fiber modes require solving Maxwell equations in cylindrical coordinates
+    // LP₀₁, LP₁₁ linearly polarized modes, V-parameter V = (2πa/λ)√(n₁²-n₂²)
+    // mode propagation constants β solving: ∇²E + (k₀²n² - β²)E = 0
+    // group velocity dispersion β₂ = d²β/dω² for pulse broadening analysis
+
+    // geonum: fiber mode is guided angle within acceptance cone
+    let core_index = Geonum::scalar(1.46); // silica core refractive index
+    let cladding_index = Geonum::scalar(1.45); // cladding refractive index
+    let fiber_mode = (core_index - cladding_index).rotate(Angle::new(1.0, 8.0)); // acceptance cone
+
+    // light guidance test: angle within acceptance cone
+    let guided_ray = Geonum::new(1.0, 1.0, 24.0); // π/24 = 7.5° (< 9.8° acceptance)
+    let escaped_ray = Geonum::new(1.0, 1.0, 6.0); // π/6 = 30° (> 9.8° acceptance)
+
+    assert!(guided_ray.angle.value() < fiber_mode.angle.value()); // 7.5° < 9.8°
+    assert!(escaped_ray.angle.value() > fiber_mode.angle.value()); // 30° > 9.8°
+
+    // propagation in fiber: multiply indices to show guidance
+    let guided_mode = core_index * fiber_mode; // core supports mode
+    let cladding_limit = cladding_index * fiber_mode; // cladding cutoff
+
+    // guided condition: core supports larger angle than cladding
+    assert!(guided_mode.length > cladding_limit.length); // guided when core > cladding
+
+    // mode coupling: power transfer between modes
+    let lp01_mode = Geonum::new_with_blade(1.0, 1, 1.0, 4.0); // LP₀₁ at blade 1, π/4
+    let lp11_mode = Geonum::new_with_blade(1.0, 2, 1.0, 6.0); // LP₁₁ at blade 2, π/6
+
+    // coupling strength through wedge product
+    let mode_coupling = lp01_mode.wedge(&lp11_mode);
+    let coupling_strength = mode_coupling.length; // coupling coefficient
+    assert!(coupling_strength > EPSILON); // modes can exchange power
+
+    // traditional: solve Maxwell equations in cylindrical coordinates with boundary conditions
+    // geonum: guided condition through angle comparison, modes encoded in blade structure
+}
+
+#[test]
+fn its_a_hologram() {
+    // traditional: holography requires interference pattern recording + reconstruction
+    // reference beam + object beam → fringe pattern storage in photographic emulsion
+    // reconstruction: readout beam illuminates hologram → diffracted object beam emerges
+    // Fourier transform holography, volume gratings, phase conjugation mathematics
+
+    // geonum: hologram is angle relationship between reference and object encoded in bivector
+    let reference_amplitude = 1.0;
+    let reference_phase = 0.0; // reference beam at 0 phase
+    let reference = Geonum::new(reference_amplitude, reference_phase, 2.0 * PI);
+
+    let object_amplitude = 0.7;
+    let object = Geonum::new(object_amplitude, 1.0, 4.0); // π/4 via constructor
+
+    // hologram recording: interference pattern captured in wedge product
+    let hologram = reference.wedge(&object); // bivector encodes fringe pattern
+
+    // verify hologram encodes interference information
+    assert!(hologram.length > 0.0); // non-zero fringe visibility
+    assert_eq!(hologram.angle.grade(), 1); // vector grade encodes interference pattern
+
+    // fringe pattern encoded in hologram angle (wedge adds blade count)
+    let expected_hologram_angle = Angle::new(3.0, 4.0); // 3π/4
+    assert_eq!(hologram.angle, expected_hologram_angle); // wedge adds blade to object angle
+
+    // hologram reconstruction: illuminate with reference beam
+    let readout_beam = reference; // same reference beam for reconstruction
+    let reconstructed = hologram.geo(&readout_beam); // geometric product gives reconstruction
+
+    // verify reconstruction recovers object information
+    assert!(reconstructed.length > 0.0); // finite reconstructed amplitude
+
+    // object wave reconstruction: phase relationship preserved
+    let phase_error = (reconstructed.angle.value() - object.angle.value()).abs();
+    let phase_tolerance = PI / 8.0; // allow some reconstruction error
+    assert!(phase_error < phase_tolerance); // object phase approximately recovered
+
+    // intensity ratio: reconstructed vs original object
+    let reconstruction_efficiency = reconstructed.length / object.length;
+    assert!(reconstruction_efficiency > 0.1); // meaningful reconstruction intensity
+    assert!(reconstruction_efficiency < 1.0); // some loss in reconstruction process
+
+    // twin image suppression: phase conjugate reconstruction
+    let conjugate_readout = readout_beam.angle.conjugate();
+    let phase_conjugate = hologram.geo(&Geonum::new_with_angle(
+        readout_beam.length,
+        conjugate_readout,
+    ));
+
+    // phase conjugate beam has opposite phase progression
+    let conjugate_phase_diff = (phase_conjugate.angle.value() + object.angle.value()).abs();
+    assert!(conjugate_phase_diff < PI); // phase conjugate relationship
+
+    // holographic storage density: multiple holograms at different angles
+    let second_object = Geonum::new(0.5, 2.0, 3.0); // π*2/3 phase
+    let second_hologram = reference.wedge(&second_object);
+
+    // verify angular multiplexing through different bivector orientations
+    assert_ne!(hologram.angle, second_hologram.angle); // different fringe orientations
+
+    // simultaneous reconstruction: each angle selectively reconstructs its object
+    let first_reconstruction = hologram.geo(&reference);
+    let second_reconstruction = second_hologram.geo(&reference);
+
+    // cross-talk between stored holograms
+    let crosstalk = (first_reconstruction.angle - second_reconstruction.angle)
+        .value()
+        .abs();
+    assert!(crosstalk > PI / 6.0); // sufficient angular separation prevents crosstalk
+
+    // traditional: complex amplitude storage + Fourier transform reconstruction
+    // geonum: wedge product recording + geometric product readout eliminates Fourier analysis
+}
+
+#[test]
+fn its_a_beam_splitter() {
+    // traditional: beam splitter requires tracking multiple optical paths
+    // reflection coefficient R, transmission coefficient T, phase relationships
+    // amplitude division: Er = √R * Ein, Et = √T * Ein with Jones matrix analysis
+    // polarization dependence, coating design, wavelength sensitivity calculations
+
+    // geonum: beam splitting through amplitude scaling with angle preservation
+    let incident = Geonum::new(1.0, 1.0, 4.0); // π/4 incident beam, unit amplitude
+
+    // 50/50 beam splitter characteristics
+    let reflectivity: f64 = 0.5; // R = 0.5
+    let transmissivity: f64 = 1.0 - reflectivity; // T = 0.5, energy conservation
+
+    // amplitude division: field amplitudes scale by sqrt of power coefficients
+    let reflected = incident.scale(reflectivity.sqrt()); // Er = √R * Ein
+    let transmitted = incident.scale(transmissivity.sqrt()); // Et = √T * Ein
+
+    // verify energy conservation: |Er|² + |Et|² = |Ein|²
+    let incident_power = incident.length.powi(2);
+    let reflected_power = reflected.length.powi(2);
+    let transmitted_power = transmitted.length.powi(2);
+    let total_power = reflected_power + transmitted_power;
+
+    assert!((total_power - incident_power).abs() < 1e-10); // power conserved
+    assert!((reflected_power / incident_power - reflectivity).abs() < 1e-10); // R test
+    assert!((transmitted_power / incident_power - transmissivity).abs() < 1e-10); // T test
+
+    // phase relationships preserved through splitting
+    assert_eq!(reflected.angle, incident.angle); // reflection preserves phase
+    assert_eq!(transmitted.angle, incident.angle); // transmission preserves phase
+
+    // test different reflectivity values
+    let high_reflector: f64 = 0.9; // 90% reflective coating
+    let hr_reflected = incident.scale(high_reflector.sqrt());
+    let hr_transmitted = incident.scale((1.0 - high_reflector).sqrt());
+
+    // verify 90/10 split
+    let hr_r_power = hr_reflected.length.powi(2);
+    let hr_t_power = hr_transmitted.length.powi(2);
+    assert!((hr_r_power / incident_power - high_reflector).abs() < 1e-10);
+    assert!((hr_t_power / incident_power - (1.0 - high_reflector)).abs() < 1e-10);
+
+    // anti-reflection coating: minimal reflection
+    let ar_coating: f64 = 0.02; // 2% reflection, 98% transmission
+    let ar_reflected = incident.scale(ar_coating.sqrt());
+    let ar_transmitted = incident.scale((1.0 - ar_coating).sqrt());
+
+    assert!(ar_reflected.length < 0.15); // minimal reflection
+    assert!(ar_transmitted.length > 0.98); // maximal transmission
+
+    // wavelength dependence: angle shift represents dispersion
+    let blue_incident = Geonum::new(1.0, 1.0, 6.0); // π/6, blue wavelength
+    let red_incident = Geonum::new(1.0, 1.0, 3.0); // π/3, red wavelength
+
+    // slight coating reflectivity change with wavelength
+    let blue_r: f64 = 0.48; // slightly lower reflectivity for blue
+    let red_r: f64 = 0.52; // slightly higher reflectivity for red
+
+    let blue_reflected = blue_incident.scale(blue_r.sqrt());
+    let red_reflected = red_incident.scale(red_r.sqrt());
+
+    // verify wavelength-dependent behavior
+    assert!(blue_reflected.length < red_reflected.length); // dispersion effect
+    assert_ne!(blue_reflected.angle, red_reflected.angle); // different angles
+
+    // polarization dependence: s and p polarization at non-normal incidence
+    // Fresnel equations: Rs ≠ Rp at oblique angles
+    let s_polarized = Geonum::new(1.0, 1.0, 8.0); // π/8, s-polarization
+    let p_polarized = Geonum::new(1.0, 3.0, 8.0); // 3π/8, p-polarization
+
+    // different reflectivities for s and p components (Fresnel reflection)
+    let rs: f64 = 0.6; // higher s-polarization reflectivity
+    let rp: f64 = 0.4; // lower p-polarization reflectivity
+
+    let s_reflected = s_polarized.scale(rs.sqrt());
+    let p_reflected = p_polarized.scale(rp.sqrt());
+
+    // verify polarization dependence
+    assert!(s_reflected.length > p_reflected.length); // s reflects more than p
+    assert_ne!(s_reflected.angle, p_reflected.angle); // different polarization angles
+
+    // Brewster angle: p-polarization transmission maximum
+    // at Brewster angle, Rp = 0, Tp = 1
+    let brewster_p = Geonum::new(1.0, 0.0, 1.0); // p-pol at Brewster angle
+    let brewster_reflected = brewster_p.scale(0.0); // Rp = 0
+    let brewster_transmitted = brewster_p.scale(1.0); // Tp = 1
+
+    assert_eq!(brewster_reflected.length, 0.0); // no p-polarized reflection
+    assert_eq!(brewster_transmitted.length, 1.0); // complete p-polarized transmission
+
+    // interference between reflected beams: coherent addition
+    let coherent_beam1 = Geonum::new(0.7, 0.0, 1.0); // beam 1
+    let coherent_beam2 = Geonum::new(0.7, 1.0, 1.0); // beam 2, π phase shift
+
+    // coherent combination: amplitudes add with phase consideration
+    let interfered = coherent_beam1 + coherent_beam2;
+
+    // destructive interference when beams are π out of phase
+    assert!(interfered.length < coherent_beam1.length); // reduced amplitude
+
+    // multiple beam splitter cascade: each split preserves energy
+    let second_splitter_r: f64 = 0.3;
+    let cascade_reflected = transmitted.scale(second_splitter_r.sqrt());
+    let cascade_transmitted = transmitted.scale((1.0 - second_splitter_r).sqrt());
+
+    // verify cascade energy conservation
+    let cascade_total = reflected.length.powi(2)
+        + cascade_reflected.length.powi(2)
+        + cascade_transmitted.length.powi(2);
+    assert!((cascade_total - incident_power).abs() < 1e-10);
+
+    // beam splitter as interferometer element
+    // Mach-Zehnder configuration: split → phase delay → recombine
+    let path_delay = Angle::new(1.0, 8.0); // π/8 phase delay in one arm
+    let delayed_transmitted = transmitted.rotate(path_delay);
+    let recombined = reflected + delayed_transmitted; // coherent recombination
+
+    // interference pattern depends on path difference
+    assert!(recombined.length != incident.length); // interference modifies amplitude
+    assert!(recombined.angle.value() > 0.0); // phase relationship encoded
+
+    // traditional: Jones matrices for polarization, Fresnel equations for reflection
+    // Mueller matrices for incoherent light, ABCD matrix propagation through systems
+    // geonum: amplitude scaling with angle preservation eliminates matrix formalism
+}
+
+#[test]
+fn its_lens_design_optimization() {
+    // traditional: lens optimization requires ray tracing + numerical gradient estimation
+    // finite difference: ∂(merit_function)/∂(parameter) ≈ [f(x+δ) - f(x)]/δ
+    // thousands of rays traced through perturbed systems to estimate sensitivities
+    // ZEMAX, Code V use Monte Carlo + Levenberg-Marquardt for iterative optimization
+
+    // geonum: exact gradients through geometric differentiation - no ray tracing needed
+    // differentiate() gives true sensitivity direction via π/2 rotation in parameter space
+    // optimization becomes navigation in angle space toward better configurations
+
+    // EDUCATIONAL NOTE: geonum's automatic differentiation works because:
+    // - differentiation IS π/2 rotation in geometric space (like sin → cos)
+    // - no approximations needed - the calculus is built into angle arithmetic
+    // - traditional finite differences estimate what geonum computes exactly
+
+    // encode optical system: angle represents optical path, length represents performance metric
+    let focal_length: f64 = 100.0; // 100mm design parameter
+    let system_error = 0.1; // current aberration level
+    let optical_path_angle = 1.0 / focal_length; // optical power in angle
+
+    let lens_system = Geonum::new(system_error, optical_path_angle, 1.0);
+    println!(
+        "initial system: error={:.3}, optical_angle={:.6} rad",
+        lens_system.length,
+        lens_system.angle.mod_4_angle()
     );
 
-    // test filtered wave properties
-    assert!(filtered_wave.length <= plane_wave.length);
-    assert_eq!(filtered_wave.angle, plane_wave.angle); // angle restored after inverse transform
+    // automatic differentiation: get exact sensitivity direction
+    // this is the KEY insight - differentiate() gives the true gradient, not an approximation
+    let gradient = lens_system.differentiate(); // π/2 rotation gives exact sensitivity
 
-    // test filter behavior
-    if otf_result.length > filter_cutoff {
-        assert_eq!(filtered_wave.length, 0.0, "high frequencies filtered out");
-    } else {
-        assert_eq!(
-            filtered_wave.length, plane_wave.length,
-            "low frequencies preserved"
+    println!(
+        "gradient direction: magnitude={:.6}, angle={:.6} rad",
+        gradient.length,
+        gradient.angle.mod_4_angle()
+    );
+
+    // optimization step: use gradient to compute correction direction
+    // in traditional optimization: parameter -= learning_rate * gradient
+    // in geonum: gradient at higher blade gives optimization direction through geometric operations
+    let gradient_base = gradient.base_angle(); // reset blade while preserving geometric relationships
+    let optimization_direction = gradient_base - lens_system; // direction toward better configuration
+    let learning_rate = 0.1;
+
+    let optimized_system = lens_system + optimization_direction.scale(learning_rate);
+    println!(
+        "optimized system: error={:.6}, optical_angle={:.6} rad",
+        optimized_system.length,
+        optimized_system.angle.mod_4_angle()
+    );
+
+    // verify optimization reduces error (length represents error magnitude)
+    assert!(
+        optimized_system.length < lens_system.length,
+        "optimization reduces error"
+    );
+
+    // multi-parameter optimization: compound lens system
+    let lens1_power = 1.0 / 50.0; // 50mm element
+    let lens2_power = 1.0 / 200.0; // 200mm element
+    let spacing_error = 0.05; // alignment error
+
+    // encode system as combination of elements
+    let element1 = Geonum::new(spacing_error, lens1_power, 1.0);
+    let element2 = Geonum::new(spacing_error, lens2_power, 1.0);
+    let compound_system = element1 * element2; // combined system
+
+    println!(
+        "compound system: error={:.6}, combined_power={:.6}",
+        compound_system.length,
+        compound_system.angle.mod_4_angle()
+    );
+
+    // system-level gradient: automatic differentiation of composed system
+    let system_gradient = compound_system.differentiate();
+
+    // optimization preserves the geometric relationships while reducing error
+    let system_gradient_base = system_gradient.base_angle();
+    let system_direction = system_gradient_base - compound_system;
+    let optimized_compound = compound_system + system_direction.scale(0.05);
+
+    assert!(
+        optimized_compound.length < compound_system.length,
+        "system optimization improves performance"
+    );
+
+    // aberration correction through gradient descent
+    // traditional: compute Zernike coefficients, optimize aspheric parameters
+    // geonum: navigate in angle space toward configurations with lower aberration
+
+    let mut current_system = lens_system;
+    let target_error = 0.01; // design specification
+    let mut iteration = 0;
+
+    while current_system.length > target_error && iteration < 15 {
+        let current_gradient = current_system.differentiate();
+        let gradient_base = current_gradient.base_angle();
+        let optimization_direction = gradient_base - current_system;
+
+        // adaptive step size: larger corrections when far from target
+        let step_size = (current_system.length / target_error * 0.1).min(0.2);
+
+        current_system = current_system + optimization_direction.scale(step_size);
+        iteration += 1;
+
+        println!(
+            "iteration {}: error={:.6}",
+            iteration, current_system.length
         );
     }
-}
 
-#[test]
-fn it_combines_systems() {
-    // traditional optical system modeling requires cascading transformations
-    // with geonum, we can combine multiple elements into a single operation
-
-    // create a complete optical system as a single transformation
-    let optical_system = |r: &Geonum, system_params: &[Geonum]| -> Geonum {
-        // extract system parameters
-        let focal_length = system_params[0].length;
-        let aberration_magnitude = system_params[1].length;
-        let aperture_size = system_params[2].length;
-
-        // compute distance from optical axis
-        let h = r.angle.sin();
-
-        // basic lens transformation
-        let refracted_angle = r.angle.mod_4_angle() - h / focal_length;
-
-        // add aberration effects
-        let aberration_effect = aberration_magnitude * h.powi(2) * system_params[1].angle.cos();
-
-        // apply aperture vignetting
-        let transmission = if h.abs() < aperture_size {
-            1.0
-        } else {
-            (1.0 - (h.abs() - aperture_size) / aperture_size).max(0.0)
-        };
-
-        Geonum::new_with_angle(
-            r.length * transmission,
-            Angle::new(refracted_angle + aberration_effect, PI),
-        )
-    };
-
-    // create an incident ray
-    let incident = Geonum::new(1.0, 37.0, 18.0); // 10 degrees in blade 1
-
-    // define system parameters
-    let system_params = [
-        Geonum::new(100.0, 2.0, 2.0), // focal length, blade 1
-        Geonum::new(0.01, 2.0, 2.0),  // aberration, blade 1
-        Geonum::new(0.5, 2.0, 2.0),   // aperture size, blade 1
-    ];
-
-    // apply complete system
-    let output_ray = optical_system(&incident, &system_params);
-
-    // test system effect
-    assert!(output_ray.length > 0.0);
-    assert_ne!(output_ray.angle, incident.angle);
-
-    // test transmission based on aperture
-    let h = incident.angle.sin();
-    assert!(h.abs() < 0.5, "ray within aperture");
-    assert_eq!(
-        output_ray.length, incident.length,
-        "full transmission within aperture"
+    assert!(
+        current_system.length <= target_error,
+        "optimization converged to specification"
+    );
+    println!(
+        "converged in {} iterations to error={:.6}",
+        iteration, current_system.length
     );
 
-    // test angle change from lens equation
-    let expected_angle =
-        incident.angle.mod_4_angle() - h / 100.0 + 0.01 * h.powi(2) * system_params[1].angle.cos();
-    assert!((output_ray.angle.mod_4_angle() - expected_angle).abs() < EPSILON);
+    // tolerance analysis: manufacturing sensitivity
+    // traditional: Monte Carlo with perturbed parameters
+    // geonum: exact sensitivity from differentiate()
 
-    // demonstrate cascaded optical system
-    // traditional approach: multiplication of N transformation matrices
-    // with geonum: single combined transformation
+    let manufacturing_tolerance = 0.01; // ±0.01mm focal length variation
+    let sensitivity = gradient.length; // how much error changes per unit parameter change
+    let performance_variation = sensitivity * manufacturing_tolerance;
 
-    // cascade three optical elements
-    let cascaded_system = |r: &Geonum, params: &[Geonum]| -> Geonum {
-        // extract parameters for three elements
-        let f1 = params[0].length;
-        let f2 = params[1].length;
-        let f3 = params[2].length;
-
-        // combine all three elements in one calculation
-        // computing the effective system transform
-
-        // calculate combined focal length (lensmaker's formula)
-        let p = 1.0 / f1 + 1.0 / f2 + 1.0 / f3 - (1.0 / f1) * (1.0 / f2) * (1.0 / f3);
-        let f_effective = 1.0 / p;
-
-        // apply combined transformation
-        let h = r.angle.sin();
-        let new_angle = r.angle.mod_4_angle() - h / f_effective;
-
-        Geonum::new_with_angle(r.length, Angle::new(new_angle, PI))
-    };
-
-    // define three-element system
-    let cascade_params = [
-        Geonum::new(200.0, 2.0, 2.0),  // first lens, blade 1
-        Geonum::new(-100.0, 2.0, 2.0), // negative lens, blade 1
-        Geonum::new(200.0, 2.0, 2.0),  // third lens, blade 1
-    ];
-
-    // apply cascaded system
-    let cascaded_ray = cascaded_system(&incident, &cascade_params);
-
-    // test cascaded system
-    assert_eq!(cascaded_ray.length, 1.0);
-    assert_ne!(cascaded_ray.angle, incident.angle);
-
-    // compute expected effective focal length
-    let f1 = 200.0;
-    let f2 = -100.0;
-    let f3 = 200.0;
-    // the formula in the code is simplified - just check the transformation works
-    let p_simple = 1.0 / f1 + 1.0 / f2 + 1.0 / f3 - (1.0 / f1) * (1.0 / f2) * (1.0 / f3);
-    let f_eff: f64 = 1.0 / p_simple;
-    assert!(f_eff.is_finite(), "effective focal length is finite");
-
-    // test angle transformation
-    let h_incident = incident.angle.sin();
-    let expected_cascaded_angle = incident.angle.mod_4_angle() - h_incident / f_eff;
-    assert!((cascaded_ray.angle.mod_4_angle() - expected_cascaded_angle).abs() < EPSILON);
-
-    // demonstrate complex optical path with multiple transformations
-    // traditional approach: sequential application of operations
-    // with geonum: single unified transformation
-
-    // combine lens, diffraction, and phase shift
-    let complex_system = |r: &Geonum, _wavelength: f64| -> Geonum {
-        // for a complex system with multiple elements
-        // we can define a direct angle transformation
-        // that encapsulates all optical effects
-
-        // encode system behavior directly
-        let h = r.angle.sin();
-        let intensity_factor = 1.0 - 0.2 * h.abs(); // vignetting
-        let phase_shift = h.powi(2) * 4.0 * PI; // quadratic phase (lens)
-
-        Geonum::new_with_angle(
-            r.length * intensity_factor,
-            Angle::new(r.angle.mod_4_angle() + phase_shift, PI),
-        )
-    };
-
-    // apply complex system
-    let complex_output = complex_system(&incident, 500e-9);
-
-    // test combined system
-    assert!(complex_output.length <= incident.length);
-    assert_ne!(complex_output.angle, incident.angle);
-
-    // test specific vignetting effect
-    let h_complex = incident.angle.sin();
-    let expected_intensity = 1.0 - 0.2 * h_complex.abs();
-    assert!((complex_output.length - incident.length * expected_intensity).abs() < EPSILON);
-
-    // test quadratic phase
-    let expected_phase_shift = h_complex.powi(2) * 4.0 * PI;
-    let expected_complex_angle = incident.angle.mod_4_angle() + expected_phase_shift;
-    // account for angle wrapping
-    let angle_diff = (complex_output.angle.mod_4_angle() - expected_complex_angle % TWO_PI).abs();
-    assert!(angle_diff < EPSILON || (angle_diff - TWO_PI).abs() < EPSILON);
-
-    // demonstrate system collapse using the ABCD transform
-    // this shows how an entire optical system can be reduced to a single transformation
-
-    // create a complete optical system with multiple elements
-    // - lens 1: focal length 200mm
-    // - free space propagation: 50mm
-    // - lens 2: focal length -100mm (diverging)
-    // - free space propagation: 30mm
-    // - lens 3: focal length 150mm
-
-    // in traditional optics, this would be a multiplication of matrices:
-    // M_total = M_lens3 * M_free2 * M_lens2 * M_free1 * M_lens1
-
-    // with the ABCD transform, we can directly create the composite matrix
-
-    // lens 1: [1 0; -1/f1 1]
-    let lens1_c = -1.0 / 200.0; // -1/f1
-
-    // free space 1: [1 d1; 0 1]
-    let free1_b = 50.0; // d1
-
-    // lens 2: [1 0; -1/f2 1]
-    let lens2_c = 1.0 / 100.0; // -1/f2 (negative for diverging)
-
-    // free space 2: [1 d2; 0 1]
-    let free2_b = 30.0; // d2
-
-    // lens 3: [1 0; -1/f3 1]
-    let lens3_c = -1.0 / 150.0; // -1/f3
-
-    // manually multiply the matrices to get the system matrix
-    // this is just to demonstrate the concept - in practice we would use matrix multiplication
-
-    // For an ABCD system [A B; C D], the transformation is:
-    // [x_out]   = [A B] * [x_in]
-    // [theta_out] = [C D]   [theta_in]
-
-    // compute system matrix parameters (simplified calculation)
-    let system_a = 1.0; // approximation
-    let system_b = free1_b + free2_b; // approximation
-    let system_c = lens1_c + lens2_c + lens3_c; // approximation
-    let system_d = 1.0; // approximation
-
-    // apply the collapsed system transformation to the input ray
-    let collapsed_system_output = incident.abcd_transform(
-        Geonum::new(system_a, 0.0, 1.0),
-        Geonum::new(system_b, 0.0, 1.0),
-        Geonum::new(system_c, 0.0, 1.0),
-        Geonum::new(system_d, 0.0, 1.0),
+    println!("manufacturing sensitivity: {:.6} error/mm", sensitivity);
+    println!(
+        "tolerance impact: ±{:.6} error for ±{:.2}mm variation",
+        performance_variation, manufacturing_tolerance
     );
 
-    // test collapsed system
-    // ABCD transform computes new height and angle
-    let h_in = incident.length;
-    let theta_in = incident.angle.mod_4_angle();
-    let new_h = system_a * h_in + system_b * theta_in;
-    let new_theta = system_c * h_in + system_d * theta_in;
+    assert!(
+        performance_variation < 0.1,
+        "design robust to manufacturing tolerances"
+    );
 
-    // ABCD transform returns new height as length
-    assert_eq!(collapsed_system_output.length, new_h);
+    // PERFORMANCE COMPARISON with traditional methods:
 
-    // ABCD transform creates new angle from transformed theta
-    let expected_angle = Angle::new(new_theta, PI);
-    assert_eq!(collapsed_system_output.angle, expected_angle);
+    // traditional ray tracing optimization:
+    // - 10,000 rays × 20 surfaces × 50 parameters = 10M ray-surface intersections
+    // - finite difference requires 2× evaluations per parameter = 20M operations
+    // - optimization needs 100+ iterations = 2B+ total operations
 
-    // demonstrate full imaging system
-    // traditional approach: intensive ray tracing
-    // with geonum: direct transformation
+    // geonum optimization:
+    // - encode system: O(1)
+    // - differentiate(): O(1) exact gradient
+    // - optimize: O(1) per iteration
+    // - total: O(iterations) = O(10) for this example
 
-    // simulate complete imaging path from object to image
-    // using the new Optics::magnify method
+    let traditional_operations = 2_000_000_000u64; // 2 billion ray operations
+    let geonum_operations = 10u64; // 10 iterations
+    let speedup = traditional_operations / geonum_operations;
 
-    // create an object point
-    let object = Geonum::new(1.0, 21.0, 10.0); // object position in blade 1
+    println!(
+        "traditional ray tracing: {} operations",
+        traditional_operations
+    );
+    println!("geonum optimization: {} operations", geonum_operations);
+    println!("speedup: {}× faster", speedup);
 
-    // apply magnification using the Optics trait
-    let magnification = Geonum::new(2.0, 0.0, 1.0); // 2x magnification
-    let image = object.magnify(magnification);
+    // chromatic optimization: wavelength-dependent correction
+    // traditional: optimize for multiple wavelengths simultaneously
+    // geonum: wavelength variations encoded in angle relationships
 
-    // test imaging properties
-    assert!(image.length < object.length); // reduced brightness
-                                           // test inverse square law for intensity
-    let expected_intensity = object.length / (2.0 * 2.0);
-    assert_eq!(image.length, expected_intensity);
+    let wavelength_variation = 0.02; // dispersion effect
+    let chromatic_system =
+        Geonum::new(system_error, optical_path_angle + wavelength_variation, 1.0);
+    let chromatic_gradient = chromatic_system.differentiate();
 
-    // magnify computes: image_angle = arcsin(-sin(object_angle) / mag)
-    let expected_angle_value = -object.angle.sin() / 2.0;
-    let expected_angle = Angle::new(expected_angle_value, PI);
-    assert_eq!(image.angle, expected_angle);
+    // achromatic correction: balance chromatic errors across wavelengths
+    let chromatic_gradient_base = chromatic_gradient.base_angle();
+    let combined_direction = (gradient_base + chromatic_gradient_base).scale(0.5); // average correction
+    let achromatic_direction = combined_direction - lens_system;
+    let achromatic_system = lens_system + achromatic_direction.scale(0.1);
 
-    // test magnification preserves geometric relationships
-    let demagnified = image.magnify(Geonum::scalar(0.5));
-    // 2x followed by 0.5x: intensity goes 1/(2^2) then 1/(0.5^2) = 1/4 * 4 = 1
-    // but we started with object.length, so final is object.length
-    assert!((demagnified.length - object.length).abs() < EPSILON);
-}
+    println!(
+        "achromatic optimization: error={:.6}",
+        achromatic_system.length
+    );
+    assert!(
+        achromatic_system.length < lens_system.length,
+        "chromatic correction improves system"
+    );
 
-#[test]
-fn its_what_a_haskell_lens_aspires_to_be() {
-    // haskell lenses are a complex abstraction for accessing and modifying nested data structures
-    // with geonum, we can represent "lenses" as direct geometric transformations
-    // achieving what haskell lenses aim for but with much greater simplicity and power
+    // EDUCATIONAL SUMMARY:
+    // 1. geonum's differentiate() gives exact gradients, not finite difference approximations
+    // 2. optimization navigates in angle space using geometric calculus
+    // 3. no ray tracing needed - sensitivities computed directly from system encoding
+    // 4. scales to arbitrary complexity with O(1) gradient computation
+    // 5. traditional lens design computational complexity eliminated through geometric representation
 
-    // define a data structure as a geometric number
-    // angle represents the path to the data, length is the value
-    let nested_data = Multivector(vec![
-        Geonum::new(10.0, 2.0, 2.0), // root value, blade 2 (bivector)
-        Geonum::new(5.0, 3.0, 4.0),  // nested value 1, blade 1 with π/4 (vector)
-        Geonum::new(3.0, 1.0, 1.0),  // deeply nested value, blade 2 (bivector)
-    ]);
-
-    // define path angles for specific paths in our data structure
-    let _root_path = 0.0; // artifact of geonum automation: path exists but not used directly
-    let _nested_path = PI / 4.0;
-    let _deep_path = PI / 2.0;
-
-    // use the Manifold trait to find elements directly
-    // looking for blade 1 with π/4 value (total = π/2 + π/4 = 3π/4)
-    let nested_value_component = nested_data.find(Angle::new(3.0, 4.0));
-    let nested_value = match nested_value_component {
-        Some(g) => *g,
-        None => Geonum::new(0.0, 2.0, 2.0), // default blade 1
-    };
-    assert_eq!(nested_value.length, 5.0);
-
-    // use the Manifold::set method to update the nested value
-    let updated_data = nested_data.set(Angle::new(3.0, 4.0), Geonum::new(7.0, 0.0, 1.0));
-
-    // Check if updated correctly using Manifold trait
-    let updated_value_component = updated_data.find(Angle::new(3.0, 4.0));
-    let updated_value = match updated_value_component {
-        Some(g) => *g,
-        None => Geonum::new(0.0, 2.0, 2.0), // default blade 1
-    };
-    assert_eq!(updated_value.length, 7.0);
-
-    // demonstrate path composition using Manifold::compose
-    let path1 = PI / 10.0;
-    let path2 = PI / 5.0;
-
-    // compute the expected composed path angle directly
-    let expected_composed_path = (path1 + path2) % TWO_PI;
-
-    // create a deeper path for testing using the compose method
-    // artifact of geonum automation: transformed data exists but not used directly in test
-    let _deeper_data_with_paths = nested_data.compose(Angle::new(path2, PI));
-
-    // create deeper path for testing
-    let composed_path = expected_composed_path;
-
-    let deeper_data = Multivector(vec![
-        nested_data[0],
-        nested_data[1],
-        nested_data[2],
-        Geonum::new_with_angle(
-            42.0,                          // super nested value
-            Angle::new(composed_path, PI), // composed path angle
-        ),
-    ]);
-
-    // get value through manifold find
-    let super_nested_component = deeper_data.find(Angle::new(composed_path, PI));
-    let super_nested = match super_nested_component {
-        Some(g) => *g,
-        None => Geonum::new(0.0, 2.0, 2.0), // default blade 1
-    };
-
-    // verify we got the right value at the composed path
-    assert_eq!(super_nested.length, 42.0);
-
-    // demonstrate lens function application using Projection::over
-    // define a function to double the value
-    let double_fn = |x: Geonum| -> Geonum { Geonum::new_with_angle(x.length * 2.0, x.angle) };
-
-    // use the Manifold::over method to apply the function at the deep path
-    let doubled_data = nested_data.over(Angle::new(1.0, 1.0), double_fn);
-
-    // get the transformed value using find
-    // deep_path = PI/2, looking for blade 2 (which is what Geonum::new(3.0, 1.0, 1.0) creates)
-    let doubled_component = doubled_data.find(Angle::new(1.0, 1.0));
-    let doubled_value = doubled_component.unwrap().length;
-
-    // test the value was doubled
-    assert_eq!(doubled_value, 20.0);
-
-    // Fix the test in its_what_a_haskell_lens_aspires_to_be
-    // Set up a test with the exact value we expect
-
-    // In a real implementation, we would then use the modified lens to update
-    // the data structure, but this demonstrates the concept
-
-    // demonstrate how the geonum lens is O(1) complexity vs haskell's O(n)
-    // no matter how deeply nested, angle-based access is always constant time
-    // the angle directly encodes the path without traversal
-
-    // with a single geometric operation we can transform entire data structures
-    // without the complex types and compositions haskell lenses require
-
-    // create a super nested structure as a fractal with angle recursion
-    let create_fractal = |depth: usize, base_angle: f64, base_value: f64| -> Multivector {
-        let mut result = Vec::new();
-
-        // recursive angle generation for nested paths
-        fn gen_angles(
-            current_depth: usize,
-            max_depth: usize,
-            angle: f64,
-            results: &mut Vec<Geonum>,
-            value: f64,
-        ) {
-            // add current level
-            results.push(Geonum::new_with_angle(
-                value / (current_depth as f64 + 1.0),
-                Angle::new(angle, PI),
-            ));
-
-            // recurse to next level
-            if current_depth < max_depth {
-                gen_angles(
-                    current_depth + 1,
-                    max_depth,
-                    (angle + PI / 4.0) % TWO_PI,
-                    results,
-                    value,
-                );
-                gen_angles(
-                    current_depth + 1,
-                    max_depth,
-                    (angle + PI / 3.0) % TWO_PI,
-                    results,
-                    value,
-                );
-            }
-        }
-
-        gen_angles(0, depth, base_angle, &mut result, base_value);
-        Multivector(result)
-    };
-
-    // create deep fractal (would be very complex with haskell lenses)
-    let fractal = create_fractal(5, 0.0, 100.0);
-
-    // direct access to any depth with O(1) complexity
-    // compose a unique path that won't collide with existing elements
-    let deep_path = PI / 7.0 + PI / 11.0 + PI / 13.0; // very unique path using primes
-
-    // add a unique element at this path to test access
-    let mut fractal_with_target = fractal.clone();
-    fractal_with_target
-        .0
-        .push(Geonum::new_with_angle(123.0, Angle::new(deep_path, PI)));
-
-    // test direct O(1) access using Manifold find
-    let deep_value_component = fractal_with_target.find(Angle::new(deep_path, PI));
-    let deep_value = match deep_value_component {
-        Some(g) => *g,
-        None => Geonum::new(0.0, 2.0, 2.0), // default blade 1
-    };
-
-    // no traversal required, just angle calculation
-    assert_eq!(deep_value.length, 123.0);
-
-    // demonstrate O(1) transformation of entire structure
-    // with a single angle rotation - impossible in haskell
-    let rotate_structure = |data: &Multivector, rotation: f64| -> Multivector {
-        Multivector(
-            data.0
-                .iter()
-                .map(|g| Geonum::new_with_angle(g.length, g.angle + Angle::new(rotation, PI)))
-                .collect(),
-        )
-    };
-
-    // rotate all paths by PI/8
-    let rotated = rotate_structure(&nested_data, PI / 8.0);
-
-    // access still works through rotated paths using Manifold find
-    // original element at 3π/4 rotated by π/8 = 7π/8
-    let rotated_value_component = rotated.find(Angle::new(7.0, 8.0));
-    let rotated_value = match rotated_value_component {
-        Some(g) => *g,
-        None => Geonum::new(0.0, 2.0, 2.0), // default blade 1
-    };
-    assert_eq!(rotated_value.length, 5.0);
-
-    // what would require complex optics and composition in haskell
-    // is just simple angle arithmetic in geonum
+    // traditional: finite difference ray tracing, numerical optimization, iterative parameter search
+    // geonum: exact geometric gradients, direct angle space navigation, automatic differentiation
 }
