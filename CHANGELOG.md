@@ -1,6 +1,6 @@
 # changelog
 
-## 0.8.0 (2025-09-11)
+## 0.8.0 (2025-09-13)
 
 ### added
 - src/geocollection.rs with GeoCollection struct for domain-specific geometric object collections
