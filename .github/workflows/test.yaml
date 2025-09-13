@@ -48,7 +48,11 @@ jobs:
         with:
           toolchain: stable
       - name: run benchmarks
-        run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="timeout 600" cargo bench
+        run: |
+          for bench in tensor_vs_geonum extreme_dimensions jacobian rotation geometric_product wedge_product dual differentiation inversion projection; do
+            echo "Running benchmark: $bench"
+            cargo bench --bench geonum_benchmarks $bench
+          done
   
   coverage:
     name: code coverage
