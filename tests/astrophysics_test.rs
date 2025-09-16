@@ -214,8 +214,16 @@ fn it_solves_three_body_problem_through_angle_correlation() {
     let steps = 1000;
 
     // track center of mass to prove conservation
-    let initial_com_x: f64 = bodies.iter().map(|b| b.length * b.angle.cos()).sum::<f64>() / 3.0;
-    let initial_com_y: f64 = bodies.iter().map(|b| b.length * b.angle.sin()).sum::<f64>() / 3.0;
+    let initial_com_x: f64 = bodies
+        .iter()
+        .map(|b| b.length * b.angle.mod_4_angle().cos())
+        .sum::<f64>()
+        / 3.0;
+    let initial_com_y: f64 = bodies
+        .iter()
+        .map(|b| b.length * b.angle.mod_4_angle().sin())
+        .sum::<f64>()
+        / 3.0;
 
     for _ in 0..steps {
         // compute angle influences between all pairs
@@ -231,7 +239,8 @@ fn it_solves_three_body_problem_through_angle_correlation() {
                     let r1 = bodies[i].length;
                     let r2 = bodies[j].length;
                     let angle_diff = bodies[j].angle - bodies[i].angle;
-                    let dist_sq = r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.cos();
+                    let dist_sq =
+                        r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.mod_4_angle().cos();
 
                     // gravitational influence as angle rate
                     // no force vectors - just angle change rate
@@ -239,7 +248,7 @@ fn it_solves_three_body_problem_through_angle_correlation() {
                     let angular_accel = influence_magnitude / (r1.max(EPSILON));
 
                     // direction of influence (toward other body)
-                    let direction = angle_diff.sin();
+                    let direction = angle_diff.mod_4_angle().sin();
 
                     angle_changes[i] =
                         angle_changes[i] + Angle::new(angular_accel * direction * dt * dt, PI);
@@ -260,10 +269,10 @@ fn it_solves_three_body_problem_through_angle_correlation() {
         // update positions through velocities
         for i in 0..3 {
             // convert to cartesian for position update (temporary)
-            let pos_x = bodies[i].length * bodies[i].angle.cos()
-                + velocities[i].length * velocities[i].angle.cos() * dt;
-            let pos_y = bodies[i].length * bodies[i].angle.sin()
-                + velocities[i].length * velocities[i].angle.sin() * dt;
+            let pos_x = bodies[i].length * bodies[i].angle.mod_4_angle().cos()
+                + velocities[i].length * velocities[i].angle.mod_4_angle().cos() * dt;
+            let pos_y = bodies[i].length * bodies[i].angle.mod_4_angle().sin()
+                + velocities[i].length * velocities[i].angle.mod_4_angle().sin() * dt;
 
             bodies[i] = Geonum::new_from_cartesian(pos_x, pos_y);
         }
@@ -272,8 +281,16 @@ fn it_solves_three_body_problem_through_angle_correlation() {
     // verify conservation laws through angle arithmetic
 
     // 1. center of mass stays fixed (momentum conservation)
-    let final_com_x: f64 = bodies.iter().map(|b| b.length * b.angle.cos()).sum::<f64>() / 3.0;
-    let final_com_y: f64 = bodies.iter().map(|b| b.length * b.angle.sin()).sum::<f64>() / 3.0;
+    let final_com_x: f64 = bodies
+        .iter()
+        .map(|b| b.length * b.angle.mod_4_angle().cos())
+        .sum::<f64>()
+        / 3.0;
+    let final_com_y: f64 = bodies
+        .iter()
+        .map(|b| b.length * b.angle.mod_4_angle().sin())
+        .sum::<f64>()
+        / 3.0;
 
     let com_drift =
         ((final_com_x - initial_com_x).powi(2) + (final_com_y - initial_com_y).powi(2)).sqrt();
@@ -287,7 +304,7 @@ fn it_solves_three_body_problem_through_angle_correlation() {
             let r1 = bodies[i].length;
             let r2 = bodies[j].length;
             let angle_diff = bodies[j].angle - bodies[i].angle;
-            let dist = (r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.cos()).sqrt();
+            let dist = (r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.mod_4_angle().cos()).sqrt();
             distances.push(dist);
         }
     }
@@ -391,8 +408,8 @@ fn it_proves_n_body_scales_linearly_through_angle_dynamics() {
 
                     // influence based on angular proximity (always small for neighbors)
                     let influence_rate = 1.0 / (radial_diff + 1.0);
-                    influence_sum =
-                        influence_sum + Angle::new(influence_rate * 0.01 * angle_diff.cos(), PI);
+                    influence_sum = influence_sum
+                        + Angle::new(influence_rate * 0.01 * angle_diff.mod_4_angle().cos(), PI);
                 }
             }
 
@@ -847,13 +864,13 @@ fn it_simulates_galaxy_collision_through_angle_interaction() {
     // measure initial configurations
     let initial_g1_com_x: f64 = galaxy1_stars
         .iter()
-        .map(|s| s.length * s.angle.cos())
+        .map(|s| s.length * s.angle.mod_4_angle().cos())
         .sum::<f64>()
         / galaxy1_size as f64;
 
     let initial_g2_com_x: f64 = galaxy2_stars
         .iter()
-        .map(|s| s.length * s.angle.cos())
+        .map(|s| s.length * s.angle.mod_4_angle().cos())
         .sum::<f64>()
         / galaxy2_size as f64;
 
@@ -876,13 +893,13 @@ fn it_simulates_galaxy_collision_through_angle_interaction() {
         // compute center of mass for each galaxy
         let g1_com_x: f64 = galaxy1_stars
             .iter()
-            .map(|s| s.length * s.angle.cos())
+            .map(|s| s.length * s.angle.mod_4_angle().cos())
             .sum::<f64>()
             / galaxy1_size as f64;
 
         let g2_com_x: f64 = galaxy2_stars
             .iter()
-            .map(|s| s.length * s.angle.cos())
+            .map(|s| s.length * s.angle.mod_4_angle().cos())
             .sum::<f64>()
             / galaxy2_size as f64;
 
@@ -898,8 +915,8 @@ fn it_simulates_galaxy_collision_through_angle_interaction() {
             // galaxy 1 stars feel galaxy 2's angle field
             for star in &mut galaxy1_stars {
                 // distance to other galaxy's center
-                let dx = g2_com_x - star.length * star.angle.cos();
-                let dy = 0.0 - star.length * star.angle.sin();
+                let dx = g2_com_x - star.length * star.angle.mod_4_angle().cos();
+                let dy = 0.0 - star.length * star.angle.mod_4_angle().sin();
                 let dist_to_g2 = (dx * dx + dy * dy).sqrt();
 
                 if dist_to_g2 < 8.0 {
@@ -916,8 +933,8 @@ fn it_simulates_galaxy_collision_through_angle_interaction() {
 
             // galaxy 2 stars feel galaxy 1's angle field
             for star in &mut galaxy2_stars {
-                let dx = g1_com_x - star.length * star.angle.cos();
-                let dy = 0.0 - star.length * star.angle.sin();
+                let dx = g1_com_x - star.length * star.angle.mod_4_angle().cos();
+                let dy = 0.0 - star.length * star.angle.mod_4_angle().sin();
                 let dist_to_g1 = (dx * dx + dy * dy).sqrt();
 
                 if dist_to_g1 < 8.0 {
@@ -1111,8 +1128,8 @@ fn it_demonstrates_cluster_dynamics_through_collective_angles() {
     // measure initial cluster properties
     let initial_com: (f64, f64) = galaxy_positions.iter().fold((0.0, 0.0), |acc, g| {
         (
-            acc.0 + g.length * g.angle.cos(),
-            acc.1 + g.length * g.angle.sin(),
+            acc.0 + g.length * g.angle.mod_4_angle().cos(),
+            acc.1 + g.length * g.angle.mod_4_angle().sin(),
         )
     });
     let initial_com_r = ((initial_com.0 / num_galaxies as f64).powi(2)
@@ -1134,10 +1151,14 @@ fn it_demonstrates_cluster_dynamics_through_collective_angles() {
             for j in 0..num_galaxies {
                 if i != j {
                     // distance between galaxies
-                    let dx = galaxy_positions[j].length * galaxy_positions[j].angle.cos()
-                        - galaxy_positions[i].length * galaxy_positions[i].angle.cos();
-                    let dy = galaxy_positions[j].length * galaxy_positions[j].angle.sin()
-                        - galaxy_positions[i].length * galaxy_positions[i].angle.sin();
+                    let dx = galaxy_positions[j].length
+                        * galaxy_positions[j].angle.mod_4_angle().cos()
+                        - galaxy_positions[i].length
+                            * galaxy_positions[i].angle.mod_4_angle().cos();
+                    let dy = galaxy_positions[j].length
+                        * galaxy_positions[j].angle.mod_4_angle().sin()
+                        - galaxy_positions[i].length
+                            * galaxy_positions[i].angle.mod_4_angle().sin();
                     let dist = (dx * dx + dy * dy).sqrt();
 
                     if dist < cluster_radius * 2.0 {
@@ -1162,11 +1183,15 @@ fn it_demonstrates_cluster_dynamics_through_collective_angles() {
             galaxy_velocities[i] = galaxy_velocities[i].rotate(angle_accelerations[i]);
 
             // position updates
-            let dx = galaxy_velocities[i].length * galaxy_velocities[i].angle.cos() * dt;
-            let dy = galaxy_velocities[i].length * galaxy_velocities[i].angle.sin() * dt;
+            let dx =
+                galaxy_velocities[i].length * galaxy_velocities[i].angle.mod_4_angle().cos() * dt;
+            let dy =
+                galaxy_velocities[i].length * galaxy_velocities[i].angle.mod_4_angle().sin() * dt;
 
-            let new_x = galaxy_positions[i].length * galaxy_positions[i].angle.cos() + dx;
-            let new_y = galaxy_positions[i].length * galaxy_positions[i].angle.sin() + dy;
+            let new_x =
+                galaxy_positions[i].length * galaxy_positions[i].angle.mod_4_angle().cos() + dx;
+            let new_y =
+                galaxy_positions[i].length * galaxy_positions[i].angle.mod_4_angle().sin() + dy;
 
             galaxy_positions[i] = Geonum::new_from_cartesian(new_x, new_y);
         }
@@ -1175,8 +1200,8 @@ fn it_demonstrates_cluster_dynamics_through_collective_angles() {
     // measure final cluster properties
     let final_com: (f64, f64) = galaxy_positions.iter().fold((0.0, 0.0), |acc, g| {
         (
-            acc.0 + g.length * g.angle.cos(),
-            acc.1 + g.length * g.angle.sin(),
+            acc.0 + g.length * g.angle.mod_4_angle().cos(),
+            acc.1 + g.length * g.angle.mod_4_angle().sin(),
         )
     });
     let final_com_r = ((final_com.0 / num_galaxies as f64).powi(2)
@@ -1371,7 +1396,7 @@ fn gravitational_influence(body1: &Geonum, body2: &Geonum, mass1: f64, mass2: f6
     let angle_diff = body2.angle - body1.angle;
 
     // distance using law of cosines in angle space
-    let distance_squared = r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.cos();
+    let distance_squared = r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * angle_diff.mod_4_angle().cos();
 
     // gravitational influence magnitude
     let influence_magnitude = G_NORMALIZED * mass1 * mass2 / (distance_squared + EPSILON);
@@ -1380,7 +1405,7 @@ fn gravitational_influence(body1: &Geonum, body2: &Geonum, mass1: f64, mass2: f6
     let angular_acceleration = influence_magnitude / (mass1 * r1.max(EPSILON));
 
     // direction based on angle difference
-    let direction_sign = angle_diff.sin();
+    let direction_sign = angle_diff.mod_4_angle().sin();
 
     Angle::new(angular_acceleration * direction_sign * 0.01, PI)
 }

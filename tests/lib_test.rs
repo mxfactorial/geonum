@@ -15,8 +15,8 @@ fn it_adds_scalars() {
     let b = Geonum::new_with_blade(4.0, 0, 0.0, 1.0); // [4, 0] = positive 4, scalar
 
     // convert to cartesian (for scalars, just the length)
-    let a_cartesian = a.length * a.angle.cos(); // 3
-    let b_cartesian = b.length * b.angle.cos(); // 4
+    let a_cartesian = a.length * a.angle.mod_4_angle().cos(); // 3
+    let b_cartesian = b.length * b.angle.mod_4_angle().cos(); // 4
 
     // add them
     let sum_cartesian = a_cartesian + b_cartesian; // 7
@@ -39,8 +39,8 @@ fn it_adds_scalars() {
     let d = Geonum::new_with_blade(8.0, 0, 1.0, 1.0); // [8, pi] = negative 8, scalar
 
     // convert to cartesian for operation
-    let c_cartesian = c.length * c.angle.cos(); // 5
-    let d_cartesian = d.length * d.angle.cos(); // -8
+    let c_cartesian = c.length * c.angle.mod_4_angle().cos(); // 5
+    let d_cartesian = d.length * d.angle.mod_4_angle().cos(); // -8
 
     // add them
     let difference = c_cartesian + d_cartesian; // -3
@@ -110,11 +110,11 @@ fn it_adds_vectors() {
     let b = Geonum::new_with_blade(4.0, 1, 1.0, 2.0); // [4, pi/2] = 4 along y-axis, vector
 
     // convert to cartesian coordinates
-    let a_x = a.length * a.angle.cos(); // 3
-    let a_y = a.length * a.angle.sin(); // 0
+    let a_x = a.length * a.angle.mod_4_angle().cos(); // 3
+    let a_y = a.length * a.angle.mod_4_angle().sin(); // 0
 
-    let b_x = b.length * b.angle.cos(); // 0
-    let b_y = b.length * b.angle.sin(); // 4
+    let b_x = b.length * b.angle.mod_4_angle().cos(); // 0
+    let b_y = b.length * b.angle.mod_4_angle().sin(); // 4
 
     // add the components
     let sum_x = a_x + b_x; // 3
@@ -141,11 +141,11 @@ fn it_adds_vectors() {
     let d = Geonum::new_with_blade(5.0, 1, 1.0, 1.0); // [5, pi] = 5 along negative x-axis, vector
 
     // convert to cartesian
-    let c_x = c.length * c.angle.cos(); // 5
-    let c_y = c.length * c.angle.sin(); // 0
+    let c_x = c.length * c.angle.mod_4_angle().cos(); // 5
+    let c_y = c.length * c.angle.mod_4_angle().sin(); // 0
 
-    let d_x = d.length * d.angle.cos(); // -5
-    let d_y = d.length * d.angle.sin(); // 0
+    let d_x = d.length * d.angle.mod_4_angle().cos(); // -5
+    let d_y = d.length * d.angle.mod_4_angle().sin(); // 0
 
     // add components
     let sum2_x = c_x + d_x; // 0

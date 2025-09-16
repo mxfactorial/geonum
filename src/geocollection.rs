@@ -1,4 +1,4 @@
-use crate::Geonum;
+use crate::{Angle, Geonum};
 
 /// collection of geometric objects for domain-specific operations
 ///
@@ -120,15 +120,17 @@ impl GeoCollection {
             self.objects
                 .iter()
                 .filter(|g| {
-                    // compute angle between directions using dot product
-                    // cos(θ) = (v1·v2) / (|v1||v2|)
+                    let magnitude = g.length * direction.length;
+                    if magnitude == 0.0 {
+                        return false;
+                    }
+
+                    // cos(θ) = (v1·v2) / (|v1||v2|) with sign encoded in dot.angle
                     let dot = g.dot(direction);
-                    let cos_angle = dot.length / (g.length * direction.length);
+                    let signed_cos =
+                        dot.length / magnitude * dot.angle.project(Angle::new(0.0, 1.0));
 
-                    // handle numerical errors
-                    let cos_angle = cos_angle.clamp(-1.0, 1.0);
-                    let angle_between = cos_angle.acos();
-
+                    let angle_between = signed_cos.clamp(-1.0, 1.0).acos();
                     angle_between <= half_angle
                 })
                 .cloned()

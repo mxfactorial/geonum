@@ -77,7 +77,7 @@ fn its_a_wavefront() {
     let interference = wave1 + wave2;
     let expected_constructive = (wave1.length.powi(2)
         + wave2.length.powi(2)
-        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).cos())
+        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).mod_4_angle().cos())
     .sqrt();
     let constructive_diff = (interference.length - expected_constructive).abs();
     assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
@@ -116,18 +116,18 @@ fn its_a_polarizer() {
 
     // Malus law through angle difference: I = I₀cos²(θ₁-θ₂)
     let angle_diff = incident.angle - polarizer.angle; // π/6 - π/4 = -π/12
-    let cos_squared = angle_diff.cos().powi(2);
+    let cos_squared = angle_diff.mod_4_angle().cos().powi(2);
     let expected_intensity = incident.length * cos_squared;
 
     // cross-polarizer test: 90° difference gives zero transmission
     let cross_polarizer = incident.rotate(Angle::new(1.0, 2.0)); // +π/2 rotation
     let cross_diff = incident.angle - cross_polarizer.angle; // π/2 difference
-    let cross_transmission = cross_diff.cos().powi(2);
+    let cross_transmission = cross_diff.mod_4_angle().cos().powi(2);
     assert!(cross_transmission < EPSILON); // cos²(π/2) = 0
 
     // parallel polarizer: 0° difference gives full transmission
     let parallel_diff = incident.angle - incident.angle; // 0 difference
-    let parallel_transmission = parallel_diff.cos().powi(2);
+    let parallel_transmission = parallel_diff.mod_4_angle().cos().powi(2);
     assert_eq!(parallel_transmission, 1.0); // cos²(0) = 1
 
     // verify expected intensity calculation
@@ -151,7 +151,7 @@ fn it_demonstrates_wave_interference_without_trigonometry() {
     let interference = wave1 + wave2;
     let expected_constructive = (wave1.length.powi(2)
         + wave2.length.powi(2)
-        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).cos())
+        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).mod_4_angle().cos())
     .sqrt();
     let constructive_diff = (interference.length - expected_constructive).abs();
     assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
@@ -201,7 +201,7 @@ fn its_a_diffraction_grating() {
     // diffraction orders: traditional requires solving mλ/d for each m
     // geonum: orders emerge from angle arithmetic multiplication
     let orders: Vec<Geonum> = (0..5)
-        .map(|m| {
+        .map(|m: usize| {
             let order_factor = m as f64 * wavelength * grating_strength / (2.0 * PI);
             let order_rotation = Angle::new(order_factor, 1.0);
             incident_angle.rotate(order_rotation)
@@ -254,7 +254,7 @@ fn its_an_interferometer() {
     // verify interference formula emerges from geometric addition
     let traditional_intensity = (beam1.length.powi(2)
         + beam2.length.powi(2)
-        + 2.0 * beam1.length * beam2.length * (beam1.angle - beam2.angle).cos())
+        + 2.0 * beam1.length * beam2.length * (beam1.angle - beam2.angle).mod_4_angle().cos())
     .sqrt();
     let intensity_diff = (interference.length - traditional_intensity).abs();
     assert!(intensity_diff < EPSILON); // cosine terms emerge from angle arithmetic
@@ -319,7 +319,7 @@ fn its_a_prism() {
 
     // Snell's law as closure: eliminates trigonometric solving
     let snells_law = |ray: &Geonum, n1: f64, n2: f64| -> Geonum {
-        let incident_sin = ray.angle.sin();
+        let incident_sin = ray.angle.mod_4_angle().sin();
         let refracted_sin = incident_sin * n1 / n2;
         let refracted_angle = refracted_sin.asin();
         Geonum::new(ray.length, refracted_angle, PI)

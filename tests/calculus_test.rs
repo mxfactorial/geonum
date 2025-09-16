@@ -197,11 +197,11 @@ fn it_proves_differentiation_cycles_grades() {
     let angle_90 = angle_0 + Angle::new(1.0, 2.0); // add π/2
 
     assert!(
-        (angle_0.cos() - angle_90.sin()).abs() < EPSILON,
+        (angle_0.mod_4_angle().cos() - angle_90.mod_4_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ+π/2)"
     );
     assert!(
-        (angle_0.sin() + angle_90.cos()).abs() < EPSILON,
+        (angle_0.mod_4_angle().sin() + angle_90.mod_4_angle().cos()).abs() < EPSILON,
         "sin(θ) = -cos(θ+π/2)"
     );
 
@@ -420,7 +420,7 @@ fn it_derives() {
     let rotated_angle = base_angle + Angle::new(1.0, 2.0); // +π/2
 
     assert!(
-        (base_angle.cos() - rotated_angle.sin()).abs() < EPSILON,
+        (base_angle.mod_4_angle().cos() - rotated_angle.mod_4_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ + π/2) enables differentiation"
     );
 
@@ -515,7 +515,7 @@ fn it_proves_quadrature_generates_polynomial_coefficients() {
     let rotated_angle = base_angle + Angle::new(1.0, 2.0); // +π/2
 
     assert!(
-        (base_angle.cos() - rotated_angle.sin()).abs() < EPSILON,
+        (base_angle.mod_4_angle().cos() - rotated_angle.mod_4_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ+π/2) fundamental quadrature"
     );
 
@@ -567,11 +567,11 @@ fn it_proves_quadrature_generates_polynomial_coefficients() {
 
     // quadrature relationships between phases
     assert!(
-        (phase_0.cos() - phase_90.sin()).abs() < EPSILON,
+        (phase_0.mod_4_angle().cos() - phase_90.mod_4_angle().sin()).abs() < EPSILON,
         "grade 0→1 transition via quadrature"
     );
     assert!(
-        (phase_90.cos() + phase_180.sin()).abs() < EPSILON,
+        (phase_90.mod_4_angle().cos() + phase_180.mod_4_angle().sin()).abs() < EPSILON,
         "grade 1→2 transition via quadrature"
     );
 
@@ -1372,24 +1372,17 @@ fn its_a_line_integral() {
     let reverse_path = high_start - high_end; // reverse direction
     let reverse_integral = high_field.dot(&reverse_path);
 
-    // workaround for scalar contamination: convert negative lengths to angle encoding
-    // TODO: remove when https://github.com/mxfactorial/geonum/issues/64 is shipped
-    let forward_geometric = if high_integral.length < 0.0 {
-        Geonum::new(high_integral.length.abs(), 1.0, 1.0)
-    } else {
-        high_integral
-    };
-    let reverse_geometric = if reverse_integral.length < 0.0 {
-        Geonum::new(reverse_integral.length.abs(), 1.0, 1.0)
-    } else {
-        reverse_integral
-    };
-
     assert!(
-        (forward_geometric.length - reverse_geometric.length).abs() < EPSILON,
+        (high_integral.length - reverse_integral.length).abs() < EPSILON,
         "path reversal preserves magnitude via geometric encoding: {} vs {}",
-        forward_geometric.length,
-        reverse_geometric.length
+        high_integral.length,
+        reverse_integral.length
+    );
+
+    assert_eq!(
+        (high_integral.angle.grade() + 2) % 4,
+        reverse_integral.angle.grade(),
+        "path reversal encodes sign via grade shift"
     );
 
     // key insights:

@@ -37,7 +37,7 @@ impl Optics for Geonum {
         // apply snells law as angle transformation
         let incident_angle = self.angle;
         let n_ratio = refractive_index.length;
-        let refracted_angle_value = (incident_angle.sin() / n_ratio).asin();
+        let refracted_angle_value = (incident_angle.mod_4_angle().sin() / n_ratio).asin();
         let refracted_angle = Angle::new(refracted_angle_value, PI);
 
         Geonum::new_with_angle(self.length, refracted_angle)
@@ -49,7 +49,7 @@ impl Optics for Geonum {
 
         // apply each zernike term
         for term in zernike_coefficients {
-            let mode_effect_value = term.length * (term.angle.sin() * 3.0).cos();
+            let mode_effect_value = term.length * (term.angle.mod_4_angle().sin() * 3.0).cos();
             let mode_effect = Angle::new(mode_effect_value, PI);
             perturbed_phase = perturbed_phase + mode_effect;
         }
@@ -96,7 +96,7 @@ impl Optics for Geonum {
         let image_intensity = 1.0 / (mag * mag);
 
         // image point has inverted angle and scaled height
-        let image_angle_value = -self.angle.sin() / mag;
+        let image_angle_value = -self.angle.mod_4_angle().sin() / mag;
         let image_angle = Angle::new(image_angle_value, PI);
 
         Geonum::new_with_angle(self.length * image_intensity, image_angle)
@@ -121,7 +121,7 @@ mod tests {
 
         // prove angle is inverted and scaled based on sin transformation
         // magnify computes: image_angle = -sin(object_angle) / mag
-        let object_sin = object.angle.sin();
+        let object_sin = object.angle.mod_4_angle().sin();
         let expected_angle_value_2x = -object_sin / 2.0;
         let expected_angle_2x = Angle::new(expected_angle_value_2x, PI);
         assert_eq!(magnified_2x.angle, expected_angle_2x);
@@ -166,8 +166,8 @@ mod tests {
         // for thin lens: new_angle = atan2(h - h/f, h) = atan2(h(1-1/f), h) = atan(1-1/f)
         // since current implementation uses sin for both h and theta,
         // all rays get same output angle regardless of input
-        let sin1 = ray1.angle.sin();
-        let sin2 = ray2.angle.sin();
+        let sin1 = ray1.angle.mod_4_angle().sin();
+        let sin2 = ray2.angle.mod_4_angle().sin();
 
         // this assertion will fail, proving the bug
         assert!(

@@ -58,11 +58,11 @@ fn its_a_tensor_product() {
     // demonstrate distributivity: a ⊗ (b + c) = a ⊗ b + a ⊗ c using cartesian addition
 
     // create b + c in cartesian
-    let e2_x = e2.length * e2.angle.cos(); // 0
-    let e2_y = e2.length * e2.angle.sin(); // 1
+    let e2_x = e2.length * e2.angle.mod_4_angle().cos(); // 0
+    let e2_y = e2.length * e2.angle.mod_4_angle().sin(); // 1
 
-    let e3_x = e3.length * e3.angle.cos(); // -1
-    let e3_y = e3.length * e3.angle.sin(); // 0
+    let e3_x = e3.length * e3.angle.mod_4_angle().cos(); // -1
+    let e3_y = e3.length * e3.angle.mod_4_angle().sin(); // 0
 
     let sum_x = e2_x + e3_x; // -1
     let sum_y = e2_y + e3_y; // 1
@@ -85,11 +85,11 @@ fn its_a_tensor_product() {
     let a_tensor_c = e1.wedge(&e3); // a ⊗ c → bivector
 
     // convert a ⊗ b and a ⊗ c back to cartesian form for vector addition
-    let ab_x = a_tensor_b.length * a_tensor_b.angle.cos();
-    let ab_y = a_tensor_b.length * a_tensor_b.angle.sin();
+    let ab_x = a_tensor_b.length * a_tensor_b.angle.mod_4_angle().cos();
+    let ab_y = a_tensor_b.length * a_tensor_b.angle.mod_4_angle().sin();
 
-    let ac_x = a_tensor_c.length * a_tensor_c.angle.cos();
-    let ac_y = a_tensor_c.length * a_tensor_c.angle.sin();
+    let ac_x = a_tensor_c.length * a_tensor_c.angle.mod_4_angle().cos();
+    let ac_y = a_tensor_c.length * a_tensor_c.angle.mod_4_angle().sin();
 
     // perform vector addition of bivectors in the plane
     let sum_products_x = ab_x + ac_x;
@@ -316,7 +316,7 @@ fn its_a_contraction() {
     let v1 = Geonum::new(2.0, 1.0, 4.0); // PI/4
     let v2 = Geonum::new(3.0, 1.0, 3.0); // PI/3
     let v1_dot_v2 = v1.dot(&v2);
-    let expected = 2.0 * 3.0 * (v1.angle - v2.angle).cos();
+    let expected = 2.0 * 3.0 * (v1.angle - v2.angle).mod_4_angle().cos();
 
     assert!((v1_dot_v2.length - expected).abs() < EPSILON);
 
@@ -716,7 +716,7 @@ fn its_a_quantum_tensor_network() {
 
     // expectation value with geonum
     let expectation = |state1: &Geonum, state2: &Geonum| -> f64 {
-        state1.length * state2.length * (state1.angle - state2.angle).cos()
+        state1.length * state2.length * (state1.angle - state2.angle).mod_4_angle().cos()
     };
 
     // compute expectation between neighbors
@@ -1463,7 +1463,9 @@ fn its_a_multi_linear_map() {
     let interior = Geonum::new_with_blade(
         vector.length
             * two_form.length
-            * (vector.angle - two_form.angle + Angle::new(1.0, 2.0)).cos(),
+            * (vector.angle - two_form.angle + Angle::new(1.0, 2.0))
+                .mod_4_angle()
+                .cos(),
         two_form.angle.blade() - 1,
         two_form.angle.value() + PI / 2.0,
         TAU,
@@ -2030,7 +2032,7 @@ fn its_a_metric_signature() {
 
     // 0 + 0 = 0, cos(0) = +1
     assert_eq!(e1_squared.angle.blade(), 0);
-    assert!(e1_squared.angle.cos() > 0.0); // positive signature
+    assert!(e1_squared.angle.mod_4_angle().cos() > 0.0); // positive signature
     assert_eq!(e1_squared.length, 1.0);
 
     // test 2: minkowski signature emerges from timelike at π/2
@@ -2042,7 +2044,7 @@ fn its_a_metric_signature() {
 
     // π/2 + π/2 = π, cos(π) = -1
     assert_eq!(time_squared.angle.blade(), 2); // blade 1 + 1 = 2 (which is π)
-    assert!(time_squared.angle.cos() < 0.0); // negative signature!
+    assert!(time_squared.angle.mod_4_angle().cos() < 0.0); // negative signature!
 
     // test 3: the "choice" of signature is just choosing initial angles
     // traditional: "lets use signature (+,-,-,+)"
@@ -2054,10 +2056,10 @@ fn its_a_metric_signature() {
     let custom_e3 = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // 0° → squares to +
 
     // verify the signature (+,-,-,+)
-    assert!((custom_e0 * custom_e0).angle.cos() > 0.0); // +
-    assert!((custom_e1 * custom_e1).angle.cos() < 0.0); // -
-    assert!((custom_e2 * custom_e2).angle.cos() < 0.0); // -
-    assert!((custom_e3 * custom_e3).angle.cos() > 0.0); // +
+    assert!((custom_e0 * custom_e0).angle.mod_4_angle().cos() > 0.0); // +
+    assert!((custom_e1 * custom_e1).angle.mod_4_angle().cos() < 0.0); // -
+    assert!((custom_e2 * custom_e2).angle.mod_4_angle().cos() < 0.0); // -
+    assert!((custom_e3 * custom_e3).angle.mod_4_angle().cos() > 0.0); // +
 
     // test 4: "negative" vectors squaring to positive
     // traditional: "in clifford algebras, some negative elements square to positive"
@@ -2068,7 +2070,7 @@ fn its_a_metric_signature() {
 
     // π + π = 2π, and 2π ≡ 0 (mod 2π)
     assert!(squared.angle.mod_4_angle().abs() < 1e-10); // back to 0
-    assert!(squared.angle.cos() > 0.0); // positive result
+    assert!(squared.angle.mod_4_angle().cos() > 0.0); // positive result
     assert_eq!(squared.length, 1.0);
 
     // this is why (-1) × (-1) = +1: its just π + π = 2π ≡ 0
@@ -2091,8 +2093,8 @@ fn its_a_metric_signature() {
     assert_eq!(blade_diff, 2); // 3 - 1 = 2, encodes dual positive/negative spacetime signature (π angle as -,+)
 
     // prove signature through cosine values - measured from actual blade arithmetic
-    assert!(spatial_squared.angle.cos() < 0.0); // spatial blade 1 gives negative cosine
-    assert!(temporal_squared.angle.cos() > 0.0); // temporal blade 3 gives positive cosine
+    assert!(spatial_squared.angle.mod_4_angle().cos() < 0.0); // spatial blade 1 gives negative cosine
+    assert!(temporal_squared.angle.mod_4_angle().cos() > 0.0); // temporal blade 3 gives positive cosine
 
     // minkowski metric signature emerges: 2 blade difference maintains space/time distinction
 
@@ -2131,9 +2133,17 @@ fn its_a_metric_signature() {
         let expected_negative = i % 4 < 2; // first two of each group are negative
 
         if expected_negative {
-            assert!(squared.angle.cos() < 0.0, "index {} negative", i);
+            assert!(
+                squared.angle.mod_4_angle().cos() < 0.0,
+                "index {} negative",
+                i
+            );
         } else {
-            assert!(squared.angle.cos() > 0.0, "index {} positive", i);
+            assert!(
+                squared.angle.mod_4_angle().cos() > 0.0,
+                "index {} positive",
+                i
+            );
         }
     }
 
@@ -2146,14 +2156,14 @@ fn its_a_metric_signature() {
     let i_squared_euclidean = i_3d_euclidean * i_3d_euclidean;
 
     // 3π/2 + 3π/2 = 3π ≡ π (mod 2π), cos(π) = -1
-    assert_eq!(i_squared_euclidean.angle.cos(), -1.0); // I² = -1 for euclidean
+    assert_eq!(i_squared_euclidean.angle.mod_4_angle().cos(), -1.0); // I² = -1 for euclidean
 
     // in 4D minkowski: 1 time (π/2) + 3 space (0°)
     let i_4d_minkowski = Geonum::new_with_blade(1.0, 4, 0.0, 1.0); // 4 × π/2 = 2π
     let i_squared_minkowski = i_4d_minkowski * i_4d_minkowski;
 
     // 2π + 2π = 4π ≡ 0 (mod 2π), cos(0) = +1
-    assert_eq!(i_squared_minkowski.angle.cos(), 1.0); // I² = +1 for minkowski
+    assert_eq!(i_squared_minkowski.angle.mod_4_angle().cos(), 1.0); // I² = +1 for minkowski
 
     // the ±1 "mystery" is just whether your total angle is odd or even multiples of π
 
