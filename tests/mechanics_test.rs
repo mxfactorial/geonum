@@ -1049,14 +1049,13 @@ fn it_encodes_potential_energy() {
     // potential energy from position-field interaction
     let field_position_interaction = height_position.dot(&gravity_field);
 
+    let signed_interaction = field_position_interaction.length
+        * field_position_interaction.angle.project(Angle::new(0.0, 1.0));
     // positions at angle 0 and field at angle π are opposite
     // dot product of opposite directions gives negative
-    assert!(
-        field_position_interaction.length < 0.0,
-        "opposite directions give negative dot product"
-    );
+    assert!(signed_interaction < 0.0, "opposite directions give negative dot product");
 
-    let interaction_magnitude = field_position_interaction.length.abs();
+    let interaction_magnitude = signed_interaction.abs();
     assert!(
         (interaction_magnitude - 49.0).abs() < EPSILON,
         "h·g = 5×9.8 = 49 m²/s²"
@@ -1076,7 +1075,9 @@ fn it_encodes_potential_energy() {
     );
 
     let double_interaction = double_height.dot(&gravity_field);
-    let double_magnitude = double_interaction.length.abs();
+    let double_magnitude = (double_interaction.length
+        * double_interaction.angle.project(Angle::new(0.0, 1.0)))
+        .abs();
     assert!(
         (double_magnitude - 98.0).abs() < EPSILON,
         "(2h)·g = 10×9.8 = 98 m²/s²"
@@ -1133,12 +1134,14 @@ fn it_encodes_potential_energy() {
     let upward_field = gravity_field.negate(); // reverse field direction
     let upward_interaction = height_position.dot(&upward_field);
 
+    let upward_scalar =
+        upward_interaction.length * upward_interaction.angle.project(Angle::new(0.0, 1.0));
     assert!(
-        upward_interaction.length > 0.0,
+        upward_scalar > 0.0,
         "aligned position-field gives positive dot product"
     );
     assert!(
-        (upward_interaction.length - 49.0).abs() < EPSILON,
+        (upward_scalar - 49.0).abs() < EPSILON,
         "reversed field changes sign but not magnitude"
     );
 
@@ -1158,15 +1161,12 @@ fn it_encodes_power() {
 
     // power from force-velocity dot product: P = F·v
     let power_interaction = force.dot(&velocity);
-    assert_eq!(
-        power_interaction.angle.blade(),
-        0,
-        "power at blade 0 (scalar)"
-    );
+    let power_scalar = power_interaction.length * power_interaction.angle.project(Angle::new(0.0, 1.0));
+    assert_eq!(power_interaction.angle.grade(), 0, "power encodes scalar polarity in grade 0/2");
 
     // aligned force and velocity give maximum power
     assert!(
-        (power_interaction.length - 60.0).abs() < EPSILON,
+        (power_scalar - 60.0).abs() < EPSILON,
         "P = F·v = 15×4 = 60 W for aligned case"
     );
 
@@ -1178,8 +1178,9 @@ fn it_encodes_power() {
     let angle_diff = PI / 24.0;
     let expected_power = 15.0 * 4.0 * angle_diff.cos();
 
+    let angled_scalar = angled_power.length * angled_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
-        (angled_power.length - expected_power).abs() < EPSILON,
+        (angled_scalar - expected_power).abs() < EPSILON,
         "angled power = 15×4×cos(π/24) = {:.2} W",
         expected_power
     );
@@ -1188,10 +1189,12 @@ fn it_encodes_power() {
     let perpendicular_velocity = Geonum::new_with_blade(4.0, 1, 5.0, 8.0); // 5π/8
     let perpendicular_power = force.dot(&perpendicular_velocity);
 
+    let perpendicular_scalar =
+        perpendicular_power.length * perpendicular_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
-        perpendicular_power.length.abs() < EPSILON,
+        perpendicular_scalar.abs() < EPSILON,
         "perpendicular F⊥v gives zero power: {:.6} ≈ 0",
-        perpendicular_power.length
+        perpendicular_scalar
     );
 
     // test power scaling with force
@@ -1202,10 +1205,9 @@ fn it_encodes_power() {
     );
 
     let double_force_power = double_force.dot(&velocity);
-    assert!(
-        (double_force_power.length - 120.0).abs() < EPSILON,
-        "P(2F) = 120 = 2×60 W"
-    );
+    let double_power_scalar =
+        double_force_power.length * double_force_power.angle.project(Angle::new(0.0, 1.0));
+    assert!((double_power_scalar - 120.0).abs() < EPSILON, "P(2F) = 120 = 2×60 W");
 
     // test power scaling with velocity
     let triple_velocity = velocity.scale(3.0); // 12 m/s
@@ -1215,19 +1217,18 @@ fn it_encodes_power() {
     );
 
     let triple_velocity_power = force.dot(&triple_velocity);
-    assert!(
-        (triple_velocity_power.length - 180.0).abs() < EPSILON,
-        "P(3v) = 180 = 3×60 W"
-    );
+    let triple_power_scalar =
+        triple_velocity_power.length * triple_velocity_power.angle.project(Angle::new(0.0, 1.0));
+    assert!((triple_power_scalar - 180.0).abs() < EPSILON, "P(3v) = 180 = 3×60 W");
 
     // verify linear scaling in both force and velocity
-    let force_ratio = double_force_power.length / power_interaction.length;
+    let force_ratio = double_power_scalar / power_scalar;
     assert!(
         (force_ratio - 2.0).abs() < EPSILON,
         "doubling force doubles power: ratio = 2.0"
     );
 
-    let velocity_ratio = triple_velocity_power.length / power_interaction.length;
+    let velocity_ratio = triple_power_scalar / power_scalar;
     assert!(
         (velocity_ratio - 3.0).abs() < EPSILON,
         "tripling velocity triples power: ratio = 3.0"
@@ -1238,31 +1239,27 @@ fn it_encodes_power() {
     let high_velocity = Geonum::new_with_blade(6.0, 1000, 2.0, 11.0); // blade 1000
 
     let high_power = high_force.dot(&high_velocity);
-    assert_eq!(
-        high_power.angle.blade(),
-        0,
-        "power at blade 0 from any blade combination"
+    let high_power_scalar =
+        high_power.length * high_power.angle.project(Angle::new(0.0, 1.0));
+    assert!(
+        high_power.angle == Angle::new(0.0, 1.0) || high_power.angle == Angle::new(1.0, 1.0),
+        "power encodes sign via scalar/bivector pair"
     );
 
     // blade 250 gives mod_4_angle ≈ 3.71, blade 1000 gives ≈ 0.57
     // they're π apart (opposite directions), so power is negative
     assert!(
-        (high_power.length + 48.0).abs() < EPSILON,
+        (high_power_scalar + 48.0).abs() < EPSILON,
         "high-dim power = -48 W (opposite directions)"
     );
 
     // test negative power (force opposing velocity)
     let opposing_force = force.negate();
     let opposing_power = opposing_force.dot(&velocity);
+    let opposing_scalar = opposing_power.length * opposing_power.angle.project(Angle::new(0.0, 1.0));
 
-    assert!(
-        opposing_power.length < 0.0,
-        "opposing force-velocity gives negative power"
-    );
-    assert!(
-        (opposing_power.length + 60.0).abs() < EPSILON,
-        "opposing power = -60 W (energy extraction)"
-    );
+    assert!(opposing_scalar < 0.0, "opposing force-velocity gives negative power");
+    assert!((opposing_scalar + 60.0).abs() < EPSILON, "opposing power = -60 W (energy extraction)");
 
     // traditional mechanics: P = F⃗·v⃗ requires vector dot products in n dimensions
     // power = dW/dt requires work differentiation and time derivatives O(n)
@@ -1293,7 +1290,7 @@ fn it_encodes_torque() {
     // blade 1 force is at π/3 + π/2 = 5π/6
     // angle difference: 5π/6 - π/6 = 2π/3
     let angle_diff = force.angle - position.angle;
-    let expected_torque = 2.0 * 10.0 * angle_diff.sin().abs();
+    let expected_torque = 2.0 * 10.0 * angle_diff.mod_4_angle().sin().abs();
     assert!(
         (torque.length - expected_torque).abs() < EPSILON,
         "τ = r×F×sin(2π/3) ≈ 17.3 N·m"
@@ -1308,7 +1305,7 @@ fn it_encodes_torque() {
     let max_torque = position.wedge(&perpendicular_force);
 
     let max_angle_diff = perpendicular_force.angle - position.angle;
-    let expected_max = 2.0 * perpendicular_force.length * max_angle_diff.sin().abs();
+    let expected_max = 2.0 * perpendicular_force.length * max_angle_diff.mod_4_angle().sin().abs();
     assert!(
         (max_torque.length - expected_max).abs() < EPSILON,
         "perpendicular τ = {:.1} N·m",
@@ -1347,7 +1344,7 @@ fn it_encodes_torque() {
 
     // compute expected magnitude
     let high_angle_diff = high_force.angle - high_position.angle;
-    let expected_high = 3.0 * 8.0 * high_angle_diff.sin().abs();
+    let expected_high = 3.0 * 8.0 * high_angle_diff.mod_4_angle().sin().abs();
 
     assert!(
         (high_torque.length - expected_high).abs() < EPSILON,
@@ -1431,7 +1428,7 @@ fn it_encodes_angular_velocity() {
 
     // compute expected magnitude
     let angle_diff = high_radius.angle - high_omega.angle;
-    let expected_speed = 1.5 * 4.0 * angle_diff.sin().abs();
+    let expected_speed = 1.5 * 4.0 * angle_diff.mod_4_angle().sin().abs();
 
     assert!(
         (high_linear.length - expected_speed).abs() < EPSILON,
@@ -1851,7 +1848,7 @@ fn it_handles_energy_conservation() {
     let max_angle = Angle::new(1.0, 3.0); // π/3 radians (60°)
 
     // at maximum displacement: all PE, no KE
-    let max_height = pendulum_length * (1.0 - max_angle.cos()); // h = L(1 - cos θ)
+    let max_height = pendulum_length * (1.0 - max_angle.mod_4_angle().cos()); // h = L(1 - cos θ)
     let pe_max = mass * g * max_height;
 
     // at bottom: all KE, no PE (taking bottom as h=0)

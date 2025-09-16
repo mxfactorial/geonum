@@ -30,10 +30,10 @@ fn its_a_translation() {
 
     // translation in geometric numbers is vector addition in polar form
     // the result is a combined displacement
-    let original_x = point.length * point.angle.cos();
-    let original_y = point.length * point.angle.sin();
-    let translate_x = translation_vector.length * translation_vector.angle.cos();
-    let translate_y = translation_vector.length * translation_vector.angle.sin();
+    let original_x = point.length * point.angle.mod_4_angle().cos();
+    let original_y = point.length * point.angle.mod_4_angle().sin();
+    let translate_x = translation_vector.length * translation_vector.angle.mod_4_angle().cos();
+    let translate_y = translation_vector.length * translation_vector.angle.mod_4_angle().sin();
 
     let expected_x = original_x + translate_x;
     let expected_y = original_y + translate_y;

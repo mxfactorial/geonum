@@ -2634,9 +2634,8 @@ fn it_computes_tangent_to_circle() {
     let _tangent_length = Geonum::scalar(tangent_length_squared.length.sqrt());
 
     // angle subtended by tangent (from center's perspective)
-    // sin(θ) = opposite/hypotenuse = radius/dist_to_center
-    let sin_tangent_angle = radius.length / dist_to_center;
-    let tangent_angle_value = sin_tangent_angle.asin();
+    // cos(θ) = adjacent/hypotenuse = radius/dist_to_center
+    let tangent_angle_value = (radius.length / dist_to_center).acos();
 
     // two tangent points exist, rotated ±θ from center_to_external direction
     let tangent_rotation1 = Angle::new(tangent_angle_value / PI, 1.0);
@@ -2669,7 +2668,8 @@ fn it_computes_tangent_to_circle() {
     let tangent_line1 = Geonum::new_from_cartesian(ex - t1x, ey - t1y);
     let dot1 = radius_to_t1.dot(&tangent_line1);
 
-    assert!(dot1.length < 0.1, "tangent 1 perpendicular to radius");
+    let dot_scalar = dot1.length * dot1.angle.project(Angle::new(0.0, 1.0));
+    assert!(dot_scalar.abs() < 0.1, "tangent 1 perpendicular to radius");
 
     // geonum ghosts CGA's P ∧ C tangent computation
     // simple rotation and scaling replace wedge products
@@ -2711,8 +2711,8 @@ fn it_computes_tangent_to_sphere() {
     // create two orthogonal tangent vectors
 
     // if radius points along x, tangents can be along y and z
-    let tangent1 = Geonum::new_with_blade(1.0, 1, 1.0, 2.0); // blade 1, π/2 angle
-    let tangent2 = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // blade 2
+    let tangent1 = Geonum::new_with_angle(1.0, Angle::new(1.0, 2.0)); // +π/2 direction
+    let tangent2 = Geonum::new_with_angle(1.0, Angle::new(3.0, 2.0)); // -π/2 direction
 
     // verify tangents are perpendicular to radius (in this case)
     // dot product with pure x-direction radius gives zero for y and z components
@@ -2720,14 +2720,10 @@ fn it_computes_tangent_to_sphere() {
     let dot2 = radius_x.dot(&tangent2);
 
     // dot product of different blades gives zero (orthogonal dimensions)
-    assert!(
-        dot1.length < EPSILON || dot1.angle.blade() > 2,
-        "tangent1 perpendicular to radius"
-    );
-    assert!(
-        dot2.length < EPSILON || dot2.angle.blade() > 2,
-        "tangent2 perpendicular to radius"
-    );
+    let dot1_scalar = dot1.length * dot1.angle.project(Angle::new(0.0, 1.0));
+    let dot2_scalar = dot2.length * dot2.angle.project(Angle::new(0.0, 1.0));
+    assert!(dot1_scalar.abs() < EPSILON, "tangent1 perpendicular to radius");
+    assert!(dot2_scalar.abs() < EPSILON, "tangent2 perpendicular to radius");
 
     // demonstrate geonum handles arbitrary dimensions through blade
     let dim_1000_point = Geonum::new_with_blade(1.0, 1000, 0.0, 1.0); // dimension 1000
@@ -3274,7 +3270,7 @@ fn it_handles_imaginary_circles() {
     assert_eq!(radius_squared.angle, Angle::new(1.0, 1.0)); // π (negative)
 
     // in cartesian projection: 4*cos(π) = -4
-    let cartesian_value = radius_squared.length * radius_squared.angle.cos();
+    let cartesian_value = radius_squared.length * radius_squared.angle.mod_4_angle().cos();
     assert!((cartesian_value - (-4.0)).abs() < EPSILON);
 
     // points on "imaginary circle" at angle θ
@@ -3328,7 +3324,7 @@ fn it_handles_imaginary_circles() {
     assert_eq!(i_squared.angle, Angle::new(1.0, 1.0)); // π
 
     // π means pointing backward = -1
-    let as_real = i_squared.length * i_squared.angle.cos();
+    let as_real = i_squared.length * i_squared.angle.mod_4_angle().cos();
     assert!((as_real - (-1.0)).abs() < EPSILON);
 
     // geonum ghosts the imaginary unit i and complex number system

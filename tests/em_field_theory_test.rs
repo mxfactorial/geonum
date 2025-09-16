@@ -570,11 +570,11 @@ fn its_a_poynting_vector() {
     // traditional calculation would use cross product and vector algebra
     let traditional_poynting = |e: &Geonum, b: &Geonum| -> Geonum {
         // convert to cartesian for cross product
-        let e_x = e.length * e.angle.cos();
-        let e_y = e.length * e.angle.sin();
+        let e_x = e.length * e.angle.mod_4_angle().cos();
+        let e_y = e.length * e.angle.mod_4_angle().sin();
 
-        let b_x = b.length * b.angle.cos();
-        let b_y = b.length * b.angle.sin();
+        let b_x = b.length * b.angle.mod_4_angle().cos();
+        let b_y = b.length * b.angle.mod_4_angle().sin();
 
         // cross product in 3D (assuming E, B in xy-plane, S points in z)
         let s_z = (e_x * b_y - e_y * b_x) / VACUUM_PERMEABILITY;
@@ -917,11 +917,11 @@ fn its_a_field_potential() {
 
         // A' = A + ∇λ
         // convert both to cartesian, add, convert back to geometric
-        let a_x = a.length * a.angle.cos();
-        let a_y = a.length * a.angle.sin();
+        let a_x = a.length * a.angle.mod_4_angle().cos();
+        let a_y = a.length * a.angle.mod_4_angle().sin();
 
-        let grad_x = grad_lambda.length * grad_lambda.angle.cos();
-        let grad_y = grad_lambda.length * grad_lambda.angle.sin();
+        let grad_x = grad_lambda.length * grad_lambda.angle.mod_4_angle().cos();
+        let grad_y = grad_lambda.length * grad_lambda.angle.mod_4_angle().sin();
 
         let new_a_x = a_x + grad_x;
         let new_a_y = a_y + grad_y;

@@ -79,7 +79,7 @@ fn its_a_naive_set() {
     // test we measure relationships instead of asserting them
     // degree of intersection is measurable through angle
     let angle_diff = b.angle - a.angle; // π/2 difference
-    let correlation = a.length * b.length * angle_diff.cos().abs();
+    let correlation = a.length * b.length * angle_diff.mod_4_angle().cos().abs();
     assert!(correlation < EPSILON); // orthogonal = 0 correlation
 }
 
@@ -141,8 +141,14 @@ fn its_a_ring() {
     // a * (b + c) = a * b + a * c
 
     // convert to cartesian to perform addition
-    let b_cartesian = [b.length * b.angle.cos(), b.length * b.angle.sin()];
-    let c_cartesian = [c.length * c.angle.cos(), c.length * c.angle.sin()];
+    let b_cartesian = [
+        b.length * b.angle.mod_4_angle().cos(),
+        b.length * b.angle.mod_4_angle().sin(),
+    ];
+    let c_cartesian = [
+        c.length * c.angle.mod_4_angle().cos(),
+        c.length * c.angle.mod_4_angle().sin(),
+    ];
 
     // b + c in cartesian
     let bc_sum_expected = b + c;
@@ -166,8 +172,14 @@ fn its_a_ring() {
     let ac = a * c;
 
     // convert to cartesian to add results
-    let ab_cartesian = [ab.length * ab.angle.cos(), ab.length * ab.angle.sin()];
-    let ac_cartesian = [ac.length * ac.angle.cos(), ac.length * ac.angle.sin()];
+    let ab_cartesian = [
+        ab.length * ab.angle.mod_4_angle().cos(),
+        ab.length * ab.angle.mod_4_angle().sin(),
+    ];
+    let ac_cartesian = [
+        ac.length * ac.angle.mod_4_angle().cos(),
+        ac.length * ac.angle.mod_4_angle().sin(),
+    ];
 
     // add results in cartesian
     let right_side_expected = (a * b) + (a * c);
@@ -278,8 +290,10 @@ fn its_a_vector_space() {
 
     // test angle-based addition
     // vector addition as component-wise operation in the same angle space
-    let v_comp1 = v[0].length * v[0].angle.cos() + w[0].length * w[0].angle.cos();
-    let v_comp2 = v[1].length * v[1].angle.sin() + w[1].length * w[1].angle.sin();
+    let v_comp1 =
+        v[0].length * v[0].angle.mod_4_angle().cos() + w[0].length * w[0].angle.mod_4_angle().cos();
+    let v_comp2 =
+        v[1].length * v[1].angle.mod_4_angle().sin() + w[1].length * w[1].angle.mod_4_angle().sin();
 
     // test sum is 4e1 + 6e2
     assert!((v_comp1 - 4.0).abs() < EPSILON);
@@ -402,9 +416,12 @@ fn its_a_lie_algebra() {
     let term3 = c.wedge(&ab);
 
     // convert to cartesian to sum
-    let term1_cartesian = term1.length * term1.angle.cos() + term1.length * term1.angle.sin();
-    let term2_cartesian = term2.length * term2.angle.cos() + term2.length * term2.angle.sin();
-    let term3_cartesian = term3.length * term3.angle.cos() + term3.length * term3.angle.sin();
+    let term1_cartesian = term1.length * term1.angle.mod_4_angle().cos()
+        + term1.length * term1.angle.mod_4_angle().sin();
+    let term2_cartesian = term2.length * term2.angle.mod_4_angle().cos()
+        + term2.length * term2.angle.mod_4_angle().sin();
+    let term3_cartesian = term3.length * term3.angle.mod_4_angle().cos()
+        + term3.length * term3.angle.mod_4_angle().sin();
 
     // test sum approximately zero (demonstrates Jacobi identity geometrically)
     let sum = (term1_cartesian + term2_cartesian + term3_cartesian).abs();
@@ -632,7 +649,8 @@ fn its_a_fiber_bundle() {
     // test sections as angle slices
     // a section assigns one point in each fiber
     // define a section that maps angle θ to length sin(θ)+2
-    let section = |angle: Angle| -> Geonum { Geonum::new_with_angle(angle.sin() + 2.0, angle) };
+    let section =
+        |angle: Angle| -> Geonum { Geonum::new_with_angle(angle.mod_4_angle().sin() + 2.0, angle) };
 
     // test the section at different base points
     let s1 = section(Angle::new(0.0, 1.0));

@@ -940,8 +940,8 @@ fn it_normalizes_geonum_preserving_blade_structure() {
 
 #[test]
 fn it_computes_dot_product_returning_scalar_blade() {
-    // DOT PRODUCT: |a|*|b|*cos(θb-θa) always returns blade=0 (scalar)
-    // formula: dot(a,b) = [|a|*|b|*cos(angle_diff), Angle::new(0.0, 1.0)]
+    // DOT PRODUCT: |a|*|b|*cos(θb-θa) returns grade 0 for positive cosine and grade 2 for negative
+    // sign is encoded as a +π rotation rather than a negative length
 
     // case 1: dot product of vectors with angle difference
     let vec_a = Geonum::new(3.0, 1.0, 6.0); // length=3, angle=π/6 → blade=0, value=π/6
@@ -949,12 +949,10 @@ fn it_computes_dot_product_returning_scalar_blade() {
     let dot_result = vec_a.dot(&vec_b);
     // step 1: angle_diff = vec_b.angle - vec_a.angle = π/3 - π/6 = π/6
     // step 2: magnitude = 3 * 4 * cos(π/6) = 12 * (√3/2) ≈ 10.39
-    // step 3: result = [magnitude, Angle::new(0.0, 1.0)] → blade=0, value=0
+    // step 3: result = [magnitude, base scalar angle]
     let expected_mag = 3.0 * 4.0 * (PI / 6.0).cos();
     assert!((dot_result.length - expected_mag).abs() < EPSILON); // computed magnitude
-    assert_eq!(dot_result.angle.blade(), 0); // always scalar blade
-    assert!(dot_result.angle.value().abs() < EPSILON); // always 0 angle
-                                                       // blade arithmetic: dot product always produces blade=0 regardless of input blades
+    assert_eq!(dot_result.angle, Angle::new(0.0, 1.0)); // positive cosine keeps scalar base angle
 
     // case 2: orthogonal vectors (π/2 apart)
     let ortho_a = Geonum::new(2.0, 0.0, 1.0); // angle=0 → blade=0, value=0
@@ -964,8 +962,7 @@ fn it_computes_dot_product_returning_scalar_blade() {
     // step 2: magnitude = 2 * 3 * cos(π/2) = 6 * 0 = 0
     // step 3: result = [0, blade=0] (scalar zero)
     assert!(ortho_dot.length.abs() < EPSILON); // zero magnitude
-    assert_eq!(ortho_dot.angle.blade(), 0); // still scalar blade
-                                            // blade arithmetic: orthogonality detected, result remains scalar
+    assert_eq!(ortho_dot.angle, Angle::new(0.0, 1.0)); // zero magnitude uses scalar pair
 
     // case 3: high blade dot product
     let high_a = Geonum::new_with_blade(2.0, 1000, 1.0, 6.0); // blade=1000, value=π/6
@@ -973,11 +970,9 @@ fn it_computes_dot_product_returning_scalar_blade() {
     let high_dot = high_a.dot(&high_b);
     // step 1: angle difference computed through mod_4_angle differences
     // step 2: magnitude = 2 * 3 * cos(angle_diff)
-    // step 3: result = [magnitude, blade=0] (always scalar)
     assert!(high_dot.length.is_finite()); // finite result
-    assert_eq!(high_dot.angle.blade(), 0); // always scalar regardless of input blades
-    assert!(high_dot.angle.value().abs() < EPSILON); // always 0 angle
-                                                     // blade arithmetic: dot product collapses any blade inputs to scalar blade=0
+    assert_eq!(high_dot.angle, Angle::new_with_blade(2, 0.0, 1.0)); // sign encoded as bivector pair
+                                                                    // blade arithmetic: dot product collapses to scalar pair with grade encoding sign
 
     // proves dot() always returns scalar blade regardless of input blade complexity
 }

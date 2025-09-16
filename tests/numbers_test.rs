@@ -167,7 +167,8 @@ fn its_a_complex_number() {
     let one = Geonum::new(1.0, 0.0, 1.0); // scalar unit
 
     // in cartesian: -1 + 1 = 0
-    let result_cartesian = e_i_pi.length * e_i_pi.angle.cos() + one.length * one.angle.cos();
+    let result_cartesian = e_i_pi.length * e_i_pi.angle.mod_4_angle().cos()
+        + one.length * one.angle.mod_4_angle().cos();
 
     assert!(result_cartesian.abs() < EPSILON); // test value is close to zero
 }
@@ -709,10 +710,10 @@ fn it_dualizes_log2_geometric_algebra_components() {
     // we can extract grade-specific components to demonstrate this
 
     // extract grade 0 (scalar part)
-    let scalar = g.length * g.angle.cos();
+    let scalar = g.length * g.angle.mod_4_angle().cos();
 
     // extract grade 1 (vector part, magnitude)
-    let vector_magnitude = g.length * g.angle.sin();
+    let vector_magnitude = g.length * g.angle.mod_4_angle().sin();
 
     // extract grade 2 (bivector part)
     // in 2D GA, bivector represents rotation in the e1^e2 plane
@@ -801,7 +802,7 @@ fn its_a_bernoulli_number() {
     let b0_value = b0.length; // 1
     let b1_value = b1.length; // 0.5
     let b2_value = b2.length; // ≈ 0.1667
-    let b4_value = b4.length * b4.angle.cos(); // division result projected to scalar
+    let b4_value = b4.length * b4.angle.mod_4_angle().cos(); // division result projected to scalar
 
     // test the computed values
     assert_eq!(b0_value, 1.0);
@@ -1134,7 +1135,8 @@ fn its_a_eulers_identity() {
     let one = Geonum::new(1.0, 0.0, 1.0); // [1, 0] = pointing forwards = +1
 
     // Verify they're additive inverses (opposite directions, same magnitude)
-    let cartesian_sum = e_to_ipi.length * e_to_ipi.angle.cos() + one.length * one.angle.cos();
+    let cartesian_sum = e_to_ipi.length * e_to_ipi.angle.mod_4_angle().cos()
+        + one.length * one.angle.mod_4_angle().cos();
     assert!(cartesian_sum.abs() < EPSILON);
 
     // STEP 8: The complete picture
