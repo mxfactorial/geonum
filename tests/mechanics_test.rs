@@ -1050,10 +1050,15 @@ fn it_encodes_potential_energy() {
     let field_position_interaction = height_position.dot(&gravity_field);
 
     let signed_interaction = field_position_interaction.length
-        * field_position_interaction.angle.project(Angle::new(0.0, 1.0));
+        * field_position_interaction
+            .angle
+            .project(Angle::new(0.0, 1.0));
     // positions at angle 0 and field at angle π are opposite
     // dot product of opposite directions gives negative
-    assert!(signed_interaction < 0.0, "opposite directions give negative dot product");
+    assert!(
+        signed_interaction < 0.0,
+        "opposite directions give negative dot product"
+    );
 
     let interaction_magnitude = signed_interaction.abs();
     assert!(
@@ -1075,9 +1080,8 @@ fn it_encodes_potential_energy() {
     );
 
     let double_interaction = double_height.dot(&gravity_field);
-    let double_magnitude = (double_interaction.length
-        * double_interaction.angle.project(Angle::new(0.0, 1.0)))
-        .abs();
+    let double_magnitude =
+        (double_interaction.length * double_interaction.angle.project(Angle::new(0.0, 1.0))).abs();
     assert!(
         (double_magnitude - 98.0).abs() < EPSILON,
         "(2h)·g = 10×9.8 = 98 m²/s²"
@@ -1161,8 +1165,13 @@ fn it_encodes_power() {
 
     // power from force-velocity dot product: P = F·v
     let power_interaction = force.dot(&velocity);
-    let power_scalar = power_interaction.length * power_interaction.angle.project(Angle::new(0.0, 1.0));
-    assert_eq!(power_interaction.angle.grade(), 0, "power encodes scalar polarity in grade 0/2");
+    let power_scalar =
+        power_interaction.length * power_interaction.angle.project(Angle::new(0.0, 1.0));
+    assert_eq!(
+        power_interaction.angle.grade(),
+        0,
+        "power encodes scalar polarity in grade 0/2"
+    );
 
     // aligned force and velocity give maximum power
     assert!(
@@ -1207,7 +1216,10 @@ fn it_encodes_power() {
     let double_force_power = double_force.dot(&velocity);
     let double_power_scalar =
         double_force_power.length * double_force_power.angle.project(Angle::new(0.0, 1.0));
-    assert!((double_power_scalar - 120.0).abs() < EPSILON, "P(2F) = 120 = 2×60 W");
+    assert!(
+        (double_power_scalar - 120.0).abs() < EPSILON,
+        "P(2F) = 120 = 2×60 W"
+    );
 
     // test power scaling with velocity
     let triple_velocity = velocity.scale(3.0); // 12 m/s
@@ -1219,7 +1231,10 @@ fn it_encodes_power() {
     let triple_velocity_power = force.dot(&triple_velocity);
     let triple_power_scalar =
         triple_velocity_power.length * triple_velocity_power.angle.project(Angle::new(0.0, 1.0));
-    assert!((triple_power_scalar - 180.0).abs() < EPSILON, "P(3v) = 180 = 3×60 W");
+    assert!(
+        (triple_power_scalar - 180.0).abs() < EPSILON,
+        "P(3v) = 180 = 3×60 W"
+    );
 
     // verify linear scaling in both force and velocity
     let force_ratio = double_power_scalar / power_scalar;
@@ -1239,8 +1254,7 @@ fn it_encodes_power() {
     let high_velocity = Geonum::new_with_blade(6.0, 1000, 2.0, 11.0); // blade 1000
 
     let high_power = high_force.dot(&high_velocity);
-    let high_power_scalar =
-        high_power.length * high_power.angle.project(Angle::new(0.0, 1.0));
+    let high_power_scalar = high_power.length * high_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         high_power.angle == Angle::new(0.0, 1.0) || high_power.angle == Angle::new(1.0, 1.0),
         "power encodes sign via scalar/bivector pair"
@@ -1256,10 +1270,17 @@ fn it_encodes_power() {
     // test negative power (force opposing velocity)
     let opposing_force = force.negate();
     let opposing_power = opposing_force.dot(&velocity);
-    let opposing_scalar = opposing_power.length * opposing_power.angle.project(Angle::new(0.0, 1.0));
+    let opposing_scalar =
+        opposing_power.length * opposing_power.angle.project(Angle::new(0.0, 1.0));
 
-    assert!(opposing_scalar < 0.0, "opposing force-velocity gives negative power");
-    assert!((opposing_scalar + 60.0).abs() < EPSILON, "opposing power = -60 W (energy extraction)");
+    assert!(
+        opposing_scalar < 0.0,
+        "opposing force-velocity gives negative power"
+    );
+    assert!(
+        (opposing_scalar + 60.0).abs() < EPSILON,
+        "opposing power = -60 W (energy extraction)"
+    );
 
     // traditional mechanics: P = F⃗·v⃗ requires vector dot products in n dimensions
     // power = dW/dt requires work differentiation and time derivatives O(n)

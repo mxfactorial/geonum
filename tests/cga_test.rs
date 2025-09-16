@@ -2722,8 +2722,14 @@ fn it_computes_tangent_to_sphere() {
     // dot product of different blades gives zero (orthogonal dimensions)
     let dot1_scalar = dot1.length * dot1.angle.project(Angle::new(0.0, 1.0));
     let dot2_scalar = dot2.length * dot2.angle.project(Angle::new(0.0, 1.0));
-    assert!(dot1_scalar.abs() < EPSILON, "tangent1 perpendicular to radius");
-    assert!(dot2_scalar.abs() < EPSILON, "tangent2 perpendicular to radius");
+    assert!(
+        dot1_scalar.abs() < EPSILON,
+        "tangent1 perpendicular to radius"
+    );
+    assert!(
+        dot2_scalar.abs() < EPSILON,
+        "tangent2 perpendicular to radius"
+    );
 
     // demonstrate geonum handles arbitrary dimensions through blade
     let dim_1000_point = Geonum::new_with_blade(1.0, 1000, 0.0, 1.0); // dimension 1000
