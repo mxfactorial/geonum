@@ -1,5 +1,18 @@
 # changelog
 
+## 0.8.1 (2025-09-15)
+
+### added
+- angle encoding trigonometric operations (sin, cos, tan) to geonum module returning Geonum instead of raw f64
+- addition_test.rs and trigonometry_test.rs comprehensive test coverage
+
+### changed
+- switched to standard library trigonometric calls
+- moved trigonometric functions from src/angle.rs to src/geonum_mod.rs with angle encoding
+
+### removed
+- raw float trigonometric functions from Angle struct
+
 ## 0.8.0 (2025-09-13)
 
 ### added
