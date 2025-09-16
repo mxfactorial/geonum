@@ -186,8 +186,8 @@ impl Geonum {
     /// # returns
     /// a tuple with (x, y) coordinates
     pub fn to_cartesian(&self) -> (f64, f64) {
-        let x = self.length * self.angle.cos();
-        let y = self.length * self.angle.sin();
+        let x = self.length * self.angle.mod_4_angle().cos();
+        let y = self.length * self.angle.mod_4_angle().sin();
         (x, y)
     }
 
@@ -290,8 +290,10 @@ impl Geonum {
     /// the dot product as a scalar geometric number
     pub fn dot(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let magnitude = self.length * other.length * angle_diff.cos();
-        Geonum::new(magnitude, 0.0, 1.0) // scalar (grade 0)
+        let cos_component = angle_diff.mod_4_angle().cos();
+        let scalar_value = self.length * other.length * cos_component;
+        // encode sign in angle so consumers read grade based polarity instead of raw negatives
+        Self::signed_at(scalar_value, Angle::new(0.0, 1.0))
     }
 
     /// projects this geometric number onto a specified dimension
@@ -317,7 +319,7 @@ impl Geonum {
     /// the wedge product as a new geometric number
     pub fn wedge(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let sin_value = angle_diff.sin();
+        let sin_value = angle_diff.mod_4_angle().sin();
         let length = self.length * other.length * sin_value.abs();
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
                                                  // wedge product creates bivector (oriented area) by adding π/2 to combined angles
@@ -424,9 +426,15 @@ impl Geonum {
                 angle: Angle::new_with_blade(self.angle.blade(), 0.0, 1.0), // preserve blade, zero angle
             };
         }
+        // polar projection encoding: length nonnegative, sign via +π
         let projection_factor = self.angle.project(onto.angle);
-        let projection_length = self.length * projection_factor;
-        Geonum::new_with_angle(projection_length, onto.angle)
+        let length = self.length * projection_factor.abs();
+        let angle = if projection_factor >= 0.0 {
+            onto.angle
+        } else {
+            onto.angle + Angle::new(1.0, 1.0)
+        };
+        Geonum::new_with_angle(length, angle)
     }
 
     /// computes the rejection of this geometric number from another
@@ -646,11 +654,66 @@ impl Geonum {
         // law of cosines: c² = a² + b² - 2ab·cos(θ)
         let angle_between = other.angle - self.angle;
         let distance_squared = self.length * self.length + other.length * other.length
-            - 2.0 * self.length * other.length * angle_between.cos();
+            - 2.0 * self.length * other.length * angle_between.mod_4_angle().cos();
         let distance = distance_squared.sqrt();
 
         // return as scalar geonum (blade 0)
         Geonum::scalar(distance)
+    }
+
+    /// adjacent projection onto the even pair (φ = 0): hypotenuse × |cos(θ)| with sign in angle
+    pub fn adj(&self) -> Geonum {
+        Geonum::cos(self.angle).scale(self.length)
+    }
+
+    /// opposite projection onto the odd pair (φ = π/2): hypotenuse × |sin(θ)| with sign in angle
+    pub fn opp(&self) -> Geonum {
+        Geonum::sin(self.angle).scale(self.length)
+    }
+
+    // helper: encode sign via +π at a base angle, keep length nonnegative
+    fn signed_at(value: f64, base: Angle) -> Geonum {
+        let angle = if value < 0.0 {
+            base + Angle::new(1.0, 1.0)
+        } else {
+            base
+        };
+        Geonum::new_with_angle(value.abs(), angle)
+    }
+
+    /// geonum cosine anchored to even pair 0↔π
+    /// length = |cos(θ)|, sign becomes +π rotation in angle
+    pub fn cos(a: Angle) -> Geonum {
+        let v = a.mod_4_angle().cos();
+        Geonum::signed_at(v, Angle::new(0.0, 1.0))
+    }
+
+    /// geonum sine anchored to odd pair π/2↔3π/2
+    /// length = |sin(θ)|, sign becomes +π rotation in angle
+    pub fn sin(a: Angle) -> Geonum {
+        let v = a.mod_4_angle().sin();
+        Geonum::signed_at(v, Angle::new(1.0, 2.0))
+    }
+
+    /// geonum tangent defined via sin/cos division so diameter crossings propagate
+    pub fn tan(a: Angle) -> Geonum {
+        let s = Geonum::sin(a);
+        let c = Geonum::cos(a);
+        s.div(&c)
+    }
+
+    /// project this geonum to another angle direction, returning geonum with grade-encoded sign
+    /// replaces scalar projection with geonum that preserves geometric meaning
+    pub fn project_to_angle(&self, onto: Angle) -> Geonum {
+        let angle_diff = onto - self.angle;
+        let cos_component = angle_diff.mod_4_angle().cos();
+
+        // encode sign in grade: positive at grade 0, negative at grade 2
+        if cos_component >= 0.0 {
+            Geonum::new_with_angle(self.length * cos_component, Angle::new(0.0, 1.0))
+        } else {
+            Geonum::new_with_angle(self.length * (-cos_component), Angle::new(1.0, 1.0))
+        }
     }
 }
 
@@ -1420,7 +1483,8 @@ mod tests {
             // test that the dot product with the original vector is negative
             let dot_product = vec.dot(&neg_vec);
             assert!(
-                dot_product.length * dot_product.angle.cos() < 0.0 || vec.length < EPSILON,
+                dot_product.length * dot_product.angle.mod_4_angle().cos() < 0.0
+                    || vec.length < EPSILON,
                 "vector and its negation have negative dot product unless vector is zero"
             );
         }
@@ -1482,7 +1546,7 @@ mod tests {
         let result = a + b;
 
         assert_eq!(result.length, 8.0);
-        assert!((result.angle.sin()).abs() < EPSILON);
+        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON);
         assert_eq!(result.angle.blade(), 0); // adding scalars gives a scalar
     }
 
@@ -1494,7 +1558,7 @@ mod tests {
         let result = a + b;
 
         assert_eq!(result.length, 0.0);
-        assert!((result.angle.sin()).abs() < EPSILON);
+        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON);
         // blade preservation: 0 + 2 = 2 when equal opposites cancel
         assert_eq!(result.angle.blade(), 2);
 
@@ -1505,7 +1569,7 @@ mod tests {
         let result2 = c + d;
 
         assert_eq!(result2.length, 2.0);
-        assert!((result2.angle.sin()).abs() < EPSILON);
+        assert!((result2.angle.mod_4_angle().sin()).abs() < EPSILON);
         // dominant component (c) preserves its blade
         assert_eq!(result2.angle.blade(), 0);
     }
@@ -1584,7 +1648,7 @@ mod tests {
         let result = a - b;
 
         assert_eq!(result.length, 2.0);
-        assert!((result.angle.sin()).abs() < EPSILON); // angle ≈ 0
+        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction with opposite angles
         let c = Geonum::new(4.0, 0.0, 1.0); // 4 units at 0 radians
@@ -1592,7 +1656,7 @@ mod tests {
         let result2 = c - d;
 
         assert_eq!(result2.length, 8.0); // 4 - (-4) = 8
-        assert!((result2.angle.sin()).abs() < EPSILON); // angle ≈ 0
+        assert!((result2.angle.mod_4_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction resulting in zero
         let e = Geonum::new(3.0, 1.0, 4.0); // 3 units at π/4
@@ -2988,7 +3052,7 @@ mod tests {
 
         // compute expected via law of cosines
         let angle_diff = p2.angle - p1.angle; // π/3 - π/6 = π/6
-        let expected_sq = 25.0 + 9.0 - 2.0 * 5.0 * 3.0 * angle_diff.cos();
+        let expected_sq = 25.0 + 9.0 - 2.0 * 5.0 * 3.0 * angle_diff.mod_4_angle().cos();
         let expected = expected_sq.sqrt();
 
         assert!(
@@ -3016,5 +3080,113 @@ mod tests {
             (high_distance.length - regular_distance.length).abs() < 1e-10,
             "distance computation independent of blade count"
         );
+    }
+
+    #[test]
+    fn it_produces_geonum_cos_on_even_pair() {
+        let samples = [
+            Angle::new(1.0, 6.0),
+            Angle::new(2.0, 3.0),
+            Angle::new(7.0, 6.0),
+        ];
+        for a in samples {
+            let theta = a.mod_4_angle();
+            let g = Geonum::cos(a);
+            assert!((g.length - theta.cos().abs()).abs() < EPSILON);
+            assert!(matches!(g.angle.grade(), 0 | 2));
+            let expected = if theta.cos() < 0.0 {
+                Angle::new(0.0, 1.0) + Angle::new(1.0, 1.0)
+            } else {
+                Angle::new(0.0, 1.0)
+            };
+            assert_eq!(g.angle.base_angle(), expected.base_angle());
+        }
+    }
+
+    #[test]
+    fn it_produces_geonum_sin_on_odd_pair() {
+        let samples = [Angle::new(5.0, 12.0), Angle::new(11.0, 6.0)];
+        for a in samples {
+            let theta = a.mod_4_angle();
+            let g = Geonum::sin(a);
+            assert!((g.length - theta.sin().abs()).abs() < EPSILON);
+            assert!(matches!(g.angle.grade(), 1 | 3));
+            let base = Angle::new(1.0, 2.0);
+            let expected = if theta.sin() < 0.0 {
+                base + Angle::new(1.0, 1.0)
+            } else {
+                base
+            };
+            assert_eq!(g.angle.base_angle(), expected.base_angle());
+        }
+    }
+
+    #[test]
+    fn it_defines_tan_via_sin_over_cos() {
+        let a = Angle::new(3.0, 8.0);
+        let t = Geonum::tan(a);
+        let s_over_c = Geonum::sin(a).div(&Geonum::cos(a));
+        assert!((t.length - s_over_c.length).abs() < EPSILON);
+        assert_eq!(t.angle.base_angle(), s_over_c.angle.base_angle());
+
+        // sanity: tan magnitude equals |sin|/|cos| for a non-singular sample
+        let theta = a.mod_4_angle();
+        assert!((t.length - (theta.sin().abs() / theta.cos().abs())).abs() < 1e-10);
+
+        // tan inherits odd parity
+        assert!(matches!(t.angle.grade(), 1 | 3));
+    }
+
+    #[test]
+    fn it_computes_adj_and_opp_at_quadrature() {
+        let g = Geonum::new(5.0, 1.0, 4.0); // [5, π/4]
+
+        let adj = g.adj();
+        let opp = g.opp();
+
+        let expected = 5.0 * (2.0_f64).sqrt() / 2.0;
+        assert!((adj.length - expected).abs() < EPSILON);
+        assert_eq!(adj.angle, Angle::new(0.0, 1.0));
+
+        assert!((opp.length - expected).abs() < EPSILON);
+        assert_eq!(opp.angle, Angle::new(1.0, 2.0));
+    }
+
+    #[test]
+    fn it_encodes_sign_in_angle_for_adj_opp() {
+        // angle = π → adj = [r, π], opp = [0, π/2]
+        let g = Geonum::new(3.0, 1.0, 1.0); // [3, π]
+        let adj = g.adj();
+        let opp = g.opp();
+        assert!((adj.length - 3.0).abs() < EPSILON);
+        assert_eq!(adj.angle, Angle::new(1.0, 1.0));
+        assert!(opp.length < EPSILON);
+
+        // angle = 3π/2 → adj = [0, 0], opp = [r, 3π/2]
+        let h = Geonum::new(7.0, 3.0, 2.0); // [7, 3π/2]
+        let adj_h = h.adj();
+        let opp_h = h.opp();
+        assert!(adj_h.length < EPSILON);
+        assert!((opp_h.length - 7.0).abs() < EPSILON);
+        assert_eq!(opp_h.angle, Angle::new(3.0, 2.0));
+    }
+
+    #[test]
+    fn it_matches_cos_sin_gateways_for_adj_opp() {
+        let length = 4.0;
+        let angle = Angle::new(1.0, 3.0); // π/3
+        let g = Geonum::new_with_angle(length, angle);
+
+        let adj = g.adj();
+        let opp = g.opp();
+
+        let adj_gateway = Geonum::cos(angle).scale(length);
+        let opp_gateway = Geonum::sin(angle).scale(length);
+
+        assert!((adj.length - adj_gateway.length).abs() < EPSILON);
+        assert_eq!(adj.angle, adj_gateway.angle);
+
+        assert!((opp.length - opp_gateway.length).abs() < EPSILON);
+        assert_eq!(opp.angle, opp_gateway.angle);
     }
 }
