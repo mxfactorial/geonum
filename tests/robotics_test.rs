@@ -220,8 +220,8 @@ fn its_a_redundant_manipulator() {
         cumulative3.value() < 1e-10,
         "bent config returns to 0 value"
     );
-    assert!(cumulative3.cos() > 0.999, "cos(2π) = 1");
-    assert!(cumulative3.sin().abs() < 1e-10, "sin(2π) = 0");
+    assert!(cumulative3.mod_4_angle().cos() > 0.999, "cos(2π) = 1");
+    assert!(cumulative3.mod_4_angle().sin().abs() < 1e-10, "sin(2π) = 0");
 
     // both solutions reach target
     let error_straight = target.distance_to(&end_straight);

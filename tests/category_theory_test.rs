@@ -297,10 +297,10 @@ fn its_a_limit() {
     let _other_projections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let p_x = p.length * p.angle.cos();
-            let p_y = p.length * p.angle.sin();
-            let o_x = other_point.length * other_point.angle.cos();
-            let o_y = other_point.length * other_point.angle.sin();
+            let p_x = p.length * p.angle.mod_4_angle().cos();
+            let p_y = p.length * p.angle.mod_4_angle().sin();
+            let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
+            let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
             let dx = p_x - o_x;
             let dy = p_y - o_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -365,10 +365,10 @@ fn its_a_colimit() {
     let _injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let c_x = colimit.length * colimit.angle.cos();
-            let c_y = colimit.length * colimit.angle.sin();
-            let p_x = p.length * p.angle.cos();
-            let p_y = p.length * p.angle.sin();
+            let c_x = colimit.length * colimit.angle.mod_4_angle().cos();
+            let c_y = colimit.length * colimit.angle.mod_4_angle().sin();
+            let p_x = p.length * p.angle.mod_4_angle().cos();
+            let p_y = p.length * p.angle.mod_4_angle().sin();
             let dx = c_x - p_x;
             let dy = c_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -387,10 +387,10 @@ fn its_a_colimit() {
     let _other_injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let o_x = other_point.length * other_point.angle.cos();
-            let o_y = other_point.length * other_point.angle.sin();
-            let p_x = p.length * p.angle.cos();
-            let p_y = p.length * p.angle.sin();
+            let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
+            let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
+            let p_x = p.length * p.angle.mod_4_angle().cos();
+            let p_y = p.length * p.angle.mod_4_angle().sin();
             let dx = o_x - p_x;
             let dy = o_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -399,10 +399,10 @@ fn its_a_colimit() {
 
     // test the existence of a unique map from colimit to other_point
     // artifact of geonum automation: categorical universal cocone property replaced by direct angle path
-    let o_x = other_point.length * other_point.angle.cos();
-    let o_y = other_point.length * other_point.angle.sin();
-    let c_x = colimit.length * colimit.angle.cos();
-    let c_y = colimit.length * colimit.angle.sin();
+    let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
+    let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
+    let c_x = colimit.length * colimit.angle.mod_4_angle().cos();
+    let c_y = colimit.length * colimit.angle.mod_4_angle().sin();
     let _to_other = Geonum::new_from_cartesian(o_x - c_x, o_y - c_y);
 
     // prove colimit construction through direct angle operations

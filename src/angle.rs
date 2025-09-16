@@ -331,44 +331,6 @@ impl Angle {
         result.normalize_boundaries()
     }
 
-    /// returns the angle offset for the current grade
-    ///
-    /// # returns
-    /// angle offset: 0, π/2, π, or 3π/2 based on grade
-    fn grade_offset(&self) -> f64 {
-        match self.mod_4_blade() {
-            0 => 0.0,            // 0
-            1 => PI / 2.0,       // π/2
-            2 => PI,             // π
-            3 => 3.0 * PI / 2.0, // 3π/2
-            _ => unreachable!(),
-        }
-    }
-
-    /// computes sine of the total angle
-    ///
-    /// # returns
-    /// sin(total_angle)
-    pub fn sin(&self) -> f64 {
-        (self.value + self.grade_offset()).sin()
-    }
-
-    /// computes cosine of the total angle
-    ///
-    /// # returns  
-    /// cos(total_angle)
-    pub fn cos(&self) -> f64 {
-        (self.value + self.grade_offset()).cos()
-    }
-
-    /// computes tangent of the total angle
-    ///
-    /// # returns
-    /// tan(total_angle)
-    pub fn tan(&self) -> f64 {
-        (self.value + self.grade_offset()).tan()
-    }
-
     /// tests if this angle is opposite to another angle
     ///
     /// two angles are opposite if they differ by π (blade difference of 2)
@@ -785,7 +747,7 @@ mod tests {
     fn it_computes_sin_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let sin_result = angle.sin();
+        let sin_result = angle.mod_4_angle().sin();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // sin(0 + 0.0) = sin(0) = 0
@@ -796,7 +758,7 @@ mod tests {
     fn it_computes_sin_with_1003_blade() {
         let angle = Angle::new(1003.0, 2.0); // 1003*(π/2)
 
-        let sin_result = angle.sin();
+        let sin_result = angle.mod_4_angle().sin();
 
         // 1003 % 4 = 3, so grade is 3 (trivector)
         // sin(3π/2 + 0.0) = sin(3π/2) = -1
@@ -807,7 +769,7 @@ mod tests {
     fn it_computes_cos_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let cos_result = angle.cos();
+        let cos_result = angle.mod_4_angle().cos();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // cos(0 + 0.0) = cos(0) = 1
@@ -818,24 +780,11 @@ mod tests {
     fn it_computes_cos_with_1001_blade() {
         let angle = Angle::new(1001.0, 2.0); // 1001*(π/2)
 
-        let cos_result = angle.cos();
+        let cos_result = angle.mod_4_angle().cos();
 
         // 1001 % 4 = 1, so grade is 1 (vector)
         // cos(π/2 + 0.0) = cos(π/2) = 0
         assert!((cos_result - 0.0).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_computes_grade_offset_for_all_grades() {
-        let angle0 = Angle::new(1000.0, 2.0); // grade 0 (scalar)
-        let angle1 = Angle::new(1001.0, 2.0); // grade 1 (vector)
-        let angle2 = Angle::new(1002.0, 2.0); // grade 2 (bivector)
-        let angle3 = Angle::new(1003.0, 2.0); // grade 3 (trivector)
-
-        assert!((angle0.grade_offset() - 0.0).abs() < EPSILON); // 0
-        assert!((angle1.grade_offset() - PI / 2.0).abs() < EPSILON); // π/2
-        assert!((angle2.grade_offset() - PI).abs() < EPSILON); // π
-        assert!((angle3.grade_offset() - 3.0 * PI / 2.0).abs() < EPSILON); // 3π/2
     }
 
     #[test]
@@ -865,7 +814,7 @@ mod tests {
     fn it_computes_tan_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let tan_result = angle.tan();
+        let tan_result = angle.mod_4_angle().tan();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // tan(0 + 0.0) = tan(0) = 0
@@ -876,7 +825,7 @@ mod tests {
     fn it_computes_tan_with_1002_blade() {
         let angle = Angle::new(1002.0, 2.0); // 1002*(π/2)
 
-        let tan_result = angle.tan();
+        let tan_result = angle.mod_4_angle().tan();
 
         // 1002 % 4 = 2, so grade is 2 (bivector)
         // tan(π + 0.0) = tan(π) = 0
@@ -994,10 +943,16 @@ mod tests {
         let negative_angle = Angle::new(-1.0, 3.0); // -π/3
 
         // negative angles give opposite sin values (for anti-commutativity)
-        assert!((positive_angle.sin() + negative_angle.sin()).abs() < EPSILON);
+        assert!(
+            (positive_angle.mod_4_angle().sin() + negative_angle.mod_4_angle().sin()).abs()
+                < EPSILON
+        );
 
         // but same cos values (preserving geometric relationships)
-        assert!((positive_angle.cos() - negative_angle.cos()).abs() < EPSILON);
+        assert!(
+            (positive_angle.mod_4_angle().cos() - negative_angle.mod_4_angle().cos()).abs()
+                < EPSILON
+        );
 
         // when you need anti-commutativity (v ∧ w = -(w ∧ v)),
         // the solution is often just to negate one result

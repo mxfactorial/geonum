@@ -48,8 +48,8 @@ fn its_a_perceptron() {
     let x_neg = Geonum::new(1.0, 5.0, 4.0); // Vector (grade 1) - input vector (negative example)
 
     // demonstrate that dot product can be computed via lengths and angles
-    let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).cos();
-    let dot_neg = w.length * x_neg.length * (w.angle - x_neg.angle).cos();
+    let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).mod_4_angle().cos();
+    let dot_neg = w.length * x_neg.length * (w.angle - x_neg.angle).mod_4_angle().cos();
 
     assert!(dot_pos > 0.0, "positive example misclassified");
     assert!(dot_neg < 0.0, "negative example misclassified");
@@ -71,9 +71,11 @@ fn its_a_perceptron() {
     let w_geometric = w.perceptron_update(learning_rate, prediction_error, &x_neg);
 
     // after updates, both classify x_neg
-    let dot_traditional =
-        w_traditional.length * x_neg.length * (w_traditional.angle - x_neg.angle).cos();
-    let dot_geometric = w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).cos();
+    let dot_traditional = w_traditional.length
+        * x_neg.length
+        * (w_traditional.angle - x_neg.angle).mod_4_angle().cos();
+    let dot_geometric =
+        w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).mod_4_angle().cos();
 
     // both methods improve classification (larger negative value is worse)
     assert!(
@@ -129,7 +131,7 @@ fn its_a_linear_regression() {
 
     // verify our geometric representation can recover the regression parameters
     // the slope is encoded in the angle: tan(θ) = slope
-    let slope_geometric = regression_geo.angle.tan();
+    let slope_geometric = regression_geo.angle.mod_4_angle().tan();
 
     // the regression line parameters will match
     assert!(
@@ -564,7 +566,8 @@ fn its_a_dimensionality_reduction() {
         .map(|p| {
             // projection as geometric operation
             // for simplicity, use the component along principal direction
-            let dot_product = p.length * principal.length * (p.angle - principal.angle).cos();
+            let dot_product =
+                p.length * principal.length * (p.angle - principal.angle).mod_4_angle().cos();
             let projection_scalar = Geonum::new(dot_product / principal.length.powi(2), 0.0, 1.0);
             principal * projection_scalar
         })
@@ -1031,7 +1034,8 @@ fn it_scales_quantum_learning() {
         let max_overlap = state
             .iter()
             .map(|g| {
-                let dot_product = g.length * point.length * (g.angle - point.angle).cos();
+                let dot_product =
+                    g.length * point.length * (g.angle - point.angle).mod_4_angle().cos();
                 (g, dot_product)
             })
             .max_by(|(_, d1), (_, d2)| d1.partial_cmp(d2).unwrap())

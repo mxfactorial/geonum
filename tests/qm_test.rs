@@ -68,11 +68,11 @@ fn its_a_state_vector() {
 
     // probability through born rule: |⟨ψ|basis⟩|² = cos²(angle_diff)
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length.powi(2) * angle_diff0.cos().powi(2);
+    let prob0 = state.length.powi(2) * angle_diff0.mod_4_angle().cos().powi(2);
     assert!((prob0 - 0.5).abs() < EPSILON); // cos²(π/4) = 0.5
 
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length.powi(2) * angle_diff1.cos().powi(2);
+    let prob1 = state.length.powi(2) * angle_diff1.mod_4_angle().cos().powi(2);
     assert!((prob1 - 0.5).abs() < EPSILON); // cos²(π/4 - π/2) = cos²(-π/4) = 0.5
 
     // total probability
@@ -187,7 +187,7 @@ fn its_a_spin_system() {
     // for a state at angle 0, measuring along pi/2 gives probability cos²(0 - pi/2) = cos²(-pi/2) = 0
     let measurement_angle = Angle::new(1.0, 2.0); // π/2
     let angle_difference = spin_up.angle - measurement_angle;
-    let prob_up_x = spin_up.length * spin_up.length * angle_difference.cos().powi(2);
+    let prob_up_x = spin_up.length * spin_up.length * angle_difference.mod_4_angle().cos().powi(2);
     assert!(prob_up_x < EPSILON); // equals 0 probability
 }
 
@@ -293,7 +293,7 @@ fn its_a_quantum_measurement() {
     // test measurement as angle correlation
     // probability of measuring in basis0 = |⟨0|ψ⟩|²
     let angle_diff0 = state.angle - basis0.angle;
-    let prob_basis0 = state.length * state.length * angle_diff0.cos().powi(2);
+    let prob_basis0 = state.length * state.length * angle_diff0.mod_4_angle().cos().powi(2);
 
     // test born rule through angle projection instead of abstract inner product
     assert!((0.0..=1.0).contains(&prob_basis0));
@@ -302,7 +302,7 @@ fn its_a_quantum_measurement() {
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob_basis1 = state.length * state.length * angle_diff1.cos().powi(2);
+    let prob_basis1 = state.length * state.length * angle_diff1.mod_4_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob_basis1));
     // for a state at pi/4, the probability relative to pi/2 is cos²(pi/4 - pi/2) = cos²(-pi/4) = 0.5
     assert!((prob_basis1 - 0.5).abs() < EPSILON);
@@ -490,8 +490,8 @@ fn its_a_path_integral() {
     let mut sum_x = 0.0;
     let mut sum_y = 0.0;
     for path in &paths {
-        sum_x += path.length * path.angle.cos();
-        sum_y += path.length * path.angle.sin();
+        sum_x += path.length * path.angle.mod_4_angle().cos();
+        sum_y += path.length * path.angle.mod_4_angle().sin();
     }
 
     // convert back to geometric number
@@ -660,12 +660,12 @@ fn it_rejects_copenhagen_interpretation() {
     // test measurement as natural process, not mysterious collapse
     // probability of measuring in basis0
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length * state.length * angle_diff0.cos().powi(2);
+    let prob0 = state.length * state.length * angle_diff0.mod_4_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob0));
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length * state.length * angle_diff1.cos().powi(2);
+    let prob1 = state.length * state.length * angle_diff1.mod_4_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob1));
 
     // test total probability = 1
@@ -761,8 +761,16 @@ fn it_unifies_quantum_and_classical() {
         .map(|dist| {
             // compute mean using weighted circular mean
             let total_p: f64 = dist.iter().map(|(p, _)| p).sum();
-            let mean_sin: f64 = dist.iter().map(|(p, g)| p * g.angle.sin()).sum::<f64>() / total_p;
-            let mean_cos: f64 = dist.iter().map(|(p, g)| p * g.angle.cos()).sum::<f64>() / total_p;
+            let mean_sin: f64 = dist
+                .iter()
+                .map(|(p, g)| p * g.angle.mod_4_angle().sin())
+                .sum::<f64>()
+                / total_p;
+            let mean_cos: f64 = dist
+                .iter()
+                .map(|(p, g)| p * g.angle.mod_4_angle().cos())
+                .sum::<f64>()
+                / total_p;
             let mean_angle = Angle::new_from_cartesian(mean_cos, mean_sin);
 
             // compute dispersion using angle differences
@@ -789,20 +797,20 @@ fn it_unifies_quantum_and_classical() {
     let total_p: f64 = narrow_dist.iter().map(|(p, _)| p).sum();
     let exp_sin: f64 = narrow_dist
         .iter()
-        .map(|(p, g)| p * g.angle.sin())
+        .map(|(p, g)| p * g.angle.mod_4_angle().sin())
         .sum::<f64>()
         / total_p;
     let exp_cos: f64 = narrow_dist
         .iter()
-        .map(|(p, g)| p * g.angle.cos())
+        .map(|(p, g)| p * g.angle.mod_4_angle().cos())
         .sum::<f64>()
         / total_p;
     let exp_angle = Angle::new_from_cartesian(exp_cos, exp_sin);
 
     // test this equals a definite classical value (π/8)
     let classical_angle = Angle::new(1.0, 8.0);
-    assert!((exp_angle.sin() - classical_angle.sin()).abs() < 0.001);
-    assert!((exp_angle.cos() - classical_angle.cos()).abs() < 0.001);
+    assert!((exp_angle.mod_4_angle().sin() - classical_angle.mod_4_angle().sin()).abs() < 0.001);
+    assert!((exp_angle.mod_4_angle().cos() - classical_angle.mod_4_angle().cos()).abs() < 0.001);
 }
 
 #[test]

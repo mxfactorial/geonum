@@ -164,11 +164,11 @@ fn its_an_optical_flow_estimator() {
 
     // flow vector is the difference between frame2 and frame1 points
     // convert to cartesian for illustrative purposes
-    let frame1_x = frame1_point.length * frame1_point.angle.cos();
-    let frame1_y = frame1_point.length * frame1_point.angle.sin();
+    let frame1_x = frame1_point.length * frame1_point.angle.mod_4_angle().cos();
+    let frame1_y = frame1_point.length * frame1_point.angle.mod_4_angle().sin();
 
-    let frame2_x = frame2_point.length * frame2_point.angle.cos();
-    let frame2_y = frame2_point.length * frame2_point.angle.sin();
+    let frame2_x = frame2_point.length * frame2_point.angle.mod_4_angle().cos();
+    let frame2_y = frame2_point.length * frame2_point.angle.mod_4_angle().sin();
 
     // flow vector components
     let flow_x = frame2_x - frame1_x;
@@ -446,7 +446,8 @@ fn its_a_3d_reconstruction() {
     // measure angle difference is not zero and calculate depth
     let angle_diff = ray1_angle - ray2_angle;
     // Use absolute value for positive depth
-    let depth1 = f64::abs(baseline * ray2_angle.sin() / angle_diff.sin());
+    let depth1 =
+        f64::abs(baseline * ray2_angle.mod_4_angle().sin() / angle_diff.mod_4_angle().sin());
 
     // reconstructed 3D point
     let reconstructed_point = Geonum::new_with_angle(depth1, ray1_angle);
@@ -673,9 +674,9 @@ fn its_a_neural_image_processing() {
     // with geonum: direct angle-based nonlinearities
 
     // ReLU-like activation: preserve positive parts of signal
-    let activated_output = if layer_output.angle.cos() > 0.0 {
+    let activated_output = if layer_output.angle.mod_4_angle().cos() > 0.0 {
         Geonum::new_with_angle(
-            layer_output.length * layer_output.angle.cos(),
+            layer_output.length * layer_output.angle.mod_4_angle().cos(),
             layer_output.angle,
         )
     } else {
@@ -683,7 +684,7 @@ fn its_a_neural_image_processing() {
     };
 
     // verify activation has expected behavior
-    if layer_output.angle.cos() > 0.0 {
+    if layer_output.angle.mod_4_angle().cos() > 0.0 {
         assert!(
             activated_output.length > 0.0,
             "ReLU should preserve positive signals"
@@ -731,8 +732,11 @@ fn its_a_neural_image_processing() {
                 );
 
                 // simplified activation
-                if output.angle.cos() > 0.0 {
-                    Geonum::new_with_angle(output.length * output.angle.cos(), output.angle)
+                if output.angle.mod_4_angle().cos() > 0.0 {
+                    Geonum::new_with_angle(
+                        output.length * output.angle.mod_4_angle().cos(),
+                        output.angle,
+                    )
                 } else {
                     Geonum::new(0.0, 0.0, 2.0) // zeroed output
                 }
@@ -866,8 +870,8 @@ fn its_an_object_detection() {
     // 2. represent bounding box directly with geometric numbers
 
     // compute bounding box center (simplified 2D case)
-    let center_x = 100.0 + 50.0 * object.angle.cos();
-    let center_y = 100.0 + 50.0 * object.angle.sin();
+    let center_x = 100.0 + 50.0 * object.angle.mod_4_angle().cos();
+    let center_y = 100.0 + 50.0 * object.angle.mod_4_angle().sin();
 
     // bounding box as center position + scale
     let bbox_angle = Geonum::new_from_cartesian(center_x, center_y).angle;

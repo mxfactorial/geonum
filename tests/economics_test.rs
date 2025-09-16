@@ -34,11 +34,11 @@ fn it_models_business_cycles() {
         // similar to principal component analysis but with geometric meaning
         let weighted_x = indicators
             .iter()
-            .map(|i| i.length * i.angle.cos()) // x-component (horizontal axis)
+            .map(|i| i.length * i.angle.mod_4_angle().cos()) // x-component (horizontal axis)
             .sum::<f64>();
         let weighted_y = indicators
             .iter()
-            .map(|i| i.length * i.angle.sin()) // y-component (vertical axis)
+            .map(|i| i.length * i.angle.mod_4_angle().sin()) // y-component (vertical axis)
             .sum::<f64>();
 
         // compute aggregate cycle phase (direction in economic state space)
@@ -49,7 +49,7 @@ fn it_models_business_cycles() {
         // in a complete implementation, this returns as additional information
         let _cycle_momentum = indicators
             .iter()
-            .map(|i| i.length * i.angle.sin())
+            .map(|i| i.length * i.angle.mod_4_angle().sin())
             .sum::<f64>();
 
         // return the economic state as a geometric number:
@@ -91,7 +91,7 @@ fn it_models_business_cycles() {
     // shows how quickly the economy moves through the cycle
     let cycle_velocity = indicators
         .iter()
-        .map(|i| i.length * i.angle.sin())
+        .map(|i| i.length * i.angle.mod_4_angle().sin())
         .sum::<f64>();
 
     // test the cycle detection produces meaningful results
@@ -412,7 +412,7 @@ fn it_detects_early_recession_indicators() {
             // payment timing signal - weighted by transaction volume
             let payment_timing_signal = transactions
                 .iter()
-                .map(|(vol, timing, _, _)| vol.length * timing.angle.sin())
+                .map(|(vol, timing, _, _)| vol.length * timing.angle.mod_4_angle().sin())
                 .sum::<f64>()
                 / total_volume;
 
@@ -970,12 +970,12 @@ fn it_models_global_trade_flows() {
         // compute weighted flow direction
         let weighted_x = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.cos())
+            .map(|f| f.length * f.angle.mod_4_angle().cos())
             .sum::<f64>();
 
         let weighted_y = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.sin())
+            .map(|f| f.length * f.angle.mod_4_angle().sin())
             .sum::<f64>();
 
         // compute total trade volume
@@ -997,7 +997,7 @@ fn it_models_global_trade_flows() {
 
     // detect trade imbalances through angle analysis
     // in perfect measurement, this should be zero due to conservation laws
-    let imbalance_magnitude = global_trade.angle.sin() * global_trade.length;
+    let imbalance_magnitude = global_trade.angle.mod_4_angle().sin() * global_trade.length;
     let balanced_trade_threshold = 0.05 * global_trade.length; // 5% measurement error threshold
 
     // prove model produces meaningful results
@@ -1053,8 +1053,8 @@ fn it_measures_economic_sectoral_balance() {
 
         // single iteration over sectors
         for sector in sectors {
-            flow_x += sector.length * sector.angle.cos();
-            flow_y += sector.length * sector.angle.sin();
+            flow_x += sector.length * sector.angle.mod_4_angle().cos();
+            flow_y += sector.length * sector.angle.mod_4_angle().sin();
             total_magnitude += sector.length;
         }
 

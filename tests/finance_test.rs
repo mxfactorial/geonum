@@ -327,7 +327,7 @@ fn it_simulates_asset_price_movements() {
 
     // in geonum, multiple paths can be generated at once by varying the angle
     let multiple_paths = (0..path_count)
-        .map(|i| {
+        .map(|i: usize| {
             // create angles distributed around circle
             let angle_offset = 2.0 * PI * (i as f64) / (path_count as f64);
 

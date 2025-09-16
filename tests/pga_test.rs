@@ -977,7 +977,7 @@ fn it_eliminates_matrix_complexity() {
 
     // prove translation vector has expected properties
     assert_eq!(translation.length, 5.0); // sqrt(3² + 4²) = 5
-    assert!((translation.angle.tan() - 4.0 / 3.0).abs() < EPSILON); // arctan(4/3)
+    assert!((translation.angle.mod_4_angle().tan() - 4.0 / 3.0).abs() < EPSILON); // arctan(4/3)
     let rotation = Geonum::new(1.0, 1.0, 4.0); // rotate by π/4
     let scale = Geonum::new(2.0, 0.0, 1.0); // scale by 2
 
@@ -1184,7 +1184,7 @@ fn it_computes_line_through_two_points() {
     let line_angle = direction.angle;
 
     // prove line angle is π/4 (45 degrees) for this case
-    assert!((line_angle.tan() - 1.0).abs() < EPSILON); // tan(π/4) = 1
+    assert!((line_angle.mod_4_angle().tan() - 1.0).abs() < EPSILON); // tan(π/4) = 1
 
     // any point on the line can be expressed as p1 + t*direction
     let t_values = vec![0.0, 0.5, 1.0, 2.0, -0.5];
@@ -1283,8 +1283,8 @@ fn it_computes_line_through_two_points() {
     // project onto line direction to find closest point
     let projection_length = to_external.dot(&direction).length / direction.length;
     let closest = Geonum::new_from_cartesian(
-        p1.to_cartesian().0 + projection_length * direction.angle.cos(),
-        p1.to_cartesian().1 + projection_length * direction.angle.sin(),
+        p1.to_cartesian().0 + projection_length * direction.angle.mod_4_angle().cos(),
+        p1.to_cartesian().1 + projection_length * direction.angle.mod_4_angle().sin(),
     );
 
     // compute distance
