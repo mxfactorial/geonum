@@ -52,7 +52,7 @@ fn its_a_feature_detector() {
     // 2. compute gradient direction and magnitude directly
 
     // gradient can be directly encoded in the feature angle
-    let gradient_direction = corner_feature.angle.mod_4_angle();
+    let gradient_direction = corner_feature.angle.grade_angle();
     let gradient_magnitude = corner_feature.length;
 
     // verify gradient direction is correct
@@ -93,7 +93,7 @@ fn its_a_feature_detector() {
     ); // vector (grade 1) - same feature type
 
     // compute match quality using angle distance
-    let angle_diff = (rotated_feature.angle - corner_feature.angle).mod_4_angle();
+    let angle_diff = (rotated_feature.angle - corner_feature.angle).grade_angle();
     let match_quality = 1.0 - angle_diff / PI;
 
     // prove close match (close to 1.0)
@@ -164,11 +164,11 @@ fn its_an_optical_flow_estimator() {
 
     // flow vector is the difference between frame2 and frame1 points
     // convert to cartesian for illustrative purposes
-    let frame1_x = frame1_point.length * frame1_point.angle.mod_4_angle().cos();
-    let frame1_y = frame1_point.length * frame1_point.angle.mod_4_angle().sin();
+    let frame1_x = frame1_point.length * frame1_point.angle.grade_angle().cos();
+    let frame1_y = frame1_point.length * frame1_point.angle.grade_angle().sin();
 
-    let frame2_x = frame2_point.length * frame2_point.angle.mod_4_angle().cos();
-    let frame2_y = frame2_point.length * frame2_point.angle.mod_4_angle().sin();
+    let frame2_x = frame2_point.length * frame2_point.angle.grade_angle().cos();
+    let frame2_y = frame2_point.length * frame2_point.angle.grade_angle().sin();
 
     // flow vector components
     let flow_x = frame2_x - frame1_x;
@@ -193,7 +193,7 @@ fn its_an_optical_flow_estimator() {
     let flow_grade_1 = Geonum::new_with_blade(
         flow_vector.length,
         1, // ensure vector (grade 1)
-        flow_vector.angle.mod_4_angle(),
+        flow_vector.angle.grade_angle(),
         PI,
     );
 
@@ -202,13 +202,13 @@ fn its_an_optical_flow_estimator() {
         Geonum::new_with_blade(
             flow_vector.length * 0.5, // half magnitude at coarser scale
             2,                        // bivector (grade 2) - coarser scale flow
-            flow_vector.angle.mod_4_angle(),
+            flow_vector.angle.grade_angle(),
             PI,
         ),
         Geonum::new_with_blade(
             flow_vector.length * 0.25, // quarter magnitude at coarsest scale
             3,                         // trivector (grade 3) - coarsest scale flow
-            flow_vector.angle.mod_4_angle(),
+            flow_vector.angle.grade_angle(),
             PI,
         ),
     ]); // optical flow at multiple scales
@@ -312,7 +312,7 @@ fn its_a_camera_calibration() {
 
     // compute reprojection error as an angle-based distance
     let angle_diff = observed_point.angle - projected_point.angle;
-    let reprojection_error = angle_diff.mod_4_angle().abs();
+    let reprojection_error = angle_diff.grade_angle().abs();
 
     // error should be non-zero but small
     assert!(reprojection_error > 0.0);
@@ -349,7 +349,7 @@ fn its_a_camera_calibration() {
         .iter()
         .map(|camera| {
             // compute relative angle between camera and world point
-            let relative_angle = world_point.angle.mod_4_angle() - camera.angle.mod_4_angle();
+            let relative_angle = world_point.angle.grade_angle() - camera.angle.grade_angle();
 
             // projection depends on relative angle
             let visible = relative_angle.abs() < PI / 2.0; // only visible in front of camera
@@ -419,7 +419,7 @@ fn its_a_3d_reconstruction() {
 
     // compute distance to epipolar line (simplified as angle difference)
     let angle_diff = candidate_match.angle - epipolar_line.angle;
-    let epipolar_distance = angle_diff.mod_4_angle().abs();
+    let epipolar_distance = angle_diff.grade_angle().abs();
 
     // should be close to epipolar line
     assert!(
@@ -447,7 +447,7 @@ fn its_a_3d_reconstruction() {
     let angle_diff = ray1_angle - ray2_angle;
     // Use absolute value for positive depth
     let depth1 =
-        f64::abs(baseline * ray2_angle.mod_4_angle().sin() / angle_diff.mod_4_angle().sin());
+        f64::abs(baseline * ray2_angle.grade_angle().sin() / angle_diff.grade_angle().sin());
 
     // reconstructed 3D point
     let reconstructed_point = Geonum::new_with_angle(depth1, ray1_angle);
@@ -474,7 +474,7 @@ fn its_a_3d_reconstruction() {
     let avg_length = observations.iter().map(|o| o.length).sum::<f64>() / observations.len() as f64;
     let avg_angle = observations
         .iter()
-        .map(|o| o.angle.mod_4_angle())
+        .map(|o| o.angle.grade_angle())
         .sum::<f64>()
         / observations.len() as f64;
 
@@ -674,9 +674,9 @@ fn its_a_neural_image_processing() {
     // with geonum: direct angle-based nonlinearities
 
     // ReLU-like activation: preserve positive parts of signal
-    let activated_output = if layer_output.angle.mod_4_angle().cos() > 0.0 {
+    let activated_output = if layer_output.angle.grade_angle().cos() > 0.0 {
         Geonum::new_with_angle(
-            layer_output.length * layer_output.angle.mod_4_angle().cos(),
+            layer_output.length * layer_output.angle.grade_angle().cos(),
             layer_output.angle,
         )
     } else {
@@ -684,7 +684,7 @@ fn its_a_neural_image_processing() {
     };
 
     // verify activation has expected behavior
-    if layer_output.angle.mod_4_angle().cos() > 0.0 {
+    if layer_output.angle.grade_angle().cos() > 0.0 {
         assert!(
             activated_output.length > 0.0,
             "ReLU should preserve positive signals"
@@ -732,9 +732,9 @@ fn its_a_neural_image_processing() {
                 );
 
                 // simplified activation
-                if output.angle.mod_4_angle().cos() > 0.0 {
+                if output.angle.grade_angle().cos() > 0.0 {
                     Geonum::new_with_angle(
-                        output.length * output.angle.mod_4_angle().cos(),
+                        output.length * output.angle.grade_angle().cos(),
                         output.angle,
                     )
                 } else {
@@ -773,11 +773,12 @@ fn its_a_segmentation_algorithm() {
     // with geonum: direct angle-based clustering
 
     // create pixels with similar but noisy orientations
-    let num_pixels = 100;
+    let num_pixels: i32 = 100;
     let pixels = (0..num_pixels)
         .map(|i| {
             // add noise to orientation
-            let noise = (i as f64 / num_pixels as f64) * 0.2 - 0.1;
+            let index = f64::from(i);
+            let noise = (index / f64::from(num_pixels)) * 0.2 - 0.1;
             Geonum::new_with_angle(1.0, region_orientation.angle + Angle::new(noise, PI))
         })
         .collect::<Vec<Geonum>>();
@@ -786,18 +787,18 @@ fn its_a_segmentation_algorithm() {
 
     // calculate mean orientation
     let mean_angle =
-        pixels.iter().map(|p| p.angle.mod_4_angle()).sum::<f64>() / pixels.len() as f64;
+        pixels.iter().map(|p| p.angle.grade_angle()).sum::<f64>() / pixels.len() as f64;
 
     // verify mean is close to original region orientation
     assert!(
-        (mean_angle - region_orientation.angle.mod_4_angle()).abs() < 0.1,
+        (mean_angle - region_orientation.angle.grade_angle()).abs() < 0.1,
         "Mean orientation should be close to region orientation"
     );
 
     // calculate circular variance
     let circular_variance = pixels
         .iter()
-        .map(|p| 1.0 - f64::cos(p.angle.mod_4_angle() - mean_angle))
+        .map(|p| 1.0 - f64::cos(p.angle.grade_angle() - mean_angle))
         .sum::<f64>()
         / pixels.len() as f64;
 
@@ -815,7 +816,7 @@ fn its_a_segmentation_algorithm() {
 
     // boundary strength is angle difference
     let angle_diff = region1_pixel.angle - region2_pixel.angle;
-    let boundary_strength = angle_diff.mod_4_angle().abs();
+    let boundary_strength = angle_diff.grade_angle().abs();
 
     // should detect strong boundary (PI/2 is 90 degrees)
     assert!(
@@ -870,8 +871,8 @@ fn its_an_object_detection() {
     // 2. represent bounding box directly with geometric numbers
 
     // compute bounding box center (simplified 2D case)
-    let center_x = 100.0 + 50.0 * object.angle.mod_4_angle().cos();
-    let center_y = 100.0 + 50.0 * object.angle.mod_4_angle().sin();
+    let center_x = 100.0 + 50.0 * object.angle.grade_angle().cos();
+    let center_y = 100.0 + 50.0 * object.angle.grade_angle().sin();
 
     // bounding box as center position + scale
     let bbox_angle = Geonum::new_from_cartesian(center_x, center_y).angle;
@@ -886,7 +887,7 @@ fn its_an_object_detection() {
     );
 
     // compute IoU-like similarity directly from angles and scales
-    let angle_diff = (bbox2.angle - bbox.angle).mod_4_angle();
+    let angle_diff = (bbox2.angle - bbox.angle).grade_angle();
     let scale_ratio = bbox.length.min(bbox2.length) / bbox.length.max(bbox2.length);
 
     // combine angle and scale similarity
@@ -926,7 +927,7 @@ fn its_an_object_detection() {
         assigned[i] = true;
 
         for j in i + 1..detections.len() {
-            let angle_diff = (detections[j].angle - detections[i].angle).mod_4_angle();
+            let angle_diff = (detections[j].angle - detections[i].angle).grade_angle();
             // Handle circular distance
             let angle_dist = angle_diff.min(2.0 * PI - angle_diff);
             if !assigned[j] && angle_dist < angle_threshold {

@@ -79,7 +79,7 @@ fn its_a_naive_set() {
     // test we measure relationships instead of asserting them
     // degree of intersection is measurable through angle
     let angle_diff = b.angle - a.angle; // π/2 difference
-    let correlation = a.length * b.length * angle_diff.mod_4_angle().cos().abs();
+    let correlation = a.length * b.length * angle_diff.grade_angle().cos().abs();
     assert!(correlation < EPSILON); // orthogonal = 0 correlation
 }
 
@@ -122,8 +122,8 @@ fn its_a_group() {
     let product = quarter_turn * inverse;
     // product is identity (angle 0)
     assert!(
-        product.angle.mod_4_angle() < EPSILON
-            || (TAU - product.angle.mod_4_angle()).abs() < EPSILON
+        product.angle.grade_angle() < EPSILON
+            || (TAU - product.angle.grade_angle()).abs() < EPSILON
     );
 }
 
@@ -142,12 +142,12 @@ fn its_a_ring() {
 
     // convert to cartesian to perform addition
     let b_cartesian = [
-        b.length * b.angle.mod_4_angle().cos(),
-        b.length * b.angle.mod_4_angle().sin(),
+        b.length * b.angle.grade_angle().cos(),
+        b.length * b.angle.grade_angle().sin(),
     ];
     let c_cartesian = [
-        c.length * c.angle.mod_4_angle().cos(),
-        c.length * c.angle.mod_4_angle().sin(),
+        c.length * c.angle.grade_angle().cos(),
+        c.length * c.angle.grade_angle().sin(),
     ];
 
     // b + c in cartesian
@@ -173,12 +173,12 @@ fn its_a_ring() {
 
     // convert to cartesian to add results
     let ab_cartesian = [
-        ab.length * ab.angle.mod_4_angle().cos(),
-        ab.length * ab.angle.mod_4_angle().sin(),
+        ab.length * ab.angle.grade_angle().cos(),
+        ab.length * ab.angle.grade_angle().sin(),
     ];
     let ac_cartesian = [
-        ac.length * ac.angle.mod_4_angle().cos(),
-        ac.length * ac.angle.mod_4_angle().sin(),
+        ac.length * ac.angle.grade_angle().cos(),
+        ac.length * ac.angle.grade_angle().sin(),
     ];
 
     // add results in cartesian
@@ -199,7 +199,7 @@ fn its_a_ring() {
     assert!((left_side.length - right_side.length).abs() < EPSILON);
 
     // angles might differ by 2π
-    let angle_diff = (left_side.angle - right_side.angle).mod_4_angle();
+    let angle_diff = (left_side.angle - right_side.angle).grade_angle();
     assert!(angle_diff.abs() < EPSILON || (TAU - angle_diff).abs() < EPSILON);
 
     // test commutativity as physical rotation invariance
@@ -291,9 +291,9 @@ fn its_a_vector_space() {
     // test angle-based addition
     // vector addition as component-wise operation in the same angle space
     let v_comp1 =
-        v[0].length * v[0].angle.mod_4_angle().cos() + w[0].length * w[0].angle.mod_4_angle().cos();
+        v[0].length * v[0].angle.grade_angle().cos() + w[0].length * w[0].angle.grade_angle().cos();
     let v_comp2 =
-        v[1].length * v[1].angle.mod_4_angle().sin() + w[1].length * w[1].angle.mod_4_angle().sin();
+        v[1].length * v[1].angle.grade_angle().sin() + w[1].length * w[1].angle.grade_angle().sin();
 
     // test sum is 4e1 + 6e2
     assert!((v_comp1 - 4.0).abs() < EPSILON);
@@ -396,7 +396,7 @@ fn its_a_lie_algebra() {
     assert!((a_wedge_b.length - b_wedge_a.length).abs() < EPSILON);
 
     // test angles differ by π (orientation flip)
-    let angle_diff = (a_wedge_b.angle - b_wedge_a.angle).mod_4_angle();
+    let angle_diff = (a_wedge_b.angle - b_wedge_a.angle).grade_angle();
     assert!((angle_diff - PI).abs() < EPSILON);
 
     // test Jacobi identity geometrically
@@ -416,12 +416,12 @@ fn its_a_lie_algebra() {
     let term3 = c.wedge(&ab);
 
     // convert to cartesian to sum
-    let term1_cartesian = term1.length * term1.angle.mod_4_angle().cos()
-        + term1.length * term1.angle.mod_4_angle().sin();
-    let term2_cartesian = term2.length * term2.angle.mod_4_angle().cos()
-        + term2.length * term2.angle.mod_4_angle().sin();
-    let term3_cartesian = term3.length * term3.angle.mod_4_angle().cos()
-        + term3.length * term3.angle.mod_4_angle().sin();
+    let term1_cartesian = term1.length * term1.angle.grade_angle().cos()
+        + term1.length * term1.angle.grade_angle().sin();
+    let term2_cartesian = term2.length * term2.angle.grade_angle().cos()
+        + term2.length * term2.angle.grade_angle().sin();
+    let term3_cartesian = term3.length * term3.angle.grade_angle().cos()
+        + term3.length * term3.angle.grade_angle().sin();
 
     // test sum approximately zero (demonstrates Jacobi identity geometrically)
     let sum = (term1_cartesian + term2_cartesian + term3_cartesian).abs();
@@ -536,7 +536,7 @@ fn its_a_metric_space() {
     // test distance via angle difference
     // define distance as minimum angle between points (on the circle)
     let d = |a: &Geonum, b: &Geonum| -> f64 {
-        let angle_diff = (a.angle - b.angle).mod_4_angle();
+        let angle_diff = (a.angle - b.angle).grade_angle();
         angle_diff.min(TAU - angle_diff)
     };
 
@@ -650,7 +650,7 @@ fn its_a_fiber_bundle() {
     // a section assigns one point in each fiber
     // define a section that maps angle θ to length sin(θ)+2
     let section =
-        |angle: Angle| -> Geonum { Geonum::new_with_angle(angle.mod_4_angle().sin() + 2.0, angle) };
+        |angle: Angle| -> Geonum { Geonum::new_with_angle(angle.grade_angle().sin() + 2.0, angle) };
 
     // test the section at different base points
     let s1 = section(Angle::new(0.0, 1.0));

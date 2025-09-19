@@ -204,7 +204,7 @@ fn it_encodes_position() {
     );
     assert_eq!(position.length, 3.0, "distance from origin");
     assert!(
-        (position.angle.mod_4_angle() - PI / 4.0).abs() < EPSILON,
+        (position.angle.grade_angle() - PI / 4.0).abs() < EPSILON,
         "direction angle π/4"
     );
 
@@ -213,8 +213,10 @@ fn it_encodes_position() {
     let new_position = position + displacement;
 
     // verify geometric addition produces expected result
-    let (x1, y1) = position.to_cartesian();
-    let (x2, y2) = displacement.to_cartesian();
+    let x1 = position.length * position.angle.grade_angle().cos();
+    let y1 = position.length * position.angle.grade_angle().sin();
+    let x2 = displacement.length * displacement.angle.grade_angle().cos();
+    let y2 = displacement.length * displacement.angle.grade_angle().sin();
     let expected_length = ((x1 + x2).powi(2) + (y1 + y2).powi(2)).sqrt();
     assert!(
         (new_position.length - expected_length).abs() < EPSILON,
@@ -307,7 +309,7 @@ fn it_encodes_velocity() {
 
     // angle matches after base_angle reset
     assert!(
-        (position_base.angle.mod_4_angle() - initial_position.angle.mod_4_angle()).abs() < EPSILON,
+        (position_base.angle.grade_angle() - initial_position.angle.grade_angle()).abs() < EPSILON,
         "integration recovers original angle"
     );
 
@@ -416,7 +418,7 @@ fn it_displaces_from_derived_velocity() {
     println!(
         "initial position: length={}, angle={}, blade={}",
         initial_position.length,
-        initial_position.angle.mod_4_angle(),
+        initial_position.angle.grade_angle(),
         initial_position.angle.blade()
     );
 
@@ -430,7 +432,7 @@ fn it_displaces_from_derived_velocity() {
     println!(
         "derived velocity: length={}, angle={}, blade={}",
         velocity.length,
-        velocity.angle.mod_4_angle(),
+        velocity.angle.grade_angle(),
         velocity.angle.blade()
     );
 
@@ -445,7 +447,7 @@ fn it_displaces_from_derived_velocity() {
     println!(
         "displacement: length={}, angle={}, blade={}",
         displacement.length,
-        displacement.angle.mod_4_angle(),
+        displacement.angle.grade_angle(),
         displacement.angle.blade()
     );
 
@@ -454,7 +456,7 @@ fn it_displaces_from_derived_velocity() {
     println!(
         "final position: length={}, angle={}, blade={}",
         final_position.length,
-        final_position.angle.mod_4_angle(),
+        final_position.angle.grade_angle(),
         final_position.angle.blade()
     );
 
@@ -463,9 +465,12 @@ fn it_displaces_from_derived_velocity() {
     // displacement: 20m at π/3 + π/2 = 5π/6 (150°)
 
     // convert to cartesian to verify physics
-    let (x0, y0) = initial_position.to_cartesian();
-    let (dx, dy) = displacement.to_cartesian();
-    let (xf, yf) = final_position.to_cartesian();
+    let x0 = initial_position.length * initial_position.angle.grade_angle().cos();
+    let y0 = initial_position.length * initial_position.angle.grade_angle().sin();
+    let dx = displacement.length * displacement.angle.grade_angle().cos();
+    let dy = displacement.length * displacement.angle.grade_angle().sin();
+    let xf = final_position.length * final_position.angle.grade_angle().cos();
+    let yf = final_position.length * final_position.angle.grade_angle().sin();
 
     println!("\ncartesian verification:");
     println!("  initial: ({:.3}, {:.3})", x0, y0);
@@ -505,7 +510,7 @@ fn it_displaces_from_derived_velocity() {
 
     // angle difference between original and perpendicular: 5π/6 - π/3 = π/2
     let angle_diff =
-        (perpendicular_position.angle.mod_4_angle() - initial_position.angle.mod_4_angle()).abs();
+        (perpendicular_position.angle.grade_angle() - initial_position.angle.grade_angle()).abs();
     assert!(
         (angle_diff - PI / 2.0).abs() < EPSILON,
         "positions are perpendicular"
@@ -513,7 +518,7 @@ fn it_displaces_from_derived_velocity() {
 
     // their derived velocities should also be perpendicular
     let velocity_angle_diff =
-        (perpendicular_velocity.angle.mod_4_angle() - velocity.angle.mod_4_angle()).abs();
+        (perpendicular_velocity.angle.grade_angle() - velocity.angle.grade_angle()).abs();
     let normalized_diff = if velocity_angle_diff > PI {
         2.0 * PI - velocity_angle_diff
     } else {
@@ -543,7 +548,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "initial position: length={}, angle={}, blade={}",
         initial_position.length,
-        initial_position.angle.mod_4_angle(),
+        initial_position.angle.grade_angle(),
         initial_position.angle.blade()
     );
 
@@ -553,7 +558,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "initial velocity: length={}, angle={}, blade={}",
         initial_velocity.length,
-        initial_velocity.angle.mod_4_angle(),
+        initial_velocity.angle.grade_angle(),
         initial_velocity.angle.blade()
     );
 
@@ -567,7 +572,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "acceleration: length={}, angle={}, blade={}",
         acceleration.length,
-        acceleration.angle.mod_4_angle(),
+        acceleration.angle.grade_angle(),
         acceleration.angle.blade()
     );
 
@@ -584,7 +589,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "\nlinear displacement (v₀t): length={}, angle={}",
         linear_displacement.length,
-        linear_displacement.angle.mod_4_angle()
+        linear_displacement.angle.grade_angle()
     );
 
     // second term: ½at² (quadratic displacement from acceleration)
@@ -601,7 +606,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "quadratic displacement (½at²): length={}, angle={}",
         quadratic_displacement.length,
-        quadratic_displacement.angle.mod_4_angle()
+        quadratic_displacement.angle.grade_angle()
     );
 
     // total displacement: combine linear and quadratic terms
@@ -609,7 +614,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "total displacement: length={}, angle={}, blade={}",
         total_displacement.length,
-        total_displacement.angle.mod_4_angle(),
+        total_displacement.angle.grade_angle(),
         total_displacement.angle.blade()
     );
 
@@ -618,15 +623,19 @@ fn it_squares_displacement_from_derived_acceleration() {
     println!(
         "final position: length={}, angle={}, blade={}",
         final_position.length,
-        final_position.angle.mod_4_angle(),
+        final_position.angle.grade_angle(),
         final_position.angle.blade()
     );
 
     // verify physics in cartesian coordinates
-    let (x0, y0) = initial_position.to_cartesian();
-    let (dx_linear, dy_linear) = linear_displacement.to_cartesian();
-    let (dx_quad, dy_quad) = quadratic_displacement.to_cartesian();
-    let (xf, yf) = final_position.to_cartesian();
+    let x0 = initial_position.length * initial_position.angle.grade_angle().cos();
+    let y0 = initial_position.length * initial_position.angle.grade_angle().sin();
+    let dx_linear = linear_displacement.length * linear_displacement.angle.grade_angle().cos();
+    let dy_linear = linear_displacement.length * linear_displacement.angle.grade_angle().sin();
+    let dx_quad = quadratic_displacement.length * quadratic_displacement.angle.grade_angle().cos();
+    let dy_quad = quadratic_displacement.length * quadratic_displacement.angle.grade_angle().sin();
+    let xf = final_position.length * final_position.angle.grade_angle().cos();
+    let yf = final_position.length * final_position.angle.grade_angle().sin();
 
     println!("\ncartesian verification:");
     println!("  initial: ({:.3}, {:.3})", x0, y0);
@@ -836,7 +845,7 @@ fn it_encodes_angular_momentum() {
     assert_eq!(angular_momentum.angle.grade(), 2, "L at grade 2 (bivector)");
 
     // magnitude encodes |r||p|sin(θ)
-    let angle_diff = (momentum.angle - position.angle).mod_4_angle();
+    let angle_diff = (momentum.angle - position.angle).grade_angle();
     let expected_magnitude = position.length * momentum.length * angle_diff.sin().abs();
     assert!(
         (angular_momentum.length - expected_magnitude).abs() < EPSILON,
@@ -862,7 +871,7 @@ fn it_encodes_angular_momentum() {
     );
 
     // torque magnitude |r||F||sin(θ)|
-    let torque_angle_diff = (force.angle - position.angle).mod_4_angle();
+    let torque_angle_diff = (force.angle - position.angle).grade_angle();
     let expected_torque = position.length * force.length * torque_angle_diff.sin().abs();
     assert!(
         (torque.length - expected_torque).abs() < EPSILON,
@@ -1121,8 +1130,8 @@ fn it_encodes_potential_energy() {
     );
 
     // compute angle difference for expected value
-    let pos_angle = high_position.angle.mod_4_angle();
-    let field_angle = high_field.angle.mod_4_angle();
+    let pos_angle = high_position.angle.grade_angle();
+    let field_angle = high_field.angle.grade_angle();
     let angle_diff = (field_angle - pos_angle).abs();
     let cos_angle = angle_diff.cos();
 
@@ -1311,7 +1320,7 @@ fn it_encodes_torque() {
     // blade 1 force is at π/3 + π/2 = 5π/6
     // angle difference: 5π/6 - π/6 = 2π/3
     let angle_diff = force.angle - position.angle;
-    let expected_torque = 2.0 * 10.0 * angle_diff.mod_4_angle().sin().abs();
+    let expected_torque = 2.0 * 10.0 * angle_diff.grade_angle().sin().abs();
     assert!(
         (torque.length - expected_torque).abs() < EPSILON,
         "τ = r×F×sin(2π/3) ≈ 17.3 N·m"
@@ -1326,7 +1335,7 @@ fn it_encodes_torque() {
     let max_torque = position.wedge(&perpendicular_force);
 
     let max_angle_diff = perpendicular_force.angle - position.angle;
-    let expected_max = 2.0 * perpendicular_force.length * max_angle_diff.mod_4_angle().sin().abs();
+    let expected_max = 2.0 * perpendicular_force.length * max_angle_diff.grade_angle().sin().abs();
     assert!(
         (max_torque.length - expected_max).abs() < EPSILON,
         "perpendicular τ = {:.1} N·m",
@@ -1365,7 +1374,7 @@ fn it_encodes_torque() {
 
     // compute expected magnitude
     let high_angle_diff = high_force.angle - high_position.angle;
-    let expected_high = 3.0 * 8.0 * high_angle_diff.mod_4_angle().sin().abs();
+    let expected_high = 3.0 * 8.0 * high_angle_diff.grade_angle().sin().abs();
 
     assert!(
         (high_torque.length - expected_high).abs() < EPSILON,
@@ -1449,7 +1458,7 @@ fn it_encodes_angular_velocity() {
 
     // compute expected magnitude
     let angle_diff = high_radius.angle - high_omega.angle;
-    let expected_speed = 1.5 * 4.0 * angle_diff.mod_4_angle().sin().abs();
+    let expected_speed = 1.5 * 4.0 * angle_diff.grade_angle().sin().abs();
 
     assert!(
         (high_linear.length - expected_speed).abs() < EPSILON,
@@ -1869,7 +1878,7 @@ fn it_handles_energy_conservation() {
     let max_angle = Angle::new(1.0, 3.0); // π/3 radians (60°)
 
     // at maximum displacement: all PE, no KE
-    let max_height = pendulum_length * (1.0 - max_angle.mod_4_angle().cos()); // h = L(1 - cos θ)
+    let max_height = pendulum_length * (1.0 - max_angle.grade_angle().cos()); // h = L(1 - cos θ)
     let pe_max = mass * g * max_height;
 
     // at bottom: all KE, no PE (taking bottom as h=0)

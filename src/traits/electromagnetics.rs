@@ -71,7 +71,7 @@ impl Electromagnetics for Geonum {
     ) -> Self {
         let magnitude = constant.length * charge.length / distance.length.powf(power.length);
         // angle calculation for negative charges
-        let direction = if charge.angle.mod_4_angle().cos() >= 0.0 {
+        let direction = if charge.angle.grade_angle().cos() >= 0.0 {
             angle
         } else {
             angle + Angle::new(1.0, 1.0) // add π

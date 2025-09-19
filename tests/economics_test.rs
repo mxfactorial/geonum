@@ -34,11 +34,11 @@ fn it_models_business_cycles() {
         // similar to principal component analysis but with geometric meaning
         let weighted_x = indicators
             .iter()
-            .map(|i| i.length * i.angle.mod_4_angle().cos()) // x-component (horizontal axis)
+            .map(|i| i.length * i.angle.grade_angle().cos()) // x-component (horizontal axis)
             .sum::<f64>();
         let weighted_y = indicators
             .iter()
-            .map(|i| i.length * i.angle.mod_4_angle().sin()) // y-component (vertical axis)
+            .map(|i| i.length * i.angle.grade_angle().sin()) // y-component (vertical axis)
             .sum::<f64>();
 
         // compute aggregate cycle phase (direction in economic state space)
@@ -49,7 +49,7 @@ fn it_models_business_cycles() {
         // in a complete implementation, this returns as additional information
         let _cycle_momentum = indicators
             .iter()
-            .map(|i| i.length * i.angle.mod_4_angle().sin())
+            .map(|i| i.length * i.angle.grade_angle().sin())
             .sum::<f64>();
 
         // return the economic state as a geometric number:
@@ -80,7 +80,7 @@ fn it_models_business_cycles() {
 
     // interpret the cycle phase in economic terms
     // map the geometric angle to economic cycle phases
-    let cycle_phase = match cycle_state.angle.mod_4_angle() {
+    let cycle_phase = match cycle_state.angle.grade_angle() {
         a if (0.0..PI / 2.0).contains(&a) => "expansion", // first quadrant: growth phase
         a if (PI / 2.0..PI).contains(&a) => "peak",       // second quadrant: mature expansion
         a if (PI..3.0 * PI / 2.0).contains(&a) => "contraction", // third quadrant: declining activity
@@ -91,7 +91,7 @@ fn it_models_business_cycles() {
     // shows how quickly the economy moves through the cycle
     let cycle_velocity = indicators
         .iter()
-        .map(|i| i.length * i.angle.mod_4_angle().sin())
+        .map(|i| i.length * i.angle.grade_angle().sin())
         .sum::<f64>();
 
     // test the cycle detection produces meaningful results
@@ -119,7 +119,7 @@ fn it_models_business_cycles() {
     println!("───── business cycle analysis ─────");
     println!(
         "cycle position: {:.2} radians",
-        cycle_state.angle.mod_4_angle()
+        cycle_state.angle.grade_angle()
     );
     println!("current economic phase: {cycle_phase}");
     println!(
@@ -222,7 +222,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
             // length = magnitude of spending change
             // angle = combined position in economic space
             let combined_angle =
-                (income_angle + region_angle + category_angle + policy.angle.mod_4_angle())
+                (income_angle + region_angle + category_angle + policy.angle.grade_angle())
                     % (2.0 * PI);
             Geonum::new(1.0 + policy_impact, combined_angle, PI)
         };
@@ -412,7 +412,7 @@ fn it_detects_early_recession_indicators() {
             // payment timing signal - weighted by transaction volume
             let payment_timing_signal = transactions
                 .iter()
-                .map(|(vol, timing, _, _)| vol.length * timing.angle.mod_4_angle().sin())
+                .map(|(vol, timing, _, _)| vol.length * timing.angle.grade_angle().sin())
                 .sum::<f64>()
                 / total_volume;
 
@@ -420,7 +420,7 @@ fn it_detects_early_recession_indicators() {
             let size_signal = transactions
                 .iter()
                 .map(|(vol, _, size, _)| {
-                    vol.length * (size.angle.mod_4_angle() - PI / 2.0).sin().abs()
+                    vol.length * (size.angle.grade_angle() - PI / 2.0).sin().abs()
                 })
                 .sum::<f64>()
                 / total_volume;
@@ -429,7 +429,7 @@ fn it_detects_early_recession_indicators() {
             let geographic_signal = transactions
                 .iter()
                 .map(|(vol, _, _, geo)| {
-                    vol.length * (geo.angle.mod_4_angle() - PI / 2.0).sin().abs()
+                    vol.length * (geo.angle.grade_angle() - PI / 2.0).sin().abs()
                 })
                 .sum::<f64>()
                 / total_volume;
@@ -970,12 +970,12 @@ fn it_models_global_trade_flows() {
         // compute weighted flow direction
         let weighted_x = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.mod_4_angle().cos())
+            .map(|f| f.length * f.angle.grade_angle().cos())
             .sum::<f64>();
 
         let weighted_y = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.mod_4_angle().sin())
+            .map(|f| f.length * f.angle.grade_angle().sin())
             .sum::<f64>();
 
         // compute total trade volume
@@ -997,7 +997,7 @@ fn it_models_global_trade_flows() {
 
     // detect trade imbalances through angle analysis
     // in perfect measurement, this should be zero due to conservation laws
-    let imbalance_magnitude = global_trade.angle.mod_4_angle().sin() * global_trade.length;
+    let imbalance_magnitude = global_trade.angle.grade_angle().sin() * global_trade.length;
     let balanced_trade_threshold = 0.05 * global_trade.length; // 5% measurement error threshold
 
     // prove model produces meaningful results
@@ -1053,8 +1053,8 @@ fn it_measures_economic_sectoral_balance() {
 
         // single iteration over sectors
         for sector in sectors {
-            flow_x += sector.length * sector.angle.mod_4_angle().cos();
-            flow_y += sector.length * sector.angle.mod_4_angle().sin();
+            flow_x += sector.length * sector.angle.grade_angle().cos();
+            flow_y += sector.length * sector.angle.grade_angle().sin();
             total_magnitude += sector.length;
         }
 
@@ -1078,8 +1078,8 @@ fn it_measures_economic_sectoral_balance() {
     let duration = start.elapsed();
 
     // compute domestic sector balance (households + businesses)
-    let weighted_angle = (household_sector.angle.mod_4_angle() * household_sector.length
-        + business_sector.angle.mod_4_angle() * business_sector.length)
+    let weighted_angle = (household_sector.angle.grade_angle() * household_sector.length
+        + business_sector.angle.grade_angle() * business_sector.length)
         / (household_sector.length + business_sector.length);
     let domestic_private_balance = Geonum::new(
         household_sector.length + business_sector.length,
@@ -1098,13 +1098,13 @@ fn it_measures_economic_sectoral_balance() {
 
     // sectoral balance identity: domestic private + public + foreign = 0
     // in angles, this means they should sum to approximate zero when weighted by magnitude
-    let _total_weighted_angle = domestic_private_balance.angle.mod_4_angle()
+    let _total_weighted_angle = domestic_private_balance.angle.grade_angle()
         * domestic_private_balance.length
-        + public_balance.angle.mod_4_angle() * public_balance.length
-        + foreign_balance.angle.mod_4_angle() * foreign_balance.length;
+        + public_balance.angle.grade_angle() * public_balance.length
+        + foreign_balance.angle.grade_angle() * foreign_balance.length;
 
     // detect economic imbalances through angle analysis
-    let imbalance_detected = economic_balance.angle.mod_4_angle().abs() > 0.1;
+    let imbalance_detected = economic_balance.angle.grade_angle().abs() > 0.1;
 
     println!(
         "Economic balance analysis: {:.2} nanoseconds",
@@ -1113,7 +1113,7 @@ fn it_measures_economic_sectoral_balance() {
     println!("Detected imbalance: {imbalance_detected}");
     println!(
         "Economy net angle: {:.4}",
-        economic_balance.angle.mod_4_angle()
+        economic_balance.angle.grade_angle()
     );
 
     // demonstrate how this analysis would detect economic crises early through

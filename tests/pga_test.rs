@@ -493,8 +493,10 @@ fn it_handles_line_representations() {
     // parametric points on the line: p(t) = (1-t)p1 + t*p2
     let parametric_point = |t: f64| -> Geonum {
         // linear interpolation in cartesian
-        let (x1, y1) = p1.to_cartesian();
-        let (x2, y2) = p2.to_cartesian();
+        let x1 = p1.adj().length;
+        let y1 = p1.opp().length;
+        let x2 = p2.adj().length;
+        let y2 = p2.opp().length;
 
         let x = (1.0 - t) * x1 + t * x2;
         let y = (1.0 - t) * y1 + t * y2;
@@ -566,15 +568,16 @@ fn it_handles_incidence_relationships() {
 
     // helper to check if point is on line through p1 and p2
     let is_on_line = |point: &Geonum, line_p1: &Geonum, line_p2: &Geonum| -> bool {
-        let (x, y) = point.to_cartesian();
-        let (x1, y1) = line_p1.to_cartesian();
-        let (x2, y2) = line_p2.to_cartesian();
+        // geonum cross product: (a × b) = a.adj * b.opp - a.opp * b.adj
+        let geonum_cross =
+            |a: &Geonum, b: &Geonum| -> Geonum { a.adj() * b.opp() - a.opp() * b.adj() };
 
-        // cross product for collinearity test
-        // (p - p1) × (p2 - p1) = 0 for collinear points
-        let cross = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+        // collinearity test: (p - p1) × (p2 - p1) = 0 for collinear points
+        let vec1 = *point - *line_p1;
+        let vec2 = *line_p2 - *line_p1;
+        let cross_result = geonum_cross(&vec1, &vec2);
 
-        cross.abs() < EPSILON
+        cross_result.length < EPSILON
     };
 
     // test points that should be on the line
@@ -628,8 +631,8 @@ fn it_handles_incidence_relationships() {
     // incidence with "point at infinity"
     // line has direction, point at infinity is opposite direction
     let line_direction = Angle::new_from_cartesian(
-        p2.to_cartesian().0 - p1.to_cartesian().0,
-        p2.to_cartesian().1 - p1.to_cartesian().1,
+        p2.adj().length - p1.adj().length,
+        p2.opp().length - p1.opp().length,
     );
 
     let point_at_infinity = Geonum::new_with_angle(
@@ -977,7 +980,7 @@ fn it_eliminates_matrix_complexity() {
 
     // prove translation vector has expected properties
     assert_eq!(translation.length, 5.0); // sqrt(3² + 4²) = 5
-    assert!((translation.angle.mod_4_angle().tan() - 4.0 / 3.0).abs() < EPSILON); // arctan(4/3)
+    assert!((translation.angle.grade_angle().tan() - 4.0 / 3.0).abs() < EPSILON); // arctan(4/3)
     let rotation = Geonum::new(1.0, 1.0, 4.0); // rotate by π/4
     let scale = Geonum::new(2.0, 0.0, 1.0); // scale by 2
 
@@ -995,13 +998,15 @@ fn it_eliminates_matrix_complexity() {
     // rotating (1,0) by π/4 gives (√2/2, √2/2)
     // scaling by 2 gives (√2, √2)
     let sqrt2 = 2.0_f64.sqrt();
-    let (x, y) = transformed.to_cartesian();
+    let x = transformed.length * transformed.angle.grade_angle().cos();
+    let y = transformed.length * transformed.angle.grade_angle().sin();
     assert!((x - sqrt2).abs() < EPSILON);
     assert!((y - sqrt2).abs() < EPSILON);
 
     // translation is additive in cartesian
     let translated = Geonum::new_from_cartesian(x + 3.0, y + 4.0);
-    let (final_x, final_y) = translated.to_cartesian();
+    let final_x = translated.length * translated.angle.grade_angle().cos();
+    let final_y = translated.length * translated.angle.grade_angle().sin();
     assert!((final_x - (sqrt2 + 3.0)).abs() < EPSILON);
     assert!((final_y - (sqrt2 + 4.0)).abs() < EPSILON);
 
@@ -1049,13 +1054,15 @@ fn it_eliminates_matrix_complexity() {
     // geonum: shear is angle-dependent length scaling
     let shear_factor = 0.5;
     let point_2d = Geonum::new_from_cartesian(2.0, 3.0);
-    let (px, py) = point_2d.to_cartesian();
+    let px = point_2d.adj().length;
+    let py = point_2d.opp().length;
 
     // apply shear in x-direction
     let sheared_x = px + shear_factor * py;
     let sheared = Geonum::new_from_cartesian(sheared_x, py);
 
-    let (sx, sy) = sheared.to_cartesian();
+    let sx = sheared.adj().length;
+    let sy = sheared.opp().length;
     assert!((sx - 3.5).abs() < EPSILON); // 2 + 0.5*3 = 3.5
     assert!((sy - 3.0).abs() < EPSILON); // y unchanged
 
@@ -1176,7 +1183,8 @@ fn it_computes_line_through_two_points() {
     let direction = p2 - p1;
 
     // prove direction vector
-    let (dx, dy) = direction.to_cartesian();
+    let dx = direction.length * direction.angle.grade_angle().cos();
+    let dy = direction.length * direction.angle.grade_angle().sin();
     assert!((dx - 3.0).abs() < EPSILON); // 4 - 1 = 3
     assert!((dy - 3.0).abs() < EPSILON); // 5 - 2 = 3
 
@@ -1184,14 +1192,15 @@ fn it_computes_line_through_two_points() {
     let line_angle = direction.angle;
 
     // prove line angle is π/4 (45 degrees) for this case
-    assert!((line_angle.mod_4_angle().tan() - 1.0).abs() < EPSILON); // tan(π/4) = 1
+    assert!((line_angle.grade_angle().tan() - 1.0).abs() < EPSILON); // tan(π/4) = 1
 
     // any point on the line can be expressed as p1 + t*direction
     let t_values = vec![0.0, 0.5, 1.0, 2.0, -0.5];
 
     for t in t_values {
         // compute point on line
-        let (p1x, p1y) = p1.to_cartesian();
+        let p1x = p1.adj().length;
+        let p1y = p1.opp().length;
         let point_on_line = Geonum::new_from_cartesian(p1x + t * dx, p1y + t * dy);
 
         // prove all points have consistent angular relationship
@@ -1219,7 +1228,8 @@ fn it_computes_line_through_two_points() {
     let v2 = Geonum::new_from_cartesian(2.0, 4.0);
 
     let vertical_direction = v2 - v1;
-    let (vdx, vdy) = vertical_direction.to_cartesian();
+    let vdx = vertical_direction.length * vertical_direction.angle.grade_angle().cos();
+    let vdy = vertical_direction.length * vertical_direction.angle.grade_angle().sin();
 
     assert!(vdx.abs() < EPSILON); // no x change
     assert!((vdy - 3.0).abs() < EPSILON); // y changes by 3
@@ -1236,7 +1246,8 @@ fn it_computes_line_through_two_points() {
     let h2 = Geonum::new_from_cartesian(5.0, 3.0);
 
     let horizontal_direction = h2 - h1;
-    let (hdx, hdy) = horizontal_direction.to_cartesian();
+    let hdx = horizontal_direction.length * horizontal_direction.angle.grade_angle().cos();
+    let hdy = horizontal_direction.length * horizontal_direction.angle.grade_angle().sin();
 
     assert!((hdx - 4.0).abs() < EPSILON); // x changes by 4
     assert!(hdy.abs() < EPSILON); // no y change
@@ -1283,8 +1294,8 @@ fn it_computes_line_through_two_points() {
     // project onto line direction to find closest point
     let projection_length = to_external.dot(&direction).length / direction.length;
     let closest = Geonum::new_from_cartesian(
-        p1.to_cartesian().0 + projection_length * direction.angle.mod_4_angle().cos(),
-        p1.to_cartesian().1 + projection_length * direction.angle.mod_4_angle().sin(),
+        p1.adj().length + projection_length * direction.angle.grade_angle().cos(),
+        p1.opp().length + projection_length * direction.angle.grade_angle().sin(),
     );
 
     // compute distance
@@ -1653,25 +1664,25 @@ fn it_computes_harmonic_division() {
     println!(
         "  A: length={}, angle={:.4}, blade={}",
         a.length,
-        a.angle.mod_4_angle(),
+        a.angle.grade_angle(),
         a.angle.blade()
     );
     println!(
         "  B: length={}, angle={:.4}, blade={}",
         b.length,
-        b.angle.mod_4_angle(),
+        b.angle.grade_angle(),
         b.angle.blade()
     );
     println!(
         "  C: length={}, angle={:.4}, blade={}",
         c.length,
-        c.angle.mod_4_angle(),
+        c.angle.grade_angle(),
         c.angle.blade()
     );
     println!(
         "  D: length={}, angle={:.4}, blade={}",
         d.length,
-        d.angle.mod_4_angle(),
+        d.angle.grade_angle(),
         d.angle.blade()
     );
 
@@ -1697,15 +1708,15 @@ fn it_computes_harmonic_division() {
     // the angle progression creates harmonic division
     let angle_step = PI / 4.0;
     assert!(
-        (b.angle.mod_4_angle() - angle_step).abs() < EPSILON,
+        (b.angle.grade_angle() - angle_step).abs() < EPSILON,
         "B at π/4"
     );
     assert!(
-        (c.angle.mod_4_angle() - 2.0 * angle_step).abs() < EPSILON,
+        (c.angle.grade_angle() - 2.0 * angle_step).abs() < EPSILON,
         "C at π/2"
     );
     assert!(
-        (d.angle.mod_4_angle() - 4.0 * angle_step).abs() < EPSILON,
+        (d.angle.grade_angle() - 4.0 * angle_step).abs() < EPSILON,
         "D at π"
     );
 
@@ -1737,16 +1748,16 @@ fn it_projects_between_planes() {
     println!(
         "  source point: length={:.2}, angle={:.4}",
         point.length,
-        point.angle.mod_4_angle()
+        point.angle.grade_angle()
     );
     println!(
         "  plane rotation: {:.4} radians",
-        plane_rotation.mod_4_angle()
+        plane_rotation.grade_angle()
     );
     println!(
         "  projected point: length={:.2}, angle={:.4}",
         projected.length,
-        projected.angle.mod_4_angle()
+        projected.angle.grade_angle()
     );
 
     // verify angle transformation
@@ -1773,7 +1784,7 @@ fn it_projects_between_planes() {
     println!("  scaled length: {:.2}", perspective_projected.length);
     println!(
         "  angle preserved: {:.4}",
-        perspective_projected.angle.mod_4_angle()
+        perspective_projected.angle.grade_angle()
     );
 
     // the meet of the planes gives their intersection

@@ -57,9 +57,9 @@ fn it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle
         "  {} + {} = {}",
         theta1,
         theta2,
-        product.angle.mod_4_angle()
+        product.angle.grade_angle()
     );
-    assert!((product.angle.mod_4_angle() - expected_sum).abs() < EPSILON);
+    assert!((product.angle.grade_angle() - expected_sum).abs() < EPSILON);
     assert_eq!(product.angle, g1.angle + g2.angle);
 
     // THE UNADDED ANGLES
@@ -225,7 +225,7 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
         "  Geonum: {} + {} = {}",
         angle,
         rotation_angle,
-        rotated_geometric.angle.mod_4_angle()
+        rotated_geometric.angle.grade_angle()
     );
 
     // decomposition: must update both coefficients using rotation formulas
@@ -271,9 +271,9 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
         "  Geonum gives: {} + {} = {}",
         v1_angle,
         v2_angle,
-        product.angle.mod_4_angle()
+        product.angle.grade_angle()
     );
-    assert!((product.angle.mod_4_angle() - (v1_angle + v2_angle)).abs() < EPSILON);
+    assert!((product.angle.grade_angle() - (v1_angle + v2_angle)).abs() < EPSILON);
 
     // SIDE EFFECT 5: Constraints between coefficients
     // for unit vectors: c₁² + c₂² = 1 must be maintained
@@ -376,12 +376,12 @@ fn it_proves_linear_combination_forces_angle_through_coefficient_algebra() {
         "  Add: {} + {} = {}",
         angle1,
         angle2,
-        (g1 * g2).angle.mod_4_angle()
+        (g1 * g2).angle.grade_angle()
     );
     println!(
         "  Double: {} * 2 = {}",
         angle1,
-        (g1 * g1).angle.mod_4_angle()
+        (g1 * g1).angle.grade_angle()
     );
     println!("  No coefficient algebra needed!");
 }
@@ -499,18 +499,18 @@ fn it_proves_angle_becomes_implicit_ratio_between_components() {
     // geonum: angle is first-class, not a ratio ghost
     let g = Geonum::new(r, theta, PI);
     println!("\ngeonum keeps angle explicit:");
-    println!("  angle = {} (directly stored)", g.angle.mod_4_angle());
+    println!("  angle = {} (directly stored)", g.angle.grade_angle());
     println!("  not computed from ratios");
     println!("  not scattered across components");
     println!("  not dependent on basis choice");
 
     // rotation is just angle addition: O(1) always
     let g_rotated = g.rotate(Angle::new(rotation, PI));
-    assert!((g_rotated.angle.mod_4_angle() - (theta + rotation)).abs() < EPSILON);
+    assert!((g_rotated.angle.grade_angle() - (theta + rotation)).abs() < EPSILON);
     println!(
         "  rotation: {} + {} = {} (direct addition)",
         theta,
         rotation,
-        g_rotated.angle.mod_4_angle()
+        g_rotated.angle.grade_angle()
     );
 }

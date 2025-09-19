@@ -87,7 +87,7 @@ impl MachineLearning for Geonum {
     fn activate(&self, activation: Activation) -> Self {
         match activation {
             Activation::ReLU => Geonum {
-                length: if self.angle.mod_4_angle().cos() > 0.0 {
+                length: if self.angle.grade_angle().cos() > 0.0 {
                     self.length
                 } else {
                     0.0
@@ -95,11 +95,11 @@ impl MachineLearning for Geonum {
                 angle: self.angle,
             },
             Activation::Sigmoid => Geonum {
-                length: self.length / (1.0 + (-self.angle.mod_4_angle().cos()).exp()),
+                length: self.length / (1.0 + (-self.angle.grade_angle().cos()).exp()),
                 angle: self.angle,
             },
             Activation::Tanh => Geonum {
-                length: self.length * self.angle.mod_4_angle().cos().tanh(),
+                length: self.length * self.angle.grade_angle().cos().tanh(),
                 angle: self.angle,
             },
             Activation::Identity => *self,

@@ -58,12 +58,30 @@ struct Geonum {
     }
 }
 ```
-
-* dimensions = blade, how many dimensions the angle spans
 * project(onto: Angle) -> angle_diff.cos() into any dimension without defining it first
 * dual() = blade + 2, duality operation adds π rotation and involutively maps grades (0 ↔ 2, 1 ↔ 3)
 * grade() = blade % 4, geometric grade
+* differentiate() = angle + π/2, polynomial coefficients computed from sin(θ+π/2) = cos(θ) quadrature identity
 * replaces "pseudoscalar" with blade arithmetic
+
+### how dimensions work
+
+dimensions = blade, how many dimensions the angle spans
+
+traditional: dimensions are coordinate axes - you stack more coordinates
+
+Geonum: dimensions are rotational states - you rotate by π/2 increments
+
+| dimension | traditional | Geonum |
+|-----------|-------------|--------|
+| 1D | (x)  | `[length, 0]` |
+| 2D | (x, y)  | `[length, π/2]` |
+| 3D | (x, y, z) | `[length, π]` |
+| 4D | (x, y, z, w) | `[length, 3π/2]` |
+
+geometric numbers break numbers free from pencil & paper math requiring everything to be described as scalars and roman numeral stacked arrays of scalars
+
+a bladed angle lets them travel and transform freely without ever needing to know which dimension theyre in or facing
 
 ### use
 
@@ -209,7 +227,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 - `.to_cartesian()` converts to (x, y) coordinates
 - angle predicates: `.is_scalar()`, `.is_vector()`, `.is_bivector()`, `.is_trivector()`
 - angle functions: `.sin()`, `.cos()`, `.tan()`, `.is_opposite()`
-- `.mod_4_angle()` returns angle within current π/2 segment
+- `.grade_angle()` returns grade-based angle representation in [0, 2π) for external interfaces
 
 ### tests
 ```

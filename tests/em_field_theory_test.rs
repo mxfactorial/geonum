@@ -110,7 +110,7 @@ fn its_a_maxwell_equation() {
     let db_dt = Geonum::new_with_blade(
         2.0,
         2, // bivector (grade 2) - time derivative of a bivector field remains bivector
-        b_field.angle.mod_4_angle(),
+        b_field.angle.grade_angle(),
         PI,
     ); // preserves the geometric algebra grade of the original field
 
@@ -163,7 +163,7 @@ fn its_a_maxwell_equation() {
     assert!(adjusted_curl_b.length_diff(&mu_epsilon_de_dt) < 0.1);
     assert!(
         (adjusted_curl_b.angle - mu_epsilon_de_dt.angle)
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             < EPSILON
     );
@@ -328,8 +328,8 @@ fn its_an_electromagnetic_wave() {
     let b_time2 = b_field.propagate(time2, position, speed_of_light);
 
     // relative phase between E and B should remain constant (90 degrees)
-    let eb_phase_diff1 = (e_time1.angle - b_time1.angle).mod_4_angle();
-    let eb_phase_diff2 = (e_time2.angle - b_time2.angle).mod_4_angle();
+    let eb_phase_diff1 = (e_time1.angle - b_time1.angle).grade_angle();
+    let eb_phase_diff2 = (e_time2.angle - b_time2.angle).grade_angle();
     assert!(
         (eb_phase_diff1 - eb_phase_diff2).abs() < EPSILON,
         "E-B phase difference should remain constant"
@@ -545,7 +545,7 @@ fn its_a_poynting_vector() {
     // each grade level represents π/2 rotation, so 3 levels = 3π/2
     // they're different grades separated by 3 levels of π/2 rotations
     // 3π/2 is still perpendicular - it just doesn't ignore the blade accumulation
-    let angle_diff_es = (s_poynting.angle - e_field.angle).mod_4_angle();
+    let angle_diff_es = (s_poynting.angle - e_field.angle).grade_angle();
     let expected_es_diff = 3.0 * PI / 2.0; // 270 degrees
 
     assert!(
@@ -570,11 +570,11 @@ fn its_a_poynting_vector() {
     // traditional calculation would use cross product and vector algebra
     let traditional_poynting = |e: &Geonum, b: &Geonum| -> Geonum {
         // convert to cartesian for cross product
-        let e_x = e.length * e.angle.mod_4_angle().cos();
-        let e_y = e.length * e.angle.mod_4_angle().sin();
+        let e_x = e.length * e.angle.grade_angle().cos();
+        let e_y = e.length * e.angle.grade_angle().sin();
 
-        let b_x = b.length * b.angle.mod_4_angle().cos();
-        let b_y = b.length * b.angle.mod_4_angle().sin();
+        let b_x = b.length * b.angle.grade_angle().cos();
+        let b_y = b.length * b.angle.grade_angle().sin();
 
         // cross product in 3D (assuming E, B in xy-plane, S points in z)
         let s_z = (e_x * b_y - e_y * b_x) / VACUUM_PERMEABILITY;
@@ -644,7 +644,7 @@ fn its_a_poynting_vector() {
     let s_incident = Geonum::new_with_blade(
         incident_wedge.length / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
-        incident_wedge.angle.mod_4_angle(),
+        incident_wedge.angle.grade_angle(),
         PI,
     ); // represents energy flow as oriented volume element
 
@@ -652,7 +652,7 @@ fn its_a_poynting_vector() {
     let s_reflected = Geonum::new_with_blade(
         reflected_wedge.length / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
-        reflected_wedge.angle.mod_4_angle(),
+        reflected_wedge.angle.grade_angle(),
         PI,
     ); // represents energy flow as oriented volume element for reflected wave
 
@@ -675,7 +675,7 @@ fn its_a_poynting_vector() {
     let s_transmitted = Geonum::new_with_blade(
         transmitted_wedge.length / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
-        transmitted_wedge.angle.mod_4_angle(),
+        transmitted_wedge.angle.grade_angle(),
         PI,
     ); // represents energy flow as oriented volume element for transmitted wave
 
@@ -689,7 +689,7 @@ fn its_a_poynting_vector() {
     // test direction of energy flow (reflected is opposite to incident)
     // For S-vectors, the PI rotation might be represented differently
     // so we check that the angle difference is close to PI in either direction
-    let angle_diff = (s_reflected.angle - s_incident.angle).mod_4_angle();
+    let angle_diff = (s_reflected.angle - s_incident.angle).grade_angle();
     assert!(
         (angle_diff - PI).abs() < EPSILON || (angle_diff - 0.0).abs() < EPSILON,
         "Reflected flow should be opposite to incident"
@@ -885,7 +885,7 @@ fn its_a_field_potential() {
     let curl_a = Geonum::new_with_blade(
         a_potential_r.length / test_radius_b, // radial derivative component
         2, // bivector (grade 2) - curl of vector potential produces magnetic field bivector
-        a_potential_r.differentiate().angle.mod_4_angle(),
+        a_potential_r.differentiate().angle.grade_angle(),
         PI,
     ); // in geometric algebra, curl operation on vector raises grade by 1
 
@@ -917,11 +917,11 @@ fn its_a_field_potential() {
 
         // A' = A + ∇λ
         // convert both to cartesian, add, convert back to geometric
-        let a_x = a.length * a.angle.mod_4_angle().cos();
-        let a_y = a.length * a.angle.mod_4_angle().sin();
+        let a_x = a.length * a.angle.grade_angle().cos();
+        let a_y = a.length * a.angle.grade_angle().sin();
 
-        let grad_x = grad_lambda.length * grad_lambda.angle.mod_4_angle().cos();
-        let grad_y = grad_lambda.length * grad_lambda.angle.mod_4_angle().sin();
+        let grad_x = grad_lambda.length * grad_lambda.angle.grade_angle().cos();
+        let grad_y = grad_lambda.length * grad_lambda.angle.grade_angle().sin();
 
         let new_a_x = a_x + grad_x;
         let new_a_y = a_y + grad_y;
@@ -986,7 +986,7 @@ fn its_a_field_potential() {
         "original b field at r={}: length={}, angle={}",
         test_radius_b,
         b_original.length,
-        b_original.angle.mod_4_angle()
+        b_original.angle.grade_angle()
     );
     println!("gauge invariance proves b field remains unchanged when a -> a + ∇λ");
 
@@ -1067,12 +1067,12 @@ fn it_creates_electric_field() {
 
     // verify field direction
     assert_eq!(
-        positive_field.angle.mod_4_angle(),
+        positive_field.angle.grade_angle(),
         PI,
         "Positive charge field points outward"
     );
     assert_eq!(
-        negative_field.angle.mod_4_angle(),
+        negative_field.angle.grade_angle(),
         0.0,
         "Negative charge field points inward"
     );
@@ -1114,7 +1114,7 @@ fn it_computes_poynting_vector() {
 
     // verify direction (perpendicular to both E and B)
     assert!(
-        (poynting.angle.mod_4_angle() - PI).abs() < 1e-10,
+        (poynting.angle.grade_angle() - PI).abs() < 1e-10,
         "Poynting vector points perpendicular to both fields"
     );
 
@@ -1151,7 +1151,7 @@ fn it_models_wire_magnetic_field() {
 
     // direction around the wire
     assert_eq!(
-        b_field.angle.mod_4_angle(),
+        b_field.angle.grade_angle(),
         0.0,
         "Magnetic field circles the wire"
     );

@@ -617,7 +617,7 @@ fn it_constructs_geonum_from_cartesian() {
     assert_eq!(geo1.length, 5.0); // pythagorean magnitude
     assert_eq!(geo1.angle.blade(), 0); // angle < π/2, no boundary crossing
     let expected_angle = 4.0_f64.atan2(3.0); // atan2 calculation
-    assert!((geo1.angle.mod_4_angle() - expected_angle).abs() < EPSILON); // preserves atan2 result
+    assert!((geo1.angle.grade_angle() - expected_angle).abs() < EPSILON); // preserves atan2 result
                                                                           // blade arithmetic: cartesian → polar → blade decomposition
 
     // case 2: unit circle quadrants (exact blade boundaries)
@@ -1859,8 +1859,8 @@ fn it_implements_geonum_add_trait_blade_accumulation() {
     let backward = Geonum::new_with_blade(4.0, 50, 0.0, 1.0); // blade=50, angle=π (opposite direction)
 
     // prove they point in opposite directions
-    assert!((forward.angle.mod_4_angle() - 0.0).abs() < EPSILON); // forward at 0
-    assert!((backward.angle.mod_4_angle() - PI).abs() < EPSILON); // backward at π
+    assert!((forward.angle.grade_angle() - 0.0).abs() < EPSILON); // forward at 0
+    assert!((backward.angle.grade_angle() - PI).abs() < EPSILON); // backward at π
     assert_eq!(forward.length, backward.length); // same magnitude
 
     let oppose_sum = forward + backward;

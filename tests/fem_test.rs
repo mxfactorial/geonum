@@ -53,7 +53,7 @@ fn its_a_shape_function() {
     // validate derivative at a point
     let deriv_at_half = shape_derivative(0.5);
     assert_eq!(deriv_at_half.length, 1.0);
-    assert_eq!(deriv_at_half.angle.mod_4_angle(), PI);
+    assert_eq!(deriv_at_half.angle.grade_angle(), PI);
 
     // demonstrate ability to represent high-order shape functions
     // using a composition of simple angle operations
@@ -140,7 +140,7 @@ fn its_a_stiffness_matrix() {
 
     // test force equals k*x for spring (k=1)
     assert_eq!(force.length, 0.5);
-    assert_eq!(force.angle.mod_4_angle(), 0.0);
+    assert_eq!(force.angle.grade_angle(), 0.0);
 
     // demonstrate boundary condition application through angle constraints
     // with BCs, displacements are constrained in traditional FEM by modifying
@@ -177,7 +177,7 @@ fn its_a_stiffness_matrix() {
 
     // test the stress computation
     assert!((stress.length - 1.0).abs() < EPSILON);
-    assert!((stress.angle.mod_4_angle() - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
+    assert!((stress.angle.grade_angle() - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
 
     // demonstrate how a million-element assembly maintains O(1) complexity
     // with geonum's angle representation

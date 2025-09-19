@@ -46,7 +46,7 @@ fn it_computes_limits() {
 
     // prove v' = [1, pi/2]
     assert_eq!(v_prime.length, 1.0);
-    assert!((v_prime.angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+    assert!((v_prime.angle.grade_angle() - PI / 2.0).abs() < EPSILON);
 
     // prove nilpotency using wedge product
     let self_wedge = v0.wedge(&v0);
@@ -61,7 +61,7 @@ fn it_computes_limits() {
 
     // prove v'' = -v
     assert_eq!(v_double_prime.length, v0.length);
-    assert!((v_double_prime.angle.mod_4_angle() - PI).abs() < EPSILON);
+    assert!((v_double_prime.angle.grade_angle() - PI).abs() < EPSILON);
 
     // prove the 4-cycle property by computing v''' and v''''
     let v_triple_prime = Geonum::new_with_angle(
@@ -71,7 +71,7 @@ fn it_computes_limits() {
 
     // v''' = [1, 3pi/2] = -v'
     assert_eq!(v_triple_prime.length, v_prime.length);
-    assert!((v_triple_prime.angle.mod_4_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
+    assert!((v_triple_prime.angle.grade_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
 
     let v_quadruple_prime = Geonum::new_with_angle(
         v_triple_prime.length,
@@ -80,7 +80,7 @@ fn it_computes_limits() {
 
     // v'''' = [1, 0] = original v
     assert_eq!(v_quadruple_prime.length, v0.length);
-    let angle_rad = v_quadruple_prime.angle.mod_4_angle();
+    let angle_rad = v_quadruple_prime.angle.grade_angle();
     assert!(angle_rad < EPSILON || (TAU - angle_rad) < EPSILON);
 
     // extend the demonstration with fifth derivative
@@ -91,7 +91,7 @@ fn it_computes_limits() {
 
     // v''''' = [1, pi/2] = v'
     assert_eq!(v_quintuple_prime.length, v_prime.length);
-    assert!((v_quintuple_prime.angle.mod_4_angle() - v_prime.angle.mod_4_angle()).abs() < EPSILON);
+    assert!((v_quintuple_prime.angle.grade_angle() - v_prime.angle.grade_angle()).abs() < EPSILON);
 }
 
 #[test]
@@ -197,11 +197,11 @@ fn it_proves_differentiation_cycles_grades() {
     let angle_90 = angle_0 + Angle::new(1.0, 2.0); // add π/2
 
     assert!(
-        (angle_0.mod_4_angle().cos() - angle_90.mod_4_angle().sin()).abs() < EPSILON,
+        (angle_0.grade_angle().cos() - angle_90.grade_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ+π/2)"
     );
     assert!(
-        (angle_0.mod_4_angle().sin() + angle_90.mod_4_angle().cos()).abs() < EPSILON,
+        (angle_0.grade_angle().sin() + angle_90.grade_angle().cos()).abs() < EPSILON,
         "sin(θ) = -cos(θ+π/2)"
     );
 
@@ -420,7 +420,7 @@ fn it_derives() {
     let rotated_angle = base_angle + Angle::new(1.0, 2.0); // +π/2
 
     assert!(
-        (base_angle.mod_4_angle().cos() - rotated_angle.mod_4_angle().sin()).abs() < EPSILON,
+        (base_angle.grade_angle().cos() - rotated_angle.grade_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ + π/2) enables differentiation"
     );
 
@@ -515,7 +515,7 @@ fn it_proves_quadrature_generates_polynomial_coefficients() {
     let rotated_angle = base_angle + Angle::new(1.0, 2.0); // +π/2
 
     assert!(
-        (base_angle.mod_4_angle().cos() - rotated_angle.mod_4_angle().sin()).abs() < EPSILON,
+        (base_angle.grade_angle().cos() - rotated_angle.grade_angle().sin()).abs() < EPSILON,
         "cos(θ) = sin(θ+π/2) fundamental quadrature"
     );
 
@@ -567,11 +567,11 @@ fn it_proves_quadrature_generates_polynomial_coefficients() {
 
     // quadrature relationships between phases
     assert!(
-        (phase_0.mod_4_angle().cos() - phase_90.mod_4_angle().sin()).abs() < EPSILON,
+        (phase_0.grade_angle().cos() - phase_90.grade_angle().sin()).abs() < EPSILON,
         "grade 0→1 transition via quadrature"
     );
     assert!(
-        (phase_90.mod_4_angle().cos() + phase_180.mod_4_angle().sin()).abs() < EPSILON,
+        (phase_90.grade_angle().cos() + phase_180.grade_angle().sin()).abs() < EPSILON,
         "grade 1→2 transition via quadrature"
     );
 

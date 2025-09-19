@@ -386,9 +386,9 @@ fn it_performs_interest_rate_modeling() {
         // mean rate prediction with uncertainty encoded in angle
         // angle blends short rate and long-term rate directions proportional to time
         // blend angles using scalar multiplication on the extracted values
-        let r_angle_value = r.angle.mod_4_angle();
-        let b_angle_value = b.angle.mod_4_angle();
-        let a_angle_value = a.angle.mod_4_angle();
+        let r_angle_value = r.angle.grade_angle();
+        let b_angle_value = b.angle.grade_angle();
+        let a_angle_value = a.angle.grade_angle();
         let blended_angle = (r_angle_value * reversion_factor
             + b_angle_value * (1.0 - reversion_factor))
             + a_angle_value * t.min(1.0); // Add mean reversion direction uncertainty
@@ -452,9 +452,9 @@ fn it_calculates_credit_risk() {
 
         // Expected loss calculation with propagated uncertainty
         // Combine uncertainty angles, weighted by relative impact
-        let exp_contribution = exp.angle.mod_4_angle();
-        let pd_contribution = pd.angle.mod_4_angle() * 3.0;
-        let lgd_contribution = lgd.angle.mod_4_angle() * 2.0;
+        let exp_contribution = exp.angle.grade_angle();
+        let pd_contribution = pd.angle.grade_angle() * 3.0;
+        let lgd_contribution = lgd.angle.grade_angle() * 2.0;
         let weighted_angle = Angle::new(
             (exp_contribution + pd_contribution + lgd_contribution) / 6.0,
             PI,
@@ -565,7 +565,7 @@ fn it_computes_arbitrage_opportunities() {
         // and higher cost uncertainty (represented by cost.angle)
         let certainty_angle = if net_profit > 0.0 {
             // Positive arbitrage with certainty decreasing as cost/profit ratio increases
-            PI / 2.0 * (1.0 - (cost.length / price_diff).min(1.0)) - cost.angle.mod_4_angle().abs()
+            PI / 2.0 * (1.0 - (cost.length / price_diff).min(1.0)) - cost.angle.grade_angle().abs()
         } else {
             // No arbitrage (or negative after costs)
             0.0
@@ -605,7 +605,7 @@ fn it_computes_arbitrage_opportunities() {
                 if opp.length > 0.0
                     && (opp.length > best_opportunity.length
                         || (opp.length == best_opportunity.length
-                            && opp.angle.mod_4_angle() > best_opportunity.angle.mod_4_angle()))
+                            && opp.angle.grade_angle() > best_opportunity.angle.grade_angle()))
                 {
                     best_opportunity = opp;
                     best_pair = (markets[i].1, markets[j].1);
@@ -642,7 +642,7 @@ fn it_computes_arbitrage_opportunities() {
         println!("  Sell in Market B at ${:.2}", price_b.length);
         println!("  Transaction cost: ${:.2}", transaction_cost.length);
         println!("  Net profit: ${:.2}", arbitrage.length);
-        println!("  Certainty factor: {:.2}", arbitrage.angle.mod_4_angle());
+        println!("  Certainty factor: {:.2}", arbitrage.angle.grade_angle());
     } else {
         println!("No arbitrage opportunity after transaction costs");
     }
@@ -652,7 +652,7 @@ fn it_computes_arbitrage_opportunities() {
         println!("Best arbitrage opportunity:");
         println!("  Buy in {} and sell in {}", best_pair.0, best_pair.1);
         println!("  Expected profit: ${:.2}", best_opportunity.length);
-        println!("  Certainty: {:.2}", best_opportunity.angle.mod_4_angle());
+        println!("  Certainty: {:.2}", best_opportunity.angle.grade_angle());
     }
 }
 
@@ -679,10 +679,10 @@ fn it_performs_high_frequency_trading_calcs() {
 
             // combine market features through geometric product
             // blend angles to create market signature
-            let p_contribution = p.angle.mod_4_angle() * 2.0;
-            let m_contribution = m.angle.mod_4_angle() * 3.0;
-            let v_contribution = v.angle.mod_4_angle();
-            let vol_contribution = vol.angle.mod_4_angle();
+            let p_contribution = p.angle.grade_angle() * 2.0;
+            let m_contribution = m.angle.grade_angle() * 3.0;
+            let v_contribution = v.angle.grade_angle();
+            let vol_contribution = vol.angle.grade_angle();
             let blended_sum = p_contribution + m_contribution + v_contribution + vol_contribution;
             let blended_angle = Angle::new(blended_sum / 7.0, PI);
             let combined_state = Geonum::new_with_angle(
@@ -692,14 +692,14 @@ fn it_performs_high_frequency_trading_calcs() {
 
             // compare current state to pattern through angle difference
             let angle_diff = combined_state.angle - pat.angle;
-            let angle_match = angle_diff.mod_4_angle().abs();
+            let angle_match = angle_diff.grade_angle().abs();
             let magnitude_match = (combined_state.length - pat.length).abs() / pat.length;
 
             // compute signal strength based on pattern match
             let signal_strength = 1.0 - (angle_match / PI) - (magnitude_match / 2.0);
 
             // determine trading direction based on momentum
-            let signal_direction = if m.angle.mod_4_angle() < PI / 2.0 {
+            let signal_direction = if m.angle.grade_angle() < PI / 2.0 {
                 Angle::new(0.0, 1.0)
             } else {
                 Angle::new(1.0, 1.0) // PI
@@ -741,7 +741,7 @@ fn it_performs_high_frequency_trading_calcs() {
         "signal strength is between 0 and 1"
     );
     assert!(
-        signal.angle.mod_4_angle() == 0.0 || signal.angle.mod_4_angle() == PI,
+        signal.angle.grade_angle() == 0.0 || signal.angle.grade_angle() == PI,
         "signal direction is buy or sell"
     );
 
@@ -804,9 +804,9 @@ fn it_analyzes_cga_transaction_streams() {
                 // accumulate transactions through geometric addition
                 // accumulate transactions through geometric addition
                 let weighted_angle = if acc.length + industry_weighted.length > 0.0 {
-                    let acc_contribution = acc.angle.mod_4_angle() * acc.length;
+                    let acc_contribution = acc.angle.grade_angle() * acc.length;
                     let ind_contribution =
-                        industry_weighted.angle.mod_4_angle() * industry_weighted.length;
+                        industry_weighted.angle.grade_angle() * industry_weighted.length;
                     let weighted_sum = acc_contribution + ind_contribution;
                     Angle::new(weighted_sum / (acc.length + industry_weighted.length), PI)
                 } else {
@@ -860,8 +860,8 @@ fn it_analyzes_cga_transaction_streams() {
                 .fold(Geonum::new_with_blade(0.0, 2, 0.0, 1.0), |acc, trans| {
                     // bivector (grade 2) - accumulates transaction patterns
                     let weighted_angle = if acc.length > 0.0 {
-                        let acc_contribution = acc.angle.mod_4_angle() * acc.length;
-                        let trans_contribution = trans.angle.mod_4_angle() * trans.length;
+                        let acc_contribution = acc.angle.grade_angle() * acc.length;
+                        let trans_contribution = trans.angle.grade_angle() * trans.length;
                         let weighted_sum = acc_contribution + trans_contribution;
                         Angle::new(weighted_sum / (acc.length + trans.length), PI)
                     } else {
@@ -971,7 +971,7 @@ fn it_calculates_multi_asset_derivatives() {
                 effective_vol += weighted_vol;
 
                 // Weight angles by contribution to total volatility
-                effective_angle += vols[i].angle.mod_4_angle() * weighted_vol;
+                effective_angle += vols[i].angle.grade_angle() * weighted_vol;
                 angle_weight_sum += weighted_vol;
             }
 
@@ -984,7 +984,7 @@ fn it_calculates_multi_asset_derivatives() {
             // Calculate angular variance as correlation proxy
             let mut angle_variance = 0.0;
             for vol in vols {
-                angle_variance += (vol.angle.mod_4_angle() - effective_angle).powi(2) * vol.length;
+                angle_variance += (vol.angle.grade_angle() - effective_angle).powi(2) * vol.length;
             }
             angle_variance /= angle_weight_sum;
 
@@ -1048,7 +1048,7 @@ fn it_calculates_multi_asset_derivatives() {
     println!("Option price: ${:.2}", basket_option.length);
     println!(
         "Effective correlation structure encoded at angle: {:.4}",
-        basket_option.angle.mod_4_angle()
+        basket_option.angle.grade_angle()
     );
     println!("Calculation time: {}ns", duration.as_nanos());
     println!("Average time per pricing: {avg_time_per_calculation:.2}µs");
@@ -1105,8 +1105,8 @@ fn it_analyzes_trading_strategies() {
         // of strategy signature and market conditions
 
         // Calculate alignment between strategy and market (dot product component)
-        let strat_angle = strat.angle.mod_4_angle();
-        let market_angle = market.angle.mod_4_angle();
+        let strat_angle = strat.angle.grade_angle();
+        let market_angle = market.angle.grade_angle();
         let alignment =
             strat_angle.cos() * market_angle.cos() + strat_angle.sin() * market_angle.sin();
 
@@ -1254,14 +1254,14 @@ fn it_analyzes_trading_strategies() {
         "  Strategy type: {}",
         strategy_types
             .iter()
-            .min_by_key(|(angle, _)| ((angle - strategy.angle.mod_4_angle()).abs() * 1000.0) as i32)
+            .min_by_key(|(angle, _)| ((angle - strategy.angle.grade_angle()).abs() * 1000.0) as i32)
             .map(|(_, name)| *name)
             .unwrap_or("Custom")
     );
     println!("  Expected Sharpe ratio: {:.2}", performance.length);
     println!(
         "  Market alignment: {:.2}",
-        performance.angle.mod_4_angle() / (PI / 2.0)
+        performance.angle.grade_angle() / (PI / 2.0)
     );
 
     println!("\nBacktest results:");
@@ -1282,7 +1282,7 @@ fn it_analyzes_trading_strategies() {
         let strat_type = strategy_types
             .iter()
             .min_by_key(|(angle, _)| {
-                ((angle - strategies[i].angle.mod_4_angle()).abs() * 1000.0) as i32
+                ((angle - strategies[i].angle.grade_angle()).abs() * 1000.0) as i32
             })
             .map(|(_, name)| *name)
             .unwrap_or("Custom");
