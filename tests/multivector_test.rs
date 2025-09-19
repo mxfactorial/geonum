@@ -200,6 +200,27 @@ fn it_proves_distributivity_requires_decomposition() {
     let b = Geonum::new(1.0, 1.0, 6.0); // π/6
     let c = Geonum::new(1.0, 1.0, 4.0); // π/4
 
+    let cartesian_components = |g: &Geonum| {
+        let angle = g.angle.grade_angle();
+        let x = g.length * angle.cos();
+        let y = g.length * angle.sin();
+        (x, y)
+    };
+
+    let wedge_area = |lhs: (f64, f64), rhs: (f64, f64)| lhs.0 * rhs.1 - lhs.1 * rhs.0;
+
+    // scalar-array decomposition obeys distributivity exactly because addition is componentwise
+    let a_xy = cartesian_components(&a);
+    let b_xy = cartesian_components(&b);
+    let c_xy = cartesian_components(&c);
+    let bc_xy = (b_xy.0 + c_xy.0, b_xy.1 + c_xy.1);
+    let wedge_scalar_sum = wedge_area(a_xy, b_xy) + wedge_area(a_xy, c_xy);
+    let wedge_scalar_unified = wedge_area(a_xy, bc_xy);
+    assert!(
+        (wedge_scalar_sum - wedge_scalar_unified).abs() < EPSILON,
+        "scalar arrays keep wedge distributive"
+    );
+
     // geometric unification: b+c creates single object with new angular structure
     let bc_unified = b + c;
     let wedge_unified = a.wedge(&bc_unified); // a∧(unified object)
@@ -228,18 +249,32 @@ fn it_proves_distributivity_requires_decomposition() {
     // - geometric reality (unified objects) breaks distributive abstraction
 
     // prove geometric unification creates different angular structure than component preservation
-    let bc_unified_angle = bc_unified.angle.mod_4_angle();
-    assert_ne!(bc_unified_angle, b.angle.mod_4_angle()); // unified angle ≠ component b
-    assert_ne!(bc_unified_angle, c.angle.mod_4_angle()); // unified angle ≠ component c
+    let bc_unified_angle = bc_unified.angle.grade_angle();
+    assert_ne!(bc_unified_angle, b.angle.grade_angle()); // unified angle ≠ component b
+    assert_ne!(bc_unified_angle, c.angle.grade_angle()); // unified angle ≠ component c
 
-    // wedge trigonometry follows actual geometric angles, not algebraic symbols
-    let unified_sin = (bc_unified_angle - a.angle.mod_4_angle()).sin();
-    let b_sin = (b.angle.mod_4_angle() - a.angle.mod_4_angle()).sin();
-    let c_sin = (c.angle.mod_4_angle() - a.angle.mod_4_angle()).sin();
+    // wedge trigonometry follows geometric angles, not algebraic symbols
+    let unified_sin = (bc_unified_angle - a.angle.grade_angle()).sin();
+    let b_sin = (b.angle.grade_angle() - a.angle.grade_angle()).sin();
+    let c_sin = (c.angle.grade_angle() - a.angle.grade_angle()).sin();
 
     // different angles create different trigonometric relationships
     assert_ne!(unified_sin, b_sin); // unified geometry ≠ component b trigonometry
     assert_ne!(unified_sin, c_sin); // unified geometry ≠ component c trigonometry
+
+    // confirm the unified vs decomposed bivectors diverge in both magnitude and direction
+    let measured_gap = (wedge_unified.length - wedge_decomposed.length).abs();
+    assert!(
+        measured_gap > 3.0e-3,
+        "geonum wedge collapsed into distributive behaviour"
+    );
+    let sum_angle = wedge_unified.base_angle().angle.grade_angle();
+    let decomp_angle = wedge_decomposed.base_angle().angle.grade_angle();
+    let angle_gap = (sum_angle - decomp_angle).abs();
+    assert!(
+        angle_gap > std::f64::consts::PI / 200.0,
+        "wedge directions converged toward distributive history"
+    );
 
     // conclusion: distributivity is algebraic artifact requiring component decomposition
     // geonum eliminates decomposition by working with unified geometric objects
@@ -262,7 +297,7 @@ fn its_a_wedge_product() {
 
     // traditional: scan through all basis pairs, compute antisymmetric combinations
     // geonum: direct trigonometric calculation
-    let angle_diff = v2.angle.mod_4_angle() - v1.angle.mod_4_angle(); // π/4 - π/6 = π/12
+    let angle_diff = v2.angle.grade_angle() - v1.angle.grade_angle(); // π/4 - π/6 = π/12
     let expected_length = v1.length * v2.length * angle_diff.sin(); // 2*3*sin(π/12)
     assert!((wedge.length - expected_length).abs() < 1e-14); // exact trigonometric match
 
@@ -606,8 +641,10 @@ fn it_adds_multivectors_without_component_matching() {
     let sum = v1 + v2;
 
     // verify cartesian addition formula: √((x1+x2)² + (y1+y2)²)
-    let (v1_x, v1_y) = v1.to_cartesian();
-    let (v2_x, v2_y) = v2.to_cartesian();
+    let v1_x = v1.length * v1.angle.grade_angle().cos();
+    let v1_y = v1.length * v1.angle.grade_angle().sin();
+    let v2_x = v2.length * v2.angle.grade_angle().cos();
+    let v2_y = v2.length * v2.angle.grade_angle().sin();
     let expected_length = ((v1_x + v2_x).powi(2) + (v1_y + v2_y).powi(2)).sqrt();
 
     assert!((sum.length - expected_length).abs() < EPSILON); // exact cartesian formula
@@ -646,9 +683,10 @@ fn it_adds_multivectors_without_component_matching() {
     // test addition chain without accumulated component management
     let chain_sum = scalar + vector + bivector + trivector; // all 4 grades
 
+    // these four unit vectors at 90° intervals cancel: (1,0) + (0,1) + (-1,0) + (0,-1) = (0,0)
     // traditional: must sort each addition into appropriate grade buckets
     // geonum: sequential cartesian additions without grade tracking
-    assert!(chain_sum.length > 0.0); // chain addition succeeds
+    assert!(chain_sum.length < EPSILON); // cancellation occurs naturally
 
     // prove addition scalability: 1000 mixed-grade objects
     let mut accumulated = Geonum::scalar(0.0);
@@ -657,9 +695,15 @@ fn it_adds_multivectors_without_component_matching() {
         accumulated = accumulated + obj; // accumulate without grade matching
     }
 
+    // 1000 objects: 250 each at grades 0,1,2,3 (angles 0, π/2, π, 3π/2)
+    // cartesian sum: 250×0.1×(1,0) + 250×0.1×(0,1) + 250×0.1×(-1,0) + 250×0.1×(0,-1) = (0,0)
     // traditional: would need grade bucket management for 1000 different blade types
     // geonum: sequential cartesian additions - no component sorting needed
-    assert!(accumulated.length > 0.0); // 1000-object addition succeeds
+    assert!(
+        accumulated.length < 1e-8,
+        "1000 objects cancel to zero: {}",
+        accumulated.length
+    );
 
     // test exact cartesian formula matches for mixed grades
     let test_scalar = Geonum::new(3.0, 0.0, 1.0); // [3, 0]
