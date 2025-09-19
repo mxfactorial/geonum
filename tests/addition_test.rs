@@ -37,7 +37,7 @@ fn it_adds_orthogonal_vectors() {
 
     assert!((sum.length - 5.0).abs() < EPSILON);
     let expected_phase = (4.0_f64).atan2(3.0);
-    assert!((sum.angle.mod_4_angle() - expected_phase).abs() < EPSILON);
+    assert!((sum.angle.grade_angle() - expected_phase).abs() < EPSILON);
 
     // history policy is preserved internally; direction and length are primary here
 }
@@ -51,10 +51,12 @@ fn it_adds_high_blades_and_preserves_history() {
     let sum = a + b;
 
     // direction modulo 2π matches cartesian result
-    let (x1, y1) = a.to_cartesian();
-    let (x2, y2) = b.to_cartesian();
+    let x1 = a.length * a.angle.grade_angle().cos();
+    let y1 = a.length * a.angle.grade_angle().sin();
+    let x2 = b.length * b.angle.grade_angle().cos();
+    let y2 = b.length * b.angle.grade_angle().sin();
     let expected_phase = (y1 + y2).atan2(x1 + x2);
-    assert!((sum.angle.mod_4_angle() - expected_phase).abs() < EPSILON);
+    assert!((sum.angle.grade_angle() - expected_phase).abs() < EPSILON);
 }
 
 #[test]
@@ -64,7 +66,7 @@ fn it_matches_projection_based_sum() {
     let b = Geonum::new(3.0, 1.0, 4.0); // [3, π/4]
 
     // δ = θb − θa in [0, 2π)
-    let delta = (b.angle.mod_4_angle() - a.angle.mod_4_angle()).rem_euclid(2.0 * PI);
+    let delta = (b.angle.grade_angle() - a.angle.grade_angle()).rem_euclid(2.0 * PI);
 
     // resolve b in a’s frame
     let adj = Geonum::cos(Angle::new(delta, PI)).scale(b.length);
@@ -117,8 +119,10 @@ fn it_accumulates_blades_in_general_case() {
     let sum = a + b;
 
     // verify geometric result matches expected
-    let (x1, y1) = a.to_cartesian();
-    let (x2, y2) = b.to_cartesian();
+    let x1 = a.length * a.angle.grade_angle().cos();
+    let y1 = a.length * a.angle.grade_angle().sin();
+    let x2 = b.length * b.angle.grade_angle().cos();
+    let y2 = b.length * b.angle.grade_angle().sin();
     let expected_length = ((x1 + x2).powi(2) + (y1 + y2).powi(2)).sqrt();
     assert!((sum.length - expected_length).abs() < EPSILON);
 
@@ -178,8 +182,10 @@ fn it_maintains_commutative_blade_accumulation() {
     assert_eq!(ab.angle, ba.angle);
 
     // a has blade 3 + π/6, b has blade 5 + π/4
-    let (x1, y1) = a.to_cartesian();
-    let (x2, y2) = b.to_cartesian();
+    let x1 = a.length * a.angle.grade_angle().cos();
+    let y1 = a.length * a.angle.grade_angle().sin();
+    let x2 = b.length * b.angle.grade_angle().cos();
+    let y2 = b.length * b.angle.grade_angle().sin();
     let cartesian_result = Geonum::new_from_cartesian(x1 + x2, y1 + y2);
     let expected = cartesian_result.angle
         + Angle::new(3.0, 2.0) // +3 blades from a

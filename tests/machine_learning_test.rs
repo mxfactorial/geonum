@@ -48,8 +48,8 @@ fn its_a_perceptron() {
     let x_neg = Geonum::new(1.0, 5.0, 4.0); // Vector (grade 1) - input vector (negative example)
 
     // demonstrate that dot product can be computed via lengths and angles
-    let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).mod_4_angle().cos();
-    let dot_neg = w.length * x_neg.length * (w.angle - x_neg.angle).mod_4_angle().cos();
+    let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).grade_angle().cos();
+    let dot_neg = w.length * x_neg.length * (w.angle - x_neg.angle).grade_angle().cos();
 
     assert!(dot_pos > 0.0, "positive example misclassified");
     assert!(dot_neg < 0.0, "negative example misclassified");
@@ -73,9 +73,9 @@ fn its_a_perceptron() {
     // after updates, both classify x_neg
     let dot_traditional = w_traditional.length
         * x_neg.length
-        * (w_traditional.angle - x_neg.angle).mod_4_angle().cos();
+        * (w_traditional.angle - x_neg.angle).grade_angle().cos();
     let dot_geometric =
-        w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).mod_4_angle().cos();
+        w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).grade_angle().cos();
 
     // both methods improve classification (larger negative value is worse)
     assert!(
@@ -131,7 +131,7 @@ fn its_a_linear_regression() {
 
     // verify our geometric representation can recover the regression parameters
     // the slope is encoded in the angle: tan(θ) = slope
-    let slope_geometric = regression_geo.angle.mod_4_angle().tan();
+    let slope_geometric = regression_geo.angle.grade_angle().tan();
 
     // the regression line parameters will match
     assert!(
@@ -229,14 +229,14 @@ fn its_a_decision_tree() {
     // with geometric numbers, we can use angle variance
 
     // compute angle variance for each class
-    let mean_angle_a = (class_a[0].angle.mod_4_angle() + class_a[1].angle.mod_4_angle()) / 2.0;
-    let var_angle_a = ((class_a[0].angle.mod_4_angle() - mean_angle_a).powi(2)
-        + (class_a[1].angle.mod_4_angle() - mean_angle_a).powi(2))
+    let mean_angle_a = (class_a[0].angle.grade_angle() + class_a[1].angle.grade_angle()) / 2.0;
+    let var_angle_a = ((class_a[0].angle.grade_angle() - mean_angle_a).powi(2)
+        + (class_a[1].angle.grade_angle() - mean_angle_a).powi(2))
         / 2.0;
 
-    let mean_angle_b = (class_b[0].angle.mod_4_angle() + class_b[1].angle.mod_4_angle()) / 2.0;
-    let var_angle_b = ((class_b[0].angle.mod_4_angle() - mean_angle_b).powi(2)
-        + (class_b[1].angle.mod_4_angle() - mean_angle_b).powi(2))
+    let mean_angle_b = (class_b[0].angle.grade_angle() + class_b[1].angle.grade_angle()) / 2.0;
+    let var_angle_b = ((class_b[0].angle.grade_angle() - mean_angle_b).powi(2)
+        + (class_b[1].angle.grade_angle() - mean_angle_b).powi(2))
         / 2.0;
 
     // low variance indicates pure classes
@@ -258,12 +258,12 @@ fn its_a_decision_tree() {
     let test_point_b = Geonum::new(1.0, PI + 0.2, PI);
 
     // classify based on angle comparison (constant time operation)
-    let prediction_a = if test_point_a.angle.mod_4_angle() < split_angle {
+    let prediction_a = if test_point_a.angle.grade_angle() < split_angle {
         "A"
     } else {
         "B"
     };
-    let prediction_b = if test_point_b.angle.mod_4_angle() < split_angle {
+    let prediction_b = if test_point_b.angle.grade_angle() < split_angle {
         "A"
     } else {
         "B"
@@ -321,7 +321,7 @@ fn its_a_support_vector_machine() {
     // the angle that maximizes the margin between classes
 
     // a simple approach: angle halfway between the closest points
-    let margin_angle = (class_a[1].angle.mod_4_angle() + class_b[1].angle.mod_4_angle()) / 2.0;
+    let margin_angle = (class_a[1].angle.grade_angle() + class_b[1].angle.grade_angle()) / 2.0;
 
     // 3. demonstrate hyperplane as angle boundary rather than vector normal
 
@@ -329,12 +329,12 @@ fn its_a_support_vector_machine() {
     let test_point_a = Geonum::new(1.0, 0.25, PI);
     let test_point_b = Geonum::new(1.0, PI - 0.25, PI);
 
-    let prediction_a = if test_point_a.angle.mod_4_angle() < margin_angle {
+    let prediction_a = if test_point_a.angle.grade_angle() < margin_angle {
         1
     } else {
         -1
     };
-    let prediction_b = if test_point_b.angle.mod_4_angle() < margin_angle {
+    let prediction_b = if test_point_b.angle.grade_angle() < margin_angle {
         1
     } else {
         -1
@@ -567,7 +567,7 @@ fn its_a_dimensionality_reduction() {
             // projection as geometric operation
             // for simplicity, use the component along principal direction
             let dot_product =
-                p.length * principal.length * (p.angle - principal.angle).mod_4_angle().cos();
+                p.length * principal.length * (p.angle - principal.angle).grade_angle().cos();
             let projection_scalar = Geonum::new(dot_product / principal.length.powi(2), 0.0, 1.0);
             principal * projection_scalar
         })
@@ -1035,7 +1035,7 @@ fn it_scales_quantum_learning() {
             .iter()
             .map(|g| {
                 let dot_product =
-                    g.length * point.length * (g.angle - point.angle).mod_4_angle().cos();
+                    g.length * point.length * (g.angle - point.angle).grade_angle().cos();
                 (g, dot_product)
             })
             .max_by(|(_, d1), (_, d2)| d1.partial_cmp(d2).unwrap())

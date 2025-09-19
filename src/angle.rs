@@ -158,35 +158,27 @@ impl Angle {
     /// the blade count preserves full dimensional information while the grade
     /// determines the geometric behavior (how it transforms under operations)
     pub fn grade(&self) -> usize {
-        self.mod_4_blade()
+        self.blade % 4
     }
 
     /// tests if this angle represents a scalar (blade = 0)
     pub fn is_scalar(&self) -> bool {
-        self.mod_4_blade() == 0
+        self.grade() == 0
     }
 
     /// tests if this angle represents a vector (blade = 1)  
     pub fn is_vector(&self) -> bool {
-        self.mod_4_blade() == 1
+        self.grade() == 1
     }
 
     /// tests if this angle represents a bivector (blade = 2)
     pub fn is_bivector(&self) -> bool {
-        self.mod_4_blade() == 2
+        self.grade() == 2
     }
 
     /// tests if this angle represents a trivector (blade = 3)
     pub fn is_trivector(&self) -> bool {
-        self.mod_4_blade() == 3
-    }
-
-    /// normalizes blade count to 4D rotation space [0,3]
-    ///
-    /// # returns
-    /// blade count within [0,3] range representing geometric grades
-    fn mod_4_blade(&self) -> usize {
-        self.blade % 4
+        self.grade() == 3
     }
 
     /// returns this angle with blade count reset to base for its grade
@@ -377,16 +369,27 @@ impl Angle {
         *self + Angle::new(1.0, 1.0)
     }
 
-    /// returns the angle in radians within [0, 2π)
-    /// by taking blade modulo 4 and adding the value component
+    /// returns the grade-based angle representation in radians within [0, 2π)
     ///
-    /// useful for interfacing with external code that expects angles in [0, 2π)
-    /// such as orbital mechanics, phase calculations, or visualization
+    /// computes the geometric angle by mapping the 4-cycle grade pattern to quarter-turns:
+    /// - grade 0 (scalar): 0 radians
+    /// - grade 1 (vector): π/2 radians
+    /// - grade 2 (bivector): π radians
+    /// - grade 3 (trivector): 3π/2 radians
+    ///
+    /// then adds the fractional angle value within the current π/2 segment
+    ///
+    /// this exposes the fundamental geometric structure where each grade represents
+    /// a π/2 rotation from the previous grade, creating the 4-fold symmetry that
+    /// underlies geometric algebra's grade behavior patterns
+    ///
+    /// useful for interfacing with external code expecting standard angles in [0, 2π)
+    /// such as trigonometric functions, orbital mechanics, or visualization systems
     ///
     /// # returns
-    /// angle in radians as f64 within [0, 2π)
-    pub fn mod_4_angle(&self) -> f64 {
-        self.mod_4_blade() as f64 * PI / 2.0 + self.value
+    /// angle in radians as f64 within [0, 2π) representing the grade-angle mapping
+    pub fn grade_angle(&self) -> f64 {
+        self.grade() as f64 * PI / 2.0 + self.value
     }
 
     /// negates this angle by adding π rotation (2 blades)
@@ -402,7 +405,7 @@ impl Angle {
     /// returns the cosine of the angle difference
     pub fn project(&self, onto: Angle) -> f64 {
         let angle_diff = onto - *self;
-        angle_diff.mod_4_angle().cos()
+        angle_diff.grade_angle().cos()
     }
 }
 
@@ -747,7 +750,7 @@ mod tests {
     fn it_computes_sin_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let sin_result = angle.mod_4_angle().sin();
+        let sin_result = angle.grade_angle().sin();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // sin(0 + 0.0) = sin(0) = 0
@@ -758,7 +761,7 @@ mod tests {
     fn it_computes_sin_with_1003_blade() {
         let angle = Angle::new(1003.0, 2.0); // 1003*(π/2)
 
-        let sin_result = angle.mod_4_angle().sin();
+        let sin_result = angle.grade_angle().sin();
 
         // 1003 % 4 = 3, so grade is 3 (trivector)
         // sin(3π/2 + 0.0) = sin(3π/2) = -1
@@ -769,7 +772,7 @@ mod tests {
     fn it_computes_cos_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let cos_result = angle.mod_4_angle().cos();
+        let cos_result = angle.grade_angle().cos();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // cos(0 + 0.0) = cos(0) = 1
@@ -780,7 +783,7 @@ mod tests {
     fn it_computes_cos_with_1001_blade() {
         let angle = Angle::new(1001.0, 2.0); // 1001*(π/2)
 
-        let cos_result = angle.mod_4_angle().cos();
+        let cos_result = angle.grade_angle().cos();
 
         // 1001 % 4 = 1, so grade is 1 (vector)
         // cos(π/2 + 0.0) = cos(π/2) = 0
@@ -814,7 +817,7 @@ mod tests {
     fn it_computes_tan_of_1000_blade() {
         let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
 
-        let tan_result = angle.mod_4_angle().tan();
+        let tan_result = angle.grade_angle().tan();
 
         // 1000 % 4 = 0, so grade is 0 (scalar)
         // tan(0 + 0.0) = tan(0) = 0
@@ -825,7 +828,7 @@ mod tests {
     fn it_computes_tan_with_1002_blade() {
         let angle = Angle::new(1002.0, 2.0); // 1002*(π/2)
 
-        let tan_result = angle.mod_4_angle().tan();
+        let tan_result = angle.grade_angle().tan();
 
         // 1002 % 4 = 2, so grade is 2 (bivector)
         // tan(π + 0.0) = tan(π) = 0
@@ -944,13 +947,13 @@ mod tests {
 
         // negative angles give opposite sin values (for anti-commutativity)
         assert!(
-            (positive_angle.mod_4_angle().sin() + negative_angle.mod_4_angle().sin()).abs()
+            (positive_angle.grade_angle().sin() + negative_angle.grade_angle().sin()).abs()
                 < EPSILON
         );
 
         // but same cos values (preserving geometric relationships)
         assert!(
-            (positive_angle.mod_4_angle().cos() - negative_angle.mod_4_angle().cos()).abs()
+            (positive_angle.grade_angle().cos() - negative_angle.grade_angle().cos()).abs()
                 < EPSILON
         );
 
@@ -1128,38 +1131,38 @@ mod tests {
     }
 
     #[test]
-    fn it_computes_mod_4_angle() {
+    fn it_computes_grade_angle() {
         // test basic cases within first rotation
         let angle1 = Angle::new(0.5, 4.0); // π/8, blade 0
-        assert!((angle1.mod_4_angle() - PI / 8.0).abs() < EPSILON);
+        assert!((angle1.grade_angle() - PI / 8.0).abs() < EPSILON);
 
         let angle2 = Angle::new(1.0, 2.0); // π/2, blade 1
-        assert!((angle2.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+        assert!((angle2.grade_angle() - PI / 2.0).abs() < EPSILON);
 
         let angle3 = Angle::new(3.0, 2.0); // 3π/2, blade 3
-        assert!((angle3.mod_4_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
+        assert!((angle3.grade_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
 
         // test angles with blade count > 3
         let angle4 = Angle::new(5.0, 2.0); // 5π/2, blade 5 -> blade 1
-        assert!((angle4.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+        assert!((angle4.grade_angle() - PI / 2.0).abs() < EPSILON);
 
         let angle5 = Angle::new(8.0, 2.0); // 8π/2 = 4π, blade 8 -> blade 0
-        assert!(angle5.mod_4_angle().abs() < EPSILON);
+        assert!(angle5.grade_angle().abs() < EPSILON);
 
         let angle6 = Angle::new(10.0, 2.0); // 10π/2 = 5π, blade 10 -> blade 2
-        assert!((angle6.mod_4_angle() - PI).abs() < EPSILON);
+        assert!((angle6.grade_angle() - PI).abs() < EPSILON);
 
         // test with non-zero value component
         let angle7 = Angle::new(9.5, 2.0); // 9.5π/2, blade 9, value π/4
                                            // blade 9 % 4 = 1, so result is π/2 + π/4 = 3π/4
-        assert!((angle7.mod_4_angle() - 3.0 * PI / 4.0).abs() < EPSILON);
+        assert!((angle7.grade_angle() - 3.0 * PI / 4.0).abs() < EPSILON);
 
         // test large blade counts
         let angle8 = Angle::new(1000.0, 2.0); // blade 1000 -> blade 0
-        assert!(angle8.mod_4_angle().abs() < EPSILON);
+        assert!(angle8.grade_angle().abs() < EPSILON);
 
         let angle9 = Angle::new(1001.0, 2.0); // blade 1001 -> blade 1
-        assert!((angle9.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+        assert!((angle9.grade_angle() - PI / 2.0).abs() < EPSILON);
     }
 
     #[test]
@@ -1455,6 +1458,6 @@ mod tests {
         // large_angle - small_angle = blade 5 - blade 0 = blade 5, value π/4 - π/8 = π/8
         assert_eq!(wrapped_diff.blade(), 5);
         assert!((wrapped_diff.value() - PI / 8.0).abs() < 1e-10);
-        assert!((wrapped_diff.mod_4_angle() - 1.9634954084936207).abs() < 1e-10);
+        assert!((wrapped_diff.grade_angle() - 1.9634954084936207).abs() < 1e-10);
     }
 }

@@ -1,5 +1,16 @@
 # changelog
 
+## 0.9.0 (2025-01-09)
+
+### removed
+- **BREAKING**: removed `pub fn to_cartesian()` crutch function from `Geonum`
+  - function encouraged escaping the geometric domain to raw coordinates
+  - all internal usage replaced with inline trigonometry where needed
+  - tests updated to use geometric operations (`adj()`, `opp()`) or inline projection
+
+  ### changed
+  - `mod_4_blade()` Geonum function changed to `grade_angle()`
+
 ## 0.8.1 (2025-09-15)
 
 ### added

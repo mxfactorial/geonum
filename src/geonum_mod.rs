@@ -181,16 +181,6 @@ impl Geonum {
         }
     }
 
-    /// returns the cartesian components of this geometric number
-    ///
-    /// # returns
-    /// a tuple with (x, y) coordinates
-    pub fn to_cartesian(&self) -> (f64, f64) {
-        let x = self.length * self.angle.mod_4_angle().cos();
-        let y = self.length * self.angle.mod_4_angle().sin();
-        (x, y)
-    }
-
     /// computes the derivative of this geometric number with respect to its parameter
     /// using the differential geometric calculus approach
     ///
@@ -290,7 +280,7 @@ impl Geonum {
     /// the dot product as a scalar geometric number
     pub fn dot(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let cos_component = angle_diff.mod_4_angle().cos();
+        let cos_component = angle_diff.grade_angle().cos();
         let scalar_value = self.length * other.length * cos_component;
         // encode sign in angle so consumers read grade based polarity instead of raw negatives
         Self::signed_at(scalar_value, Angle::new(0.0, 1.0))
@@ -319,7 +309,7 @@ impl Geonum {
     /// the wedge product as a new geometric number
     pub fn wedge(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let sin_value = angle_diff.mod_4_angle().sin();
+        let sin_value = angle_diff.grade_angle().sin();
         let length = self.length * other.length * sin_value.abs();
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
                                                  // wedge product creates bivector (oriented area) by adding π/2 to combined angles
@@ -654,7 +644,7 @@ impl Geonum {
         // law of cosines: c² = a² + b² - 2ab·cos(θ)
         let angle_between = other.angle - self.angle;
         let distance_squared = self.length * self.length + other.length * other.length
-            - 2.0 * self.length * other.length * angle_between.mod_4_angle().cos();
+            - 2.0 * self.length * other.length * angle_between.grade_angle().cos();
         let distance = distance_squared.sqrt();
 
         // return as scalar geonum (blade 0)
@@ -684,14 +674,14 @@ impl Geonum {
     /// geonum cosine anchored to even pair 0↔π
     /// length = |cos(θ)|, sign becomes +π rotation in angle
     pub fn cos(a: Angle) -> Geonum {
-        let v = a.mod_4_angle().cos();
+        let v = a.grade_angle().cos();
         Geonum::signed_at(v, Angle::new(0.0, 1.0))
     }
 
     /// geonum sine anchored to odd pair π/2↔3π/2
     /// length = |sin(θ)|, sign becomes +π rotation in angle
     pub fn sin(a: Angle) -> Geonum {
-        let v = a.mod_4_angle().sin();
+        let v = a.grade_angle().sin();
         Geonum::signed_at(v, Angle::new(1.0, 2.0))
     }
 
@@ -706,7 +696,7 @@ impl Geonum {
     /// replaces scalar projection with geonum that preserves geometric meaning
     pub fn project_to_angle(&self, onto: Angle) -> Geonum {
         let angle_diff = onto - self.angle;
-        let cos_component = angle_diff.mod_4_angle().cos();
+        let cos_component = angle_diff.grade_angle().cos();
 
         // encode sign in grade: positive at grade 0, negative at grade 2
         if cos_component >= 0.0 {
@@ -759,27 +749,33 @@ impl Add for Geonum {
             }
         }
 
-        // general case: find resultant through geometric combination
-        let (x1, y1) = self.to_cartesian();
-        let (x2, y2) = other.to_cartesian();
-        let x = x1 + x2;
-        let y = y1 + y2;
+        // general case: cosine interference between rotations at different angles
+        // follows cosine rule: c² = a² + b² + 2ab*cos(θ) where θ is angle difference
+        let angle1 = self.angle.grade_angle();
+        let angle2 = other.angle.grade_angle();
+
+        // compute result angle from opposite and adjacent projections
+        let opp_sum = self.length * angle1.sin() + other.length * angle2.sin();
+        let adj_sum = self.length * angle1.cos() + other.length * angle2.cos();
+        let result_angle = opp_sum.atan2(adj_sum);
+
+        // compute result length using cosine rule for rotation interference
+        let angle_diff = angle2 - angle1;
+        let result_length = (self.length.powi(2)
+            + other.length.powi(2)
+            + 2.0 * self.length * other.length * angle_diff.cos())
+        .sqrt();
 
         // combine transformation histories
         let combined_blade_count = self.angle.blade() + other.angle.blade();
 
-        // get the geometric result
-        let cartesian_result = Self::new_from_cartesian(x, y);
-
         // preserve accumulated transformations by setting the combined blade count
-        // subtract the blade shift to keep geometric position unchanged
-        let total_result_angle = cartesian_result.angle.mod_4_angle();
         let blade_shift = (combined_blade_count as f64) * std::f64::consts::PI / 2.0;
-        let corrected_angle = total_result_angle - blade_shift;
+        let adjusted_angle = result_angle - blade_shift;
         Self::new_with_blade(
-            cartesian_result.length,
+            result_length,
             combined_blade_count,
-            corrected_angle,
+            adjusted_angle,
             std::f64::consts::PI,
         )
     }
@@ -1483,7 +1479,7 @@ mod tests {
             // test that the dot product with the original vector is negative
             let dot_product = vec.dot(&neg_vec);
             assert!(
-                dot_product.length * dot_product.angle.mod_4_angle().cos() < 0.0
+                dot_product.length * dot_product.angle.grade_angle().cos() < 0.0
                     || vec.length < EPSILON,
                 "vector and its negation have negative dot product unless vector is zero"
             );
@@ -1546,7 +1542,7 @@ mod tests {
         let result = a + b;
 
         assert_eq!(result.length, 8.0);
-        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON);
+        assert!((result.angle.grade_angle().sin()).abs() < EPSILON);
         assert_eq!(result.angle.blade(), 0); // adding scalars gives a scalar
     }
 
@@ -1558,7 +1554,7 @@ mod tests {
         let result = a + b;
 
         assert_eq!(result.length, 0.0);
-        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON);
+        assert!((result.angle.grade_angle().sin()).abs() < EPSILON);
         // blade preservation: 0 + 2 = 2 when equal opposites cancel
         assert_eq!(result.angle.blade(), 2);
 
@@ -1569,7 +1565,7 @@ mod tests {
         let result2 = c + d;
 
         assert_eq!(result2.length, 2.0);
-        assert!((result2.angle.mod_4_angle().sin()).abs() < EPSILON);
+        assert!((result2.angle.grade_angle().sin()).abs() < EPSILON);
         // dominant component (c) preserves its blade
         assert_eq!(result2.angle.blade(), 0);
     }
@@ -1648,7 +1644,7 @@ mod tests {
         let result = a - b;
 
         assert_eq!(result.length, 2.0);
-        assert!((result.angle.mod_4_angle().sin()).abs() < EPSILON); // angle ≈ 0
+        assert!((result.angle.grade_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction with opposite angles
         let c = Geonum::new(4.0, 0.0, 1.0); // 4 units at 0 radians
@@ -1656,7 +1652,7 @@ mod tests {
         let result2 = c - d;
 
         assert_eq!(result2.length, 8.0); // 4 - (-4) = 8
-        assert!((result2.angle.mod_4_angle().sin()).abs() < EPSILON); // angle ≈ 0
+        assert!((result2.angle.grade_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction resulting in zero
         let e = Geonum::new(3.0, 1.0, 4.0); // 3 units at π/4
@@ -2363,8 +2359,12 @@ mod tests {
         );
 
         // with base_angle(), returns to original position
-        let (px, py) = point.to_cartesian();
-        let (rx, ry) = reflected_twice.base_angle().to_cartesian();
+        let px = point.length * point.angle.grade_angle().cos();
+        let py = point.length * point.angle.grade_angle().sin();
+        let rx = reflected_twice.base_angle().length
+            * reflected_twice.base_angle().angle.grade_angle().cos();
+        let ry = reflected_twice.base_angle().length
+            * reflected_twice.base_angle().angle.grade_angle().sin();
         assert!(
             (px - rx).abs() < 1e-10 && (py - ry).abs() < 1e-10,
             "double reflection with base_angle returns to original position"
@@ -2524,8 +2524,10 @@ mod tests {
         );
 
         // test cartesian coordinates after reflection
-        let (ox, oy) = point.to_cartesian();
-        let (rx, ry) = reflected.to_cartesian();
+        let ox = point.length * point.angle.grade_angle().cos();
+        let oy = point.length * point.angle.grade_angle().sin();
+        let rx = reflected.length * reflected.angle.grade_angle().cos();
+        let ry = reflected.length * reflected.angle.grade_angle().sin();
 
         println!("Original: ({ox}, {oy})");
         println!("Reflected: ({rx}, {ry})");
@@ -2912,7 +2914,7 @@ mod tests {
 
             // angle returns to original (but with blade accumulation)
             assert!(
-                (twice.angle.mod_4_angle() - original.angle.mod_4_angle()).abs() < 1e-10,
+                (twice.angle.grade_angle() - original.angle.grade_angle()).abs() < 1e-10,
                 "axis at {name}: angle returns to original"
             );
         }
@@ -3052,7 +3054,7 @@ mod tests {
 
         // compute expected via law of cosines
         let angle_diff = p2.angle - p1.angle; // π/3 - π/6 = π/6
-        let expected_sq = 25.0 + 9.0 - 2.0 * 5.0 * 3.0 * angle_diff.mod_4_angle().cos();
+        let expected_sq = 25.0 + 9.0 - 2.0 * 5.0 * 3.0 * angle_diff.grade_angle().cos();
         let expected = expected_sq.sqrt();
 
         assert!(
@@ -3090,7 +3092,7 @@ mod tests {
             Angle::new(7.0, 6.0),
         ];
         for a in samples {
-            let theta = a.mod_4_angle();
+            let theta = a.grade_angle();
             let g = Geonum::cos(a);
             assert!((g.length - theta.cos().abs()).abs() < EPSILON);
             assert!(matches!(g.angle.grade(), 0 | 2));
@@ -3107,7 +3109,7 @@ mod tests {
     fn it_produces_geonum_sin_on_odd_pair() {
         let samples = [Angle::new(5.0, 12.0), Angle::new(11.0, 6.0)];
         for a in samples {
-            let theta = a.mod_4_angle();
+            let theta = a.grade_angle();
             let g = Geonum::sin(a);
             assert!((g.length - theta.sin().abs()).abs() < EPSILON);
             assert!(matches!(g.angle.grade(), 1 | 3));
@@ -3130,7 +3132,7 @@ mod tests {
         assert_eq!(t.angle.base_angle(), s_over_c.angle.base_angle());
 
         // sanity: tan magnitude equals |sin|/|cos| for a non-singular sample
-        let theta = a.mod_4_angle();
+        let theta = a.grade_angle();
         assert!((t.length - (theta.sin().abs() / theta.cos().abs())).abs() < 1e-10);
 
         // tan inherits odd parity

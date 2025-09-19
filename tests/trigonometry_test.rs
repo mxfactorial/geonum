@@ -1,4 +1,5 @@
 use geonum::*;
+use std::f64::consts::PI;
 
 const EPSILON: f64 = 1e-10;
 
@@ -26,7 +27,7 @@ fn it_maps_trig_onto_the_pi_over_2_lattice() {
     ];
 
     for a in angles {
-        let theta = a.mod_4_angle();
+        let theta = a.grade_angle();
 
         let c = Geonum::cos(a);
         assert!((c.length - theta.cos().abs()).abs() < EPSILON);
@@ -169,7 +170,7 @@ fn it_doesnt_need_cos_and_tan() {
     ];
 
     for a in angles {
-        let theta = a.mod_4_angle();
+        let theta = a.grade_angle();
 
         // cos via sin matches standard magnitude and parity
         let c = cos_via_sin(a);
@@ -224,58 +225,183 @@ fn it_is_projection() {
 }
 
 #[test]
-fn it_adds_vectors_with_pure_angle_arithmetic() {
-    // pure angle arithmetic: law of cosines + length-weighted angle averaging
-    // no projections, no component decomposition, no pythagorean theorem
+fn it_adds_vectors_with_cosine_interference() {
+    // cosine interference: rotations combine according to cosine rule
+    // c² = a² + b² + 2ab*cos(θ) where θ is angle difference
     let a = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
     let b = Geonum::new(3.0, 1.0, 4.0); // [3, π/4]
 
-    // compute angle difference for law of cosines
-    let angle_diff = (b.angle - a.angle).mod_4_angle();
+    let interference_result = a + b;
 
-    // length: law of cosines using angle difference
-    // |c|² = |a|² + |b|² + 2|a||b|cos(θ) where θ is angle between vectors
-    let result_length =
-        (a.length.powi(2) + b.length.powi(2) + 2.0 * a.length * b.length * angle_diff.cos()).sqrt();
-
-    // angle: length-weighted average of input angles
-    let total_length = a.length + b.length;
-    let result_angle_value =
-        (a.angle.mod_4_angle() * a.length + b.angle.mod_4_angle() * b.length) / total_length;
-    let result_angle = Angle::new(result_angle_value, std::f64::consts::PI);
-
-    let pure_result = Geonum::new_with_angle(result_length, result_angle);
-
-    // compare to current cartesian-based addition
-    let cartesian_result = a + b;
-
-    println!("Debug angle calculation:");
+    println!("Cosine interference addition:");
     println!(
-        "  pure_result angle: {:.10}",
-        pure_result.angle.mod_4_angle()
+        "  a: length={}, angle={:.3}",
+        a.length,
+        a.angle.grade_angle()
     );
     println!(
-        "  cartesian_result angle: {:.10}",
-        cartesian_result.angle.mod_4_angle()
+        "  b: length={}, angle={:.3}",
+        b.length,
+        b.angle.grade_angle()
     );
     println!(
-        "  angle difference: {:.10}",
-        (pure_result.angle.mod_4_angle() - cartesian_result.angle.mod_4_angle()).abs()
+        "  result: length={:.3}, angle={:.3}",
+        interference_result.length,
+        interference_result.angle.grade_angle()
     );
 
-    assert!((pure_result.length - cartesian_result.length).abs() < EPSILON);
-    // angle comparison with slightly relaxed tolerance due to different computation paths
-    assert!((pure_result.angle.mod_4_angle() - cartesian_result.angle.mod_4_angle()).abs() < 1e-3);
+    // manually compute using cosine rule
+    let angle1 = a.angle.grade_angle();
+    let angle2 = b.angle.grade_angle();
 
-    // prove this approach eliminates all projection decomposition
-    // law of cosines works directly with lengths and angles - no x,y components needed
-    // length-weighted averaging works directly with angles - no trigonometric projections needed
+    // step 1: sum projections (no squares)
+    let y_sum = a.length * angle1.sin() + b.length * angle2.sin();
+    let x_sum = a.length * angle1.cos() + b.length * angle2.cos();
 
-    // demonstrate that quadrature relationships are preserved without explicit sin/cos decomposition
-    let cos_angle_diff = angle_diff.cos();
-    let sin_angle_diff = angle_diff.sin();
-    assert!((cos_angle_diff.powi(2) + sin_angle_diff.powi(2) - 1.0).abs() < EPSILON);
+    // step 2: derive angle using atan2 (no squares)
+    let manual_angle = y_sum.atan2(x_sum);
 
-    // but we only use cos_angle_diff in the computation - sin is not needed for addition
-    // this proves vector addition can be computed without decomposing into orthogonal projections
+    // step 3: derive length using projection constraint (no squares)
+    let manual_length =
+        a.length * (angle1 - manual_angle).cos() + b.length * (angle2 - manual_angle).cos();
+
+    // verify manual computation matches cosine interference
+    assert!((manual_length - interference_result.length).abs() < EPSILON);
+    assert!((manual_angle - interference_result.angle.grade_angle()).abs() < EPSILON);
+
+    println!("Manual cosine interference verification:");
+    println!("  y_sum: {:.6}, x_sum: {:.6}", y_sum, x_sum);
+    println!(
+        "  angle: atan2({:.6}, {:.6}) = {:.6}",
+        y_sum, x_sum, manual_angle
+    );
+    println!("  length: projection constraint = {:.6}", manual_length);
+    println!("  ✓ No squares anywhere in the computation!");
+}
+
+#[test]
+fn it_derives_pythagorean_identity_from_quadrature() {
+    // sin²+cos² = 1 is the pythagorean identity
+    // but it comes from quadrature: sin(θ+π/2) = cos(θ)
+
+    let angle = Angle::new(2.0, 7.0); // 2π/7
+
+    // quadrature relationship
+    let angle_plus_quarter = angle + Angle::new(1.0, 2.0);
+    let sin_shifted = angle_plus_quarter.grade_angle().sin();
+    let cos_original = angle.grade_angle().cos();
+
+    println!("Quadrature relationship:");
+    println!(
+        "  sin(θ+π/2) = sin({:.3}) = {:.3}",
+        angle_plus_quarter.grade_angle(),
+        sin_shifted
+    );
+    println!(
+        "  cos(θ) = cos({:.3}) = {:.3}",
+        angle.grade_angle(),
+        cos_original
+    );
+    assert!((sin_shifted - cos_original).abs() < EPSILON);
+
+    // pythagorean identity from quadrature
+    let sin_val = angle.grade_angle().sin();
+    let cos_val = angle.grade_angle().cos();
+    let identity = sin_val.powi(2) + cos_val.powi(2);
+
+    println!("\nPythagorean identity:");
+    println!(
+        "  sin²({:.3}) + cos²({:.3}) = {:.3}² + {:.3}² = {:.3}",
+        angle.grade_angle(),
+        angle.grade_angle(),
+        sin_val,
+        cos_val,
+        identity
+    );
+    assert!((identity - 1.0).abs() < EPSILON);
+
+    // now connect to 3-4-5: if hypotenuse is at angle θ
+    // and we project onto 0° and 90° directions
+    // we get adjacent = hyp×cos(θ) and opposite = hyp×sin(θ)
+    let hypotenuse = 5.0_f64;
+    let theta = (4.0_f64 / 5.0_f64).asin(); // angle for 3-4-5 triangle
+
+    let adj = hypotenuse * theta.cos(); // should be 3
+    let opp = hypotenuse * theta.sin(); // should be 4
+
+    println!("\n3-4-5 triangle from quadrature:");
+    println!("  hypotenuse: {}", hypotenuse);
+    println!("  angle: {:.3}", theta);
+    println!(
+        "  adjacent: {} × cos({:.3}) = {:.3}",
+        hypotenuse, theta, adj
+    );
+    println!(
+        "  opposite: {} × sin({:.3}) = {:.3}",
+        hypotenuse, theta, opp
+    );
+
+    assert!((adj - 3.0).abs() < EPSILON);
+    assert!((opp - 4.0).abs() < EPSILON);
+
+    // the pythagorean theorem is really saying:
+    // (hyp×cos)² + (hyp×sin)² = hyp²
+    // which simplifies to: hyp²(cos²+sin²) = hyp²
+    // which uses the quadrature identity: cos²+sin² = 1
+
+    let check = adj.powi(2) + opp.powi(2);
+    println!("  check: {:.3}² + {:.3}² = {:.3}", adj, opp, check);
+    assert!((check - hypotenuse.powi(2)).abs() < EPSILON);
+
+    println!("\nPythagorean theorem is quadrature in disguise:");
+    println!("  3² + 4² = 5² ↔ (5cos)² + (5sin)² = 5²");
+    println!("  ↔ 25(cos²+sin²) = 25");
+    println!("  ↔ cos²+sin² = 1 (quadrature identity)");
+}
+
+#[test]
+fn it_expresses_pythagoras_theorem_through_composed_angles() {
+    // 3² + 4² = 5² isn't about lengths - it's about angle composition through quadrature
+    // each number encodes a rotation, pythagorean theorem describes how rotations combine
+
+    // the classic 3-4-5 triangle
+    let three = Geonum::new(3.0, 0.0, 1.0); // whatever rotation 3 encodes
+    let four = Geonum::new(4.0, 1.0, 2.0); // whatever rotation 4 encodes, rotated π/2
+
+    println!("3-4-5 triangle as angle composition:");
+    println!(
+        "  3: length={} at angle={:.3}",
+        three.length,
+        three.angle.grade_angle()
+    );
+    println!(
+        "  4: length={} at angle={:.3}",
+        four.length,
+        four.angle.grade_angle()
+    );
+
+    // when angles are π/2 apart (orthogonal), their combination follows cosine rule with cos(π/2) = 0
+    let angle_diff = (four.angle - three.angle).grade_angle();
+    println!(
+        "  angle difference: {:.3} (π/2 = {:.3})",
+        angle_diff,
+        PI / 2.0
+    );
+    assert!((angle_diff - PI / 2.0).abs() < EPSILON);
+
+    // the "5" emerges from cosine interference with orthogonal rotations
+    let combined = three + four;
+    println!(
+        "  combined: length={:.3} at angle={:.3}",
+        combined.length,
+        combined.angle.grade_angle()
+    );
+
+    // verify pythagorean relationship in lengths
+    let expected_length = (3.0_f64.powi(2) + 4.0_f64.powi(2)).sqrt();
+    assert!((combined.length - expected_length).abs() < EPSILON);
+    assert!((combined.length - 5.0).abs() < EPSILON);
+
+    // but the real insight: this length relationship comes from cosine interference
+    // cos(π/2) = 0 means orthogonal rotations combine with zero interference term
 }

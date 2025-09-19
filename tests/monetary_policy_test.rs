@@ -195,8 +195,8 @@ fn it_models_causal_transaction_structure() {
         }
 
         // weighted average of angles
-        let acc_angle = acc.angle.mod_4_angle();
-        let biv_angle = bivector.angle.mod_4_angle();
+        let acc_angle = acc.angle.grade_angle();
+        let biv_angle = bivector.angle.grade_angle();
         let new_angle = if acc.length > 0.0 {
             (acc_angle * acc.length + biv_angle * bivector.length) / new_length
         } else {
@@ -232,8 +232,8 @@ fn it_models_causal_transaction_structure() {
             return acc;
         }
 
-        let acc_angle = acc.angle.mod_4_angle();
-        let biv_angle = bivector.angle.mod_4_angle();
+        let acc_angle = acc.angle.grade_angle();
+        let biv_angle = bivector.angle.grade_angle();
         let new_angle = if acc.length > 0.0 {
             (acc_angle * acc.length + biv_angle * bivector.length) / new_length
         } else {
@@ -257,7 +257,7 @@ fn it_models_causal_transaction_structure() {
     );
     println!(
         "transaction net flow angle: {:.4}",
-        economic_flow.angle.mod_4_angle()
+        economic_flow.angle.grade_angle()
     );
     println!("conservation check: {total_balance:.10}");
 }
@@ -344,14 +344,14 @@ fn it_models_investment_network_resilience() {
         // compute directional impact
         let avg_angle_before = original
             .iter()
-            .map(|b| b.angle.mod_4_angle() * b.length)
+            .map(|b| b.angle.grade_angle() * b.length)
             .sum::<f64>()
             / initial_value;
 
         let avg_angle_after = after_default
             .iter()
             .filter(|b| b.length > 0.0) // exclude defaulted entities
-            .map(|b| b.angle.mod_4_angle() * b.length)
+            .map(|b| b.angle.grade_angle() * b.length)
             .sum::<f64>()
             / final_value;
 
@@ -384,7 +384,7 @@ fn it_models_investment_network_resilience() {
     println!("network loss: {:.2}%", impact.length * 100.0);
     println!(
         "investment direction shift: {:.4}",
-        impact.angle.mod_4_angle()
+        impact.angle.grade_angle()
     );
     println!("computation time: {:.2} nanoseconds", duration.as_nanos());
 
@@ -485,7 +485,7 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
             // calculate mean angle (risk level)
             let _mean_angle = profit_rates
                 .iter()
-                .map(|g| g.angle.mod_4_angle())
+                .map(|g| g.angle.grade_angle())
                 .sum::<f64>()
                 / profit_rates.len() as f64;
 

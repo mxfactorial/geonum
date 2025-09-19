@@ -43,7 +43,7 @@ fn it_projects_a_geonum_onto_coordinate_axes() {
     // each projection represents alignment with that blade space
 
     // test individual projections are trigonometrically consistent
-    let geonum_angle = final_geonum.angle.mod_4_angle();
+    let geonum_angle = final_geonum.angle.grade_angle();
     let expected_blade_0 = final_geonum.length * (geonum_angle - 0.0).cos(); // angle from blade 0
     let expected_blade_1 = final_geonum.length * (geonum_angle - PI / 2.0).cos(); // angle from blade 1
 
@@ -96,7 +96,7 @@ fn it_proves_quadrature_creates_dimensional_structure() {
     let entity = Geonum::new(1.0, 1.0, 6.0); // π/6 angle, unit magnitude
 
     // test the fundamental quadrature relationship: sin(θ+π/2) = cos(θ)
-    let theta = entity.angle.mod_4_angle();
+    let theta = entity.angle.grade_angle();
     let theta_plus_quarter = theta + PI / 2.0;
     assert!((theta.cos() - theta_plus_quarter.sin()).abs() < EPSILON);
     assert!((theta.sin() + theta_plus_quarter.cos()).abs() < EPSILON);
@@ -153,10 +153,10 @@ fn it_shows_dimensions_are_quarter_turns() {
     let constructed_dim_3 = Geonum::create_dimension(1.0, 3); // 3 quarter turns
 
     // these are separated by exactly π/2 rotations
-    assert!((constructed_dim_0.angle.mod_4_angle() - 0.0).abs() < EPSILON);
-    assert!((constructed_dim_1.angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
-    assert!((constructed_dim_2.angle.mod_4_angle() - PI).abs() < EPSILON);
-    assert!((constructed_dim_3.angle.mod_4_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
+    assert!((constructed_dim_0.angle.grade_angle() - 0.0).abs() < EPSILON);
+    assert!((constructed_dim_1.angle.grade_angle() - PI / 2.0).abs() < EPSILON);
+    assert!((constructed_dim_2.angle.grade_angle() - PI).abs() < EPSILON);
+    assert!((constructed_dim_3.angle.grade_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
 
     // rotating between dimensions proves they are angle positions
     let rotated_0_to_1 = constructed_dim_0.rotate(Angle::new(1.0, 2.0)); // +π/2
@@ -673,7 +673,8 @@ fn it_doesnt_need_a_pseudoscalar() {
     // geonum: unified operation without grade extraction
     let input = Geonum::new(1.0, 0.0, 1.0);
     let geonum_result = input.scale_rotate(scale_factor, Angle::new(rotation_angle, PI));
-    let (geonum_x, geonum_y) = geonum_result.to_cartesian();
+    let geonum_x = geonum_result.length * geonum_result.angle.grade_angle().cos();
+    let geonum_y = geonum_result.length * geonum_result.angle.grade_angle().sin();
     assert!((traditional_result[0] - geonum_x).abs() < 1e-10);
     assert!((traditional_result[1] - geonum_y).abs() < 1e-10);
 
@@ -801,7 +802,8 @@ fn it_demonstrates_pseudoscalar_elimination_benefits() {
     let rotation = Angle::new(1.0, 2.0); // π/2
     let rotated = point.rotate(rotation);
 
-    let (x, y) = rotated.to_cartesian();
+    let x = rotated.length * rotated.angle.grade_angle().cos();
+    let y = rotated.length * rotated.angle.grade_angle().sin();
     assert!((x - (-4.0)).abs() < EPSILON);
     assert!((y - 3.0).abs() < EPSILON);
 
@@ -820,7 +822,8 @@ fn it_demonstrates_pseudoscalar_elimination_benefits() {
     assert_eq!(composed, Angle::new(3.0, 4.0)); // 3π/4
 
     let final_point = point.rotate(composed);
-    let (fx, fy) = final_point.to_cartesian();
+    let fx = final_point.length * final_point.angle.grade_angle().cos();
+    let fy = final_point.length * final_point.angle.grade_angle().sin();
     assert!((fx - (-4.949)).abs() < 0.01);
     assert!((fy - (-0.707)).abs() < 0.01);
 
@@ -1021,7 +1024,7 @@ fn it_proves_angle_space_is_absolute() {
     // prove operations work with absolute positions, not relative signs
     let chain = angle_0 * angle_pi_4 * angle_pi_2 * angle_3pi_4 * angle_pi;
     let total_angle = 0.0 + PI / 4.0 + PI / 2.0 + 3.0 * PI / 4.0 + PI;
-    assert!((chain.angle.mod_4_angle() - (total_angle % (2.0 * PI))).abs() < EPSILON);
+    assert!((chain.angle.grade_angle() - (total_angle % (2.0 * PI))).abs() < EPSILON);
 
     // prove grade transformations are absolute position changes
     let scalar = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // grade 0
@@ -1427,7 +1430,7 @@ fn it_proves_rotational_quadrature_expresses_quadratic_forms() {
     println!(
         "Geonum: length={}, angle={:.3} rad",
         geonum.length,
-        geonum.angle.mod_4_angle()
+        geonum.angle.grade_angle()
     );
 
     // step 2: get projections through geonum's rotational interface
@@ -1437,7 +1440,7 @@ fn it_proves_rotational_quadrature_expresses_quadratic_forms() {
     println!("Rotational projections: x={:.3}, y={:.3}", proj_x, proj_y);
 
     // step 3: compute the same projections using traditional trigonometry
-    let angle = geonum.angle.mod_4_angle();
+    let angle = geonum.angle.grade_angle();
     let trig_x = geonum.length * angle.cos(); // traditional x = r*cos(θ)
     let trig_y = geonum.length * angle.sin(); // traditional y = r*sin(θ)
 
@@ -1584,7 +1587,7 @@ fn it_proves_rotational_quadrature_expresses_quadratic_forms() {
     );
 
     println!("\n✓ Complete causal chain proven:");
-    println!("  quadrature: sin(θ+π/2) = cos(θ)");
+    println!("  quadrature: t");
     println!("  → Orthogonal projections: cos(θ), sin(θ)");
     println!("  → Quadratic identity: sin²+cos²=1");
     println!("  → Projection equivalence: geonum rotational = trigonometric");

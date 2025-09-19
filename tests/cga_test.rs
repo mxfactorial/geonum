@@ -137,9 +137,12 @@ fn it_represents_circles_through_three_points() {
     // the circumcenter calculation in cartesian IS the simplification
 
     // convert to cartesian for circumcenter calculation
-    let (x1, y1) = p1.to_cartesian();
-    let (x2, y2) = p2.to_cartesian();
-    let (x3, y3) = p3.to_cartesian();
+    let x1 = p1.adj().length;
+    let y1 = p1.opp().length;
+    let x2 = p2.adj().length;
+    let y2 = p2.opp().length;
+    let x3 = p3.adj().length;
+    let y3 = p3.opp().length;
 
     // circumcenter formula (this is what CGA tries to abstract)
     let d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
@@ -2058,10 +2061,18 @@ fn it_applies_inversion_in_arbitrary_sphere() {
             );
 
             // test angle preservation
+            let expected_angle = relative.angle + Angle::new(2.0, 1.0); // add 4 blades for transformation
             assert_eq!(
-                inverted_relative.angle,
-                relative.angle + Angle::new(2.0, 1.0), // add 4 blades for transformation
-                "inversion preserves angles (conformal)"
+                inverted_relative.angle.blade(),
+                expected_angle.blade(),
+                "blade preservation"
+            );
+            // custom comparison avoids tight PartialEq tolerance (1e-15) for accumulated floating point error
+            assert!(
+                (inverted_relative.angle.value() - expected_angle.value()).abs() < 1e-14,
+                "angle value preservation: got {:.15}, expected {:.15}",
+                inverted_relative.angle.value(),
+                expected_angle.value()
             );
 
             // test fixed points on sphere
@@ -2357,7 +2368,7 @@ fn it_applies_reflection_in_sphere() {
 
         // test angle preservation: ray and inverted_ray have same angle
         assert!(
-            (inverted_ray.angle.mod_4_angle() - ray.angle.mod_4_angle()).abs() < EPSILON,
+            (inverted_ray.angle.grade_angle() - ray.angle.grade_angle()).abs() < EPSILON,
             "inversion preserves angle from center"
         );
 
@@ -2442,7 +2453,7 @@ fn it_composes_conformal_transformations() {
     // different order gives different result (non-commutative)
     assert!(
         scaled.length != then_translated.length
-            || (scaled.angle.mod_4_angle() - then_translated.angle.mod_4_angle()).abs() > EPSILON,
+            || (scaled.angle.grade_angle() - then_translated.angle.grade_angle()).abs() > EPSILON,
         "transformation order matters (non-commutative)"
     );
 
@@ -2531,7 +2542,7 @@ fn it_preserves_angles_under_conformal_maps() {
     // vectors from p1 to p2 and p1 to p3
     let v12 = p2 - p1;
     let v13 = p3 - p1;
-    let angle_before = (v13.angle - v12.angle).mod_4_angle();
+    let angle_before = (v13.angle - v12.angle).grade_angle();
 
     // invert all three points using geonum operations
     let invert = |point: Geonum| -> Geonum {
@@ -2550,7 +2561,7 @@ fn it_preserves_angles_under_conformal_maps() {
     // vectors between inverted points
     let iv12 = i2 - i1;
     let iv13 = i3 - i1;
-    let angle_after = (iv13.angle - iv12.angle).mod_4_angle();
+    let angle_after = (iv13.angle - iv12.angle).grade_angle();
 
     // inversion preserves angles between curves at their intersection points
     println!("angle between vectors before inversion: {angle_before}");
@@ -2619,8 +2630,10 @@ fn it_computes_tangent_to_circle() {
 
     // vector from center to external point
     // compute directly using cartesian coordinates to avoid blade wrapping in subtraction
-    let (cx, cy) = circle_center.to_cartesian();
-    let (ex, ey) = external_point.to_cartesian();
+    let cx = circle_center.adj().length;
+    let cy = circle_center.opp().length;
+    let ex = external_point.adj().length;
+    let ey = external_point.opp().length;
     let center_to_external = Geonum::new_from_cartesian(ex - cx, ey - cy);
     let dist_to_center = center_to_external.length;
 
@@ -2663,7 +2676,8 @@ fn it_computes_tangent_to_circle() {
 
     // verify tangents are perpendicular to radii at tangent points
     // compute vectors directly in cartesian to avoid blade issues
-    let (t1x, t1y) = tangent_point1.to_cartesian();
+    let t1x = tangent_point1.adj().length;
+    let t1y = tangent_point1.opp().length;
     let radius_to_t1 = Geonum::new_from_cartesian(t1x - cx, t1y - cy);
     let tangent_line1 = Geonum::new_from_cartesian(ex - t1x, ey - t1y);
     let dot1 = radius_to_t1.dot(&tangent_line1);
@@ -3276,7 +3290,7 @@ fn it_handles_imaginary_circles() {
     assert_eq!(radius_squared.angle, Angle::new(1.0, 1.0)); // π (negative)
 
     // in cartesian projection: 4*cos(π) = -4
-    let cartesian_value = radius_squared.length * radius_squared.angle.mod_4_angle().cos();
+    let cartesian_value = radius_squared.length * radius_squared.angle.grade_angle().cos();
     assert!((cartesian_value - (-4.0)).abs() < EPSILON);
 
     // points on "imaginary circle" at angle θ
@@ -3330,7 +3344,7 @@ fn it_handles_imaginary_circles() {
     assert_eq!(i_squared.angle, Angle::new(1.0, 1.0)); // π
 
     // π means pointing backward = -1
-    let as_real = i_squared.length * i_squared.angle.mod_4_angle().cos();
+    let as_real = i_squared.length * i_squared.angle.grade_angle().cos();
     assert!((as_real - (-1.0)).abs() < EPSILON);
 
     // geonum ghosts the imaginary unit i and complex number system
@@ -3461,8 +3475,10 @@ fn it_computes_power_of_point_to_sphere() {
     let outside_z = 1.0;
 
     // compute 3D distance
-    let (cx, cy) = center.to_cartesian();
-    let (ox, oy) = outside.to_cartesian();
+    let cx = center.adj().length;
+    let cy = center.opp().length;
+    let ox = outside.adj().length;
+    let oy = outside.opp().length;
     let dx = ox - cx;
     let dy = oy - cy;
     let dz = outside_z - center_z;
@@ -3485,7 +3501,8 @@ fn it_computes_power_of_point_to_sphere() {
     let on_sphere = Geonum::new_from_cartesian(cx + 2.5, cy); // x = center_x + radius
     let on_sphere_z = center_z; // z = center_z
 
-    let (sx, sy) = on_sphere.to_cartesian();
+    let sx = on_sphere.adj().length;
+    let sy = on_sphere.opp().length;
     let dist_on_squared = Geonum::scalar(
         (sx - cx) * (sx - cx)
             + (sy - cy) * (sy - cy)
@@ -3504,7 +3521,8 @@ fn it_computes_power_of_point_to_sphere() {
     let inside = Geonum::new_from_cartesian(cx + 1.0, cy); // x = center_x + 1
     let inside_z = center_z; // z = center_z
 
-    let (ix, iy) = inside.to_cartesian();
+    let ix = inside.adj().length;
+    let iy = inside.opp().length;
     let dist_inside_squared = Geonum::scalar(
         (ix - cx) * (ix - cx)
             + (iy - cy) * (iy - cy)
@@ -4339,7 +4357,7 @@ fn it_computes_steiner_chain() {
     assert!(scaled.angle.blade() == chain_circle.angle.blade() || scaled.length < EPSILON);
     // rotation by π/3 adds that angle
     let expected_angle = chain_circle.angle + Angle::new(1.0, 3.0);
-    assert_eq!(rotated.angle.mod_4_angle(), expected_angle.mod_4_angle());
+    assert_eq!(rotated.angle.grade_angle(), expected_angle.grade_angle());
 
     // non-concentric case: offset inner circle
     let offset_inner = inner_center + Geonum::new(1.0, 0.0, 1.0);
@@ -5391,11 +5409,11 @@ fn it_applies_circular_inversion() {
 
         // blade structure transforms but total angle relationship is preserved
         // through the combination of blade count and angle value
-        let total_angle_change = offset_inv.angle.mod_4_angle() - offset.angle.mod_4_angle();
+        let total_angle_change = offset_inv.angle.grade_angle() - offset.angle.grade_angle();
         println!(
             "Point ({:.1},{:.1}): blade {} → {}, total angle change: {:.4}",
-            p.to_cartesian().0,
-            p.to_cartesian().1,
+            p.adj().length,
+            p.opp().length,
             offset.angle.blade(),
             offset_inv.angle.blade(),
             total_angle_change
@@ -5543,9 +5561,10 @@ fn it_eliminates_versor_complexity() {
     // translation without translator versor T = 1 - ½te∞
     let translation = Geonum::new_from_cartesian(2.0, -1.0);
     let translated = point + translation; // just addition, no sandwich product
-    let (tx, ty) = translated.to_cartesian();
+    let expected = Geonum::new_from_cartesian(5.0, 3.0);
     assert!(
-        (tx - 5.0).abs() < EPSILON && (ty - 3.0).abs() < EPSILON,
+        (translated.adj().length - expected.adj().length).abs() < EPSILON
+            && (translated.opp().length - expected.opp().length).abs() < EPSILON,
         "translation is simple addition, not versor sandwich"
     );
 
