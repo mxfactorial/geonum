@@ -1,6 +1,6 @@
 # changelog
 
-## 0.9.0 (2025-01-09)
+## 0.9.0 (2025-09-19)
 
 ### removed
 - **BREAKING**: removed `pub fn to_cartesian()` crutch function from `Geonum`
