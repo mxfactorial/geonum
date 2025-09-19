@@ -109,7 +109,7 @@ fn it_handles_scanning_laser_beams() {
     // compute angular coverage
     let mut angles: Vec<f64> = laser_beams
         .iter()
-        .map(|beam| beam.angle.mod_4_angle())
+        .map(|beam| beam.angle.grade_angle())
         .collect();
     angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
@@ -229,8 +229,8 @@ fn it_represents_electromagnetic_field_lines() {
 
     for i in 0..field_lines.len() {
         for j in (i + 1)..field_lines.len() {
-            let angle1 = field_lines[i].angle.mod_4_angle();
-            let angle2 = field_lines[j].angle.mod_4_angle();
+            let angle1 = field_lines[i].angle.grade_angle();
+            let angle2 = field_lines[j].angle.grade_angle();
             let separation = (angle2 - angle1).abs();
             angular_separations.push(separation);
         }
@@ -286,7 +286,7 @@ fn it_demonstrates_why_single_geonum_fails_here() {
     // Result: angles have been added together
     // Original: 0°, 90°, 45°
     // Combined: 0° + 90° + 45° = 135°
-    assert_eq!(combined_wrong.angle.mod_4_angle(), 3.0 * PI / 4.0);
+    assert_eq!(combined_wrong.angle.grade_angle(), 3.0 * PI / 4.0);
 
     // We've lost the fact that these were three separate beams!
     // The combined result suggests one beam at 135°, not three beams at different angles
@@ -305,9 +305,9 @@ fn it_demonstrates_why_single_geonum_fails_here() {
 
     // With separate representation, we can:
     // 1. Query individual beam properties
-    assert_eq!(separate_beams[0].angle.mod_4_angle(), 0.0);
-    assert_eq!(separate_beams[1].angle.mod_4_angle(), PI / 2.0);
-    assert_eq!(separate_beams[2].angle.mod_4_angle(), PI / 4.0);
+    assert_eq!(separate_beams[0].angle.grade_angle(), 0.0);
+    assert_eq!(separate_beams[1].angle.grade_angle(), PI / 2.0);
+    assert_eq!(separate_beams[2].angle.grade_angle(), PI / 4.0);
 
     // 2. Compute pairwise interactions
     let beam1_beam2_meet = separate_beams[0].meet(&separate_beams[1]);

@@ -50,8 +50,8 @@ fn its_a_category() {
     ]); // categorical objects as geometric positions at angles 0 and π/2
 
     // test objects exist in the space
-    assert!(objects[0].angle.mod_4_angle() < EPSILON);
-    assert!((objects[1].angle.mod_4_angle() - PI / 2.0).abs() < EPSILON);
+    assert!(objects[0].angle.grade_angle() < EPSILON);
+    assert!((objects[1].angle.grade_angle() - PI / 2.0).abs() < EPSILON);
 
     // test angle-based composition vs symbol-based composition
     // in category theory, f ∘ g is defined abstractly
@@ -75,7 +75,7 @@ fn its_a_category() {
     assert!((f_compose_g.length - 6.0).abs() < EPSILON); // lengths multiply: 2*3=6
                                                          // angles add: pi/4 + pi/6 = 5pi/12
     let expected_angle = PI / 4.0 + PI / 6.0;
-    assert!((f_compose_g.angle.mod_4_angle() - expected_angle).abs() < EPSILON);
+    assert!((f_compose_g.angle.grade_angle() - expected_angle).abs() < EPSILON);
 
     // test natural transformations as geometric rotations
     // a natural transformation is just a rotation that preserves structure
@@ -90,9 +90,9 @@ fn its_a_category() {
     let b_transformed = transform(&b);
 
     // test transformation preserves structure (angle differences)
-    let original_diff = (b.angle.mod_4_angle() - a.angle.mod_4_angle()).abs();
+    let original_diff = (b.angle.grade_angle() - a.angle.grade_angle()).abs();
     let transformed_diff =
-        (b_transformed.angle.mod_4_angle() - a_transformed.angle.mod_4_angle()).abs();
+        (b_transformed.angle.grade_angle() - a_transformed.angle.grade_angle()).abs();
 
     assert!((original_diff - transformed_diff).abs() < EPSILON);
 
@@ -140,8 +140,8 @@ fn its_a_functor() {
 
     // test transformation space vs arbitrary mapping
     // our functor preserves the angle relationships between objects
-    let original_diff = (b.angle.mod_4_angle() - a.angle.mod_4_angle()).abs();
-    let transformed_diff = (f_b.angle.mod_4_angle() - f_a.angle.mod_4_angle()).abs();
+    let original_diff = (b.angle.grade_angle() - a.angle.grade_angle()).abs();
+    let transformed_diff = (f_b.angle.grade_angle() - f_a.angle.grade_angle()).abs();
 
     // our example functor doubles angles, so differences should double
     assert!((transformed_diff - 2.0 * original_diff).abs() < EPSILON);
@@ -171,13 +171,13 @@ fn its_a_functor() {
 
     // angles do maintain consistent transformations
     let angle_diff =
-        (f_of_composition.angle.mod_4_angle() - composition_of_f.angle.mod_4_angle()).abs();
+        (f_of_composition.angle.grade_angle() - composition_of_f.angle.grade_angle()).abs();
     assert!(angle_diff < EPSILON || (TAU - angle_diff) < EPSILON);
 
     // test we can directly measure the degree of structure preservation
     // instead of just asserting it exists
-    let original_composition_angle = f_source.angle.mod_4_angle() + g_source.angle.mod_4_angle();
-    let functor_composition_angle = f_f.angle.mod_4_angle() + f_g.angle.mod_4_angle();
+    let original_composition_angle = f_source.angle.grade_angle() + g_source.angle.grade_angle();
+    let functor_composition_angle = f_f.angle.grade_angle() + f_g.angle.grade_angle();
     let expected_relationship = 2.0; // our functor doubles angles
 
     let measured_relationship = functor_composition_angle / original_composition_angle;
@@ -202,12 +202,8 @@ fn its_an_adjunction() {
 
     // define a "right adjoint" functor from D to C by halving angles
     let right_adjoint = |g: &Geonum| -> Geonum {
-        // halve angles - multiply by 0.5 which is 1/2
-        Geonum::new_with_angle(
-            g.length,
-            // create angle that is half of input
-            Angle::new(g.angle.mod_4_angle() * 2.0 / PI, 4.0),
-        )
+        // halve angles using angle division
+        Geonum::new_with_angle(g.length, g.angle / 2.0)
     };
 
     // test adjoint relationship through angle reflection
@@ -224,10 +220,10 @@ fn its_an_adjunction() {
 
     // test the adjunction property via angle relationships
     // measure "distance" (in angle space) from F(c) to d in D
-    let hom_fd_d = (fc.angle.mod_4_angle() - d.angle.mod_4_angle()).abs();
+    let hom_fd_d = (fc.angle.grade_angle() - d.angle.grade_angle()).abs();
 
     // measure "distance" from c to G(d) in C
-    let hom_c_gd = (c.angle.mod_4_angle() - gd.angle.mod_4_angle()).abs();
+    let hom_c_gd = (c.angle.grade_angle() - gd.angle.grade_angle()).abs();
 
     // test these are related by our adjunction factor (2 in this case)
     assert!((hom_fd_d - 2.0 * hom_c_gd).abs() < EPSILON);
@@ -241,14 +237,14 @@ fn its_an_adjunction() {
     let gfc = right_adjoint(&left_adjoint(&c));
 
     // the unit at c is the transformation from c to GF(c)
-    let unit_angle = gfc.angle.mod_4_angle() - c.angle.mod_4_angle();
+    let unit_angle = gfc.angle.grade_angle() - c.angle.grade_angle();
 
     // for our functors, this should be 0 (GF is identity on angles)
     assert!(unit_angle.abs() < EPSILON);
 
     // similarly test the counit
     let fgd = left_adjoint(&right_adjoint(&d));
-    let counit_angle = d.angle.mod_4_angle() - fgd.angle.mod_4_angle();
+    let counit_angle = d.angle.grade_angle() - fgd.angle.grade_angle();
 
     // for our functors, this should be 0 (FG is identity on angles)
     assert!(counit_angle.abs() < EPSILON);
@@ -297,10 +293,10 @@ fn its_a_limit() {
     let _other_projections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let p_x = p.length * p.angle.mod_4_angle().cos();
-            let p_y = p.length * p.angle.mod_4_angle().sin();
-            let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
-            let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
+            let p_x = p.length * p.angle.grade_angle().cos();
+            let p_y = p.length * p.angle.grade_angle().sin();
+            let o_x = other_point.length * other_point.angle.grade_angle().cos();
+            let o_y = other_point.length * other_point.angle.grade_angle().sin();
             let dx = p_x - o_x;
             let dy = p_y - o_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -365,10 +361,10 @@ fn its_a_colimit() {
     let _injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let c_x = colimit.length * colimit.angle.mod_4_angle().cos();
-            let c_y = colimit.length * colimit.angle.mod_4_angle().sin();
-            let p_x = p.length * p.angle.mod_4_angle().cos();
-            let p_y = p.length * p.angle.mod_4_angle().sin();
+            let c_x = colimit.length * colimit.angle.grade_angle().cos();
+            let c_y = colimit.length * colimit.angle.grade_angle().sin();
+            let p_x = p.length * p.angle.grade_angle().cos();
+            let p_y = p.length * p.angle.grade_angle().sin();
             let dx = c_x - p_x;
             let dy = c_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -387,10 +383,10 @@ fn its_a_colimit() {
     let _other_injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
-            let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
-            let p_x = p.length * p.angle.mod_4_angle().cos();
-            let p_y = p.length * p.angle.mod_4_angle().sin();
+            let o_x = other_point.length * other_point.angle.grade_angle().cos();
+            let o_y = other_point.length * other_point.angle.grade_angle().sin();
+            let p_x = p.length * p.angle.grade_angle().cos();
+            let p_y = p.length * p.angle.grade_angle().sin();
             let dx = o_x - p_x;
             let dy = o_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -399,10 +395,10 @@ fn its_a_colimit() {
 
     // test the existence of a unique map from colimit to other_point
     // artifact of geonum automation: categorical universal cocone property replaced by direct angle path
-    let o_x = other_point.length * other_point.angle.mod_4_angle().cos();
-    let o_y = other_point.length * other_point.angle.mod_4_angle().sin();
-    let c_x = colimit.length * colimit.angle.mod_4_angle().cos();
-    let c_y = colimit.length * colimit.angle.mod_4_angle().sin();
+    let o_x = other_point.length * other_point.angle.grade_angle().cos();
+    let o_y = other_point.length * other_point.angle.grade_angle().sin();
+    let c_x = colimit.length * colimit.angle.grade_angle().cos();
+    let c_y = colimit.length * colimit.angle.grade_angle().sin();
     let _to_other = Geonum::new_from_cartesian(o_x - c_x, o_y - c_y);
 
     // prove colimit construction through direct angle operations
@@ -502,8 +498,8 @@ fn its_a_natural_transformation() {
     );
 
     // verify morphisms preserve expected properties
-    assert!(g_morphism.angle.mod_4_angle().abs() > EPSILON);
-    assert!(f_morphism.angle.mod_4_angle().abs() > EPSILON);
+    assert!(g_morphism.angle.grade_angle().abs() > EPSILON);
+    assert!(f_morphism.angle.grade_angle().abs() > EPSILON);
 }
 
 #[test]

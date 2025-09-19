@@ -58,11 +58,11 @@ fn its_a_tensor_product() {
     // demonstrate distributivity: a ⊗ (b + c) = a ⊗ b + a ⊗ c using cartesian addition
 
     // create b + c in cartesian
-    let e2_x = e2.length * e2.angle.mod_4_angle().cos(); // 0
-    let e2_y = e2.length * e2.angle.mod_4_angle().sin(); // 1
+    let e2_x = e2.length * e2.angle.grade_angle().cos(); // 0
+    let e2_y = e2.length * e2.angle.grade_angle().sin(); // 1
 
-    let e3_x = e3.length * e3.angle.mod_4_angle().cos(); // -1
-    let e3_y = e3.length * e3.angle.mod_4_angle().sin(); // 0
+    let e3_x = e3.length * e3.angle.grade_angle().cos(); // -1
+    let e3_y = e3.length * e3.angle.grade_angle().sin(); // 0
 
     let sum_x = e2_x + e3_x; // -1
     let sum_y = e2_y + e3_y; // 1
@@ -85,11 +85,11 @@ fn its_a_tensor_product() {
     let a_tensor_c = e1.wedge(&e3); // a ⊗ c → bivector
 
     // convert a ⊗ b and a ⊗ c back to cartesian form for vector addition
-    let ab_x = a_tensor_b.length * a_tensor_b.angle.mod_4_angle().cos();
-    let ab_y = a_tensor_b.length * a_tensor_b.angle.mod_4_angle().sin();
+    let ab_x = a_tensor_b.length * a_tensor_b.angle.grade_angle().cos();
+    let ab_y = a_tensor_b.length * a_tensor_b.angle.grade_angle().sin();
 
-    let ac_x = a_tensor_c.length * a_tensor_c.angle.mod_4_angle().cos();
-    let ac_y = a_tensor_c.length * a_tensor_c.angle.mod_4_angle().sin();
+    let ac_x = a_tensor_c.length * a_tensor_c.angle.grade_angle().cos();
+    let ac_y = a_tensor_c.length * a_tensor_c.angle.grade_angle().sin();
 
     // perform vector addition of bivectors in the plane
     let sum_products_x = ab_x + ac_x;
@@ -105,7 +105,7 @@ fn its_a_tensor_product() {
     // prove that a ⊗ (b + c) and a ⊗ b + a ⊗ c differ in phase by 45° (π/4 radians)
     // geonum captures this additional structure — tensors do not
 
-    let angle_diff = (left_distribute.angle - Angle::new(sum_products_angle, PI)).mod_4_angle();
+    let angle_diff = (left_distribute.angle - Angle::new(sum_products_angle, PI)).grade_angle();
     assert!((angle_diff - PI / 4.0).abs() < EPSILON); // ≈ 0.785398...
 
     // demonstrate rank-3 tensor operation efficiency
@@ -161,7 +161,7 @@ fn its_a_tensor_product() {
 
     // in geonum ijk = [1, π/2 + π + 3π/2] = [1, 3π] = [1, π] = -1
     assert_eq!(ijk.length, 1.0);
-    assert!((ijk.angle.mod_4_angle() - PI).abs() < EPSILON);
+    assert!((ijk.angle.grade_angle() - PI).abs() < EPSILON);
 
     // compare with traditional tensor implementation
 
@@ -238,10 +238,10 @@ fn its_a_kronecker_product() {
 
     // traditional kronecker blocks A₁₁B₁₁, A₁₂B₁₁, etc:
     // geonum computes these exact same values through trigonometric projections
-    let expected_k00 = kronecker.length * (kronecker.angle.mod_4_angle() - 0.0).cos();
-    let expected_k01 = kronecker.length * (kronecker.angle.mod_4_angle() - PI / 2.0).cos();
-    let expected_k10 = kronecker.length * (kronecker.angle.mod_4_angle() - PI).cos();
-    let expected_k11 = kronecker.length * (kronecker.angle.mod_4_angle() - 3.0 * PI / 2.0).cos();
+    let expected_k00 = kronecker.length * (kronecker.angle.grade_angle() - 0.0).cos();
+    let expected_k01 = kronecker.length * (kronecker.angle.grade_angle() - PI / 2.0).cos();
+    let expected_k10 = kronecker.length * (kronecker.angle.grade_angle() - PI).cos();
+    let expected_k11 = kronecker.length * (kronecker.angle.grade_angle() - 3.0 * PI / 2.0).cos();
 
     assert!((k00_projection - expected_k00).abs() < EPSILON);
     assert!((k01_projection - expected_k01).abs() < EPSILON);
@@ -316,7 +316,7 @@ fn its_a_contraction() {
     let v1 = Geonum::new(2.0, 1.0, 4.0); // PI/4
     let v2 = Geonum::new(3.0, 1.0, 3.0); // PI/3
     let v1_dot_v2 = v1.dot(&v2);
-    let expected = 2.0 * 3.0 * (v1.angle - v2.angle).mod_4_angle().cos();
+    let expected = 2.0 * 3.0 * (v1.angle - v2.angle).grade_angle().cos();
 
     assert!((v1_dot_v2.length - expected).abs() < EPSILON);
 
@@ -406,7 +406,7 @@ fn its_a_covariant_derivative() {
 
     // prove covariant differs from ordinary due to curvature
     assert!(
-        (covariant_derivative.angle.mod_4_angle() - ordinary_derivative.angle.mod_4_angle()).abs()
+        (covariant_derivative.angle.grade_angle() - ordinary_derivative.angle.grade_angle()).abs()
             > EPSILON,
         "curvature modifies derivative through rotation"
     );
@@ -418,7 +418,7 @@ fn its_a_covariant_derivative() {
 
     // prove parallel transport changes orientation in curved space
     assert!(
-        (parallel_transported.angle.mod_4_angle() - initial_vector.angle.mod_4_angle()).abs()
+        (parallel_transported.angle.grade_angle() - initial_vector.angle.grade_angle()).abs()
             > EPSILON,
         "parallel transport rotates vector in curved space"
     );
@@ -447,7 +447,7 @@ fn its_a_covariant_derivative() {
 
     // prove geodesic deviation through angle change caused by differential curvature
     assert!(
-        (evolved_separation.angle.mod_4_angle() - separation_vector.angle.mod_4_angle()).abs()
+        (evolved_separation.angle.grade_angle() - separation_vector.angle.grade_angle()).abs()
             > EPSILON,
         "differential curvature rotates geodesic separation vector"
     );
@@ -475,7 +475,7 @@ fn its_a_covariant_derivative() {
 
     // holonomy: net rotation after completing the loop
     let holonomy_angle =
-        (transported_vector.angle.mod_4_angle() - test_vector.angle.mod_4_angle()).abs();
+        (transported_vector.angle.grade_angle() - test_vector.angle.grade_angle()).abs();
 
     // prove nonzero holonomy reveals spacetime curvature
     assert!(
@@ -716,7 +716,7 @@ fn its_a_quantum_tensor_network() {
 
     // expectation value with geonum
     let expectation = |state1: &Geonum, state2: &Geonum| -> f64 {
-        state1.length * state2.length * (state1.angle - state2.angle).mod_4_angle().cos()
+        state1.length * state2.length * (state1.angle - state2.angle).grade_angle().cos()
     };
 
     // compute expectation between neighbors
@@ -826,8 +826,8 @@ fn its_a_quantum_tensor_network() {
         // phase flip gate
         let pi_2 = Angle::new(1.0, 2.0); // PI/2
         let three_pi_2 = Angle::new(3.0, 2.0); // 3*PI/2
-        if (q.angle - pi_2).mod_4_angle().abs() < EPSILON
-            || (q.angle - three_pi_2).mod_4_angle().abs() < EPSILON
+        if (q.angle - pi_2).grade_angle().abs() < EPSILON
+            || (q.angle - three_pi_2).grade_angle().abs() < EPSILON
         {
             // apply -1 phase to |1⟩ component
             Geonum::new_with_angle(
@@ -860,8 +860,8 @@ fn its_a_quantum_tensor_network() {
         // apply phase only if control is |1⟩
         let pi = Angle::new(1.0, 1.0);
         let three_pi = Angle::new(3.0, 1.0);
-        if (control.angle - pi).mod_4_angle().abs() < EPSILON
-            || (control.angle - three_pi).mod_4_angle().abs() < EPSILON
+        if (control.angle - pi).grade_angle().abs() < EPSILON
+            || (control.angle - three_pi).grade_angle().abs() < EPSILON
         {
             (
                 *control,
@@ -1351,7 +1351,7 @@ fn its_a_multi_linear_map() {
     // verify that one-forms transform oppositely to vectors
     assert!(
         (one_form_transformed.angle - geo_transform.angle)
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             > 0.1
     );
@@ -1424,7 +1424,7 @@ fn its_a_multi_linear_map() {
     let two_form_reversed = e2.wedge(&e1);
     assert!(
         (two_form.angle - two_form_reversed.angle)
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             > PI - EPSILON
     );
@@ -1451,7 +1451,7 @@ fn its_a_multi_linear_map() {
     assert_eq!(pullback.length, two_form.length);
     assert!(
         (pullback.angle - (two_form.angle - Angle::new(theta, PI)))
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             < EPSILON
     );
@@ -1464,7 +1464,7 @@ fn its_a_multi_linear_map() {
         vector.length
             * two_form.length
             * (vector.angle - two_form.angle + Angle::new(1.0, 2.0))
-                .mod_4_angle()
+                .grade_angle()
                 .cos(),
         two_form.angle.blade() - 1,
         two_form.angle.value() + PI / 2.0,
@@ -1550,11 +1550,11 @@ fn its_a_multi_linear_map() {
     // they should have π/2 angle difference
     assert!(
         (ham_vector.angle - gradient.angle - Angle::new(1.0, 2.0))
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             < EPSILON
             || (ham_vector.angle - gradient.angle + Angle::new(3.0, 2.0))
-                .mod_4_angle()
+                .grade_angle()
                 .abs()
                 < EPSILON
     );
@@ -1954,7 +1954,7 @@ fn its_a_tensor_comparison() {
         geo_vector = Geonum::new_with_blade(
             geo_vector.length,
             1,
-            (geo_vector.angle + Angle::new(0.001 * (i as f64).sin(), PI)).mod_4_angle(),
+            (geo_vector.angle + Angle::new(0.001 * (i as f64).sin(), PI)).grade_angle(),
             1.0,
         );
     }
@@ -2032,7 +2032,7 @@ fn its_a_metric_signature() {
 
     // 0 + 0 = 0, cos(0) = +1
     assert_eq!(e1_squared.angle.blade(), 0);
-    assert!(e1_squared.angle.mod_4_angle().cos() > 0.0); // positive signature
+    assert!(e1_squared.angle.grade_angle().cos() > 0.0); // positive signature
     assert_eq!(e1_squared.length, 1.0);
 
     // test 2: minkowski signature emerges from timelike at π/2
@@ -2044,7 +2044,7 @@ fn its_a_metric_signature() {
 
     // π/2 + π/2 = π, cos(π) = -1
     assert_eq!(time_squared.angle.blade(), 2); // blade 1 + 1 = 2 (which is π)
-    assert!(time_squared.angle.mod_4_angle().cos() < 0.0); // negative signature!
+    assert!(time_squared.angle.grade_angle().cos() < 0.0); // negative signature!
 
     // test 3: the "choice" of signature is just choosing initial angles
     // traditional: "lets use signature (+,-,-,+)"
@@ -2056,10 +2056,10 @@ fn its_a_metric_signature() {
     let custom_e3 = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // 0° → squares to +
 
     // verify the signature (+,-,-,+)
-    assert!((custom_e0 * custom_e0).angle.mod_4_angle().cos() > 0.0); // +
-    assert!((custom_e1 * custom_e1).angle.mod_4_angle().cos() < 0.0); // -
-    assert!((custom_e2 * custom_e2).angle.mod_4_angle().cos() < 0.0); // -
-    assert!((custom_e3 * custom_e3).angle.mod_4_angle().cos() > 0.0); // +
+    assert!((custom_e0 * custom_e0).angle.grade_angle().cos() > 0.0); // +
+    assert!((custom_e1 * custom_e1).angle.grade_angle().cos() < 0.0); // -
+    assert!((custom_e2 * custom_e2).angle.grade_angle().cos() < 0.0); // -
+    assert!((custom_e3 * custom_e3).angle.grade_angle().cos() > 0.0); // +
 
     // test 4: "negative" vectors squaring to positive
     // traditional: "in clifford algebras, some negative elements square to positive"
@@ -2069,8 +2069,8 @@ fn its_a_metric_signature() {
     let squared = negative_vector * negative_vector;
 
     // π + π = 2π, and 2π ≡ 0 (mod 2π)
-    assert!(squared.angle.mod_4_angle().abs() < 1e-10); // back to 0
-    assert!(squared.angle.mod_4_angle().cos() > 0.0); // positive result
+    assert!(squared.angle.grade_angle().abs() < 1e-10); // back to 0
+    assert!(squared.angle.grade_angle().cos() > 0.0); // positive result
     assert_eq!(squared.length, 1.0);
 
     // this is why (-1) × (-1) = +1: its just π + π = 2π ≡ 0
@@ -2093,8 +2093,8 @@ fn its_a_metric_signature() {
     assert_eq!(blade_diff, 2); // 3 - 1 = 2, encodes dual positive/negative spacetime signature (π angle as -,+)
 
     // prove signature through cosine values - measured from actual blade arithmetic
-    assert!(spatial_squared.angle.mod_4_angle().cos() < 0.0); // spatial blade 1 gives negative cosine
-    assert!(temporal_squared.angle.mod_4_angle().cos() > 0.0); // temporal blade 3 gives positive cosine
+    assert!(spatial_squared.angle.grade_angle().cos() < 0.0); // spatial blade 1 gives negative cosine
+    assert!(temporal_squared.angle.grade_angle().cos() > 0.0); // temporal blade 3 gives positive cosine
 
     // minkowski metric signature emerges: 2 blade difference maintains space/time distinction
 
@@ -2134,13 +2134,13 @@ fn its_a_metric_signature() {
 
         if expected_negative {
             assert!(
-                squared.angle.mod_4_angle().cos() < 0.0,
+                squared.angle.grade_angle().cos() < 0.0,
                 "index {} negative",
                 i
             );
         } else {
             assert!(
-                squared.angle.mod_4_angle().cos() > 0.0,
+                squared.angle.grade_angle().cos() > 0.0,
                 "index {} positive",
                 i
             );
@@ -2156,14 +2156,14 @@ fn its_a_metric_signature() {
     let i_squared_euclidean = i_3d_euclidean * i_3d_euclidean;
 
     // 3π/2 + 3π/2 = 3π ≡ π (mod 2π), cos(π) = -1
-    assert_eq!(i_squared_euclidean.angle.mod_4_angle().cos(), -1.0); // I² = -1 for euclidean
+    assert_eq!(i_squared_euclidean.angle.grade_angle().cos(), -1.0); // I² = -1 for euclidean
 
     // in 4D minkowski: 1 time (π/2) + 3 space (0°)
     let i_4d_minkowski = Geonum::new_with_blade(1.0, 4, 0.0, 1.0); // 4 × π/2 = 2π
     let i_squared_minkowski = i_4d_minkowski * i_4d_minkowski;
 
     // 2π + 2π = 4π ≡ 0 (mod 2π), cos(0) = +1
-    assert_eq!(i_squared_minkowski.angle.mod_4_angle().cos(), 1.0); // I² = +1 for minkowski
+    assert_eq!(i_squared_minkowski.angle.grade_angle().cos(), 1.0); // I² = +1 for minkowski
 
     // the ±1 "mystery" is just whether your total angle is odd or even multiples of π
 

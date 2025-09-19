@@ -25,12 +25,12 @@ fn it_ships_conservation_with_the_wedge_product() {
     println!(
         "Vector: [{}, {:.3}]",
         vector.length,
-        vector.angle.mod_4_angle()
+        vector.angle.grade_angle()
     );
     println!(
         "v ∧ v = [{:.10}, {:.3}]",
         self_wedge.length,
-        self_wedge.angle.mod_4_angle()
+        self_wedge.angle.grade_angle()
     );
 
     // This IS conservation: you can't create something from nothing
@@ -70,17 +70,17 @@ fn it_ships_conservation_with_motion() {
     println!(
         "Position: [{:.2e}, {:.3}]",
         position.length,
-        position.angle.mod_4_angle()
+        position.angle.grade_angle()
     );
     println!(
         "Momentum: [{:.2e}, {:.3}]",
         momentum.length,
-        momentum.angle.mod_4_angle()
+        momentum.angle.grade_angle()
     );
     println!(
         "Angular momentum: [{:.3e}, {:.3}]",
         initial_angular_momentum.length,
-        initial_angular_momentum.angle.mod_4_angle()
+        initial_angular_momentum.angle.grade_angle()
     );
     println!("Energy: {:.3e}", initial_energy.length);
 
@@ -106,17 +106,17 @@ fn it_ships_conservation_with_motion() {
     println!(
         "Position: [{:.2e}, {:.3}]",
         position.length,
-        position.angle.mod_4_angle()
+        position.angle.grade_angle()
     );
     println!(
         "Momentum: [{:.2e}, {:.3}]",
         momentum.length,
-        momentum.angle.mod_4_angle()
+        momentum.angle.grade_angle()
     );
     println!(
         "Angular momentum: [{:.3e}, {:.3}]",
         final_angular_momentum.length,
-        final_angular_momentum.angle.mod_4_angle()
+        final_angular_momentum.angle.grade_angle()
     );
     println!("Energy: {:.3e}", final_energy.length);
 
@@ -171,12 +171,12 @@ fn it_sets_geometric_nilpotency_as_physical_law() {
         println!(
             "Quantity: [{:.3e}, {:.3}]",
             quantity.length,
-            quantity.angle.mod_4_angle()
+            quantity.angle.grade_angle()
         );
         println!(
             "Self-interaction: [{:.3e}, {:.3}]",
             self_interaction.length,
-            self_interaction.angle.mod_4_angle()
+            self_interaction.angle.grade_angle()
         );
 
         // Physical law: identical quantities cannot interact with themselves
@@ -216,12 +216,12 @@ fn its_independent_of_external_enforcement() {
     println!(
         "Vector: [{}, {:.3}]",
         vector.length,
-        vector.angle.mod_4_angle()
+        vector.angle.grade_angle()
     );
     println!(
         "Self-wedge: [{:.10}, {:.3}]",
         attempted_violation.length,
-        attempted_violation.angle.mod_4_angle()
+        attempted_violation.angle.grade_angle()
     );
 
     // Violation impossible - algebra prevents it
@@ -258,7 +258,7 @@ fn its_independent_of_external_enforcement() {
             "Violation attempt {}: [{:.10}, {:.3}]",
             i + 1,
             violation_attempt.length,
-            violation_attempt.angle.mod_4_angle()
+            violation_attempt.angle.grade_angle()
         );
         assert!(
             violation_attempt.length < EPSILON,
@@ -295,7 +295,7 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     println!(
         "   Self-wedge = [{:.10}, {:.3}]",
         inertia_test.length,
-        inertia_test.angle.mod_4_angle()
+        inertia_test.angle.grade_angle()
     );
 
     // Newton's "Second Law" = Just the geometric product
@@ -327,16 +327,16 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     println!(
         "   v∧w = [{:.3}, {:.3}]",
         action.length,
-        action.angle.mod_4_angle()
+        action.angle.grade_angle()
     );
     println!(
         "   w∧v = [{:.3}, {:.3}]",
         reaction.length,
-        reaction.angle.mod_4_angle()
+        reaction.angle.grade_angle()
     );
 
     // Prove antisymmetry (action = -reaction)
-    let angle_diff = (action.angle - reaction.angle).mod_4_angle().abs();
+    let angle_diff = (action.angle - reaction.angle).grade_angle().abs();
     let angle_diff_mod = angle_diff % (2.0 * PI);
     let is_opposite = (angle_diff_mod - PI).abs() < 0.1 || angle_diff_mod < 0.1;
     assert!(is_opposite, "Action and reaction are opposite");
@@ -426,7 +426,7 @@ fn it_improves_physics_engines() {
     println!(
         "Result: [{:.10}, {:.3}] - conservation proven",
         conservation_proof.length,
-        conservation_proof.angle.mod_4_angle()
+        conservation_proof.angle.grade_angle()
     );
 
     assert!(

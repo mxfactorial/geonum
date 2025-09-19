@@ -14,7 +14,7 @@ fn its_a_scalar() {
 
     // test if scalar has expected properties
     assert_eq!(scalar.length, 1.0);
-    assert_eq!(scalar.angle.mod_4_angle(), 0.0);
+    assert_eq!(scalar.angle.grade_angle(), 0.0);
 
     // multiplying scalars follows "angles add, lengths multiply" rule
     let scalar2 = Geonum::new(2.0, 0.0, 1.0);
@@ -23,7 +23,7 @@ fn its_a_scalar() {
 
     // 1 × 2 = 2
     assert_eq!(product.length, 2.0);
-    assert_eq!(product.angle.mod_4_angle(), 0.0);
+    assert_eq!(product.angle.grade_angle(), 0.0);
 
     // multiplication with negative scalar
     let neg_scalar = Geonum::new(3.0, 1.0, 1.0); // PI radians
@@ -32,7 +32,7 @@ fn its_a_scalar() {
 
     // 1 × (-3) = -3
     assert_eq!(neg_product.length, 3.0);
-    assert_eq!(neg_product.angle.mod_4_angle(), PI);
+    assert_eq!(neg_product.angle.grade_angle(), PI);
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn its_an_imaginary_number() {
     let rot4 = imaginary * rot3; // rotate four times
 
     assert_eq!(rot4.length, real.length);
-    assert!(rot4.angle.mod_4_angle().abs() < EPSILON); // back to original angle
+    assert!(rot4.angle.grade_angle().abs() < EPSILON); // back to original angle
 }
 
 #[test]
@@ -167,8 +167,8 @@ fn its_a_complex_number() {
     let one = Geonum::new(1.0, 0.0, 1.0); // scalar unit
 
     // in cartesian: -1 + 1 = 0
-    let result_cartesian = e_i_pi.length * e_i_pi.angle.mod_4_angle().cos()
-        + one.length * one.angle.mod_4_angle().cos();
+    let result_cartesian = e_i_pi.length * e_i_pi.angle.grade_angle().cos()
+        + one.length * one.angle.grade_angle().cos();
 
     assert!(result_cartesian.abs() < EPSILON); // test value is close to zero
 }
@@ -196,7 +196,7 @@ fn its_a_quaternion() {
     // the angles might be congruent mod 2π
     // the angles might be congruent mod 2π
     let expected_angle = Angle::new(1.0, 2.0); // π/2
-    let angle_diff = (jk.angle.mod_4_angle() - expected_angle.mod_4_angle()).abs();
+    let angle_diff = (jk.angle.grade_angle() - expected_angle.grade_angle()).abs();
     assert!(angle_diff < EPSILON || (TAU - angle_diff) < EPSILON);
 
     // test k*i = j
@@ -254,7 +254,7 @@ fn its_a_dual_number() {
     // ε² should map back to scalar (blade 0 or 4)
     assert_eq!(epsilon_squared.length, 1.0);
     // angle doubles: π + π = 2π ≡ 0 (mod 2π)
-    let angle_mod = epsilon_squared.angle.mod_4_angle();
+    let angle_mod = epsilon_squared.angle.grade_angle();
     assert!(
         angle_mod < EPSILON || (TAU - angle_mod) < EPSILON,
         "ε² returns to scalar"
@@ -386,7 +386,7 @@ fn its_an_octonion() {
     // test that they're not equal (non-associative)
     // test if lengths or angles differ
     let _equal = (e1e2e4.length - e1e2e4_alt.length).abs() < EPSILON
-        && (e1e2e4.angle.mod_4_angle() - e1e2e4_alt.angle.mod_4_angle()).abs() < EPSILON;
+        && (e1e2e4.angle.grade_angle() - e1e2e4_alt.angle.grade_angle()).abs() < EPSILON;
 
     // if they're not exactly equal, non-associativity is demonstrated
     // note: in this simplification, the actual values depend on how
@@ -710,15 +710,15 @@ fn it_dualizes_log2_geometric_algebra_components() {
     // we can extract grade-specific components to demonstrate this
 
     // extract grade 0 (scalar part)
-    let scalar = g.length * g.angle.mod_4_angle().cos();
+    let scalar = g.length * g.angle.grade_angle().cos();
 
     // extract grade 1 (vector part, magnitude)
-    let vector_magnitude = g.length * g.angle.mod_4_angle().sin();
+    let vector_magnitude = g.length * g.angle.grade_angle().sin();
 
     // extract grade 2 (bivector part)
     // in 2D GA, bivector represents rotation in the e1^e2 plane
     // which is encoded in the angle component
-    let bivector_angle = g.angle.mod_4_angle();
+    let bivector_angle = g.angle.grade_angle();
 
     // demonstrate that all grades of the 2D geometric algebra are encoded
     // in just the 2 components (length and angle) of the geometric number
@@ -765,8 +765,8 @@ fn it_keeps_information_entropy_zero() {
     // but for a perfect dualization, this equals 0 (no information is lost)
 
     // reconstruct original data from both geonums
-    let original_data = (g1.length, g1.angle.mod_4_angle());
-    let dual_data = (g2.length, g2.angle.mod_4_angle() - PI / 2.0);
+    let original_data = (g1.length, g1.angle.grade_angle());
+    let dual_data = (g2.length, g2.angle.grade_angle() - PI / 2.0);
 
     // compute difference (represents information loss if any)
     let length_diff = (original_data.0 - dual_data.0).abs();
@@ -802,7 +802,7 @@ fn its_a_bernoulli_number() {
     let b0_value = b0.length; // 1
     let b1_value = b1.length; // 0.5
     let b2_value = b2.length; // ≈ 0.1667
-    let b4_value = b4.length * b4.angle.mod_4_angle().cos(); // division result projected to scalar
+    let b4_value = b4.length * b4.angle.grade_angle().cos(); // division result projected to scalar
 
     // test the computed values
     assert_eq!(b0_value, 1.0);
@@ -1117,7 +1117,7 @@ fn its_a_eulers_identity() {
 
     // Test that e^(iπ) × e^(iπ) = 1 (multiplicative identity)
     assert_eq!(self_product.length, 1.0);
-    assert!(self_product.angle.mod_4_angle().abs() < EPSILON); // 2π ≡ 0 (mod 2π)
+    assert!(self_product.angle.grade_angle().abs() < EPSILON); // 2π ≡ 0 (mod 2π)
 
     // STEP 6: This is what Euler's identity actually demonstrates
     // Not mysterious connections between constants, but that [1, π]
@@ -1135,8 +1135,8 @@ fn its_a_eulers_identity() {
     let one = Geonum::new(1.0, 0.0, 1.0); // [1, 0] = pointing forwards = +1
 
     // Verify they're additive inverses (opposite directions, same magnitude)
-    let cartesian_sum = e_to_ipi.length * e_to_ipi.angle.mod_4_angle().cos()
-        + one.length * one.angle.mod_4_angle().cos();
+    let cartesian_sum = e_to_ipi.length * e_to_ipi.angle.grade_angle().cos()
+        + one.length * one.angle.grade_angle().cos();
     assert!(cartesian_sum.abs() < EPSILON);
 
     // STEP 8: The complete picture
@@ -1165,7 +1165,7 @@ fn its_a_eulers_identity() {
 
     // 2π ≡ 0 (mod 2π), so we're back to [1, 0] = multiplicative identity
     assert_eq!(twice_rotated.length, 1.0);
-    assert!(twice_rotated.angle.mod_4_angle().abs() < EPSILON);
+    assert!(twice_rotated.angle.grade_angle().abs() < EPSILON);
 
     // CONCLUSION: Euler's identity reveals fundamental geometric inverse properties
 

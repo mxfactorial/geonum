@@ -220,8 +220,8 @@ fn its_a_redundant_manipulator() {
         cumulative3.value() < 1e-10,
         "bent config returns to 0 value"
     );
-    assert!(cumulative3.mod_4_angle().cos() > 0.999, "cos(2π) = 1");
-    assert!(cumulative3.mod_4_angle().sin().abs() < 1e-10, "sin(2π) = 0");
+    assert!(cumulative3.grade_angle().cos() > 0.999, "cos(2π) = 1");
+    assert!(cumulative3.grade_angle().sin().abs() < 1e-10, "sin(2π) = 0");
 
     // both solutions reach target
     let error_straight = target.distance_to(&end_straight);
@@ -234,7 +234,8 @@ fn its_a_redundant_manipulator() {
     );
 
     // bent config reaches different position
-    let (bent_x, bent_y) = end_bent.to_cartesian();
+    let bent_x = end_bent.adj().length;
+    let bent_y = end_bent.opp().length;
     assert!((bent_x - 4.464).abs() < 0.001, "bent config x position");
     assert!(bent_y.abs() < 0.001, "bent config y position (horizontal)");
 

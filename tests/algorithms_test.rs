@@ -522,8 +522,8 @@ fn its_a_distributed_algorithm() {
         let mut sum_y = 0.0;
 
         for node in system {
-            sum_x += node.angle.mod_4_angle().cos();
-            sum_y += node.angle.mod_4_angle().sin();
+            sum_x += node.angle.grade_angle().cos();
+            sum_y += node.angle.grade_angle().sin();
         }
 
         // compute average angle (circular mean)
@@ -1001,7 +1001,7 @@ fn its_a_machine_learning_algorithm() {
                     // Use sine instead of cosine for better discrimination
                     // This helps prevent balanced weights leading to zero output
                     let weight_projection =
-                        self.weights[i].length * self.weights[i].angle.mod_4_angle().sin();
+                        self.weights[i].length * self.weights[i].angle.grade_angle().sin();
                     sum += input * weight_projection;
                 }
             }

@@ -50,7 +50,7 @@ fn its_a_state_vector() {
 
     // test direct geometric representation
     assert_eq!(state.length, 1.0); // normalized amplitude
-    assert!((state.angle.mod_4_angle() - PI / 4.0).abs() < EPSILON); // phase π/4
+    assert!((state.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // phase π/4
 
     // superposition |ψ⟩ = α|0⟩ + β|1⟩ as single geonum from cartesian
     // equal probability superposition: (|0⟩ + |1⟩)/√2
@@ -68,11 +68,11 @@ fn its_a_state_vector() {
 
     // probability through born rule: |⟨ψ|basis⟩|² = cos²(angle_diff)
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length.powi(2) * angle_diff0.mod_4_angle().cos().powi(2);
+    let prob0 = state.length.powi(2) * angle_diff0.grade_angle().cos().powi(2);
     assert!((prob0 - 0.5).abs() < EPSILON); // cos²(π/4) = 0.5
 
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length.powi(2) * angle_diff1.mod_4_angle().cos().powi(2);
+    let prob1 = state.length.powi(2) * angle_diff1.grade_angle().cos().powi(2);
     assert!((prob1 - 0.5).abs() < EPSILON); // cos²(π/4 - π/2) = cos²(-π/4) = 0.5
 
     // total probability
@@ -81,11 +81,11 @@ fn its_a_state_vector() {
     // measurement alignment - no mysterious "collapse", just angle alignment
     let measurement_result = if prob0 > 0.5 { basis0 } else { basis1 };
     let alignment_check = (measurement_result.angle - basis0.angle)
-        .mod_4_angle()
+        .grade_angle()
         .abs()
         < EPSILON
         || (measurement_result.angle - basis1.angle)
-            .mod_4_angle()
+            .grade_angle()
             .abs()
             < EPSILON;
     assert!(alignment_check);
@@ -170,7 +170,7 @@ fn its_a_spin_system() {
     // test spin-1/2 as minimal angle subdivision
     // in spin-1/2 systems, angles are separated by π
     let angle_diff = spin_down.angle - spin_up.angle;
-    assert_eq!(angle_diff.mod_4_angle(), PI);
+    assert_eq!(angle_diff.grade_angle(), PI);
 
     // test spin composition through direct rotation
     // measure spin-up in x-basis
@@ -187,7 +187,7 @@ fn its_a_spin_system() {
     // for a state at angle 0, measuring along pi/2 gives probability cos²(0 - pi/2) = cos²(-pi/2) = 0
     let measurement_angle = Angle::new(1.0, 2.0); // π/2
     let angle_difference = spin_up.angle - measurement_angle;
-    let prob_up_x = spin_up.length * spin_up.length * angle_difference.mod_4_angle().cos().powi(2);
+    let prob_up_x = spin_up.length * spin_up.length * angle_difference.grade_angle().cos().powi(2);
     assert!(prob_up_x < EPSILON); // equals 0 probability
 }
 
@@ -251,7 +251,7 @@ fn its_a_quantum_gate() {
     //     [0 i]
     let phase_gate = |q: &Geonum| -> Geonum {
         // check if in |1⟩ state (angle π/2)
-        let angle_mod = q.angle.mod_4_angle();
+        let angle_mod = q.angle.grade_angle();
         if (angle_mod - PI / 2.0).abs() < EPSILON {
             // if in the |1⟩ state, add π/2 to the angle
             q.rotate(Angle::new(1.0, 2.0))
@@ -264,7 +264,7 @@ fn its_a_quantum_gate() {
     // test gate application through angle transformation
     let h_applied = hadamard(&qubit);
     assert_eq!(h_applied.length, qubit.length); // preserves norm
-    assert!((h_applied.angle.mod_4_angle() - PI / 4.0).abs() < EPSILON); // creates superposition
+    assert!((h_applied.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // creates superposition
 
     // test gate composition through angle addition
     // first apply hadamard, then phase gate
@@ -293,7 +293,7 @@ fn its_a_quantum_measurement() {
     // test measurement as angle correlation
     // probability of measuring in basis0 = |⟨0|ψ⟩|²
     let angle_diff0 = state.angle - basis0.angle;
-    let prob_basis0 = state.length * state.length * angle_diff0.mod_4_angle().cos().powi(2);
+    let prob_basis0 = state.length * state.length * angle_diff0.grade_angle().cos().powi(2);
 
     // test born rule through angle projection instead of abstract inner product
     assert!((0.0..=1.0).contains(&prob_basis0));
@@ -302,7 +302,7 @@ fn its_a_quantum_measurement() {
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob_basis1 = state.length * state.length * angle_diff1.mod_4_angle().cos().powi(2);
+    let prob_basis1 = state.length * state.length * angle_diff1.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob_basis1));
     // for a state at pi/4, the probability relative to pi/2 is cos²(pi/4 - pi/2) = cos²(-pi/4) = 0.5
     assert!((prob_basis1 - 0.5).abs() < EPSILON);
@@ -322,8 +322,8 @@ fn its_a_quantum_measurement() {
     };
 
     // test the measured state is aligned with one of the basis states
-    let angle_to_basis0 = (measured_state.angle - basis0.angle).mod_4_angle();
-    let angle_to_basis1 = (measured_state.angle - basis1.angle).mod_4_angle();
+    let angle_to_basis0 = (measured_state.angle - basis0.angle).grade_angle();
+    let angle_to_basis1 = (measured_state.angle - basis1.angle).grade_angle();
     assert!(angle_to_basis0.abs() < EPSILON || angle_to_basis1.abs() < EPSILON);
 }
 
@@ -342,7 +342,7 @@ fn its_an_entangled_state() {
     // test entanglement as angle relationship
     // the angles are precisely correlated
     let angle_diff = bell_state.1.angle - bell_state.0.angle;
-    assert_eq!(angle_diff.mod_4_angle(), PI);
+    assert_eq!(angle_diff.grade_angle(), PI);
 
     // test bell state properties through angle configuration
     assert!((bell_state.0.length - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
@@ -355,7 +355,7 @@ fn its_an_entangled_state() {
     let first_measurement = Angle::new(0.0, 1.0); // measured in |0⟩ state
 
     // test second particles state is determined by first measurement
-    let angle_match_0 = (first_measurement - bell_state.0.angle).mod_4_angle().abs() < EPSILON;
+    let angle_match_0 = (first_measurement - bell_state.0.angle).grade_angle().abs() < EPSILON;
     let second_particle_angle = if angle_match_0 {
         bell_state.0.angle // |0⟩ for second particle
     } else {
@@ -367,7 +367,7 @@ fn its_an_entangled_state() {
 
     // test nonlocality naturally emerges from angle correlation
     // no need for abstract "spooky action" - just geometric correspondence
-    let correlation_diff = (first_measurement - second_particle_angle).mod_4_angle();
+    let correlation_diff = (first_measurement - second_particle_angle).grade_angle();
     assert!(correlation_diff.abs() < EPSILON);
 }
 
@@ -388,8 +388,8 @@ fn its_a_quantum_harmonic_oscillator() {
     let energy_diff2 = second_excited.angle - first_excited.angle;
 
     // both differences should be π/2
-    assert_eq!(energy_diff1.mod_4_angle(), PI / 2.0);
-    assert_eq!(energy_diff2.mod_4_angle(), PI / 2.0);
+    assert_eq!(energy_diff1.grade_angle(), PI / 2.0);
+    assert_eq!(energy_diff2.grade_angle(), PI / 2.0);
 
     // create ladder operators as angle shifts
     // a† (creation) raises energy level, a (annihilation) lowers it
@@ -490,8 +490,8 @@ fn its_a_path_integral() {
     let mut sum_x = 0.0;
     let mut sum_y = 0.0;
     for path in &paths {
-        sum_x += path.length * path.angle.mod_4_angle().cos();
-        sum_y += path.length * path.angle.mod_4_angle().sin();
+        sum_x += path.length * path.angle.grade_angle().cos();
+        sum_y += path.length * path.angle.grade_angle().sin();
     }
 
     // convert back to geometric number
@@ -602,11 +602,11 @@ fn its_a_quantum_information_system() {
     // compute statistical dispersion of angles
     let angle_dispersion: f64 = mixed_state
         .iter()
-        .map(|(p, g)| p * g.angle.mod_4_angle().powi(2))
+        .map(|(p, g)| p * g.angle.grade_angle().powi(2))
         .sum::<f64>()
         - mixed_state
             .iter()
-            .map(|(p, g)| p * g.angle.mod_4_angle())
+            .map(|(p, g)| p * g.angle.grade_angle())
             .sum::<f64>()
             .powi(2);
 
@@ -617,7 +617,7 @@ fn its_a_quantum_information_system() {
     // a quantum channel can be represented as a transformation
     let channel = |state: &Geonum| -> Geonum {
         // depolarizing channel: potentially rotate the state
-        if state.angle.mod_4_angle().abs() < EPSILON {
+        if state.angle.grade_angle().abs() < EPSILON {
             // leave 70% probability unchanged, rotate 30%
             Geonum::new_with_angle(state.length * 0.7_f64.sqrt(), state.angle)
         } else {
@@ -660,12 +660,12 @@ fn it_rejects_copenhagen_interpretation() {
     // test measurement as natural process, not mysterious collapse
     // probability of measuring in basis0
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length * state.length * angle_diff0.mod_4_angle().cos().powi(2);
+    let prob0 = state.length * state.length * angle_diff0.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob0));
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length * state.length * angle_diff1.mod_4_angle().cos().powi(2);
+    let prob1 = state.length * state.length * angle_diff1.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob1));
 
     // test total probability = 1
@@ -763,12 +763,12 @@ fn it_unifies_quantum_and_classical() {
             let total_p: f64 = dist.iter().map(|(p, _)| p).sum();
             let mean_sin: f64 = dist
                 .iter()
-                .map(|(p, g)| p * g.angle.mod_4_angle().sin())
+                .map(|(p, g)| p * g.angle.grade_angle().sin())
                 .sum::<f64>()
                 / total_p;
             let mean_cos: f64 = dist
                 .iter()
-                .map(|(p, g)| p * g.angle.mod_4_angle().cos())
+                .map(|(p, g)| p * g.angle.grade_angle().cos())
                 .sum::<f64>()
                 / total_p;
             let mean_angle = Angle::new_from_cartesian(mean_cos, mean_sin);
@@ -776,7 +776,7 @@ fn it_unifies_quantum_and_classical() {
             // compute dispersion using angle differences
             dist.iter()
                 .map(|(p, g)| {
-                    let diff = (g.angle - mean_angle).mod_4_angle();
+                    let diff = (g.angle - mean_angle).grade_angle();
                     p * diff.powi(2)
                 })
                 .sum::<f64>()
@@ -797,20 +797,20 @@ fn it_unifies_quantum_and_classical() {
     let total_p: f64 = narrow_dist.iter().map(|(p, _)| p).sum();
     let exp_sin: f64 = narrow_dist
         .iter()
-        .map(|(p, g)| p * g.angle.mod_4_angle().sin())
+        .map(|(p, g)| p * g.angle.grade_angle().sin())
         .sum::<f64>()
         / total_p;
     let exp_cos: f64 = narrow_dist
         .iter()
-        .map(|(p, g)| p * g.angle.mod_4_angle().cos())
+        .map(|(p, g)| p * g.angle.grade_angle().cos())
         .sum::<f64>()
         / total_p;
     let exp_angle = Angle::new_from_cartesian(exp_cos, exp_sin);
 
     // test this equals a definite classical value (π/8)
     let classical_angle = Angle::new(1.0, 8.0);
-    assert!((exp_angle.mod_4_angle().sin() - classical_angle.mod_4_angle().sin()).abs() < 0.001);
-    assert!((exp_angle.mod_4_angle().cos() - classical_angle.mod_4_angle().cos()).abs() < 0.001);
+    assert!((exp_angle.grade_angle().sin() - classical_angle.grade_angle().sin()).abs() < 0.001);
+    assert!((exp_angle.grade_angle().cos() - classical_angle.grade_angle().cos()).abs() < 0.001);
 }
 
 #[test]
@@ -878,7 +878,7 @@ fn it_eliminates_statistical_collections() {
     assert_eq!(pure_state.length, 1.0); // normalized
                                         // phase is definite, not statistical
     let expected_phase = (0.8_f64).atan2(0.6);
-    assert!((pure_state.angle.mod_4_angle() - expected_phase).abs() < EPSILON);
+    assert!((pure_state.angle.grade_angle() - expected_phase).abs() < EPSILON);
 
     // measurement outcomes from projection geometry, not probability sampling
     let measurement_axis = Geonum::new(1.0, 0.0, 1.0); // |0⟩ basis
