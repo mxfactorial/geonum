@@ -1,5 +1,13 @@
 # changelog
 
+## 0.9.1 (2025-10-13)
+
+### added
+- optimization test suite proving O(1) angle arithmetic vs O(n³) lagrange multipliers
+
+### changed
+- reference individual test names and line ranges in readme and agent instructions
+
 ## 0.9.0 (2025-09-19)
 
 ### removed

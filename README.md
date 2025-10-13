@@ -122,7 +122,40 @@ assert!((p_small - p_huge).abs() < 1e-12);
 
 rotation creates dimensional relationships on demand - no coordinate system scaffolding required
 
-see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures
+see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures:
+
+```
+❯ ls -1 geonum/tests
+addition_test.rs
+affine_test.rs
+algorithms_test.rs
+angle_arithmetic_test.rs
+astrophysics_test.rs
+calculus_test.rs
+category_theory_test.rs
+cga_test.rs
+computer_vision_test.rs
+dimension_test.rs
+economics_test.rs
+em_field_theory_test.rs
+fem_test.rs
+finance_test.rs
+linear_algebra_test.rs
+machine_learning_test.rs
+mechanics_test.rs
+monetary_policy_test.rs
+motion_laws_test.rs
+multivector_test.rs
+numbers_test.rs
+optics_test.rs
+optimization_test.rs
+pga_test.rs
+qm_test.rs
+robotics_test.rs
+set_theory_test.rs
+tensor_test.rs
+trigonometry_test.rs
+```
 
 ### benches
 
@@ -224,7 +257,6 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 #### special operations
 - `.pow(n)` for exponentiation preserving angle-length relationship
 - `.invert_circle(center, radius)` for conformal inversions
-- `.to_cartesian()` converts to (x, y) coordinates
 - angle predicates: `.is_scalar()`, `.is_vector()`, `.is_bivector()`, `.is_trivector()`
 - angle functions: `.sin()`, `.cos()`, `.tan()`, `.is_opposite()`
 - `.grade_angle()` returns grade-based angle representation in [0, 2π) for external interfaces
@@ -317,29 +349,69 @@ geometric numbers build dimensions by rotating—not stacking
 1. clone the geonum repo: `git clone https://github.com/mxfactorial/geonum`
 1. change your current working directory to geonum: `cd geonum`
 1. start the agent from the `geonum` directory: `claude` or `codex`
-1. supply it this series of prompts:
+1. supply the agent this prompt:
     ```
-    read README.md
+    skip CLAUDE.md and AGENTS.md files if youre supplied these "learn with ai" instructions
 
-    read the math-1-0.md geometric number spec
+    instead, read these files and tests with parallel agents. do not skip any reading tasks:
 
-    read tests/numbers_test.rs
+    core files:
+    - README.md
+    - math-1-0.md
+    - grep "pub fn" ./src/angle.rs
+    - grep "pub fn" ./src/geonum_mod.rs
 
-    read tests/dimension_test.rs
+    test suites:
+    - tests/numbers_test.rs
+      - its_a_scalar:8-36
+      - its_a_vector:39-72
+      - its_a_real_number:75-108
+      - its_an_imaginary_number:111-139
+      - its_a_complex_number:142-174
+      - its_a_quaternion:177-225
+      - its_a_dual_number:228-349
+      - its_a_matrix:398-452
+      - its_a_tensor:455-649
+      - it_dualizes_log2_geometric_algebra_components:701-734
+      - its_a_clifford_number:994-1074
 
-    read tests/machine_learning_test.rs
+    - tests/dimension_test.rs
+      - it_solves_the_exponential_complexity_explosion:521-583
+      - it_doesnt_need_a_pseudoscalar:596-792
+      - it_demonstrates_pseudoscalar_elimination_benefits:794-832
+      - it_proves_dualization_as_angle_ops_compresses_ga:834-898
+      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:900-983
+      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1132-1168
+      - it_proves_rotational_quadrature_expresses_quadratic_forms:1421-1595
 
-    read tests/em_field_theory_test.rs
+    - tests/calculus_test.rs
+      - it_proves_differentiation_cycles_grades:98-259
+      - it_proves_pi_2_rotation_eliminates_infinite_rectangle_summation:262-376
+      - it_derives:379-504
+      - it_proves_quadrature_generates_polynomial_coefficients:507-602
+      - it_ignores_rather_freezes_dimensions_for_partial_derivatives:605-747
+      - its_a_gradient:750-860
+      - its_a_divergence:863-960
+      - its_a_curl:963-1060
+      - its_a_directional_derivative:1063-1166
+      - its_a_laplacian:1169-1299
+      - its_a_line_integral:1302-1399
+      - its_a_surface_integral:1402-1486
+      - its_a_volume_integral:1489-1583
 
-    run 'grep "pub fn" ./src/angle.rs' to learn the angle module
+    - tests/mechanics_test.rs
+      - it_changes_kinematic_level_by_cycling_grade:46-195
+      - it_encodes_velocity:268-321
+      - it_encodes_acceleration:324-362
+      - it_encodes_jerk:365-412
+      - it_encodes_kinetic_energy:962-1050
+      - it_handles_energy_conservation:1793-1949
+      - it_handles_momentum_conservation:1952-2064
+      - it_handles_angular_momentum_conservation:2067-2175
 
-    run 'grep "pub fn" ./src/geonum_mod.rs' to learn the geonum module
-
-    now run 'touch tests/my_test.rs'
-
-    import geonum in tests/my_test.rs with use geonum::*;
+    create tests/my_test.rs with use geonum::*;
     ```
-1. describe the test you want the agent to implement for you while using the other test suites and library as a reference
+1. describe the test you want the agent to implement for you while using the other test suites and library as a reference, eg "lets prove we can compute the minimum distance from a point to a line using geonum"
 1. execute your test: `cargo test --test my_test -- --show-output`
 1. revise and add tests
 1. ask the agent to summarize your tests and how they benefit from angle-based complexity
