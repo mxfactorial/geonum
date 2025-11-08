@@ -1,5 +1,10 @@
 # changelog
 
+## 0.9.2 (2025-11-08)
+
+### changed
+- switch quaternion test coverage from number to linear algebra test suite
+
 ## 0.9.1 (2025-10-13)
 
 ### added

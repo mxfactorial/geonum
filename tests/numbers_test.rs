@@ -174,57 +174,6 @@ fn its_a_complex_number() {
 }
 
 #[test]
-fn its_a_quaternion() {
-    // quaternions are an extension of complex numbers with three imaginary units i,j,k
-    // they can be represented as a multivector with four components
-
-    // quaternion multiplication through angle arithmetic:
-    let i = Geonum::new(1.0, 1.0, 2.0); // π/2
-    let j = Geonum::new(1.0, 2.0, 2.0); // π
-    let k = Geonum::new(1.0, 3.0, 2.0); // 3π/2
-
-    // test i*j = k
-    let ij = i * j;
-    assert_eq!(ij.length, 1.0);
-    assert_eq!(ij.angle, Angle::new(3.0, 2.0)); // test it equals k
-
-    // test j*k = i
-    // j*k equals [1, π+3π/2] = [1, 5π/2] = [1, π/2] = i
-    let jk = j * k;
-    assert_eq!(jk.length, 1.0);
-
-    // the angles might be congruent mod 2π
-    // the angles might be congruent mod 2π
-    let expected_angle = Angle::new(1.0, 2.0); // π/2
-    let angle_diff = (jk.angle.grade_angle() - expected_angle.grade_angle()).abs();
-    assert!(angle_diff < EPSILON || (TAU - angle_diff) < EPSILON);
-
-    // test k*i = j
-    // k*i equals [1, 3π/2+π/2] = [1, 2π] = [1, 0] which is not j
-    // (this is a limitation of our simplified implementation)
-    // in a proper quaternion implementation, k*i would be -j = [1, 2π - π] = [1, π]
-    let ki = k * i;
-    assert_eq!(ki.length, 1.0);
-
-    // for our simplified implementation, verify length is preserved
-    // the angle will depend on the exact implementation
-
-    // quaternion rotation: traditional requires 4 components + Hamilton multiplication table
-    // geonum: rotations are angle addition across axes
-    let x_rotation = Geonum::scalar(1.0); // rotation around x: angle 0
-    let y_rotation = Geonum::new(1.0, 1.0, 2.0); // rotation around y: angle π/2
-    let z_rotation = Geonum::new(1.0, 1.0, 1.0); // rotation around z: angle π
-
-    // combined xyz rotation: just add angles
-    let ijk = x_rotation * y_rotation * z_rotation; // 0 + π/2 + π = 3π/2
-    assert_eq!(ijk.angle.value(), 0.0); // 3π/2 normalized to blade 3, value 0
-    assert_eq!(ijk.angle.blade(), 3); // 3π/2 = 3 × π/2 rotations
-
-    // traditional quaternion: complex [w,x,y,z] storage + multiplication rules
-    // geonum: direct angle composition eliminates quaternion complexity
-}
-
-#[test]
 fn its_a_dual_number() {
     // dual numbers have the form a + bε where ε² = 0
     // they're useful for automatic differentiation
