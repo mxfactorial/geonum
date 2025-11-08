@@ -48,9 +48,9 @@ learn how to construct angles with new and new_with_blade from src/angle.rs:22~9
 
 learn how to construct geonum with new, new_with_angle from src/geonum_mod.rs:22~49
 
-learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-108, its_an_imaginary_number:111-139, its_a_complex_number:142-174, its_a_quaternion:177-225, its_a_dual_number:228-349, its_an_octonion:352-395 tests in tests/numbers_test.rs
+learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-108, its_an_imaginary_number:111-139, its_a_complex_number:142-174, its_a_dual_number:177-298, its_an_octonion:301-344 tests in tests/numbers_test.rs
 
-learn how geonum eliminates angle slack created by decomposing angles into scalar coefficients by reading the it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle_addition:13-84, it_proves_decomposition_distributes_one_angle_across_multiple_scalars:87-160 tests in tests/linear_algebra_test.rs
+learn how geonum eliminates angle slack created by decomposing angles into scalar coefficients by reading the it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle_addition:13-84, it_proves_decomposition_distributes_one_angle_across_multiple_scalars:87-160, it_proves_quaternion_tables_add_back_what_decomposition_subtracts:519-660, it_proves_anticommutativity_exists_because_decomposition_subtracts_different_amounts:663-726 tests in tests/linear_algebra_test.rs
 
 learn how geonum replaces scalar based quadratic forms with simple angle based rotations in the it_proves_rotational_quadrature_expresses_quadratic_forms:1421-1595 test in tests/dimension_test.rs
 

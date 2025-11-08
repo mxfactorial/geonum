@@ -368,12 +368,12 @@ geometric numbers build dimensions by rotating—not stacking
       - its_a_real_number:75-108
       - its_an_imaginary_number:111-139
       - its_a_complex_number:142-174
-      - its_a_quaternion:177-225
-      - its_a_dual_number:228-349
-      - its_a_matrix:398-452
-      - its_a_tensor:455-649
-      - it_dualizes_log2_geometric_algebra_components:701-734
-      - its_a_clifford_number:994-1074
+      - its_a_dual_number:177-298
+      - its_an_octonion:301-344
+      - its_a_matrix:347-401
+      - its_a_tensor:404-647
+      - it_dualizes_log2_geometric_algebra_components:650-683
+      - its_a_clifford_number:943-1023
 
     - tests/dimension_test.rs
       - it_solves_the_exponential_complexity_explosion:521-583
