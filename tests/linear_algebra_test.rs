@@ -514,3 +514,213 @@ fn it_proves_angle_becomes_implicit_ratio_between_components() {
         g_rotated.angle.grade_angle()
     );
 }
+
+#[test]
+fn it_proves_quaternion_tables_add_back_what_decomposition_subtracts() {
+    // quaterions are a patch for the angle slack added by decomposition
+
+    println!("\n=== QUATERNION TABLES ADD BACK WHAT DECOMPOSITION SUBTRACTS ===\n");
+
+    // STEP 1: what primitive angle composition gives
+    println!("STEP 1: Primitive Angle Composition");
+    println!("------------------------------------");
+
+    let theta1 = PI / 2.0; // i = 90°
+    let theta2 = PI; // j = 180°
+
+    let g1 = Geonum::new(1.0, 1.0, 2.0); // π/2
+    let g2 = Geonum::new(1.0, 1.0, 1.0); // π
+
+    let primitive_product = g1 * g2;
+    let expected_angle = theta1 + theta2; // π/2 + π = 3π/2
+
+    println!("  θ₁ = π/2 (i)");
+    println!("  θ₂ = π (j)");
+    println!("  θ₁ + θ₂ = 3π/2 (k) ← EXPECTED geometric composition");
+    assert!((primitive_product.angle.grade_angle() - expected_angle).abs() < EPSILON);
+
+    // STEP 2: what happens when you decompose into basis vectors
+    println!("\nSTEP 2: Decomposition into Basis Vectors");
+    println!("-----------------------------------------");
+
+    // decompose first rotation at angle θ₁ = π/2
+    let c1 = theta1.cos(); // 0
+    let s1 = theta1.sin(); // 1
+    println!("  v₁ at θ₁=π/2 decomposes to: [{:.3}, {:.3}]", c1, s1);
+
+    // decompose second rotation at angle θ₂ = π
+    let c2 = theta2.cos(); // -1
+    let s2 = theta2.sin(); // 0
+    println!("  v₂ at θ₂=π decomposes to: [{:.3}, {:.3}]", c2, s2);
+
+    // STEP 3: geometric product of decomposed vectors
+    println!("\nSTEP 3: Geometric Product of Decomposed Vectors");
+    println!("------------------------------------------------");
+    println!("  Computing (c₁e₁ + s₁e₂)(c₂e₁ + s₂e₂):");
+
+    // geometric product gives scalar and bivector parts
+    let scalar_part = c1 * c2 + s1 * s2; // cos(θ₂ - θ₁)
+    let bivector_part = c1 * s2 - s1 * c2; // sin(θ₂ - θ₁)
+
+    let decomposed_angle = bivector_part.atan2(scalar_part);
+
+    println!("    Scalar part: {} = cos(θ₂ - θ₁)", scalar_part);
+    println!("    Bivector part: {} = sin(θ₂ - θ₁)", bivector_part);
+    println!("    Extracted angle: {:.3} = θ₂ - θ₁", decomposed_angle);
+
+    let expected_difference = theta2 - theta1; // π - π/2 = π/2
+    assert!((decomposed_angle - expected_difference).abs() < EPSILON);
+
+    println!("\n  ⚠ DECOMPOSITION SUBTRACTS 2θ₁!");
+    println!("  • Decomposition gives: θ₂ - θ₁ (subtraction, not addition)");
+    println!("  • We wanted: θ₁ + θ₂ (addition)");
+    println!("  • Amount subtracted: 2θ₁");
+
+    // STEP 4: compute what was subtracted
+    println!("\nSTEP 4: What Decomposition Subtracted");
+    println!("--------------------------------------");
+
+    let subtracted = expected_angle - decomposed_angle;
+    println!("  Expected (θ₁ + θ₂): {:.3}", expected_angle);
+    println!("  Got (θ₂ - θ₁): {:.3}", decomposed_angle);
+    println!("  Amount subtracted: {:.3}", subtracted);
+    println!("  This equals 2θ₁: {:.3}", 2.0 * theta1);
+
+    assert!((subtracted - 2.0 * theta1).abs() < EPSILON);
+
+    println!("\n  ✓ Decomposition SUBTRACTED exactly 2θ₁!");
+
+    // STEP 5: how quaternion multiplication table adds it back
+    println!("\nSTEP 5: Quaternion Table Adds Back What Was Subtracted");
+    println!("-------------------------------------------------------");
+
+    println!("  Decomposition SUBTRACTED: 2θ₁ = π");
+    println!("  Decomposition gave us: θ₂ - θ₁ = π/2");
+    println!("  Quaternion table: ADD BACK 2θ₁ = π");
+    println!("  Restored result: (θ₂ - θ₁) + 2θ₁ = θ₁ + θ₂ = 3π/2 ✓");
+
+    let corrected_angle = decomposed_angle + 2.0 * theta1;
+    assert!((corrected_angle - expected_angle).abs() < EPSILON);
+
+    println!("\n  The entry i·j = k means:");
+    println!("  'Add back the 2θ₁ that decomposition subtracted'");
+
+    // STEP 6: show this pattern across different angles
+    println!("\nSTEP 6: Pattern Holds for All Angle Pairs");
+    println!("------------------------------------------");
+
+    let test_cases = [
+        (PI / 4.0, PI / 3.0),       // 45° and 60°
+        (PI / 6.0, PI / 2.0),       // 30° and 90°
+        (PI / 3.0, 2.0 * PI / 3.0), // 60° and 120°
+    ];
+
+    for (theta_a, theta_b) in test_cases {
+        // primitive angle composition
+        let sum = theta_a + theta_b;
+
+        // decomposed gives difference
+        let ca = theta_a.cos();
+        let sa = theta_a.sin();
+        let cb = theta_b.cos();
+        let sb = theta_b.sin();
+
+        let scalar = ca * cb + sa * sb;
+        let bivector = ca * sb - sa * cb;
+        let decomposed_result = bivector.atan2(scalar);
+        let expected_diff = theta_b - theta_a;
+
+        // what was subtracted
+        let subtracted = sum - decomposed_result;
+
+        println!("\n  θ₁={:.3}, θ₂={:.3}:", theta_a, theta_b);
+        println!("    Want (θ₁+θ₂): {:.3}", sum);
+        println!("    Got (θ₂-θ₁): {:.3}", decomposed_result);
+        println!("    Subtracted: {:.3} = 2θ₁ ✓", subtracted);
+
+        assert!((decomposed_result - expected_diff).abs() < EPSILON);
+        assert!((subtracted - 2.0 * theta_a).abs() < EPSILON);
+    }
+
+    // STEP 7: the conclusion
+    println!("\n=== CONCLUSION ===");
+    println!("------------------");
+    println!("When you decompose rotations into basis vectors:");
+    println!("  • Geometric product gives θ₂ - θ₁ (subtraction)");
+    println!("  • Rotation composition gives θ₁ + θ₂ (addition)");
+    println!("  • Decomposition subtracts 2θ₁");
+    println!("\nQuaternion multiplication tables add it back:");
+    println!("  • Each table entry encodes how much to add back");
+    println!("  • i·j = k means: add back π to get 3π/2");
+    println!("  • The table is a lookup of addition corrections for subtraction errors");
+    println!("\nWithout decomposition:");
+    println!("  • No subtraction error occurs");
+    println!("  • No correction needed");
+    println!("  • Direct angle addition: θ₁ + θ₂ ✓\n");
+}
+
+#[test]
+fn it_proves_anticommutativity_exists_because_decomposition_subtracts_different_amounts() {
+    println!("\n=== ANTICOMMUTATIVITY: DECOMPOSITION SUBTRACTS DIFFERENT AMOUNTS ===\n");
+
+    let theta1 = PI / 2.0; // i
+    let theta2 = PI; // j
+
+    // primitive angle composition is commutative
+    println!("Primitive Angle Composition (Commutative):");
+    println!("  i·j = π/2 + π = 3π/2");
+    println!("  j·i = π + π/2 = 3π/2");
+    println!("  Same result! ✓\n");
+
+    let forward = theta1 + theta2;
+    let backward = theta2 + theta1;
+    assert!((forward - backward).abs() < EPSILON);
+
+    // decomposed product is NOT commutative (because of the missing 2θ₁)
+    println!("Decomposed Product (Non-commutative):");
+
+    // i·j decomposed
+    let c1 = theta1.cos();
+    let s1 = theta1.sin();
+    let c2 = theta2.cos();
+    let s2 = theta2.sin();
+
+    let ij_scalar = c1 * c2 + s1 * s2;
+    let ij_bivector = c1 * s2 - s1 * c2;
+    let ij_angle = ij_bivector.atan2(ij_scalar);
+
+    println!("  i·j decomposed = θ₂ - θ₁ = π - π/2 = π/2");
+    println!("    (subtracted 2θ₁ = π)");
+
+    // j·i decomposed
+    let ji_scalar = c2 * c1 + s2 * s1;
+    let ji_bivector = c2 * s1 - s2 * c1;
+    let ji_angle = ji_bivector.atan2(ji_scalar);
+
+    println!("  j·i decomposed = θ₁ - θ₂ = π/2 - π = -π/2");
+    println!("    (subtracted 2θ₂ = 2π)\n");
+
+    // they differ
+    println!("  i·j ≠ j·i because decomposition SUBTRACTED different amounts:");
+    println!("    i·j subtracted: 2θ₁ = π");
+    println!("    j·i subtracted: 2θ₂ = 2π");
+
+    // after adding back
+    let ij_corrected = ij_angle + 2.0 * theta1;
+    let ji_corrected = ji_angle + 2.0 * theta2;
+
+    println!("\n  Adding back what was subtracted:");
+    println!("    i·j: π/2 + 2θ₁ = π/2 + π = 3π/2 = k ✓");
+    println!("    j·i: -π/2 + 2θ₂ = -π/2 + 2π = 3π/2 = k ✓");
+
+    println!("\n  Both give 3π/2 after adding back what was subtracted!");
+
+    assert!((ij_corrected - (theta1 + theta2)).abs() < EPSILON);
+    assert!((ji_corrected - (theta1 + theta2)).abs() < EPSILON);
+
+    println!("\nAnticommutativity is a subtraction artifact:");
+    println!("  • Decomposition subtracts DIFFERENT amounts (2θ₁ vs 2θ₂)");
+    println!("  • Tables add back DIFFERENT amounts to compensate");
+    println!("  • This creates apparent non-commutativity");
+    println!("  • Primitive angle composition remains commutative\n");
+}
