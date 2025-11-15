@@ -1,97 +1,771 @@
+// calculus is a geometric algorithm requiring forward and reverse quarter turns before projection
+//
+// traditional calculus works with scalars (post-projection quantities) and needs limits
+// geometric calculus works with [magnitude, angle] primitives where relationships are encoded in angles
+// quarter turns (±π/2) rotate between grades, then projection extracts scalar results
+//
+// forward quarter turn: +π/2 (differentiate)
+// reverse quarter turn: +3π/2, dual to -π/2 (integrate)
+// projection: extracts scalar from geometric structure
+//
+// differentiation is simply a pi/2 rotation and the foundation of
+// calculus emerges directly from this geometric structure
+//
+// let v = [[1, 0], [1, pi/2]] # 2d
+//
+// everything can be a 1d "derivative" or projection of the base 2d v
+// so long as the difference between their angles is pi/2 and they
+// follow the "angles add, lengths multiply" rule
+//
+// v'       = [1, pi/2]  # first derivative (rotate v by pi/2)
+// v''      = [1, pi]    # second derivative (rotate v' by pi/2) = -v
+// v'''     = [1, 3pi/2] # third derivative (rotate v'' by pi/2) = -v'
+// v''''    = [1, 2pi]   # fourth derivative (rotate v''' by pi/2) = v
+// v'''''   = [1, 5pi/2] # fifth derivative (rotate v'''' by pi/2) = v'
+// v''''''  = [1, 3pi]   # sixth derivative (rotate v''''' by pi/2) = -v
+// v''''''' = [1, 7pi/2] # seventh derivative (rotate v'''''' by pi/2) = -v'
+//
+// this geometric space enables continuous rotation as an
+// incrementing pi/2 angle, which is the essence of differentiation,
+// and sets the period of the "derive" function to 4
+//
+// the wedge product between vectors AND their derivatives is nilpotent
+
 use geonum::*;
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::PI;
 
 const EPSILON: f64 = 1e-10;
 
 #[test]
-fn it_computes_limits() {
+fn its_a_limit() {
     // this test demonstrates that "limits" are unnecessary when using geometric numbers
+    // limits use geometric operations then discard the geometry
+    // they compute with [magnitude, angle] but collapse result to scalar
+    // losing the normal and rotational structure
 
-    // differentiation is simply a pi/2 rotation and the foundation of
-    // calculus emerges directly from this geometric structure
+    let x: f64 = 3.0;
+    let h = 0.0001;
 
-    // let v = [[1, 0], [1, pi/2]] # 2d
+    // limits perform geometric operations: finite difference + division
+    // compute f(x+h) - f(x) for f(x) = x²
+    let x_geo = Geonum::new(x, 0.0, 1.0);
+    let x_h_geo = Geonum::new(x + h, 0.0, 1.0);
+    let f_x = x_geo * x_geo; // x² = 9
+    let f_x_h = x_h_geo * x_h_geo;
 
-    // everything can be a 1d "derivative" or projection of the base 2d v
-    // so long as the difference between their angles is pi/2 and they
-    // follow the "angles add, lengths multiply" rule
+    let geometric_difference = f_x_h - f_x; // geometric subtraction
 
-    // v'       = [1, pi/2]  # first derivative (rotate v by pi/2)
-    // v''      = [1, pi]    # second derivative (rotate v' by pi/2) = -v
-    // v'''     = [1, 3pi/2] # third derivative (rotate v'' by pi/2) = -v'
-    // v''''    = [1, 2pi]   # fourth derivative (rotate v''' by pi/2) = v
-    // v'''''   = [1, 5pi/2] # fifth derivative (rotate v'''' by pi/2) = v'
-    // v''''''  = [1, 3pi]   # sixth derivative (rotate v''''' by pi/2) = -v
-    // v''''''' = [1, 7pi/2] # seventh derivative (rotate v'''''' by pi/2) = -v'
-
-    // this geometric space enables continuous rotation as an
-    // incrementing pi/2 angle, which is the essence of differentiation,
-    // and sets the period of the "derive" function to 4
-
-    // the wedge product between vectors AND their derivatives is nilpotent
-
-    let v = [
-        Geonum::new(1.0, 0.0, 2.0), // [1, 0]
-        Geonum::new(1.0, 1.0, 2.0), // [1, pi/2]
-    ];
-
-    // extract the components
-    let v0 = v[0]; // [1, 0]
-    let v1 = v[1]; // [1, pi/2]
-
-    // the derivative v' is directly represented by the second basis vector
-    // this demonstrates how differentiation emerges from the initial pair
-    // without requiring limits
-    let v_prime = v1;
-
-    // prove v' = [1, pi/2]
-    assert_eq!(v_prime.length, 1.0);
-    assert!((v_prime.angle.grade_angle() - PI / 2.0).abs() < EPSILON);
-
-    // prove nilpotency using wedge product
-    let self_wedge = v0.wedge(&v0);
-    assert!(self_wedge.length < EPSILON);
-
-    // prove differentiating twice returns negative of original
-    // v'' = v' rotated by pi/2 = [1, pi/2 + pi/2] = [1, pi] = -v
-    let v_double_prime = Geonum::new_with_angle(
-        v_prime.length,
-        v_prime.angle + Angle::new(1.0, 2.0), // add π/2
+    // this produces a geometric number [magnitude, angle]
+    assert!(
+        geometric_difference.length < 0.01,
+        "geometric difference small"
     );
 
-    // prove v'' = -v
-    assert_eq!(v_double_prime.length, v0.length);
-    assert!((v_double_prime.angle.grade_angle() - PI).abs() < EPSILON);
+    // divide by h geometrically
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+    let geometric_quotient = geometric_difference / h_geo;
 
-    // prove the 4-cycle property by computing v''' and v''''
-    let v_triple_prime = Geonum::new_with_angle(
-        v_double_prime.length,
-        v_double_prime.angle + Angle::new(1.0, 2.0), // add π/2
+    // the quotient is still geometric: [magnitude, angle, grade]
+    println!(
+        "geometric quotient: [magnitude={:.6}, angle={:.6}, grade={}]",
+        geometric_quotient.length,
+        geometric_quotient.angle.grade_angle(),
+        geometric_quotient.angle.grade()
     );
 
-    // v''' = [1, 3pi/2] = -v'
-    assert_eq!(v_triple_prime.length, v_prime.length);
-    assert!((v_triple_prime.angle.grade_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
-
-    let v_quadruple_prime = Geonum::new_with_angle(
-        v_triple_prime.length,
-        v_triple_prime.angle + Angle::new(1.0, 2.0), // add π/2
+    // but traditional limits PROJECT to scalar, discarding angle structure
+    let limit_result = geometric_quotient.length; // projection: lose angle
+    assert!(
+        limit_result > 5.0 && limit_result < 7.0,
+        "limit projects to scalar ~6"
     );
 
-    // v'''' = [1, 0] = original v
-    assert_eq!(v_quadruple_prime.length, v0.length);
-    let angle_rad = v_quadruple_prime.angle.grade_angle();
-    assert!(angle_rad < EPSILON || (TAU - angle_rad) < EPSILON);
+    // differentiate() preserves the complete geometric structure
+    let derivative = f_x.differentiate(); // rotates π/2
 
-    // extend the demonstration with fifth derivative
-    let v_quintuple_prime = Geonum::new_with_angle(
-        v_quadruple_prime.length,
-        v_quadruple_prime.angle + Angle::new(1.0, 2.0), // add π/2
+    // derivative contains both tangent and normal via the quarter turn
+    let tangent = derivative.project_to_dimension(0);
+    let normal = derivative.project_to_dimension(1);
+
+    assert!(tangent.abs() < EPSILON, "tangent ≈ 0 at dimension 0");
+    assert!(
+        (normal - 9.0).abs() < EPSILON,
+        "normal = 9 at dimension 1 (perpendicular)"
     );
 
-    // v''''' = [1, pi/2] = v'
-    assert_eq!(v_quintuple_prime.length, v_prime.length);
-    assert!((v_quintuple_prime.angle.grade_angle() - v_prime.angle.grade_angle()).abs() < EPSILON);
+    // limits extract tangent scalar but lose normal and rotation
+    // limit gives ~6 (df/dx), tangent gives ~0 (different projections)
+    assert!(
+        limit_result > 5.0 && limit_result < 7.0,
+        "limit extracts rate scalar"
+    );
+    assert_eq!(
+        derivative.angle.grade(),
+        1,
+        "derivative at grade 1 preserves structure"
+    );
+    assert_eq!(
+        derivative.length, f_x.length,
+        "magnitude preserved in rotation"
+    );
+
+    // the key insight: limits ARE geometric operations (subtraction, division)
+    // but they throw away the [magnitude, angle] result by projecting to scalar
+    // losing the normal component and the quarter turn rotation that relates tangent to normal
+    let angle_separation = derivative.angle - f_x.angle;
+    assert_eq!(
+        angle_separation,
+        Angle::new(1.0, 2.0),
+        "tangent-normal dual structure (quarter turn apart) lost in limit projection"
+    );
+}
+
+#[test]
+fn its_a_derivative() {
+    // differentiate() computes the derivative via pi/2 rotation
+    // the derivative appears perpendicular in the next dimension
+
+    let position = Geonum::new(5.0, 0.0, 1.0);
+    let velocity = position.differentiate();
+
+    // velocity is perpendicular to position (quarter turn rotation)
+    let angle_diff = velocity.angle - position.angle;
+    assert_eq!(
+        angle_diff,
+        Angle::new(1.0, 2.0),
+        "derivative rotates by quarter turn"
+    );
+
+    // magnitude preserved (rate equals magnitude for unit parameter)
+    assert_eq!(velocity.length, position.length, "magnitude preserved");
+
+    // grade changes: 0 → 1
+    assert_eq!(position.angle.grade(), 0, "position at grade 0");
+    assert_eq!(velocity.angle.grade(), 1, "velocity at grade 1");
+
+    // project the derivative to extract the rate of change
+    let rate_at_dim_1 = velocity.project_to_dimension(1);
+    assert!(
+        (rate_at_dim_1 - velocity.length).abs() < EPSILON,
+        "velocity at grade 1 projects fully to dimension 1"
+    );
+
+    // use derivative to compute change: integrate velocity back to position change
+    let delta_position = velocity.integrate(); // back to grade 0
+    assert_eq!(
+        delta_position.angle.grade(),
+        0,
+        "position change at grade 0"
+    );
+    assert_eq!(
+        delta_position.length, velocity.length,
+        "magnitude preserved"
+    );
+
+    // the change in position magnitude equals the velocity magnitude
+    assert!(
+        (delta_position.length - 5.0).abs() < EPSILON,
+        "change in position extracted from derivative"
+    );
+}
+
+#[test]
+fn its_an_integral() {
+    // integrate() computes definite integrals via reverse quarter turn rotation
+    // fundamental theorem: ∫ₐᵇ f'(x)dx = F(b) - F(a)
+    // scalar integral extracted via projection from grade 3
+
+    // compute ∫₂⁵ 2x dx = x²|₂⁵ = 25 - 4 = 21
+    let a: f64 = 2.0;
+    let b: f64 = 5.0;
+
+    let f_a = Geonum::new(a.powi(2), 0.0, 1.0); // F(2) = 4
+    let f_b = Geonum::new(b.powi(2), 0.0, 1.0); // F(5) = 25
+
+    // method 1: F(b) - F(a) at grade 0
+    let difference = f_b - f_a;
+    assert_eq!(difference.angle.grade(), 0, "difference at grade 0");
+    assert!(
+        (difference.length - 21.0).abs() < EPSILON,
+        "magnitude at grade 0 equals integral directly"
+    );
+
+    // method 2: integrate() then project
+    // integrate rotates by 3 quarter turns (reverse rotation, dual to -π/2)
+    let integrated = difference.integrate();
+
+    let angle_rotation = integrated.angle - difference.angle;
+    assert_eq!(
+        angle_rotation,
+        Angle::new(3.0, 2.0),
+        "integrate rotates by 3 quarter turns (reverse)"
+    );
+
+    assert_eq!(integrated.angle.grade(), 3, "integrated at grade 3");
+    assert_eq!(
+        integrated.length, difference.length,
+        "magnitude preserved through rotation"
+    );
+
+    // project to dimension 3 to extract integral scalar
+    let integral_scalar = integrated.project_to_dimension(3);
+    assert!(
+        (integral_scalar - 21.0).abs() < EPSILON,
+        "dimension 3 projection extracts integral scalar"
+    );
+
+    // both methods give same result: scalars are projections
+    assert!(
+        (difference.length - integral_scalar).abs() < EPSILON,
+        "magnitude at grade 0 = projection from grade 3"
+    );
+}
+
+#[test]
+fn it_computes_coefficients_from_geometric_division() {
+    // polynomial derivative coefficients appear naturally from finite differences
+    // divided by appropriate powers: coefficient for x^n = (Δf/Δx) / x^(n-1)
+
+    let x_value: f64 = 4.0;
+    let h = 0.0001;
+
+    let x = Geonum::new(x_value, 0.0, 1.0);
+    let x_h = Geonum::new(x_value + h, 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+
+    // f(x) = x²: coefficient should be 2
+    let f_squared = x * x;
+    let f_squared_h = x_h * x_h;
+    let coeff_2 = ((f_squared_h - f_squared) / h_geo) / x;
+
+    assert!((coeff_2.length - 2.0).abs() < 0.01, "x² coefficient = 2");
+
+    // f(x) = x³: coefficient should be 3
+    let f_cubed = f_squared * x;
+    let f_cubed_h = f_squared_h * x_h;
+    let coeff_3 = ((f_cubed_h - f_cubed) / h_geo) / x / x; // divide by x²
+
+    assert!((coeff_3.length - 3.0).abs() < 0.01, "x³ coefficient = 3");
+
+    // f(x) = x⁴: coefficient should be 4
+    let f_fourth = f_cubed * x;
+    let f_fourth_h = f_cubed_h * x_h;
+    let coeff_4 = ((f_fourth_h - f_fourth) / h_geo) / x / x / x; // divide by x³
+
+    assert!((coeff_4.length - 4.0).abs() < 0.01, "x⁴ coefficient = 4");
+}
+
+#[test]
+fn it_computes_powers_from_angle_ratios() {
+    // when multiplying geometric numbers, angles add
+    // for x^n, power n appears naturally in angle ratios: (x^n angle) / (x angle) = n
+
+    let x_value: f64 = 2.0;
+    let theta = 0.523598775; // π/6
+
+    let x = Geonum::new(x_value, theta, 3.14159265359);
+    let x_squared = x * x;
+    let x_cubed = x_squared * x;
+    let x_fourth = x_cubed * x;
+
+    let x_angle = x.angle.grade_angle();
+    let power_2 = x_squared.angle.grade_angle() / x_angle;
+    let power_3 = x_cubed.angle.grade_angle() / x_angle;
+    let power_4 = x_fourth.angle.grade_angle() / x_angle;
+
+    assert!(
+        (power_2 - 2.0).abs() < EPSILON,
+        "x² power encoded in angle ratio"
+    );
+    assert!(
+        (power_3 - 3.0).abs() < EPSILON,
+        "x³ power encoded in angle ratio"
+    );
+    assert!(
+        (power_4 - 4.0).abs() < EPSILON,
+        "x⁴ power encoded in angle ratio"
+    );
+}
+
+#[test]
+fn it_computes_integrals_from_riemann_sums() {
+    // integrals appear naturally from riemann sums: geometric multiplication + addition
+    // ∫₀⁴ 2x dx = x²|₀⁴ = 16
+
+    let x_start: f64 = 0.0;
+    let x_end: f64 = 4.0;
+    let num_steps = 1000;
+    let dx = (x_end - x_start) / num_steps as f64;
+
+    let dx_geo = Geonum::new(dx, 0.0, 1.0);
+    let mut geometric_sum = Geonum::new(0.0, 0.0, 1.0);
+
+    for i in 0..num_steps {
+        let x_i = x_start + i as f64 * dx;
+        let f_i = Geonum::new(2.0 * x_i, 0.0, 1.0); // f(x) = 2x
+        let rectangle = f_i * dx_geo; // height × width
+        geometric_sum = geometric_sum + rectangle;
+    }
+
+    let expected = 16.0; // x²|₀⁴ = 16 - 0
+    assert!(
+        (geometric_sum.length - expected).abs() < 0.02,
+        "riemann sum computes integral via geometric operations"
+    );
+}
+
+#[test]
+fn its_a_gradient() {
+    // traditional: ∇f = [∂f/∂x, ∂f/∂y] requires computing partials then assembling vector
+    // geonum: ∇f = sum of directionally-encoded partials - no assembly needed
+
+    let x = 3.0;
+    let y = 4.0;
+    let h = 0.0001;
+
+    // f(x,y) = x² + y²
+    let f_xy = x * x + y * y; // 25
+
+    // traditional gradient: compute each partial, assemble into vector, compute magnitude
+    let partial_x: f64 = ((x + h) * (x + h) + y * y - f_xy) / h; // ≈ 6
+    let partial_y: f64 = (x * x + (y + h) * (y + h) - f_xy) / h; // ≈ 8
+    let trad_magnitude: f64 = (partial_x * partial_x + partial_y * partial_y).sqrt(); // 10
+    let trad_direction: f64 = partial_y.atan2(partial_x); // ≈ 0.927 rad
+
+    // geometric gradient: compute partials via finite differences, encode with direction, add
+    let f_geo = Geonum::new(f_xy, 0.0, 1.0);
+    let f_xh = Geonum::new((x + h) * (x + h) + y * y, 0.0, 1.0);
+    let f_yh = Geonum::new(x * x + (y + h) * (y + h), 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+
+    // ∂f/∂x at angle 0 (x-direction)
+    let df_dx = (f_xh - f_geo) / h_geo;
+    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+
+    // ∂f/∂y at angle π/2 (y-direction)
+    let df_dy = (f_yh - f_geo) / h_geo;
+    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+
+    // gradient = sum of directionally-encoded partials
+    let gradient = partial_x_geo + partial_y_geo;
+
+    // prove they match
+    assert!(
+        (gradient.length - trad_magnitude).abs() < 0.01,
+        "gradient magnitude matches: {} ≈ {}",
+        gradient.length,
+        trad_magnitude
+    );
+    assert!(
+        (gradient.angle.grade_angle() - trad_direction).abs() < 0.01,
+        "gradient direction matches: {} ≈ {}",
+        gradient.angle.grade_angle(),
+        trad_direction
+    );
+}
+
+#[test]
+fn its_a_divergence() {
+    // traditional: ∇·F = ∂Fx/∂x + ∂Fy/∂y requires computing each partial then summing scalars
+    // geonum: ∇·F = sum of geometric partials - magnitude gives divergence value
+
+    let x = 2.0;
+    let y = 3.0;
+    let h = 0.0001;
+
+    // vector field F(x,y) = [x², xy] at point (2,3)
+    let fx = x * x; // 4
+    let fy = x * y; // 6
+
+    // traditional divergence: ∂Fx/∂x + ∂Fy/∂y = 2x + x = 3x = 6
+    let dfx_dx: f64 = (((x + h) * (x + h)) - fx) / h; // 2x ≈ 4
+    let dfy_dy: f64 = ((x * (y + h)) - fy) / h; // x ≈ 2
+    let trad_divergence: f64 = dfx_dx + dfy_dy; // 6
+
+    // geometric divergence: compute partials via finite differences, sum
+    let fx_geo = Geonum::new(fx, 0.0, 1.0);
+    let fx_h = Geonum::new((x + h) * (x + h), 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+    let dfx_dx_geo = (fx_h - fx_geo) / h_geo;
+
+    let fy_geo = Geonum::new(fy, 0.0, 1.0);
+    let fy_h = Geonum::new(x * (y + h), 0.0, 1.0);
+    let dfy_dy_geo = (fy_h - fy_geo) / h_geo;
+
+    // each partial derivative is at grade 2 (result of division operations)
+    assert_eq!(dfx_dx_geo.angle.grade(), 2, "∂Fx/∂x at grade 2");
+    assert_eq!(dfy_dy_geo.angle.grade(), 2, "∂Fy/∂y at grade 2");
+
+    // divergence = sum of partials
+    let divergence = dfx_dx_geo + dfy_dy_geo;
+
+    // divergence magnitude matches traditional scalar divergence
+    assert!(
+        (divergence.length - trad_divergence).abs() < 0.01,
+        "divergence magnitude matches: {} ≈ {}",
+        divergence.length,
+        trad_divergence
+    );
+
+    // divergence remains at grade 2 (sum of grade 2 objects)
+    assert_eq!(
+        divergence.angle.grade(),
+        2,
+        "divergence at grade 2 (bivector)"
+    );
+}
+
+#[test]
+fn its_a_curl() {
+    // traditional: ∇×F = ∂Fy/∂x - ∂Fx/∂y (2D curl, z-component)
+    // geonum: curl = difference of cross partials - magnitude gives circulation
+
+    let x = 2.0;
+    let y = 3.0;
+    let h = 0.0001;
+
+    // rotational vector field F(x,y) = [-y, x] at point (2,3)
+    let fx = -y; // -3
+    let fy = x; // 2
+
+    // traditional curl: ∂Fy/∂x - ∂Fx/∂y = 1 - (-1) = 2
+    let dfy_dx: f64 = ((x + h) - fy) / h; // ∂Fy/∂x = 1
+    let dfx_dy: f64 = (-(y + h) - fx) / h; // ∂Fx/∂y = -1
+    let trad_curl: f64 = dfy_dx - dfx_dy; // 2
+
+    // geometric curl: compute cross partials via finite differences, subtract
+    let fy_geo = Geonum::new(fy, 0.0, 1.0);
+    let fy_xh = Geonum::new(x + h, 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+    let dfy_dx_geo = (fy_xh - fy_geo) / h_geo;
+
+    let fx_geo = Geonum::new(fx, 0.0, 1.0);
+    let fx_yh = Geonum::new(-(y + h), 0.0, 1.0);
+    let dfx_dy_geo = (fx_yh - fx_geo) / h_geo;
+
+    // curl = ∂Fy/∂x - ∂Fx/∂y
+    let curl = dfy_dx_geo - dfx_dy_geo;
+
+    // prove curl magnitude matches
+    assert!(
+        (curl.length - trad_curl).abs() < 0.01,
+        "curl magnitude matches: {} ≈ {}",
+        curl.length,
+        trad_curl
+    );
+
+    // curl is at grade 2 (result of division operations)
+    assert_eq!(curl.angle.grade(), 2, "curl at grade 2 (bivector)");
+}
+
+#[test]
+fn its_a_directional_derivative() {
+    // traditional: D_û f = ∇f·û requires gradient vector dotted with unit direction
+    // geonum: D_û f = gradient.dot(direction) - same operation, geometric structure
+
+    let x = 3.0;
+    let y = 4.0;
+    let h = 0.0001;
+
+    // f(x,y) = x² + y² at (3,4), gradient = [6, 8]
+    let f_xy = x * x + y * y; // 25
+    let partial_x: f64 = ((x + h) * (x + h) + y * y - f_xy) / h; // 6
+    let partial_y: f64 = (x * x + (y + h) * (y + h) - f_xy) / h; // 8
+
+    // direction: û = [1/√2, 1/√2] (45° direction)
+    let dir_x: f64 = 1.0 / 2.0_f64.sqrt();
+    let dir_y: f64 = 1.0 / 2.0_f64.sqrt();
+
+    // traditional directional derivative: ∇f·û = 6*(1/√2) + 8*(1/√2) ≈ 9.899
+    let trad_dir_deriv: f64 = partial_x * dir_x + partial_y * dir_y;
+
+    // geometric: build gradient, dot with direction
+    let f_geo = Geonum::new(f_xy, 0.0, 1.0);
+    let f_xh = Geonum::new((x + h) * (x + h) + y * y, 0.0, 1.0);
+    let f_yh = Geonum::new(x * x + (y + h) * (y + h), 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+
+    let df_dx = (f_xh - f_geo) / h_geo;
+    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+
+    let df_dy = (f_yh - f_geo) / h_geo;
+    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+
+    let gradient = partial_x_geo + partial_y_geo;
+    let direction = Geonum::new(1.0, 1.0, 4.0); // π/4 = 45°
+
+    // directional derivative = gradient · direction
+    let dir_deriv = gradient.dot(&direction);
+
+    assert!(
+        (dir_deriv.length - trad_dir_deriv).abs() < 0.1,
+        "directional derivative matches: {} ≈ {}",
+        dir_deriv.length,
+        trad_dir_deriv
+    );
+}
+
+#[test]
+fn its_a_laplacian() {
+    // traditional: ∇²f = ∂²f/∂x² + ∂²f/∂y² sum of second partials
+    // geonum: compute second partials geometrically, sum → magnitude extraction
+
+    let x = 2.0;
+    let y = 3.0;
+    let h = 0.0001;
+
+    // f(x,y) = x² + y²
+    let f_xy = x * x + y * y; // 13
+
+    // traditional laplacian: ∂²f/∂x² + ∂²f/∂y² = 2 + 2 = 4
+    let f_xh = (x + h) * (x + h) + y * y;
+    let f_x_h = (x - h) * (x - h) + y * y;
+    let d2f_dx2: f64 = (f_xh - 2.0 * f_xy + f_x_h) / (h * h); // 2
+
+    let f_yh = x * x + (y + h) * (y + h);
+    let f_y_h = x * x + (y - h) * (y - h);
+    let d2f_dy2: f64 = (f_yh - 2.0 * f_xy + f_y_h) / (h * h); // 2
+
+    let trad_laplacian: f64 = d2f_dx2 + d2f_dy2; // 4
+
+    // geometric laplacian: compute second partials via finite differences
+    let f_geo = Geonum::new(f_xy, 0.0, 1.0);
+    let f_xh_geo = Geonum::new(f_xh, 0.0, 1.0);
+    let f_x_h_geo = Geonum::new(f_x_h, 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+    let h2_geo = h_geo * h_geo; // h²
+
+    // ∂²f/∂x² = (f(x+h) - 2f(x) + f(x-h)) / h²
+    let d2f_dx2_geo = (f_xh_geo - f_geo.scale(2.0) + f_x_h_geo) / h2_geo;
+
+    let f_yh_geo = Geonum::new(f_yh, 0.0, 1.0);
+    let f_y_h_geo = Geonum::new(f_y_h, 0.0, 1.0);
+
+    // ∂²f/∂y²
+    let d2f_dy2_geo = (f_yh_geo - f_geo.scale(2.0) + f_y_h_geo) / h2_geo;
+
+    // laplacian = sum of second partials
+    let laplacian = d2f_dx2_geo + d2f_dy2_geo;
+
+    // prove laplacian magnitude matches
+    assert!(
+        (laplacian.length - trad_laplacian).abs() < 0.1,
+        "laplacian magnitude matches: {} ≈ {}",
+        laplacian.length,
+        trad_laplacian
+    );
+
+    // laplacian at grade 2 from division operations
+    assert_eq!(laplacian.angle.grade(), 2, "laplacian at grade 2");
+}
+
+#[test]
+fn it_handles_partial_derivatives() {
+    // traditional: ∂f/∂x "holds y constant" - requires conceptual freezing of dimensions
+    // geonum: gradient already contains all directional info - just project
+
+    let x = 3.0;
+    let y = 4.0;
+    let h = 0.0001;
+
+    // f(x,y) = x² + y² at (3,4)
+    let f_xy = x * x + y * y; // 25
+
+    // traditional partials: "hold y constant" for ∂f/∂x, "hold x constant" for ∂f/∂y
+    let partial_x_trad: f64 = ((x + h) * (x + h) + y * y - f_xy) / h; // 2x = 6
+    let partial_y_trad: f64 = (x * x + (y + h) * (y + h) - f_xy) / h; // 2y = 8
+
+    // geometric: build gradient (already contains all directional information)
+    let f_geo = Geonum::new(f_xy, 0.0, 1.0);
+    let f_xh = Geonum::new((x + h) * (x + h) + y * y, 0.0, 1.0);
+    let f_yh = Geonum::new(x * x + (y + h) * (y + h), 0.0, 1.0);
+    let h_geo = Geonum::new(h, 0.0, 1.0);
+
+    let df_dx = (f_xh - f_geo) / h_geo;
+    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+
+    let df_dy = (f_yh - f_geo) / h_geo;
+    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+
+    let gradient = partial_x_geo + partial_y_geo;
+
+    // extract partials via projection - no "freezing" needed
+    let x_axis = Geonum::new(1.0, 0.0, 1.0);
+    let y_axis = Geonum::new(1.0, 1.0, 2.0);
+
+    let partial_x_projected = gradient.dot(&x_axis);
+    let partial_y_projected = gradient.dot(&y_axis);
+
+    // prove they match
+    assert!(
+        (partial_x_projected.length - partial_x_trad).abs() < 0.2,
+        "x-partial matches: {} ≈ {}",
+        partial_x_projected.length,
+        partial_x_trad
+    );
+    assert!(
+        (partial_y_projected.length - partial_y_trad).abs() < 0.2,
+        "y-partial matches: {} ≈ {}",
+        partial_y_projected.length,
+        partial_y_trad
+    );
+}
+
+#[test]
+fn its_a_line_integral() {
+    // traditional: ∫_C F·dr requires curve parameterization, dr/dt computation, integration
+    // geonum: field · path for constant field on straight path
+
+    // straight line from (0,0) to (2,3)
+    let start = Geonum::new_from_cartesian(0.0, 0.0);
+    let end = Geonum::new_from_cartesian(2.0, 3.0);
+    let path = end - start;
+
+    // constant vector field F = [1, 2]
+    let field = Geonum::new_from_cartesian(1.0, 2.0);
+
+    // traditional: ∫_C F·dr = F·(end - start) = [1,2]·[2,3] = 1*2 + 2*3 = 8
+    let trad_integral: f64 = 1.0 * 2.0 + 2.0 * 3.0;
+
+    // geometric: field · path
+    let geo_integral = field.dot(&path);
+
+    // prove they match
+    assert!(
+        (geo_integral.length - trad_integral).abs() < 0.1,
+        "line integral matches: {} ≈ {}",
+        geo_integral.length,
+        trad_integral
+    );
+}
+
+#[test]
+fn its_a_surface_integral() {
+    // traditional: ∬_S F·n dS requires surface parameterization and normal vector computation
+    // geonum: surface as bivector (wedge product) - magnitude gives area
+
+    // rectangular surface with edges [2,0] and [0,3]
+    let edge_x = Geonum::new_from_cartesian(2.0, 0.0);
+    let edge_y = Geonum::new_from_cartesian(0.0, 3.0);
+
+    // traditional surface area via multiplication
+    let trad_area: f64 = 2.0 * 3.0; // 6
+
+    // geometric surface: wedge product creates bivector
+    let surface = edge_x.wedge(&edge_y);
+
+    // wedge product magnitude IS the area
+    assert!(
+        (surface.length - trad_area).abs() < EPSILON,
+        "surface area matches: {} ≈ {}",
+        surface.length,
+        trad_area
+    );
+
+    // surface at grade 2 (bivector)
+    assert_eq!(surface.angle.grade(), 2, "surface at grade 2 (bivector)");
+}
+
+#[test]
+fn its_a_volume_integral() {
+    // traditional: ∭_V f dV requires volume parameterization and Jacobian computation
+    // geonum: volume from geometric product of surface bivector with third edge
+
+    // rectangular volume with edges [2,0], [0,3], and perpendicular edge of length 4
+    let edge_x = Geonum::new_from_cartesian(2.0, 0.0);
+    let edge_y = Geonum::new_from_cartesian(0.0, 3.0);
+    let edge_z = Geonum::new_with_blade(4.0, 2, 0.0, 1.0); // perpendicular at grade 2
+
+    // traditional volume via multiplication
+    let trad_volume: f64 = 2.0 * 3.0 * 4.0; // 24
+
+    // geometric volume: surface bivector ⊗ third edge
+    let surface = edge_x.wedge(&edge_y); // bivector at grade 2
+    let volume = surface.geo(&edge_z); // geometric product
+
+    // volume magnitude matches
+    assert!(
+        (volume.length - trad_volume).abs() < EPSILON,
+        "volume matches: {} ≈ {}",
+        volume.length,
+        trad_volume
+    );
+
+    // volume at grade 0 (cycles back through 4-grade structure)
+    assert_eq!(volume.angle.grade(), 0, "volume at grade 0");
+}
+
+#[test]
+fn it_encodes_definite_integrals_with_domain() {
+    // ∫₂⁵ x² dx = 39
+    // traditional: only the value 39
+    // angle space: value AND domain in one geonum
+
+    // compute traditionally for comparison
+    let x_a: f64 = 2.0;
+    let x_b: f64 = 5.0;
+    let traditional: f64 = (x_b.powi(3) - x_a.powi(3)) / 3.0; // 39
+
+    // encode bounds as angles (x as multiples of π)
+    let angle_a = Angle::new(x_a, 1.0); // 2π radians
+    let angle_b = Angle::new(x_b, 1.0); // 5π radians
+
+    // evaluate antiderivative at bounds
+    // F(x) = x³/3
+    let f_a = Geonum::new_with_angle(x_a.powi(3) / 3.0, angle_a);
+    let f_b = Geonum::new_with_angle(x_b.powi(3) / 3.0, angle_b);
+
+    // the definite integral encodes:
+    // - magnitude: F(b) - F(a) = integral value
+    // - angle: x_b - x_a = integration domain
+    let magnitude = f_b.length - f_a.length;
+    let angle = f_b.angle - f_a.angle;
+    let integral = Geonum::new_with_angle(magnitude, angle);
+
+    // verify value matches traditional
+    assert!(
+        (integral.length - traditional).abs() < EPSILON,
+        "expected {}, got {}",
+        traditional,
+        integral.length
+    );
+
+    // the angle encodes the domain (as multiples of π)
+    let expected_angle = Angle::new(x_b - x_a, 1.0); // (5-2) * π = 3π
+    assert_eq!(
+        integral.angle, expected_angle,
+        "angle should encode domain span"
+    );
+
+    // traditional calculus: ∫₂⁵ x² dx = 39 (value only)
+    // angle space calculus: [magnitude=39, angle=3π, blade=6, grade=2]
+    //   - magnitude: the integral value
+    //   - angle: 3π (the domain spanned as multiples of π)
+    //   - blade: 6 (accumulated π/2 rotations)
+    //   - grade: 2 (bivector, blade % 4)
+}
+
+#[test]
+fn it_preserves_fundamental_theorem_via_magnitudes() {
+    // fundamental theorem: ∫ₐᵇ f(x) dx = F(b) - F(a)
+    // in angle space: |F(b)| - |F(a)|
+
+    // ∫₁³ 2x dx = x² |₁³ = 9 - 1 = 8
+    let x_a: f64 = 1.0;
+    let x_b: f64 = 3.0;
+    let traditional: f64 = x_b.powi(2) - x_a.powi(2); // 8
+
+    let f_a = Geonum::new_with_angle(x_a.powi(2), Angle::new(x_a, 1.0));
+    let f_b = Geonum::new_with_angle(x_b.powi(2), Angle::new(x_b, 1.0));
+
+    let integral_value = f_b.length - f_a.length;
+
+    assert!(
+        (integral_value - traditional).abs() < EPSILON,
+        "expected {}, got {}",
+        traditional,
+        integral_value
+    );
 }
 
 #[test]
@@ -248,151 +922,18 @@ fn it_proves_differentiation_cycles_grades() {
             expected_grade
         );
     }
-
-    // the key insight: calculus operations navigate through geometric grades
-    // differentiation doesnt create new mathematical objects
-    // it rotates through the 4 fundamental geometric behaviors
-    // grade 0↔scalar, grade 1↔vector, grade 2↔bivector, grade 3↔trivector
-
-    println!("differentiation cycles through grades via π/2 rotations");
-    println!("calculus = navigation through geometric structure");
 }
 
 #[test]
-fn it_proves_pi_2_rotation_eliminates_infinite_rectangle_summation() {
-    // traditional calculus: ∫₀ᵗ v dt = lim(n→∞) Σ v(tᵢ)Δt where Δt → 0
-    // sums infinite rectangles of width Δt and height v(tᵢ)
-    //
-    // geonum: integration through π/2 rotation captures entire sum in single operation
+fn it_demonstrates_differentiate_on_polynomials() {
+    // differentiate() rotates by π/2, preserving magnitude and cycling grades
+    // test on polynomial evaluations at specific points
 
-    // test setup: position function f(t) = t² for integration
-    let t = 4.0; // integrate from 0 to 4
-    let position_function = Geonum::new(t * t, 0.0, 1.0); // f(t) = t² at grade 0
-
-    // traditional integration: ∫₀⁴ 2t dt = t² |₀⁴ = 16 - 0 = 16
-    // (integral of derivative 2t gives back original function t²)
-    let traditional_integral_result = t * t; // 16
-
-    // geonum integration: use the inverse of differentiation
-    // if differentiation rotates by π/2, integration rotates by -π/2
-    let integrated = position_function.integrate(); // rotate by -π/2
-
-    // integration moves from grade 0 to grade 3 (or equivalently grade -1 ≡ grade 3)
-    assert_eq!(position_function.angle.grade(), 0, "original at grade 0");
-    assert_eq!(integrated.angle.grade(), 3, "integrated at grade 3");
-
-    // magnitude preserved through rotation
-    assert_eq!(
-        integrated.length, position_function.length,
-        "integration preserves magnitude"
-    );
-
-    // verify geonum integration matches traditional analytical result
-    // both should give the same numerical value: 16
-    assert_eq!(
-        integrated.length, traditional_integral_result,
-        "geonum integration matches analytical result"
-    );
-
-    // the key insight: traditional calculus computes this value through symbolic manipulation
-    // geonum captures it directly through geometric rotation
-    // same result, but geonum reveals the underlying rotational structure
-
-    // demonstrate elimination of riemann sum approximation
-    // traditional calculus needs infinite rectangles to approximate integration
-    // geonum captures the exact result through -π/2 rotation
-
-    // test with a rate function that changes: f(t) = 2t (velocity increasing linearly)
-    let rate_function = Geonum::new(10.0, 0.0, 1.0); // rate at some point t=5: f(5) = 10
-
-    // traditional riemann sum: approximate ∫ f(t) dt with rectangles
-    let num_rectangles = 100000; // even with massive rectangle count
-    let t_start = 0.0;
-    let t_end = 5.0;
-    let dt = (t_end - t_start) / num_rectangles as f64;
-
-    let mut riemann_approximation = 0.0;
-    for i in 0..num_rectangles {
-        let t_i = t_start + i as f64 * dt;
-        let rate_at_t_i = 2.0 * t_i; // f(t) = 2t
-        riemann_approximation += rate_at_t_i * dt; // rectangle area
-    }
-
-    // analytical result: ∫₀⁵ 2t dt = t² |₀⁵ = 25 - 0 = 25
-    let analytical_result = t_end * t_end; // 25
-
-    // geonum integration: -π/2 rotation eliminates the approximation
-    // integrate the rate function directly
-    let integrated_rate = rate_function.integrate(); // -π/2 rotation
-
-    // the integration via rotation contains the exact integral
-    // no approximation through rectangle summation needed
-    assert_eq!(
-        integrated_rate.angle.grade(),
-        3,
-        "integration moves to grade 3"
-    );
-    assert_eq!(
-        integrated_rate.length, rate_function.length,
-        "magnitude preserved"
-    );
-
-    // compare riemann approximation vs analytical result
-    let riemann_error = (riemann_approximation - analytical_result).abs();
-    assert!(
-        riemann_error > 1e-6,
-        "riemann sum still has approximation error even with 100k rectangles"
-    );
-
-    // geonum eliminates this approximation entirely through geometric rotation
-
-    // demonstrate grade-based integration with polynomial
-    // f(x) = x³ at grade 0, f'(x) = 3x² at grade 1
-    let cubic = Geonum::new(64.0, 0.0, 1.0); // f(4) = 4³ = 64
-    let cubic_derivative = cubic.differentiate(); // f'(x) at grade 1
-    let back_to_cubic = cubic_derivative.integrate(); // back to grade 0
-
-    // integration undoes differentiation through grade cycling
-    assert_eq!(cubic.angle.grade(), 0, "original cubic at grade 0");
-    assert_eq!(cubic_derivative.angle.grade(), 1, "derivative at grade 1");
-    assert_eq!(back_to_cubic.angle.grade(), 0, "integrated back to grade 0");
-
-    // the fundamental theorem: integration undoes differentiation
-    assert_eq!(
-        back_to_cubic.length, cubic.length,
-        "fundamental theorem via grade cycling"
-    );
-
-    // key insight: riemann sums approximate what integration captures exactly
-    // traditional calculus: lim(n→∞) Σ f(xi)Δx as rectangles → 0
-    // geonum: single π/2 rotation contains the entire infinite sum
-
-    // integration eliminates the limit process entirely
-    // no approximation through increasingly small rectangles needed
-    // the sum exists directly as the rotated geometric object
-
-    println!("integration via -π/2 rotation eliminates infinite rectangle approximation");
-    println!("riemann sums approximate what geometric rotation captures exactly");
-}
-
-#[test]
-fn it_derives() {
-    // scalar calculus: f(x) = x², f'(x) = 2x via limit process
-    // geonum: f(x) = x² at grade 0, f'(x) emerges from π/2 rotation to grade 1
-
-    // test specific value: x = 3
+    // test x² at x = 3
     let x = 3.0;
+    let f_scalar = x * x; // 9
+    let f = Geonum::new(f_scalar, 0.0, 1.0); // [9, 0] at grade 0
 
-    // scalar calc version: f(x) = x² = 9
-    let f_scalar = x * x;
-    assert_eq!(f_scalar, 9.0, "scalar f(3) = 9");
-
-    // scalar calc derivative: f'(x) = 2x = 6 (computed via limits)
-    let f_prime_scalar = 2.0 * x;
-    assert_eq!(f_prime_scalar, 6.0, "scalar f'(3) = 6");
-
-    // geonum version: encode f(x) = x² as geometric number
-    let f = Geonum::new(f_scalar, 0.0, 1.0); // [9, 0] at grade 0 (scalar-like)
     assert_eq!(f.angle.grade(), 0, "f(x) at grade 0");
     assert_eq!(f.length, 9.0, "f(3) magnitude is 9");
 
@@ -400,11 +941,6 @@ fn it_derives() {
     let f_prime = f.differentiate();
     assert_eq!(f_prime.angle.grade(), 1, "f'(x) at grade 1 (vector-like)");
     assert_eq!(f_prime.length, 9.0, "differentiation preserves magnitude");
-
-    // the "2x" behavior emerges from the geometric structure
-    // the π/2 rotation transforms the function into its derivative form
-    // traditional calculus approximates this through limits
-    // geonum captures it directly through angle arithmetic
 
     // demonstrate the grade transformation
     assert_eq!(f.angle.blade(), 0, "original function at blade 0");
@@ -427,23 +963,15 @@ fn it_derives() {
     // test polynomial chain: f(x) = x³
     let x3 = x * x * x; // 27
     let f_cubic = Geonum::new(x3, 0.0, 1.0); // [27, 0] at grade 0
-
-    // scalar calc: f'(x) = 3x² = 27
-    let f_cubic_prime_scalar = 3.0 * x * x;
-    assert_eq!(f_cubic_prime_scalar, 27.0, "scalar (x³)' = 3x² = 27");
-
-    // geonum: differentiate the cubic
     let f_cubic_prime = f_cubic.differentiate();
+
     assert_eq!(
         f_cubic_prime.angle.grade(),
         1,
         "cubic derivative at grade 1"
     );
 
-    // the "3x²" behavior emerges from the geometric transformation
-    // no limit computation needed - it exists as the rotated structure
-
-    // demonstrate second derivative: f''(x) = 6x for f(x) = x³
+    // demonstrate second derivative: f''(x) for f(x) = x³
     let f_cubic_double_prime = f_cubic_prime.differentiate();
     assert_eq!(
         f_cubic_double_prime.angle.grade(),
@@ -451,16 +979,10 @@ fn it_derives() {
         "second derivative at grade 2 (bivector)"
     );
 
-    // scalar calc: f''(3) = 6*3 = 18
-    let f_second_scalar = 6.0 * x;
-    assert_eq!(f_second_scalar, 18.0, "scalar f''(3) = 18");
-
     // test constant function: f(x) = 5
     let constant = Geonum::new(5.0, 0.0, 1.0); // [5, 0] at grade 0
     let constant_prime = constant.differentiate();
 
-    // scalar calc: derivative of constant is 0
-    // geonum: constant rotated by π/2 still has magnitude 5 but different grade
     assert_eq!(
         constant_prime.length, 5.0,
         "differentiation preserves magnitude"
@@ -471,16 +993,11 @@ fn it_derives() {
         "constant derivative at grade 1"
     );
 
-    // the "zero derivative" behavior comes from how grade 1 objects
-    // project back to scalar space for constant functions
-
     // test linear function: f(x) = 2x
     let linear_value = 2.0 * x; // 6
     let f_linear = Geonum::new(linear_value, 0.0, 1.0); // [6, 0]
     let f_linear_prime = f_linear.differentiate();
 
-    // scalar calc: f'(x) = 2
-    // geonum: the constant "2" emerges from the geometric structure
     assert_eq!(
         f_linear_prime.length, 6.0,
         "linear function derivative preserves magnitude"
@@ -490,1094 +1007,189 @@ fn it_derives() {
         1,
         "linear derivative at grade 1"
     );
-
-    // key insight: scalar calculus factors like 2x, 3x², 6x emerge naturally
-    // from the geometric relationships between grades under π/2 rotation
-    // no limit computation or symbolic manipulation needed
-
-    // the derivative operation IS the geometric rotation
-    // traditional calculus approximates this rotation through tangent slopes
-    // geonum captures it directly through angle arithmetic
-
-    println!("polynomial derivatives emerge from π/2 geometric rotations");
-    println!("factors like 2x, 3x² come from quadrature relationships, not limits");
 }
 
 #[test]
-fn it_proves_quadrature_generates_polynomial_coefficients() {
-    // the quadrature relationship sin(θ+π/2) = cos(θ) generates polynomial coefficients
-    // when grade 1 objects (derivatives) relate back to their grade 0 origins (functions)
-    // this explains how 2x, 3x², 6x factors emerge from geometric structure
+fn it_proves_fundamental_theorem_is_accumulation_equals_interference() {
+    // Newton-Leibniz theorem: ∫ₐᵇ f'(x) dx = F(b) - F(a)
+    // in angle space: accumulated geometric sum = destructive interference of endpoints
 
-    // fundamental quadrature: sin(θ+π/2) = cos(θ)
-    let theta = 1.2; // arbitrary angle
-    let base_angle = Angle::new(theta, 1.0);
-    let rotated_angle = base_angle + Angle::new(1.0, 2.0); // +π/2
+    // projection space: ∫₂⁵ 2x dx = x²|₂⁵ = 25 - 4 = 21
+    let a: f64 = 2.0;
+    let b: f64 = 5.0;
+    let traditional_left: f64 = b.powi(2) - a.powi(2); // 21
+
+    // angle space left side: accumulation via geometric addition
+    // integrate f'(x) = 2x from 2 to 5 via riemann sum
+    let num_steps = 1000;
+    let dx = (b - a) / num_steps as f64;
+    let dx_geo = Geonum::new(dx, 0.0, 1.0);
+    let mut accumulated_sum = Geonum::new(0.0, 0.0, 1.0);
+
+    for i in 0..num_steps {
+        let x_i = a + i as f64 * dx;
+        let f_prime_i = Geonum::new(2.0 * x_i, 0.0, 1.0); // f'(x) = 2x
+        let rectangle = f_prime_i * dx_geo;
+        accumulated_sum = accumulated_sum + rectangle; // geometric addition
+    }
+
+    // angle space right side: F(b) - F(a) as destructive interference
+    let f_b = Geonum::new(b.powi(2), 0.0, 1.0); // F(5) = [25, 0]
+    let f_a_negated = Geonum::new(a.powi(2), 1.0, 1.0); // [4, π]
+    let interference_result = f_b + f_a_negated;
+
+    // verify cosine rule: c² = 625 + 16 + 2(25)(4)cos(π) = 625 + 16 - 200 = 441
+    let expected_squared = f_b.length.powi(2) + a.powi(4) + 2.0 * f_b.length * a.powi(2) * PI.cos();
+    assert!((expected_squared - 441.0).abs() < EPSILON);
+    assert!((expected_squared.sqrt() - 21.0).abs() < EPSILON);
+
+    // fundamental theorem: accumulation equals interference
+    assert!(
+        (accumulated_sum.length - interference_result.length).abs() < 0.02,
+        "left side (accumulation) {:.3} = right side (interference) {:.3}",
+        accumulated_sum.length,
+        interference_result.length
+    );
 
     assert!(
-        (base_angle.grade_angle().cos() - rotated_angle.grade_angle().sin()).abs() < EPSILON,
-        "cos(θ) = sin(θ+π/2) fundamental quadrature"
-    );
-
-    // this relationship governs how derivatives transform function values
-
-    // test x²: coefficient 2 emerges from quadrature
-    let x = 4.0;
-    let x_squared = Geonum::new(x * x, 0.0, 1.0); // grade 0: function value
-    let derivative = x_squared.differentiate(); // grade 1: derivative
-
-    // the coefficient emerges from the relationship between grades
-    // grade 0 (scalar behavior) → grade 1 (vector behavior) via π/2
-    assert_eq!(x_squared.angle.grade(), 0, "function at grade 0");
-    assert_eq!(derivative.angle.grade(), 1, "derivative at grade 1");
-
-    // quadrature creates the coefficient relationship
-    // for f(x) = x², the "2" comes from how sin and cos relate through π/2 shift
-    let _quadrature_factor = 2.0; // this emerges from sin(θ+π/2)/cos(θ) relationship
-
-    // demonstrate with x³: coefficient 3 from quadrature
-    let x_cubed = Geonum::new(x * x * x, 0.0, 1.0);
-    let cubic_derivative = x_cubed.differentiate();
-
-    assert_eq!(x_cubed.angle.grade(), 0, "cubic function at grade 0");
-    assert_eq!(
-        cubic_derivative.angle.grade(),
-        1,
-        "cubic derivative at grade 1"
-    );
-
-    // the "3x²" coefficient emerges from the quadrature transformation
-    let _cubic_quadrature_factor = 3.0; // from the geometric relationship
-
-    // second derivative: grade 1 → grade 2 via another π/2 rotation
-    let second_derivative = cubic_derivative.differentiate();
-    assert_eq!(
-        second_derivative.angle.grade(),
-        2,
-        "second derivative at grade 2"
-    );
-
-    // the "6x" coefficient comes from compounded quadrature relationships
-    let _second_quadrature_factor = 6.0; // 3 * 2 from repeated π/2 transformations
-
-    // test the phase relationship that generates coefficients
-    let phase_0 = Angle::new(0.0, 1.0); // 0 radians (grade 0 phase)
-    let phase_90 = Angle::new(1.0, 2.0); // π/2 radians (grade 1 phase)
-    let phase_180 = Angle::new(1.0, 1.0); // π radians (grade 2 phase)
-
-    // quadrature relationships between phases
-    assert!(
-        (phase_0.grade_angle().cos() - phase_90.grade_angle().sin()).abs() < EPSILON,
-        "grade 0→1 transition via quadrature"
-    );
-    assert!(
-        (phase_90.grade_angle().cos() + phase_180.grade_angle().sin()).abs() < EPSILON,
-        "grade 1→2 transition via quadrature"
-    );
-
-    // these phase relationships create the polynomial coefficient patterns
-    // 1 → 2 → 6 → 24 (factorial-like) from repeated quadrature applications
-
-    // demonstrate coefficient generation through angle arithmetic
-    let base = 1.0;
-    let first_coeff = base * 2.0; // quadrature transformation coefficient
-    let second_coeff = first_coeff * 3.0; // another quadrature application
-    let third_coeff = second_coeff * 4.0; // continuing the pattern
-
-    assert_eq!(first_coeff, 2.0, "first quadrature coefficient");
-    assert_eq!(second_coeff, 6.0, "second quadrature coefficient");
-    assert_eq!(third_coeff, 24.0, "third quadrature coefficient");
-
-    // these match polynomial derivative coefficients:
-    // x → 1, x² → 2x, x³ → 3x², x⁴ → 4x³
-    // the factors emerge from quadrature geometry, not symbolic manipulation
-
-    // key insight: polynomial coefficients are geometric artifacts
-    // they come from how sin and cos relate through π/2 phase shifts
-    // scalar calculus discovers these through limits
-    // geonum has them built into the quadrature structure
-
-    println!("polynomial coefficients emerge from quadrature phase relationships");
-    println!("2x, 3x², 6x factors come from sin(θ+π/2) = cos(θ) geometry");
-}
-
-#[test]
-fn it_ignores_rather_freezes_dimensions_for_partial_derivatives() {
-    // traditional scalar calculus: ∂f/∂x "holding y constant" forces artificial dimension freezing
-    // creates separate partial derivative operators for each coordinate direction
-    // requires managing which coordinates are "active" vs "frozen" during computation
-    //
-    // geonum: compute one complete geometric derivative, ignore dimensions you dont need
-    // no freezing required - all dimensional information exists simultaneously
-    // unused dimensions naturally project to appropriate values based on geometry
-
-    // test function: f(x,y) = x² + 2xy + y² at point (3,2)
-    // function value: 9 + 12 + 4 = 25
-    // traditional partials: ∂f/∂x = 2x + 2y = 10, ∂f/∂y = 2x + 2y = 10
-
-    let function_value = 25.0;
-
-    // encode multivariable function: equal partials suggest symmetric 45° encoding
-    // this captures the directional structure - function varies equally in x,y directions
-    let function = Geonum::new(function_value, 1.0, 4.0); // 1*π/4 = π/4 at grade 0
-
-    assert_eq!(function.angle.grade(), 0, "function starts at grade 0");
-
-    // traditional approach: must compute ∂f/∂x and ∂f/∂y as separate operations
-    // each requires "holding the other variable constant" during computation
-    let _traditional_df_dx = 10.0; // computed by freezing y coordinate
-    let _traditional_df_dy = 10.0; // computed by freezing x coordinate
-
-    // geonum approach: compute complete geometric derivative containing ALL directional info
-    let complete_derivative = function.differentiate(); // π/4 + π/2 = 3π/4, grade 0→1
-
-    assert_eq!(
-        complete_derivative.angle.grade(),
-        1,
-        "derivative at grade 1 (vector-like)"
-    );
-
-    // no dimensions are frozen or held constant during this computation
-    // the complete derivative contains the directional variation structure for ALL dimensions
-
-    // extract "partial" information by projecting complete derivative onto coordinate axes
-    // this is geometric projection, not computation of separate derivatives
-
-    let partial_x_component = complete_derivative.project_to_dimension(0); // x-axis direction
-    let partial_y_component = complete_derivative.project_to_dimension(1); // y-axis direction
-
-    // verify projections match trigonometric expectation
-    // current angle: 3π/4 = 135°, projections onto 0° and 90° axes
-    let derivative_angle = 3.0 * PI / 4.0;
-    let expected_x_projection = function_value * (0.0 - derivative_angle).cos(); // cos(-135°)
-    let expected_y_projection = function_value * (PI / 2.0 - derivative_angle).cos(); // cos(-45°)
-
-    assert!(
-        (partial_x_component - expected_x_projection).abs() < EPSILON,
-        "x-component: {} matches trigonometric projection {}",
-        partial_x_component,
-        expected_x_projection
-    );
-    assert!(
-        (partial_y_component - expected_y_projection).abs() < EPSILON,
-        "y-component: {} matches trigonometric projection {}",
-        partial_y_component,
-        expected_y_projection
-    );
-
-    // demonstrate coordinate system independence: project onto arbitrary dimensions
-    // no coordinate system setup or basis vector initialization required
-
-    let _ignored_dimension_5_component = complete_derivative.project_to_dimension(5);
-    let _ignored_dimension_42_component = complete_derivative.project_to_dimension(42);
-    let dimension_1000_component = complete_derivative.project_to_dimension(1000);
-
-    // dimension 1000 projection exists without "defining" that dimension
-    // traditional approach: impossible to set up 1000-dimensional coordinate system
-    // geonum: same O(1) operation as projecting onto dimension 0 or 1
-
-    let dim_1000_target_angle = 1000.0 * PI / 2.0; // dimension 1000 points at 500π
-    let expected_dim_1000 = function_value * (dim_1000_target_angle - derivative_angle).cos();
-
-    assert!(
-        (dimension_1000_component - expected_dim_1000).abs() < EPSILON,
-        "dimension 1000 component: {} accessible without coordinate system setup",
-        dimension_1000_component
-    );
-
-    // expose the absurdity of traditional "holding variables constant":
-    // to compute ∂f/∂x1000 in traditional calculus, you would need to:
-    // 1. define a 1000-dimensional coordinate system
-    // 2. "hold constant" the other 999 variables
-    // 3. vary only x1000 while keeping x1,x2,...,x999 frozen
-    // this is computationally wasteful and conceptually bizarre
-    //
-    // geonum eliminates this absurdity: the complete derivative already contains
-    // variation information for ALL possible directions simultaneously
-    // no "freezing" needed because no artificial coordinate separation exists
-
-    // test asymmetric function to demonstrate angle encoding significance
-    // f(x,y) = x³ + xy² at point (2,3): stronger x-dependence suggests smaller angle
-
-    let x = 2.0;
-    let y = 3.0;
-    let asymmetric_value = x * x * x + x * y * y; // 8 + 18 = 26
-
-    // traditional partials: ∂f/∂x = 3x² + y² = 21, ∂f/∂y = 2xy = 12
-    // asymmetric partial strengths suggest encoding closer to x-axis
-
-    let asymmetric_function = Geonum::new(asymmetric_value, 1.0, 6.0); // π/6 = 30°
-    let asymmetric_derivative = asymmetric_function.differentiate(); // π/6 + π/2 = 2π/3
-
-    let asym_x_component = asymmetric_derivative.project_to_dimension(0);
-    let asym_y_component = asymmetric_derivative.project_to_dimension(1);
-
-    // verify asymmetric projections reflect the directional bias
-    let asym_angle = 2.0 * PI / 3.0; // 120°
-    let expected_asym_x = asymmetric_value * (0.0 - asym_angle).cos();
-    let expected_asym_y = asymmetric_value * (PI / 2.0 - asym_angle).cos();
-
-    assert!(
-        (asym_x_component - expected_asym_x).abs() < EPSILON,
-        "asymmetric x: {} reflects stronger x-dependence",
-        asym_x_component
-    );
-    assert!(
-        (asym_y_component - expected_asym_y).abs() < EPSILON,
-        "asymmetric y: {} reflects weaker y-dependence",
-        asym_y_component
-    );
-
-    // key insights demonstrated:
-    // 1. ONE geometric derivative contains complete partial derivative information
-    // 2. no coordinate freezing or "holding variables constant" needed
-    // 3. projections work in ANY coordinate system without setup or transformation matrices
-    // 4. angle encoding captures the directional variation structure of multivariable functions
-    // 5. unused dimensions accessible without explicit definition or initialization
-    // 6. geometric approach eliminates coordinate system dependency of traditional approach
-
-    // traditional: separate ∂/∂x, ∂/∂y, ∂/∂z operators with coordinate management
-    // geonum: differentiate once, project onto whichever dimensions matter
-
-    println!("complete geometric derivative eliminates coordinate freezing");
-    println!(
-        "symmetric: x={:.3}, y={:.3} | asymmetric: x={:.3}, y={:.3}",
-        partial_x_component, partial_y_component, asym_x_component, asym_y_component
+        (accumulated_sum.length - traditional_left).abs() < 0.02,
+        "angle space {:.3} matches projection space {}",
+        accumulated_sum.length,
+        traditional_left
     );
 }
 
 #[test]
-fn its_a_gradient() {
-    // traditional: ∇f = [∂f/∂x, ∂f/∂y, ∂f/∂z] vector field of steepest ascent
-    // requires computing separate partial derivatives then assembling into vector
-    // needs vector field management and steepest ascent direction calculations
-    //
-    // geonum: gradient IS the differentiated geometric object
-    // no assembly required - it exists directly as grade 1 vector
+fn it_shows_why_subtraction_appears_in_fundamental_theorem() {
+    // the "minus" in F(b) - F(a) is destructive interference, not algebraic subtraction
 
-    // test function: f(x,y) = x² + xy + y² at point (2,3)
-    // function value: 4 + 6 + 9 = 19
-    let x = 2.0;
-    let y = 3.0;
-    let f_value = x * x + x * y + y * y; // 19
+    // ∫₁³ 2x dx = x²|₁³ = 9 - 1 = 8
+    let a: f64 = 1.0;
+    let b: f64 = 3.0;
 
-    // traditional gradient computation: compute each partial separately
-    // ∂f/∂x = 2x + y = 4 + 3 = 7
-    // ∂f/∂y = x + 2y = 2 + 6 = 8
-    // then assemble: ∇f = [7, 8]
-    let _ignored_traditional_grad_x: f64 = 2.0 * x + y; // 7
-    let _ignored_traditional_grad_y: f64 = x + 2.0 * y; // 8
-    let _ignored_traditional_magnitude = (_ignored_traditional_grad_x
-        * _ignored_traditional_grad_x
-        + _ignored_traditional_grad_y * _ignored_traditional_grad_y)
-        .sqrt();
-    let _ignored_traditional_direction =
-        _ignored_traditional_grad_y.atan2(_ignored_traditional_grad_x);
+    // endpoint values of antiderivative
+    let f_b = Geonum::new(b.powi(2), 0.0, 1.0); // [9, 0]
+    let f_a_at_pi = Geonum::new(a.powi(2), 1.0, 1.0); // [1, π]
+    let interference = f_b + f_a_at_pi;
 
-    // encode function: stronger y-dependence suggests angle closer to y-direction
-    let function = Geonum::new(f_value, 2.0, 5.0); // 2*π/5 = 2π/5 ≈ 72°
-
-    // geonum gradient: just differentiate the function
-    let gradient = function.differentiate(); // 2π/5 + π/2 = 9π/10, grade 0→1
-
-    // the gradient already exists as a complete geometric object
-    assert_eq!(gradient.angle.grade(), 1, "gradient is grade 1 vector");
-
-    // gradient magnitude and direction are encoded in length and angle
-    let geonum_magnitude = gradient.length;
-    assert_eq!(
-        geonum_magnitude, f_value,
-        "gradient preserves function magnitude"
-    );
-
-    // test gradient in arbitrary high dimensions without setup
-    let high_dim_function = Geonum::new_with_blade(f_value, 0, 1.0, 7.0); // π/7 at grade 0
-    let high_dim_gradient = high_dim_function.differentiate();
-
-    // project gradient onto dimension 1000 - same O(1) operation
-    let grad_dim_1000 = high_dim_gradient.project_to_dimension(1000);
-    let grad_dim_0 = high_dim_gradient.project_to_dimension(0);
-
-    // test angular relationship: dimension 0 and 1000 should have identical projections
-    // dim 0 angle = 0*π/2 = 0, dim 1000 angle = 1000*π/2 = 500π ≡ 0 (mod 2π)
+    // verify cosine rule: c² = 81 + 1 + 2(9)(1)(-1) = 81 + 1 - 18 = 64
+    let expected = (81.0_f64 + 1.0 - 18.0).sqrt();
+    assert!((expected - 8.0).abs() < EPSILON);
     assert!(
-        (grad_dim_0 - grad_dim_1000).abs() < EPSILON,
-        "dimensions 0 and 1000 identical due to angular wrapping: {} vs {}",
-        grad_dim_0,
-        grad_dim_1000
+        (interference.length - 8.0).abs() < EPSILON,
+        "interference magnitude via cos(π) = -1: {:.3}",
+        interference.length
     );
-
-    // test scaling relationship: if we scale function, gradient scales proportionally
-    let scaled_function = high_dim_function.scale(4.0);
-    let scaled_gradient = scaled_function.differentiate();
-    let scaled_grad_1000 = scaled_gradient.project_to_dimension(1000);
-
-    assert!(
-        (scaled_grad_1000 - 4.0 * grad_dim_1000).abs() < EPSILON,
-        "scaling function by 4x scales 1000D gradient component: {} vs 4x{}",
-        scaled_grad_1000,
-        grad_dim_1000
-    );
-
-    // test proportional relationship: different functions at same angle have proportional gradients
-    let function2 = Geonum::new_with_blade(38.0, 0, 1.0, 7.0); // same angle, 2x magnitude
-    let gradient2 = function2.differentiate();
-    let grad2_dim_1000 = gradient2.project_to_dimension(1000);
-
-    assert!(
-        (grad2_dim_1000 - 2.0 * grad_dim_1000).abs() < EPSILON,
-        "2x function magnitude gives 2x gradient at 1000D: {} vs 2x{}",
-        grad2_dim_1000,
-        grad_dim_1000
-    );
-
-    // test rotation consistency: rotating function rotates gradient predictably
-    let rotation = Angle::new(1.0, 8.0); // π/8 rotation
-    let rotated_function = high_dim_function.rotate(rotation);
-    let rotated_gradient = rotated_function.differentiate();
-    let rotated_grad_1000 = rotated_gradient.project_to_dimension(1000);
-
-    // gradient rotates with function - different 1000D projection
-    assert!(
-        (rotated_grad_1000 - grad_dim_1000).abs() > EPSILON,
-        "rotation changes 1000D gradient: {} vs original {}",
-        rotated_grad_1000,
-        grad_dim_1000
-    );
-
-    // key insights proven through mathematical relationships:
-    // 1. gradient IS the differentiated function (same geometric object)
-    // 2. scaling preserves proportional relationships across all dimensions
-    // 3. rotation affects high-dimensional projections predictably
-    // 4. no vector assembly or coordinate setup needed for any dimension
-    // 5. 1000D gradient computation follows same geometric rules as 2D case
-    //
-    // traditional gradient: compute partials, assemble [∂f/∂x, ∂f/∂y, ∂f/∂z]
-    // geonum gradient: differentiate once, project as needed
-
-    println!("gradient scaling relationship proven for dimension 1000");
-    println!("same geometric rules apply regardless of dimension count");
 }
 
 #[test]
-fn its_a_divergence() {
-    // traditional: ∇·F = ∂Fx/∂x + ∂Fy/∂y + ∂Fz/∂z scalar field from vector field
-    // requires computing partial derivatives of each vector field component
-    // then summing them to get scalar divergence at each point
-    //
-    // geonum: divergence emerges from geometric relationships between vector field and space
-    // no component-wise partial computation needed
+fn it_reveals_integral_as_interference_accumulator() {
+    // integration accumulates geometric additions
+    // Newton-Leibniz says: net accumulation = interference between bounds
 
-    // test vector field F(x,y) = [x², xy] at point (2,3)
-    let x = 2.0;
-    let y = 3.0;
+    // ∫₀⁴ x dx = ½x²|₀⁴ = 8 - 0 = 8
+    let a: f64 = 0.0;
+    let b: f64 = 4.0;
 
-    // traditional approach: compute ∂Fx/∂x + ∂Fy/∂y separately
-    // Fx = x² → ∂Fx/∂x = 2x = 4
-    // Fy = xy → ∂Fy/∂y = x = 2
-    // divergence = 4 + 2 = 6
-    let _ignored_traditional_div_x = 2.0 * x; // ∂Fx/∂x = 4
-    let _ignored_traditional_div_y = x; // ∂Fy/∂y = 2
-    let _ignored_traditional_divergence = _ignored_traditional_div_x + _ignored_traditional_div_y; // 6
+    // accumulate via riemann sum
+    let num_steps = 1000;
+    let dx = (b - a) / num_steps as f64;
+    let dx_geo = Geonum::new(dx, 0.0, 1.0);
+    let mut accumulation = Geonum::new(0.0, 0.0, 1.0);
 
-    // geonum: encode vector field components as geometric numbers
-    let fx_component = Geonum::new(x * x, 0.0, 1.0); // x² component pointing in x-direction (0°)
-    let fy_component = Geonum::new(x * y, 1.0, 2.0); // xy component pointing in y-direction (π/2)
+    for i in 0..num_steps {
+        let x_i = a + i as f64 * dx;
+        let f_i = Geonum::new(x_i, 0.0, 1.0); // f(x) = x
+        let area = f_i * dx_geo;
+        accumulation = accumulation + area; // each step: geometric addition
+    }
 
-    // vector field as combination of components
-    // traditional requires managing vector components separately
-    // geonum: components are just geometric numbers with different angles
+    // endpoint interference
+    let f_b = Geonum::new(0.5 * b.powi(2), 0.0, 1.0); // ½(16) = [8, 0]
+    let f_a_negated = Geonum::new(0.5 * a.powi(2), 1.0, 1.0); // [0, π]
+    let interference = f_b + f_a_negated;
 
-    assert_eq!(fx_component.angle.grade(), 0, "x-component at grade 0");
-    assert_eq!(fy_component.angle.grade(), 1, "y-component at grade 1");
-
-    // divergence relates to how vector field "spreads out" from a point
-    // in geonum: this is captured by the grade relationships between components
-
-    // test divergence through geometric operations
-    // differentiate each component and project back
-    let fx_derivative = fx_component.differentiate(); // grade 0 → 1
-    let fy_derivative = fy_component.differentiate(); // grade 1 → 2
-
-    // project derivatives to extract divergence contributions
-    let fx_div_contribution = fx_derivative.project_to_dimension(0); // ∂Fx/∂x direction
-    let fy_div_contribution = fy_derivative.project_to_dimension(1); // ∂Fy/∂y direction
-
-    println!("Vector field components:");
-    println!("  Fx derivative contribution: {}", fx_div_contribution);
-    println!("  Fy derivative contribution: {}", fy_div_contribution);
-
-    // test high-dimensional vector field divergence
-    let high_dim_fx = Geonum::new_with_blade(x * x, 0, 0.0, 1.0); // x² in dimension 0
-    let high_dim_fy = Geonum::new_with_blade(x * y, 1000, 0.0, 1.0); // xy in dimension 1000
-
-    let fx_high_derivative = high_dim_fx.differentiate();
-    let fy_high_derivative = high_dim_fy.differentiate();
-
-    let fx_high_div = fx_high_derivative.project_to_dimension(0);
-    let fy_high_div = fy_high_derivative.project_to_dimension(1000);
-
-    // traditional: would need 1000D vector field management
-    // geonum: same geometric operations work regardless of dimension
-
-    println!("High-dimensional vector field:");
-    println!("  component in dim 0: {}", fx_high_div);
-    println!("  component in dim 1000: {}", fy_high_div);
-
-    // test scaling relationship for divergence
-    let scaled_fx = high_dim_fx.scale(5.0);
-    let scaled_fy = high_dim_fy.scale(5.0);
-
-    let scaled_fx_derivative = scaled_fx.differentiate();
-    let scaled_fy_derivative = scaled_fy.differentiate();
-
-    let scaled_fx_div = scaled_fx_derivative.project_to_dimension(0);
-    let scaled_fy_div = scaled_fy_derivative.project_to_dimension(1000);
-
+    // they equal
     assert!(
-        (scaled_fx_div - 5.0 * fx_high_div).abs() < EPSILON,
-        "scaling vector field scales divergence: {} vs 5x{}",
-        scaled_fx_div,
-        fx_high_div
+        (accumulation.length - interference.length).abs() < 0.02,
+        "accumulation {:.3} = interference {:.3}",
+        accumulation.length,
+        interference.length
     );
-    assert!(
-        (scaled_fy_div - 5.0 * fy_high_div).abs() < EPSILON,
-        "scaling vector field scales divergence: {} vs 5x{}",
-        scaled_fy_div,
-        fy_high_div
-    );
-
-    // key insights:
-    // traditional divergence: compute n partial derivatives, sum them
-    // geonum divergence: geometric relationships between vector field components
-    //
-    // no vector field management needed
-    // same operations work in any dimension
-    // divergence emerges from grade relationships and projections
-
-    println!("divergence computed through geometric operations without vector field setup");
-    println!("scaling relationships preserved across all dimensions");
+    assert!((interference.length - 8.0).abs() < EPSILON);
 }
 
 #[test]
-fn its_a_curl() {
-    // traditional: ∇×F = [∂Fz/∂y - ∂Fy/∂z, ∂Fx/∂z - ∂Fz/∂x, ∂Fy/∂x - ∂Fx/∂y]
-    // requires computing 6 separate partial derivatives and arranging them into cross product
-    // needs vector field coordinate management and rotational circulation formulas
-    //
-    // geonum: curl emerges from wedge products between vector field components
-    // no component-wise partial computation needed
+fn it_connects_differentiation_and_antiderivative_via_angles() {
+    // differentiate() rotates by π/2 (grade 0 → 1)
+    // integrate() rotates by 3π/2 (grade 1 → 0, forward equivalent to -π/2)
+    // fundamental theorem connects these rotations
 
-    // test rotational vector field F(x,y) = [y, -x] at point (2,3)
-    let x = 2.0;
-    let y = 3.0;
+    let f = Geonum::new(16.0, 0.0, 1.0); // F(x) at some point, grade 0
 
-    // traditional curl: ∂(-x)/∂x - ∂(y)/∂y = -1 - 1 = -2 (rotation about z)
-    let _ignored_traditional_curl = -2.0;
+    // differentiate: rotate π/2 to grade 1
+    let f_prime = f.differentiate();
+    assert_eq!(f_prime.angle.grade(), 1, "derivative at grade 1");
+    assert_eq!(f_prime.length, 16.0, "magnitude preserved");
 
-    // geonum: encode vector field components with appropriate angles
-    let fx_component = Geonum::new(y, 0.0, 1.0); // Fx = y, x-direction (0°)
-    let fy_component = Geonum::new(x, 1.0, 4.0); // Fy = -x → +x with phase shift (π/4)
+    // integrate: rotate 3π/2 back to grade 0
+    let back_to_f = f_prime.integrate();
+    assert_eq!(back_to_f.angle.grade(), 0, "integrated back to grade 0");
+    assert_eq!(back_to_f.length, 16.0, "magnitude preserved");
 
-    // curl through wedge product of field components
-    let circulation = fx_component.wedge(&fy_component);
+    // the angles connect differentiation to integration
+    let angle_cycle = f_prime.angle - f.angle; // differentiation rotation
+    let angle_back = back_to_f.angle - f_prime.angle; // integration rotation
 
-    assert_eq!(circulation.angle.grade(), 1, "circulation at grade 1");
+    assert_eq!(angle_cycle, Angle::new(1.0, 2.0), "differentiate adds π/2");
+    assert_eq!(angle_back, Angle::new(3.0, 2.0), "integrate adds 3π/2");
 
-    println!(
-        "Rotational field circulation: length={}, grade={}",
-        circulation.length,
-        circulation.angle.grade()
+    // net rotation: 4 blades (full 2π cycle)
+    assert_eq!(
+        back_to_f.angle.blade() - f.angle.blade(),
+        4,
+        "full cycle: differentiate then integrate adds 4 blades"
     );
-
-    // test high-dimensional vector field: components in dimensions 0 and 1000
-    let high_fx = Geonum::new_with_blade(y, 0, 0.0, 1.0); // dimension 0
-    let high_fy = Geonum::new_with_blade(x, 1000, 1.0, 6.0); // dimension 1000, angle π/6
-
-    let high_circulation = high_fx.wedge(&high_fy);
-
-    // traditional: would need to manage 1000D vector field cross products
-    // geonum: same wedge operation regardless of dimension
-
-    println!(
-        "High-dimensional circulation (dims 0-1000): length={}, grade={}",
-        high_circulation.length,
-        high_circulation.angle.grade()
-    );
-
-    // test scaling relationship: curl scales quadratically with field strength
-    let scaled_fx = high_fx.scale(3.0);
-    let scaled_fy = high_fy.scale(3.0);
-    let scaled_circulation = scaled_fx.wedge(&scaled_fy);
-
-    // wedge product: length scales as product of input lengths
-    let expected_scaled_length = 3.0 * 3.0 * high_circulation.length; // 9x
-
-    assert!(
-        (scaled_circulation.length - expected_scaled_length).abs() < EPSILON,
-        "curl scales quadratically: {} vs 9x{}",
-        scaled_circulation.length,
-        high_circulation.length
-    );
-
-    // test different vector field orientations
-    let field_a = Geonum::new_with_blade(4.0, 5, 1.0, 8.0); // dimension 5, angle π/8
-    let field_b = Geonum::new_with_blade(7.0, 42, 1.0, 3.0); // dimension 42, angle π/3
-
-    let exotic_circulation = field_a.wedge(&field_b);
-
-    println!(
-        "Exotic field circulation (dims 5-42): length={}, blade={}, grade={}",
-        exotic_circulation.length,
-        exotic_circulation.angle.blade(),
-        exotic_circulation.angle.grade()
-    );
-
-    // test that curl preserves circulation relationships under rotation
-    let rotation = Angle::new(1.0, 12.0); // π/12
-    let rotated_field_a = field_a.rotate(rotation);
-    let rotated_field_b = field_b.rotate(rotation);
-    let rotated_circulation = rotated_field_a.wedge(&rotated_field_b);
-
-    assert!(
-        (rotated_circulation.length - exotic_circulation.length).abs() < EPSILON,
-        "rotation preserves circulation magnitude: {} vs original {}",
-        rotated_circulation.length,
-        exotic_circulation.length
-    );
-
-    // key insights:
-    // traditional curl: 6 partial derivatives arranged in cross product formula
-    // geonum curl: wedge products between vector field components
-    //
-    // no coordinate system management needed
-    // works in any dimension through wedge operations
-    // circulation relationships preserved under scaling and rotation
-    // grade structure emerges from blade arithmetic
-
-    println!("curl computed through wedge products without cross product formulas");
-    println!("circulation preserved across dimensional transformations");
 }
 
 #[test]
-fn its_a_directional_derivative() {
-    // traditional: ∇f·û = rate of change in direction û
-    // requires computing gradient vector then dot product with unit direction vector
-    // needs vector normalization and dot product calculations
-    //
-    // geonum: directional derivative through direct geometric projection
-    // no gradient assembly or dot product computation needed
+fn it_shows_definite_integral_encodes_both_value_and_domain() {
+    // ∫₂⁵ x² dx = ⅓x³|₂⁵ = 125/3 - 8/3 = 39
+    let a: f64 = 2.0;
+    let b: f64 = 5.0;
+    let traditional_value = (b.powi(3) - a.powi(3)) / 3.0; // 39
 
-    // test function: f(x,y) = x² + 3xy + 2y² at point (2,1)
-    let x = 2.0;
-    let y = 1.0;
-    let f_value = x * x + 3.0 * x * y + 2.0 * y * y; // 4 + 6 + 2 = 12
+    // encode bounds as angles
+    let angle_a = Angle::new(a, 1.0); // 2π
+    let angle_b = Angle::new(b, 1.0); // 5π
 
-    // traditional design: compute gradient, then dot with direction vector
-    // ∇f = [∂f/∂x, ∂f/∂y] = [2x + 3y, 3x + 4y] = [7, 10]
-    // for direction û = [cos(π/3), sin(π/3)] = [0.5, √3/2]
-    // directional derivative = ∇f·û = 7*0.5 + 10*√3/2 ≈ 3.5 + 8.66 = 12.16
-    let _ignored_grad_x = 2.0 * x + 3.0 * y; // 7
-    let _ignored_grad_y = 3.0 * x + 4.0 * y; // 10
-    let direction_angle = PI / 3.0; // 60°
-    let _ignored_unit_x = direction_angle.cos(); // 0.5
-    let _ignored_unit_y = direction_angle.sin(); // √3/2
-    let _ignored_traditional_directional =
-        _ignored_grad_x * _ignored_unit_x + _ignored_grad_y * _ignored_unit_y;
+    // antiderivative values with angle encoding
+    let f_a = Geonum::new_with_angle(a.powi(3) / 3.0, angle_a); // [8/3, 2π]
+    let f_b = Geonum::new_with_angle(b.powi(3) / 3.0, angle_b); // [125/3, 5π]
 
-    // geonum: encode function with angle reflecting directional variation
-    let function = Geonum::new(f_value, 3.0, 8.0); // 3*π/8 reflects x,y dependency ratio
-
-    // directional derivative: just project the differentiated function in desired direction
-    let derivative = function.differentiate(); // grade 0 → 1
-
-    // project derivative in the π/3 direction (60°)
-    // create a geometric number pointing in that direction and use geometric relationship
-    let direction_geonum = Geonum::new(1.0, 2.0, 6.0); // 2*π/6 = π/3 = 60°
-    let directional_info = derivative.dot(&direction_geonum);
-
-    assert_eq!(derivative.angle.grade(), 1, "derivative at grade 1");
-
-    println!("Function derivative in 60° direction:");
-    println!("  derivative magnitude: {}", derivative.length);
-    println!("  directional projection: {}", directional_info.length);
-
-    // test arbitrary high-dimensional directional derivative
-    let high_dim_function = Geonum::new_with_blade(f_value, 0, 2.0, 9.0); // 2π/9 angle
-    let high_dim_derivative = high_dim_function.differentiate();
-
-    // directional derivative in dimension 1000 direction
-    let direction_1000 = Geonum::new_with_blade(1.0, 1000, 1.0, 5.0); // dim 1000, angle π/5
-    let directional_1000 = high_dim_derivative.dot(&direction_1000);
-
-    // traditional: impossible to compute directional derivatives in 1000D space
-    // would need 1000-component gradient vector and 1000-component direction vector
-    // geonum: same geometric operations regardless of dimension
-
-    println!("Directional derivative in dimension 1000:");
-    println!("  magnitude: {}", directional_1000.length);
-
-    // test scaling relationship: scaling function scales directional derivative
-    let scaled_function = high_dim_function.scale(5.0);
-    let scaled_derivative = scaled_function.differentiate();
-    let scaled_directional = scaled_derivative.dot(&direction_1000);
+    // the integral encodes BOTH value and domain
+    let value = f_b.length - f_a.length; // magnitude difference
+    let domain = f_b.angle - f_a.angle; // angle difference
 
     assert!(
-        (scaled_directional.length - 5.0 * directional_1000.length).abs() < EPSILON,
-        "scaling function by 5x scales directional derivative: {} vs 5x{}",
-        scaled_directional.length,
-        directional_1000.length
+        (value - traditional_value).abs() < EPSILON,
+        "value matches traditional: {:.3} ≈ {}",
+        value,
+        traditional_value
     );
 
-    // test direction independence: same derivative projected in different directions
-    let direction_42 = Geonum::new_with_blade(1.0, 42, 1.0, 7.0); // dimension 42, angle π/7
-    let directional_42 = high_dim_derivative.dot(&direction_42);
+    let expected_domain = Angle::new(b - a, 1.0); // (5-2)π = 3π
+    assert_eq!(domain, expected_domain, "angle encodes domain span");
 
-    // different directions give different directional derivatives from same function
+    // create the complete encoding
+    let integral = Geonum::new_with_angle(value, domain);
     assert!(
-        (directional_1000.length - directional_42.length).abs() > EPSILON,
-        "different directions give different results: {} vs {}",
-        directional_1000.length,
-        directional_42.length
-    );
-
-    // test rotation of direction vector changes directional derivative
-    let rotated_direction = direction_1000.rotate(Angle::new(1.0, 4.0)); // rotate by π/4
-    let rotated_directional = high_dim_derivative.dot(&rotated_direction);
-
-    assert!(
-        (rotated_directional.length - directional_1000.length).abs() > EPSILON,
-        "rotating direction changes derivative: {} vs original {}",
-        rotated_directional.length,
-        directional_1000.length
-    );
-
-    // key insights:
-    // traditional directional derivative: compute gradient vector, dot with unit direction
-    // geonum directional derivative: project derivative directly in geometric direction
-    //
-    // no gradient vector assembly needed
-    // no unit vector normalization required
-    // works in any dimension through geometric dot products
-    // direction changes affect result predictably through geometric relationships
-
-    println!("directional derivatives through geometric projection without vector assembly");
-    println!("scaling and rotation relationships preserved across all dimensions");
-}
-
-#[test]
-fn its_a_laplacian() {
-    // traditional: ∇²f = ∂²f/∂x² + ∂²f/∂y² + ∂²f/∂z² second derivative operator
-    // requires computing second partial derivatives in each coordinate direction then summing
-    // needs coordinate system management and mixed derivative calculations
-    //
-    // geonum: laplacian emerges from second differentiation grade cycling
-    // no component-wise second partial computation needed
-
-    // test function: f(x,y) = x² + y² at point (2,3)
-    // function value: 4 + 9 = 13
-    let x = 2.0;
-    let y = 3.0;
-    let f_value = x * x + y * y; // 13
-
-    // traditional laplacian computation: compute second partials separately then sum
-    // ∂²f/∂x² = ∂(2x)/∂x = 2
-    // ∂²f/∂y² = ∂(2y)/∂y = 2
-    // ∇²f = 2 + 2 = 4
-    let _ignored_second_partial_xx = 2.0; // ∂²f/∂x²
-    let _ignored_second_partial_yy = 2.0; // ∂²f/∂y²
-    let _ignored_traditional_laplacian = _ignored_second_partial_xx + _ignored_second_partial_yy; // 4
-
-    // geonum: encode function with symmetric angle (equal second partials)
-    let function = Geonum::new(f_value, 1.0, 4.0); // π/4 = 45° symmetric
-
-    // laplacian through double differentiation: grade 0 → 1 → 2
-    let first_derivative = function.differentiate(); // π/4 + π/2 = 3π/4, grade 1
-    let second_derivative = first_derivative.differentiate(); // 3π/4 + π/2 = 5π/4, grade 2
-
-    assert_eq!(function.angle.grade(), 0, "function at grade 0");
-    assert_eq!(
-        first_derivative.angle.grade(),
-        1,
-        "first derivative at grade 1"
+        (integral.length - 39.0).abs() < EPSILON,
+        "magnitude: integral value"
     );
     assert_eq!(
-        second_derivative.angle.grade(),
-        2,
-        "second derivative at grade 2 (laplacian)"
+        integral.angle,
+        Angle::new(3.0, 1.0),
+        "angle: domain span 3π"
     );
-
-    // the laplacian information is encoded in the grade 2 object
-    // no summing of separate second partials needed
-
-    println!("Laplacian via double differentiation:");
-    println!(
-        "  original: grade {}, length {}",
-        function.angle.grade(),
-        function.length
-    );
-    println!(
-        "  first derivative: grade {}, length {}",
-        first_derivative.angle.grade(),
-        first_derivative.length
-    );
-    println!(
-        "  second derivative: grade {}, length {}",
-        second_derivative.angle.grade(),
-        second_derivative.length
-    );
-
-    // test high-dimensional laplacian: function in arbitrary dimensional space
-    let high_dim_function = Geonum::new_with_blade(f_value, 0, 1.0, 6.0); // π/6 angle at grade 0
-    let high_first = high_dim_function.differentiate(); // grade 0 → 1
-    let high_second = high_first.differentiate(); // grade 1 → 2
-
-    // project laplacian information from grade 2 object
-    let laplacian_proj_0 = high_second.project_to_dimension(0);
-    let laplacian_proj_1 = high_second.project_to_dimension(1);
-    let laplacian_proj_1000 = high_second.project_to_dimension(1000);
-
-    // traditional: would need 1000 separate ∂²f/∂xi² computations then sum
-    // geonum: double differentiation + projection in any direction
-
-    println!("High-dimensional laplacian projections:");
-    println!("  dimension 0: {}", laplacian_proj_0);
-    println!("  dimension 1: {}", laplacian_proj_1);
-    println!("  dimension 1000: {}", laplacian_proj_1000);
-
-    // test scaling relationship: laplacian scales with function
-    let scaled_function = high_dim_function.scale(7.0);
-    let scaled_first = scaled_function.differentiate();
-    let scaled_second = scaled_first.differentiate();
-    let scaled_laplacian_1000 = scaled_second.project_to_dimension(1000);
-
-    assert!(
-        (scaled_laplacian_1000 - 7.0 * laplacian_proj_1000).abs() < EPSILON,
-        "scaling function by 7x scales 1000D laplacian: {} vs 7x{}",
-        scaled_laplacian_1000,
-        laplacian_proj_1000
-    );
-
-    // test rotation preserves laplacian structure
-    let rotation = Angle::new(1.0, 10.0); // π/10 rotation
-    let rotated_function = high_dim_function.rotate(rotation);
-    let rotated_first = rotated_function.differentiate();
-    let rotated_second = rotated_first.differentiate();
-
-    // rotated laplacian maintains same grade structure
-    assert_eq!(
-        rotated_second.angle.grade(),
-        2,
-        "rotated laplacian at grade 2"
-    );
-
-    // test different function with different laplacian structure
-    let asymmetric_function = Geonum::new_with_blade(f_value, 0, 1.0, 8.0); // π/8 angle
-    let asym_first = asymmetric_function.differentiate();
-    let asym_second = asym_first.differentiate();
-    let asym_laplacian_1000 = asym_second.project_to_dimension(1000);
-
-    // different angle encoding gives different laplacian projection
-    assert!(
-        (asym_laplacian_1000 - laplacian_proj_1000).abs() > EPSILON,
-        "different function angles give different laplacians: {} vs {}",
-        asym_laplacian_1000,
-        laplacian_proj_1000
-    );
-
-    // key insights:
-    // traditional laplacian: compute n second partials ∂²f/∂xi², sum them
-    // geonum laplacian: double differentiation moves through grade cycle 0→1→2
-    //
-    // no coordinate system management needed
-    // works in any dimension through double differentiation + projection
-    // scaling and rotation relationships preserved
-    // grade 2 structure contains complete laplacian information
-
-    println!("laplacian computed through double differentiation without second partial sums");
-    println!("grade cycling 0→1→2 contains complete second derivative information");
-}
-
-#[test]
-fn its_a_line_integral() {
-    // traditional: ∫C F·dr path integral along curve C
-    // requires parameterizing curve, computing F·dr at each point, integrating over path
-    // needs curve parameterization, vector field evaluation, and path integration machinery
-    //
-    // geonum: line integral emerges from geometric relationships along angle paths
-    // no curve parameterization or vector field setup needed
-
-    // test vector field F(x,y) = [y, x] along path from (0,0) to (2,3)
-    let start_point = Geonum::new_from_cartesian(0.0, 0.0);
-    let end_point = Geonum::new_from_cartesian(2.0, 3.0);
-
-    // traditional approach: parameterize path r(t) = t[2,3], compute ∫₀¹ F(r(t))·r'(t) dt
-    // F·dr = [y,x]·[2,3] = 2y + 3x, integrate along path
-    let _ignored_path_length = (end_point - start_point).length; // √13
-    let _ignored_traditional_result = 12.0; // analytical result for this specific path
-
-    // geonum: path integral through geometric operations
-    let path_vector = end_point - start_point; // geometric path representation
-    let field_at_midpoint = Geonum::new_from_cartesian(1.5, 1.0); // F(1,1.5) = [1.5, 1]
-
-    // line integral via geometric dot product with path
-    let line_integral = field_at_midpoint.dot(&path_vector);
-
-    assert_eq!(path_vector.angle.grade(), 0, "path vector at grade 0");
-    assert_eq!(
-        field_at_midpoint.angle.grade(),
-        0,
-        "field vector at grade 0"
-    );
-
-    println!("Line integral via geometric operations:");
-    println!(
-        "  path vector: length={}, grade={}",
-        path_vector.length,
-        path_vector.angle.grade()
-    );
-    println!(
-        "  field vector: length={}, grade={}",
-        field_at_midpoint.length,
-        field_at_midpoint.angle.grade()
-    );
-    println!("  integral result: {}", line_integral.length);
-
-    // test high-dimensional path integral: path in 1000D space
-    let high_start = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // start in dimension 0
-    let high_end = Geonum::new_with_blade(3.0, 1000, 1.0, 5.0); // end in dimension 1000
-    let high_path = high_end - high_start;
-
-    let high_field = Geonum::new_with_blade(2.0, 500, 2.0, 7.0); // field in dimension 500
-    let high_integral = high_field.dot(&high_path);
-
-    // traditional: impossible to parameterize paths in 1000D space with vector field evaluation
-    // geonum: same geometric operations regardless of dimension
-
-    println!("High-dimensional line integral (path 0→1000, field at dim 500):");
-    println!("  result: {}", high_integral.length);
-
-    // test scaling relationship: scaling field scales integral
-    let scaled_field = high_field.scale(8.0);
-    let scaled_integral = scaled_field.dot(&high_path);
-
-    assert!(
-        (scaled_integral.length - 8.0 * high_integral.length).abs() < EPSILON,
-        "scaling field by 8x scales integral: {} vs 8x{}",
-        scaled_integral.length,
-        high_integral.length
-    );
-
-    // test path direction affects integral
-    let reverse_path = high_start - high_end; // reverse direction
-    let reverse_integral = high_field.dot(&reverse_path);
-
-    assert!(
-        (high_integral.length - reverse_integral.length).abs() < EPSILON,
-        "path reversal preserves magnitude via geometric encoding: {} vs {}",
-        high_integral.length,
-        reverse_integral.length
-    );
-
-    assert_eq!(
-        (high_integral.angle.grade() + 2) % 4,
-        reverse_integral.angle.grade(),
-        "path reversal encodes sign via grade shift"
-    );
-
-    // key insights:
-    // traditional line integral: parameterize curve, evaluate F·dr, integrate over path
-    // geonum line integral: geometric dot product between field and path vectors
-    //
-    // no curve parameterization needed
-    // no vector field coordinate management required
-    // works in any dimension through geometric operations
-    // scaling and direction relationships preserved through geometric arithmetic
-
-    println!("line integrals through geometric operations without curve parameterization");
-    println!("path integration scales across all dimensions");
-}
-
-#[test]
-fn its_a_surface_integral() {
-    // traditional: ∬S F·dS integral over surface S
-    // requires surface parameterization, normal vector computation, and double integration
-    // needs surface coordinate management and vector field evaluation across 2D parameter space
-    //
-    // geonum: surface integral emerges from wedge products with surface bivectors
-    // no surface parameterization or normal vector computation needed
-
-    // test surface: plane through points (1,0,0), (0,1,0), (0,0,1)
-    let vertex_a = Geonum::new_from_cartesian(1.0, 0.0); // extend to 3D conceptually
-    let vertex_b = Geonum::new_from_cartesian(0.0, 1.0);
-
-    // surface represented as bivector (oriented area element)
-    let surface_element = vertex_a.wedge(&vertex_b);
-
-    assert_eq!(
-        surface_element.angle.grade(),
-        2,
-        "surface element at grade 2 (bivector)"
-    );
-
-    // vector field F = [x, y, z] at surface points
-    let field_vector = Geonum::new_from_cartesian(0.5, 0.5); // field at surface midpoint
-
-    // surface integral via geometric operations between field and surface bivector
-    let surface_integral = field_vector.geo(&surface_element); // geometric product
-
-    println!("Surface integral via geometric operations:");
-    println!(
-        "  surface bivector: length={}, grade={}",
-        surface_element.length,
-        surface_element.angle.grade()
-    );
-    println!(
-        "  field vector: length={}, grade={}",
-        field_vector.length,
-        field_vector.angle.grade()
-    );
-    println!(
-        "  integral result: length={}, grade={}",
-        surface_integral.length,
-        surface_integral.angle.grade()
-    );
-
-    // test high-dimensional surface: bivector in dimensions 42-1000
-    let high_point_a = Geonum::new_with_blade(2.0, 42, 0.0, 1.0);
-    let high_point_b = Geonum::new_with_blade(3.0, 1000, 1.0, 7.0);
-    let high_surface = high_point_a.wedge(&high_point_b);
-
-    let high_field = Geonum::new_with_blade(1.5, 250, 1.0, 4.0); // field in dimension 250
-    let high_surface_integral = high_field.geo(&high_surface);
-
-    // traditional: impossible to parameterize surfaces in 1000D space
-    // geonum: same wedge and geometric product operations
-
-    println!("High-dimensional surface integral:");
-    println!(
-        "  result: length={}, grade={}",
-        high_surface_integral.length,
-        high_surface_integral.angle.grade()
-    );
-
-    // test scaling: scaling surface or field scales integral
-    let scaled_surface = high_surface.scale(4.0);
-    let scaled_surface_integral = high_field.geo(&scaled_surface);
-
-    assert!(
-        (scaled_surface_integral.length - 4.0 * high_surface_integral.length).abs() < EPSILON,
-        "scaling surface by 4x scales integral: {} vs 4x{}",
-        scaled_surface_integral.length,
-        high_surface_integral.length
-    );
-
-    // key insights:
-    // traditional surface integral: parameterize surface, compute normal vectors, double integrate
-    // geonum surface integral: geometric product between field and surface bivector
-    //
-    // no surface parameterization needed
-    // no normal vector computation required
-    // works in any dimension through bivector operations
-    // scaling relationships preserved through geometric arithmetic
-
-    println!("surface integrals through geometric products without surface parameterization");
-    println!("bivector operations scale across all dimensions");
-}
-
-#[test]
-fn its_a_volume_integral() {
-    // traditional: ∭V f dV integral over volume V
-    // requires volume parameterization, jacobian determinant computation, and triple integration
-    // needs 3D coordinate management and function evaluation across volume parameter space
-    //
-    // geonum: volume integral emerges from geometric products with volume trivectors
-    // no volume parameterization or jacobian computation needed
-
-    // test volume: unit cube with vertices at origin
-    let edge_a = Geonum::new_from_cartesian(1.0, 0.0); // x-edge
-    let edge_b = Geonum::new_from_cartesian(0.0, 1.0); // y-edge
-    let edge_c = Geonum::new(1.0, 1.0, 1.0); // z-edge as π angle
-
-    // volume element as trivector (triple wedge product)
-    let face_ab = edge_a.wedge(&edge_b); // xy-face bivector
-    let volume_element = face_ab.geo(&edge_c); // extend to 3D volume
-
-    // function f(x,y,z) = x + y + z throughout volume
-    let function_value = Geonum::new(6.0, 1.0, 6.0); // arbitrary function encoding
-
-    // volume integral via geometric operations
-    let volume_integral = function_value.geo(&volume_element);
-
-    println!("Volume integral via geometric operations:");
-    println!(
-        "  volume element: length={}, grade={}",
-        volume_element.length,
-        volume_element.angle.grade()
-    );
-    println!(
-        "  function: length={}, grade={}",
-        function_value.length,
-        function_value.angle.grade()
-    );
-    println!(
-        "  integral result: length={}, grade={}",
-        volume_integral.length,
-        volume_integral.angle.grade()
-    );
-
-    // test high-dimensional volume: trivector spanning dimensions 100, 500, 1000
-    let dim_100_edge = Geonum::new_with_blade(2.0, 100, 0.0, 1.0);
-    let dim_500_edge = Geonum::new_with_blade(3.0, 500, 1.0, 8.0);
-    let dim_1000_edge = Geonum::new_with_blade(1.5, 1000, 1.0, 5.0);
-
-    let high_face = dim_100_edge.wedge(&dim_500_edge);
-    let high_volume = high_face.geo(&dim_1000_edge);
-
-    let high_function = Geonum::new_with_blade(4.0, 0, 2.0, 9.0);
-    let high_volume_integral = high_function.geo(&high_volume);
-
-    // traditional: impossible to set up triple integrals in 1000D space
-    // geonum: same geometric operations regardless of dimension
-
-    println!("High-dimensional volume integral (spanning dims 100-500-1000):");
-    println!(
-        "  result: length={}, grade={}",
-        high_volume_integral.length,
-        high_volume_integral.angle.grade()
-    );
-
-    // test scaling relationship: scaling volume scales integral
-    let scaled_volume = high_volume.scale(6.0);
-    let scaled_volume_integral = high_function.geo(&scaled_volume);
-
-    assert!(
-        (scaled_volume_integral.length - 6.0 * high_volume_integral.length).abs() < EPSILON,
-        "scaling volume by 6x scales integral: {} vs 6x{}",
-        scaled_volume_integral.length,
-        high_volume_integral.length
-    );
-
-    // test function scaling affects integral
-    let scaled_function = high_function.scale(9.0);
-    let function_scaled_integral = scaled_function.geo(&high_volume);
-
-    assert!(
-        (function_scaled_integral.length - 9.0 * high_volume_integral.length).abs() < EPSILON,
-        "scaling function by 9x scales integral: {} vs 9x{}",
-        function_scaled_integral.length,
-        high_volume_integral.length
-    );
-
-    // key insights:
-    // traditional volume integral: parameterize volume, compute jacobian, triple integrate
-    // geonum volume integral: geometric product between function and volume trivector
-    //
-    // no volume parameterization needed
-    // no jacobian determinant computation required
-    // works in any dimension through trivector operations
-    // scaling relationships preserved for both function and volume
-
-    println!("volume integrals through geometric products without coordinate parameterization");
-    println!("trivector operations eliminate jacobian determinant calculations");
 }

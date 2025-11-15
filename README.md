@@ -125,11 +125,12 @@ rotation creates dimensional relationships on demand - no coordinate system scaf
 see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures:
 
 ```
-❯ ls -1 geonum/tests
+❯ ls -1 tests
 addition_test.rs
 affine_test.rs
 algorithms_test.rs
 angle_arithmetic_test.rs
+arithmetic_test.rs
 astrophysics_test.rs
 calculus_test.rs
 category_theory_test.rs
@@ -385,19 +386,17 @@ geometric numbers build dimensions by rotating—not stacking
       - it_proves_rotational_quadrature_expresses_quadratic_forms:1421-1595
 
     - tests/calculus_test.rs
-      - it_proves_differentiation_cycles_grades:98-259
-      - it_proves_pi_2_rotation_eliminates_infinite_rectangle_summation:262-376
-      - it_derives:379-504
-      - it_proves_quadrature_generates_polynomial_coefficients:507-602
-      - it_ignores_rather_freezes_dimensions_for_partial_derivatives:605-747
-      - its_a_gradient:750-860
-      - its_a_divergence:863-960
-      - its_a_curl:963-1060
-      - its_a_directional_derivative:1063-1166
-      - its_a_laplacian:1169-1299
-      - its_a_line_integral:1302-1399
-      - its_a_surface_integral:1402-1486
-      - its_a_volume_integral:1489-1583
+      - its_a_limit:40-121
+      - its_a_derivative:124-172
+      - its_an_integral:173-224
+      - it_proves_differentiation_cycles_grades:772-926
+      - its_a_gradient:318-367
+      - its_a_divergence:368-418
+      - its_a_curl:419-461
+      - its_a_laplacian:509-562
+      - its_a_line_integral:615-642
+      - its_a_surface_integral:643-669
+      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1013-1062
 
     - tests/mechanics_test.rs
       - it_changes_kinematic_level_by_cycling_grade:46-195

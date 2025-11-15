@@ -64,6 +64,6 @@ learn about angle forward only geometry from the it_sets_angle_forward_geometry_
 
 read only tests/angle_arithmetic_test.rs:1~20 because the file is large, but you can learn about the angle forward only blade arithmetic of operations from this file
 
-read the it_computes_limits:7-95, it_proves_differentiation_cycles_grades:98-259 tests in tests/calculus_test.rs to understand how geonum automates calculus
+read the its_a_limit:40-121, it_proves_differentiation_cycles_grades:772-926 tests in tests/calculus_test.rs to understand how geonum automates calculus
 
 tests are styled as trojan horses for simplicity. conventional jargon promising symbol salad but readers get simple arithmetic in test contents. example tests: it_handles_conformal_split:4784-4897, it_handles_inversive_distance:4900-5029 in tests/cga_test.rs
