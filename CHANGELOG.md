@@ -1,5 +1,13 @@
 # changelog
 
+## 0.9.3 (2025-11-14)
+
+### added
+- arithmetic test suite
+
+### changed
+- strengthen calculus test suite
+
 ## 0.9.2 (2025-11-08)
 
 ### changed
