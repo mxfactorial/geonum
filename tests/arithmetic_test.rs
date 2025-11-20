@@ -201,7 +201,7 @@ fn it_demonstrates_interference_pattern_for_various_angles() {
     // opposite: θ = π, cos(π) = -1 (destructive)
     let b_opp = Geonum::new(4.0, 1.0, 1.0); // π
     let opp_result = a + b_opp;
-    let opp_expected = (3.0_f64.powi(2) + 4.0_f64.powi(2) + 2.0 * 3.0 * 4.0 * (-1.0)).sqrt();
+    let opp_expected = (3.0_f64.powi(2) + 4.0_f64.powi(2) - 2.0 * 3.0 * 4.0).sqrt();
     assert!(
         (opp_result.length - opp_expected).abs() < EPSILON,
         "θ=π: cos(π)=-1, destructive: |3-4|=1, got {}",

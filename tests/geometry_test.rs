@@ -173,9 +173,21 @@ fn its_a_3d_point() {
 
     println!("\narbitrary point (1,2,3):");
     println!("  representation: GeoCollection with 3 geonums");
-    println!("  x: {} units at blade {}", arbitrary[0].length, arbitrary[0].angle.blade());
-    println!("  y: {} units at blade {}", arbitrary[1].length, arbitrary[1].angle.blade());
-    println!("  z: {} units at blade {}", arbitrary[2].length, arbitrary[2].angle.blade());
+    println!(
+        "  x: {} units at blade {}",
+        arbitrary[0].length,
+        arbitrary[0].angle.blade()
+    );
+    println!(
+        "  y: {} units at blade {}",
+        arbitrary[1].length,
+        arbitrary[1].angle.blade()
+    );
+    println!(
+        "  z: {} units at blade {}",
+        arbitrary[2].length,
+        arbitrary[2].angle.blade()
+    );
 
     assert_eq!(arbitrary.len(), 3);
     assert_eq!(arbitrary[0].length, 1.0);
@@ -232,8 +244,8 @@ fn its_a_3d_volume() {
     // NOTE: spherical coords (r, θ, φ) already do this - not revolutionary (why not 10/10)
     // but geonum extends this to operations via blade arithmetic
     let xy_projection = (width.powi(2) + height.powi(2)).sqrt();
-    let theta = height.atan2(width);           // azimuth in xy-plane
-    let phi = depth.atan2(xy_projection);      // elevation from xy-plane
+    let theta = height.atan2(width); // azimuth in xy-plane
+    let phi = depth.atan2(xy_projection); // elevation from xy-plane
 
     println!("  azimuth θ: {:.4} rad", theta);
     println!("  elevation φ: {:.4} rad", phi);
@@ -243,11 +255,13 @@ fn its_a_3d_volume() {
     let diagonal_geonum = Geonum::new(diagonal, theta, PI);
 
     println!("\ngeonum representation:");
-    println!("  [length: {:.4}, angle: {:.4}]",
+    println!(
+        "  [length: {:.4}, angle: {:.4}]",
         diagonal_geonum.length,
         diagonal_geonum.angle.grade_angle()
     );
-    println!("  storage: {} bytes (constant for any dimension)",
+    println!(
+        "  storage: {} bytes (constant for any dimension)",
         std::mem::size_of_val(&diagonal_geonum)
     );
 
@@ -274,7 +288,10 @@ fn its_a_3d_volume() {
     println!("\npythagorean constraint (automatic):");
     println!("  x² + y² + z² = {:.4}", sum_of_squares);
     println!("  diagonal²    = {:.4}", diagonal_squared);
-    println!("  difference:    {:.4e}", (sum_of_squares - diagonal_squared).abs());
+    println!(
+        "  difference:    {:.4e}",
+        (sum_of_squares - diagonal_squared).abs()
+    );
 
     assert!((sum_of_squares - diagonal_squared).abs() < EPSILON);
 
@@ -369,9 +386,15 @@ fn its_non_euclidean() {
     let actual_magnitude = entity.length;
 
     println!("\npythagorean test:");
-    println!("  √(proj_0² + proj_1² + proj_2²) = {:.4}", euclidean_magnitude);
+    println!(
+        "  √(proj_0² + proj_1² + proj_2²) = {:.4}",
+        euclidean_magnitude
+    );
     println!("  actual magnitude               = {:.4}", actual_magnitude);
-    println!("  difference                     = {:.4}", (euclidean_magnitude - actual_magnitude).abs());
+    println!(
+        "  difference                     = {:.4}",
+        (euclidean_magnitude - actual_magnitude).abs()
+    );
 
     // this FAILS - blade projections are non-euclidean
     assert!(
