@@ -261,9 +261,9 @@ fn it_computes_powers_from_angle_ratios() {
     // for x^n, power n appears naturally in angle ratios: (x^n angle) / (x angle) = n
 
     let x_value: f64 = 2.0;
-    let theta = 0.523598775; // π/6
+    let theta = std::f64::consts::FRAC_PI_6;
 
-    let x = Geonum::new(x_value, theta, 3.14159265359);
+    let x = Geonum::new(x_value, theta, PI);
     let x_squared = x * x;
     let x_cubed = x_squared * x;
     let x_fourth = x_cubed * x;
