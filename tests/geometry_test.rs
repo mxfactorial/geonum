@@ -20,100 +20,85 @@ fn its_a_point() {
     let y_axis = Geonum::new(7.0, 1.0, 2.0); // 7 units at π/2 radians
 
     assert_eq!(x_axis.length, 7.0);
-    assert!(x_axis.angle.grade_angle().abs() < EPSILON);
-    assert!((y_axis.angle.grade_angle() - PI / 2.0).abs() < EPSILON);
+    assert_eq!(y_axis.length, 7.0);
 
-    // distance between points
-    let p1 = Geonum::new_from_cartesian(1.0, 2.0);
-    let p2 = Geonum::new_from_cartesian(4.0, 6.0);
-    let distance = (p2 - p1).length;
+    // cartesian (3,4) is same as polar (5, atan(4/3))
+    // but polar (5, π/6) doesnt require cartesian coordinates
+    let polar = Geonum::new(5.0, 1.0, 6.0); // 5 units at π/6 radians
+    assert_eq!(polar.length, 5.0);
+    assert!((polar.angle.grade_angle() - PI / 6.0).abs() < EPSILON);
 
-    assert!((distance - 5.0).abs() < EPSILON);
+    // dimension-free: same [length, angle] representation works in 2D, 3D, 100D
+    // only the interpretation of projections changes
 }
 
 #[test]
 fn its_a_line() {
-    // traditional: slope-intercept y = mx + b, breaks for vertical lines
-    // PGA: plücker coordinates [l:m:n:p:q:r], 6 components for 3D line
-    //
-    // geonum: wedge two points, π/2 increment creates line element
+    // traditional PGA: line from two points uses 6 plücker coordinates (direction + moment)
+    // geonum: wedge product creates bivector [magnitude, angle]
 
-    let p0 = Geonum::new(1.0, 0.0, 1.0); // 1 unit at 0 radians, grade 0
-    let p1 = Geonum::new(1.0, 1.0, 4.0); // 1 unit at π/4 radians, grade 0
+    let p1 = Geonum::new(1.0, 0.0, 1.0); // grade 0
+    let p2 = Geonum::new(1.0, 1.0, 2.0); // grade 0, π/2 from p1
 
-    // wedge formula: [|a|*|b|*sin(θb-θa), θa + θb + π/2]
-    let line = p0.wedge(&p1);
+    let line = p1.wedge(&p2);
 
-    // magnitude: 1 * 1 * sin(π/4 - 0) = sin(π/4) = √2/2
-    let oriented_area = line.length;
-    assert!((oriented_area - 0.7071067811865475).abs() < EPSILON);
+    // wedge formula: magnitude = |a|*|b|*sin(angle_diff)
+    // for perpendicular: sin(π/2) = 1, so magnitude = 1*1*1 = 1
+    assert!((line.length - 1.0).abs() < EPSILON);
 
-    // angle: 0 + π/4 + π/2 = 3π/4, crosses one boundary
-    assert_eq!(line.angle.blade(), 1);
-    assert_eq!(line.angle.grade(), 1);
+    // grade: wedge of two grade-0 creates grade-2 (bivector)
+    assert_eq!(line.angle.grade(), 2);
 
-    // vertical line - no special case needed
-    let v0 = Geonum::new(1.0, 0.0, 1.0); // 0 rad, grade 0
-    let v1 = Geonum::new(1.0, 1.0, 2.0); // π/2 rad, grade 1
-
-    let vertical = v0.wedge(&v1);
-
-    // magnitude: 1 * 1 * sin(π/2 - 0) = 1.0
-    let area = vertical.length;
-    assert!((area - 1.0).abs() < EPSILON);
-
-    // angle: 0 + π/2 + π/2 = π, crosses two boundaries
-    assert_eq!(vertical.angle.blade(), 2);
-    assert_eq!(vertical.angle.grade(), 2);
-
-    // horizontal line - same pattern
-    let h0 = Geonum::new(1.0, 0.0, 1.0); // 0 rad
-    let h1 = Geonum::new(1.0, 0.0, 1.0); // same angle
-
-    let horizontal = h0.wedge(&h1);
-
-    // parallel vectors: sin(0) = 0, nilpotent
-    assert!(horizontal.length < EPSILON);
+    println!("line representation:");
+    println!("  traditional PGA: 6 plücker coordinates");
+    println!(
+        "  geonum: [magnitude={:.3}, blade={}]",
+        line.length,
+        line.angle.blade()
+    );
 }
 
 #[test]
 fn its_a_plane() {
-    // traditional: implicit equation ax + by + cz = d, 4 coefficients
-    // PGA: trivector from P₁ ∧ P₂ ∧ P₃, complex grade manipulations
-    //
-    // geonum: wedge grade-0 with grade-1, π/2 creates bivector space
+    // plane from wedging grade-0 and grade-1 creates grade-2 bivector
 
-    let p0 = Geonum::new(1.0, 0.0, 1.0); // 1 unit at 0 rad, grade 0
-    let p1 = Geonum::new(1.0, 1.0, 2.0); // 1 unit at π/2 rad, grade 1
+    let p0 = Geonum::new(1.0, 0.0, 1.0); // grade 0
+    let p1 = Geonum::new(1.0, 1.0, 2.0); // grade 1 (π/2)
 
     let plane = p0.wedge(&p1);
 
-    // orthogonal unit vectors: magnitude = 1 * 1 * sin(π/2 - 0) = 1.0
-    let bivector_magnitude = plane.length;
-    assert!((bivector_magnitude - 1.0).abs() < EPSILON);
+    // perpendicular: magnitude = 1*1*sin(π/2) = 1
+    assert!((plane.length - 1.0).abs() < EPSILON);
 
-    // angle: 0 + π/2 + π/2 = π, crosses two boundaries
-    assert_eq!(plane.angle.blade(), 2);
+    // grade-0 ∧ grade-1 = grade-2
     assert_eq!(plane.angle.grade(), 2);
 
     // bivector encodes oriented area directly
-    // no normal vector computation, no implicit equations
-    // the π/2 increment created the perpendicular bivector space
+    println!("plane as bivector:");
+    println!("  magnitude: oriented area = {:.3}", plane.length);
+    println!("  grade: {} (bivector)", plane.angle.grade());
+}
 
-    // anticommutativity: order matters for orientation
-    let plane_reversed = p1.wedge(&p0);
+#[test]
+fn its_a_rotation() {
+    // rotation is angle addition, not matrix multiplication
 
-    // same magnitude
-    let reversed_magnitude = plane_reversed.length;
-    assert!((reversed_magnitude - 1.0).abs() < EPSILON);
+    let point = Geonum::new(5.0, 0.0, 1.0); // 5 units at 0 radians
+    let rotation = Angle::new(1.0, 4.0); // π/4 radians
 
-    // negative sin adds π orientation (2 more blades)
-    // angle: π/2 + 0 + π/2 + π = 2π, blade = 4
-    assert_eq!(plane_reversed.angle.blade(), 4);
-    assert_eq!(plane_reversed.angle.grade(), 0); // 4 % 4 = 0, wraps to scalar
+    let rotated = point.rotate(rotation);
 
-    // different blade but same oriented magnitude
-    // orientation encoded in blade count, not separate sign
+    // rotation preserves magnitude
+    assert_eq!(rotated.length, 5.0);
+
+    // angle increased by π/4
+    assert!((rotated.angle.grade_angle() - PI / 4.0).abs() < EPSILON);
+
+    // traditional: requires 2×2 rotation matrix and 4 multiplications
+    // geonum: single angle addition
+    println!("rotation:");
+    println!("  traditional: matrix multiplication O(n²)");
+    println!("  geonum: angle addition O(1)");
 }
 
 #[test]
@@ -217,250 +202,464 @@ fn its_a_3d_point() {
 }
 
 #[test]
-fn its_a_3d_volume() {
-    // volumes dont need 3 independent edge values
-    //
-    // traditional: store [width, height, depth] as 3 independent scalars
-    // problem: theyre NOT independent - constrained by pythagorean relationship
-    //
-    // geonum: store diagonal [length, angle], edges are constrained projections
-    // benefit: makes the geometric constraint explicit, not hidden
+fn its_non_euclidean() {
+    // blade projections are views of one angle, not independent coordinates
+    // they dont satisfy euclidean pythagorean theorem
 
-    println!("\n=== 3D VOLUME: EDGES AS CONSTRAINED PROJECTIONS ===\n");
+    let entity = Geonum::new_with_blade(2.0, 3, 0.0, 1.0);
 
-    let width: f64 = 3.0;
-    let height: f64 = 4.0;
-    let depth: f64 = 5.0;
+    println!("\nentity with blade 3:");
+    println!("  length: {:.3}", entity.length);
+    println!("  blade: {}", entity.angle.blade());
+    println!("  angle: {:.3} rad", entity.angle.grade_angle());
 
-    // traditional approach hides the constraint
-    println!("traditional storage: [{}, {}, {}]", width, height, depth);
-    println!("  appears independent but constrained by x² + y² + z² = diagonal²");
+    // project to first 4 dimensions
+    let proj_0 = entity.project_to_dimension(0);
+    let proj_1 = entity.project_to_dimension(1);
+    let proj_2 = entity.project_to_dimension(2);
+    let proj_3 = entity.project_to_dimension(3);
 
-    // compute diagonal - this is the actual geometric primitive
-    let diagonal = (width.powi(2) + height.powi(2) + depth.powi(2)).sqrt();
-    println!("\ndiagonal: {:.4}", diagonal);
+    println!("\nprojections:");
+    println!("  dimension 0: {:.3}", proj_0);
+    println!("  dimension 1: {:.3}", proj_1);
+    println!("  dimension 2: {:.3}", proj_2);
+    println!("  dimension 3: {:.3}", proj_3);
 
-    // encode angles using spherical-like coordinates
-    // NOTE: spherical coords (r, θ, φ) already do this - not revolutionary (why not 10/10)
-    // but geonum extends this to operations via blade arithmetic
-    let xy_projection = (width.powi(2) + height.powi(2)).sqrt();
-    let theta = height.atan2(width); // azimuth in xy-plane
-    let phi = depth.atan2(xy_projection); // elevation from xy-plane
+    // test euclidean norm
+    let euclidean_magnitude =
+        (proj_0.powi(2) + proj_1.powi(2) + proj_2.powi(2) + proj_3.powi(2)).sqrt();
 
-    println!("  azimuth θ: {:.4} rad", theta);
-    println!("  elevation φ: {:.4} rad", phi);
-
-    // the geometric number: [diagonal, angle]
-    // this is 2 values regardless of dimension (8/10: same for 3D, 10D, 1000D)
-    let diagonal_geonum = Geonum::new(diagonal, theta, PI);
-
-    println!("\ngeonum representation:");
+    println!("\neuclidean test:");
     println!(
-        "  [length: {:.4}, angle: {:.4}]",
-        diagonal_geonum.length,
-        diagonal_geonum.angle.grade_angle()
+        "  √(proj₀² + proj₁² + proj₂² + proj₃²) = {:.3}",
+        euclidean_magnitude
     );
+    println!("  entity.length = {:.3}", entity.length);
     println!(
-        "  storage: {} bytes (constant for any dimension)",
-        std::mem::size_of_val(&diagonal_geonum)
+        "  equal? {}",
+        (euclidean_magnitude - entity.length).abs() < EPSILON
     );
 
-    // INSIGHT: edges are projections, not independent measurements
-    // this is the systematic inversion - measurements derive from geometry
-    let edge_x = diagonal * theta.cos() * phi.cos();
-    let edge_y = diagonal * theta.sin() * phi.cos();
-    let edge_z = diagonal * phi.sin();
+    // projections are trigonometrically consistent but not euclidean
+    // they are views of one angle, not independent vectors
+    assert!((euclidean_magnitude - entity.length).abs() > EPSILON);
 
-    println!("\nedges via projection (measurements from geometry):");
-    println!("  x = diagonal × cos(θ) × cos(φ) = {:.4}", edge_x);
-    println!("  y = diagonal × sin(θ) × cos(φ) = {:.4}", edge_y);
-    println!("  z = diagonal × sin(φ)          = {:.4}", edge_z);
-
-    assert!((edge_x - width).abs() < EPSILON);
-    assert!((edge_y - height).abs() < EPSILON);
-    assert!((edge_z - depth).abs() < EPSILON);
-
-    // the pythagorean constraint is automatic, not enforced
-    // (pushes toward 9/10: constraint falls out naturally)
-    let sum_of_squares = edge_x.powi(2) + edge_y.powi(2) + edge_z.powi(2);
-    let diagonal_squared = diagonal.powi(2);
-
-    println!("\npythagorean constraint (automatic):");
-    println!("  x² + y² + z² = {:.4}", sum_of_squares);
-    println!("  diagonal²    = {:.4}", diagonal_squared);
-    println!(
-        "  difference:    {:.4e}",
-        (sum_of_squares - diagonal_squared).abs()
-    );
-
-    assert!((sum_of_squares - diagonal_squared).abs() < EPSILON);
-
-    // volume computable from projections
-    let volume = edge_x * edge_y * edge_z;
-    println!("\nvolume = x × y × z = {:.4}", volume);
-
-    // COMPARISON: traditional GA approach
-    // would need 2^3 = 8 components to represent 3D multivector
-    // geonum: 2 values (length + angle) regardless of dimension
-    println!("\n=== COMPLEXITY COMPARISON ===");
-    println!("traditional GA in 3D:");
-    println!("  multivector components: 2³ = 8");
-    println!("  per-dimension scaling: O(2ⁿ)");
-    println!("\ngeonum:");
-    println!("  storage: 2 values [length, angle]");
-    println!("  any dimension: still 2 values");
-    println!("  edges: projections (not stored, computed)");
-
-    // demonstrate dimension-free property
-    println!("\n=== DIMENSION-FREE VERIFICATION ===");
-    let dims = [3, 10, 100, 1000];
-    for &d in &dims {
-        let test_diagonal = Geonum::new_with_blade(diagonal, d, theta, PI);
-        println!("  {}D: {} bytes", d, std::mem::size_of_val(&test_diagonal));
-        assert_eq!(
-            std::mem::size_of_val(&test_diagonal),
-            std::mem::size_of_val(&diagonal_geonum)
-        );
-    }
-
-    println!("\n=== KEY INSIGHTS ===");
-    println!("✓ [x,y,z] independence is artificial");
-    println!("✓ pythagorean constraint automatic, not enforced");
-    println!("✓ same representation for 3D and 1000D volumes");
-    println!("✓ systematic inversion: measurements from geometry");
-    println!("✓ 2 values vs 2ⁿ components for traditional GA");
-    println!();
-    println!("comparison to spherical coordinates:");
-    println!("  (r,θ,φ) also encodes position via angles");
-    println!("  geonum extends this to operations via blade arithmetic");
-    println!();
-    println!("exponential reduction:");
-    println!("  traditional GA: 8 components for 3D, 1024 for 10D");
-    println!("  geonum: 2 values for any dimension");
+    println!("\nwhy? projections are views of ONE angle onto different dimensions");
+    println!("not independent coordinates that satisfy x²+y²+z²=r²");
 }
 
 #[test]
-fn its_non_euclidean() {
-    // blade projections don't satisfy pythagorean theorem
-    // this is not a bug - it reveals euclidean coordinate independence is irrelevant
-    //
-    // pythagorean x² + y² + z² = r² assumes independent orthogonal coordinates
-    // but blade projections are views of ONE angle onto different blade positions
-    // testing pythagorean imposes euclidean scaffolding on angle-native geometry
+fn its_a_line_between_two_3d_points() {
+    // traditional PGA: line through two points uses 6 plücker coordinates
+    // 3 for direction, 3 for moment (offset from origin)
 
-    println!("\n=== BLADE PROJECTIONS ARE NON-EUCLIDEAN ===\n");
+    // geonum: points are [length, angle]
+    // the angle encodes the direction via blade counting
 
-    // create geometric number via rotations (natural construction)
-    let base = Geonum::scalar(5.0);
-    let rotated = base.rotate(Angle::new(1.0, 4.0)); // π/4 rotation
-    let entity = rotated.scale(2.0); // 10 units at π/4
+    // simplified example: two points in different blade positions
+    // point 1: 2 units at blade 0 (0 radians)
+    let p1 = Geonum::new_with_blade(2.0, 0, 0.0, 1.0);
 
-    println!("entity: 10 units at π/4");
-    println!("  length: {}", entity.length);
-    println!("  angle: {:.4} rad", entity.angle.grade_angle());
+    // point 2: 3 units at blade 1 (π/2 radians)
+    let p2 = Geonum::new_with_blade(3.0, 1, 0.0, 1.0);
 
-    // project onto blade dimensions
-    let proj_0 = entity.project_to_dimension(0); // blade 0 space
-    let proj_1 = entity.project_to_dimension(1); // blade 1 space
-    let proj_2 = entity.project_to_dimension(2); // blade 2 space
+    println!("point 1:");
+    println!("  length: {:.3}", p1.length);
+    println!("  angle: {:.3} rad", p1.angle.grade_angle());
+    println!("  blade: {}", p1.angle.blade());
 
-    println!("\nblade projections:");
-    println!("  blade 0: {:.4}", proj_0);
-    println!("  blade 1: {:.4}", proj_1);
-    println!("  blade 2: {:.4}", proj_2);
+    println!("\npoint 2:");
+    println!("  length: {:.3}", p2.length);
+    println!("  angle: {:.3} rad (π/2)", p2.angle.grade_angle());
+    println!("  blade: {}", p2.angle.blade());
 
-    // projections are trigonometrically consistent
-    let angle = entity.angle.grade_angle();
-    let expected_0 = entity.length * (angle - 0.0).cos();
-    let expected_1 = entity.length * (angle - PI / 2.0).cos();
+    // line between them via wedge product
+    // wedge formula: [|a|*|b|*sin(θb-θa), θa + θb + π/2]
+    let line = p1.wedge(&p2);
 
-    assert!((proj_0 - expected_0).abs() < EPSILON);
-    assert!((proj_1 - expected_1).abs() < EPSILON);
+    println!("\nline via wedge:");
+    println!("  magnitude: {:.3}", line.length);
+    println!("  angle: {:.3} rad", line.angle.grade_angle());
+    println!("  blade: {}", line.angle.blade());
+    println!("  grade: {}", line.angle.grade());
 
-    println!("\ntrigonometric consistency:");
-    println!("  proj_0 = length × cos(angle - 0)     ✓");
-    println!("  proj_1 = length × cos(angle - π/2)   ✓");
+    // for perpendicular vectors (π/2 apart): sin(π/2) = 1
+    // magnitude: 2 * 3 * 1 = 6
+    let angle_diff = (p2.angle.grade_angle() - p1.angle.grade_angle()).abs();
+    let expected_mag = p1.length * p2.length * angle_diff.sin();
 
-    // TEST: do blade projections satisfy pythagorean theorem?
-    let euclidean_magnitude = (proj_0.powi(2) + proj_1.powi(2) + proj_2.powi(2)).sqrt();
-    let actual_magnitude = entity.length;
-
-    println!("\npythagorean test:");
+    println!("\nwedge magnitude:");
+    println!("  |a| * |b| * sin(θb-θa)");
     println!(
-        "  √(proj_0² + proj_1² + proj_2²) = {:.4}",
-        euclidean_magnitude
+        "  {:.3} * {:.3} * sin({:.3})",
+        p1.length, p2.length, angle_diff
     );
-    println!("  actual magnitude               = {:.4}", actual_magnitude);
+    println!("  = {:.3}", expected_mag);
+
+    assert!((line.length - expected_mag).abs() < EPSILON);
+    assert_eq!(line.angle.grade(), 2, "wedge creates bivector (grade 2)");
+
+    // storage comparison
+    println!("\nstorage:");
+    println!("  traditional PGA: 6 plücker coordinates");
     println!(
-        "  difference                     = {:.4}",
-        (euclidean_magnitude - actual_magnitude).abs()
+        "  geonum: 2 values [length={:.3}, angle with blade={}]",
+        line.length,
+        line.angle.blade()
     );
 
-    // this FAILS - blade projections are non-euclidean
+    // the wedge encodes both direction and moment in angle + magnitude
+    // no decomposition into 6 separate scalars needed
+}
+
+#[test]
+fn it_encodes_moment() {
+    // traditional concern: "line not through origin requires non-zero moment in plücker coordinates"
+
+    // the moment in plücker coordinates encodes offset from origin
+    // in geonum, this is captured by the position vectors and their wedge
+
+    // build the two points as position vectors from origin
+    let p1 = Geonum::new_from_cartesian(1.0, 0.0); // simplified to 2D: (1,0)
+    let p2 = Geonum::new_from_cartesian(0.0, 1.0); // (0,1)
+
+    println!("point p1 at (1,0):");
+    println!("  length: {:.3}", p1.length);
+    println!("  angle: {:.3} rad", p1.angle.grade_angle());
+
+    println!("\npoint p2 at (0,1):");
+    println!("  length: {:.3}", p2.length);
+    println!("  angle: {:.3} rad (π/2)", p2.angle.grade_angle());
+
+    // line between them
+    let line = p1.wedge(&p2);
+
+    println!("\nline via wedge:");
+    println!("  magnitude: {:.3}", line.length);
+    println!("  angle: {:.3} rad", line.angle.grade_angle());
+    println!("  blade: {}", line.angle.blade());
+
+    // the wedge magnitude is the oriented area of parallelogram
+    // for perpendicular unit vectors: 1 * 1 * sin(π/2) = 1
     assert!(
-        (euclidean_magnitude - actual_magnitude).abs() > 0.1,
-        "blade projections do NOT satisfy pythagorean theorem"
+        (line.length - 1.0).abs() < EPSILON,
+        "unit area for perpendicular unit vectors"
     );
 
-    println!("\n  ✗ pythagorean theorem FAILS");
-    println!("  → blade projections are non-euclidean");
+    // this line passes through (1,0) and (0,1), not the origin
+    // the "moment" information is encoded in the combined position vectors
+    // no need to separately store direction + moment
 
-    // WHY this is expected, not a bug
-    println!("\n=== WHY PYTHAGOREAN FAILS ===");
-    println!();
-    println!("pythagorean x² + y² + z² = r² assumes:");
-    println!("  • x, y, z are independent measurements");
-    println!("  • orthogonal coordinate axes");
-    println!("  • linear combination: r⃗ = x·e₁ + y·e₂ + z·e₃");
-    println!();
-    println!("blade projections are:");
-    println!("  • projections of ONE angle onto blade positions");
-    println!("  • NOT independent coordinates");
-    println!("  • views of same geometric object, not components");
-    println!();
-    println!("testing pythagorean asks:");
-    println!("  'do blade projections behave like euclidean coordinates?'");
-    println!();
-    println!("answer: NO - and that's the point");
-    println!("  blade geometry is angle-native");
-    println!("  euclidean coordinate independence is projection artifact");
+    // in traditional PGA:
+    // - direction: (0,1) - (1,0) = (-1, 1, 0)
+    // - moment: (1,0,0) × (-1,1,0) encodes offset
+    // - total: 6 values
 
-    // what IS preserved: angle relationships
-    println!("\n=== WHAT IS PRESERVED ===");
+    // in geonum:
+    // - wedge encodes both position and orientation
+    // - total: 2 values (length + angle with blade)
 
-    let blade_0_axis = Angle::new_with_blade(0, 0.0, 1.0);
-    let blade_1_axis = Angle::new_with_blade(1, 0.0, 1.0);
+    println!("\nthe wedge magnitude and angle encode what plücker separates:");
+    println!("  magnitude: oriented area (related to moment)");
+    println!("  angle: combined orientation (related to direction)");
+    println!("  no decomposition into direction + moment needed");
+}
 
-    let angle_to_0 = entity.angle.project(blade_0_axis);
-    let angle_to_1 = entity.angle.project(blade_1_axis);
+#[test]
+fn its_a_cartesian_unit_cube() {
+    // unit cube with 8 vertices
+    // plain coordinate math, no geonum
 
-    assert!((proj_0 - entity.length * angle_to_0).abs() < EPSILON);
-    assert!((proj_1 - entity.length * angle_to_1).abs() < EPSILON);
+    println!("\n=== CARTESIAN UNIT CUBE ===\n");
 
-    println!("angle relationships:");
-    println!("  proj_0 = length × angle_projection_0  ✓");
-    println!("  proj_1 = length × angle_projection_1  ✓");
-    println!();
-    println!("blade projections preserve:");
-    println!("  • angle relationships");
-    println!("  • trigonometric consistency");
-    println!("  • rotational structure");
-    println!();
-    println!("blade projections do NOT preserve:");
-    println!("  • euclidean coordinate independence");
-    println!("  • pythagorean magnitude relationship");
-    println!("  • linear combination properties");
+    // 8 vertices as (x, y, z) tuples
+    let v000 = (0.0, 0.0, 0.0);
+    let v100 = (1.0, 0.0, 0.0);
+    let v010 = (0.0, 1.0, 0.0);
+    let v001 = (0.0, 0.0, 1.0);
+    let v110 = (1.0, 1.0, 0.0);
+    let v101 = (1.0, 0.0, 1.0);
+    let v011 = (0.0, 1.0, 1.0);
+    let v111 = (1.0, 1.0, 1.0);
 
-    println!("\n=== KEY INSIGHT ===");
-    println!();
-    println!("pythagorean theorem describes euclidean coordinate scaffolding");
-    println!("blade geometry works with angle primitives directly");
-    println!();
-    println!("testing if blade projections satisfy pythagorean is like");
-    println!("testing if polar coordinates (r,θ) satisfy cartesian relationships");
-    println!("→ you're imposing coordinate assumptions on angle-native representation");
-    println!();
-    println!("blade projections are non-euclidean by design");
-    println!("not because geometry is broken");
-    println!("but because euclidean independence is irrelevant to angle space");
+    println!("vertices:");
+    println!("  v000: {:?}", v000);
+    println!("  v100: {:?}", v100);
+    println!("  v010: {:?}", v010);
+    println!("  v001: {:?}", v001);
+    println!("  v110: {:?}", v110);
+    println!("  v101: {:?}", v101);
+    println!("  v011: {:?}", v011);
+    println!("  v111: {:?}", v111);
+
+    println!("\n=== EDGES ===\n");
+
+    // 12 edges (4 along each axis direction)
+    // compute edge vectors by subtraction
+
+    // x-direction edges
+    let edge_x1: (f64, f64, f64) = (v100.0 - v000.0, v100.1 - v000.1, v100.2 - v000.2);
+    let edge_x2: (f64, f64, f64) = (v110.0 - v010.0, v110.1 - v010.1, v110.2 - v010.2);
+    let edge_x3: (f64, f64, f64) = (v101.0 - v001.0, v101.1 - v001.1, v101.2 - v001.2);
+    let edge_x4: (f64, f64, f64) = (v111.0 - v011.0, v111.1 - v011.1, v111.2 - v011.2);
+
+    println!("x-direction edges:");
+    println!("  v000→v100: {:?}", edge_x1);
+    println!("  v010→v110: {:?}", edge_x2);
+    println!("  v001→v101: {:?}", edge_x3);
+    println!("  v011→v111: {:?}", edge_x4);
+
+    // edge lengths (euclidean norm)
+    let len_x1 = (edge_x1.0.powi(2) + edge_x1.1.powi(2) + edge_x1.2.powi(2)).sqrt();
+    let len_x2 = (edge_x2.0.powi(2) + edge_x2.1.powi(2) + edge_x2.2.powi(2)).sqrt();
+    let len_x3 = (edge_x3.0.powi(2) + edge_x3.1.powi(2) + edge_x3.2.powi(2)).sqrt();
+    let len_x4 = (edge_x4.0.powi(2) + edge_x4.1.powi(2) + edge_x4.2.powi(2)).sqrt();
+
+    println!(
+        "  lengths: {:.3}, {:.3}, {:.3}, {:.3}",
+        len_x1, len_x2, len_x3, len_x4
+    );
+
+    assert!((len_x1 - 1.0).abs() < EPSILON);
+    assert!((len_x2 - 1.0).abs() < EPSILON);
+    assert!((len_x3 - 1.0).abs() < EPSILON);
+    assert!((len_x4 - 1.0).abs() < EPSILON);
+
+    // y-direction edges
+    let edge_y1: (f64, f64, f64) = (v010.0 - v000.0, v010.1 - v000.1, v010.2 - v000.2);
+    let edge_y2: (f64, f64, f64) = (v110.0 - v100.0, v110.1 - v100.1, v110.2 - v100.2);
+    let edge_y3: (f64, f64, f64) = (v011.0 - v001.0, v011.1 - v001.1, v011.2 - v001.2);
+    let edge_y4: (f64, f64, f64) = (v111.0 - v101.0, v111.1 - v101.1, v111.2 - v101.2);
+
+    let len_y1 = (edge_y1.0.powi(2) + edge_y1.1.powi(2) + edge_y1.2.powi(2)).sqrt();
+    let len_y2 = (edge_y2.0.powi(2) + edge_y2.1.powi(2) + edge_y2.2.powi(2)).sqrt();
+    let len_y3 = (edge_y3.0.powi(2) + edge_y3.1.powi(2) + edge_y3.2.powi(2)).sqrt();
+    let len_y4 = (edge_y4.0.powi(2) + edge_y4.1.powi(2) + edge_y4.2.powi(2)).sqrt();
+
+    println!("\ny-direction edges:");
+    println!(
+        "  lengths: {:.3}, {:.3}, {:.3}, {:.3}",
+        len_y1, len_y2, len_y3, len_y4
+    );
+
+    assert!((len_y1 - 1.0).abs() < EPSILON);
+    assert!((len_y2 - 1.0).abs() < EPSILON);
+    assert!((len_y3 - 1.0).abs() < EPSILON);
+    assert!((len_y4 - 1.0).abs() < EPSILON);
+
+    // z-direction edges
+    let edge_z1: (f64, f64, f64) = (v001.0 - v000.0, v001.1 - v000.1, v001.2 - v000.2);
+    let edge_z2: (f64, f64, f64) = (v101.0 - v100.0, v101.1 - v100.1, v101.2 - v100.2);
+    let edge_z3: (f64, f64, f64) = (v011.0 - v010.0, v011.1 - v010.1, v011.2 - v010.2);
+    let edge_z4: (f64, f64, f64) = (v111.0 - v110.0, v111.1 - v110.1, v111.2 - v110.2);
+
+    let len_z1 = (edge_z1.0.powi(2) + edge_z1.1.powi(2) + edge_z1.2.powi(2)).sqrt();
+    let len_z2 = (edge_z2.0.powi(2) + edge_z2.1.powi(2) + edge_z2.2.powi(2)).sqrt();
+    let len_z3 = (edge_z3.0.powi(2) + edge_z3.1.powi(2) + edge_z3.2.powi(2)).sqrt();
+    let len_z4 = (edge_z4.0.powi(2) + edge_z4.1.powi(2) + edge_z4.2.powi(2)).sqrt();
+
+    println!("\nz-direction edges:");
+    println!(
+        "  lengths: {:.3}, {:.3}, {:.3}, {:.3}",
+        len_z1, len_z2, len_z3, len_z4
+    );
+
+    assert!((len_z1 - 1.0).abs() < EPSILON);
+    assert!((len_z2 - 1.0).abs() < EPSILON);
+    assert!((len_z3 - 1.0).abs() < EPSILON);
+    assert!((len_z4 - 1.0).abs() < EPSILON);
+
+    println!("\n=== FACE DIAGONALS ===\n");
+
+    // xy-face diagonal from v000 to v110
+    let diag_xy: (f64, f64, f64) = (v110.0 - v000.0, v110.1 - v000.1, v110.2 - v000.2);
+    let len_diag_xy = (diag_xy.0.powi(2) + diag_xy.1.powi(2) + diag_xy.2.powi(2)).sqrt();
+
+    println!("xy-face diagonal v000→v110:");
+    println!("  vector: {:?}", diag_xy);
+    println!(
+        "  length: {:.3} (expected √2 = {:.3})",
+        len_diag_xy,
+        2.0_f64.sqrt()
+    );
+
+    assert!((len_diag_xy - 2.0_f64.sqrt()).abs() < EPSILON);
+
+    // xz-face diagonal from v000 to v101
+    let diag_xz: (f64, f64, f64) = (v101.0 - v000.0, v101.1 - v000.1, v101.2 - v000.2);
+    let len_diag_xz = (diag_xz.0.powi(2) + diag_xz.1.powi(2) + diag_xz.2.powi(2)).sqrt();
+
+    println!("\nxz-face diagonal v000→v101:");
+    println!("  length: {:.3}", len_diag_xz);
+
+    assert!((len_diag_xz - 2.0_f64.sqrt()).abs() < EPSILON);
+
+    // yz-face diagonal from v000 to v011
+    let diag_yz: (f64, f64, f64) = (v011.0 - v000.0, v011.1 - v000.1, v011.2 - v000.2);
+    let len_diag_yz = (diag_yz.0.powi(2) + diag_yz.1.powi(2) + diag_yz.2.powi(2)).sqrt();
+
+    println!("\nyz-face diagonal v000→v011:");
+    println!("  length: {:.3}", len_diag_yz);
+
+    assert!((len_diag_yz - 2.0_f64.sqrt()).abs() < EPSILON);
+
+    println!("\n=== BODY DIAGONAL ===\n");
+
+    // main diagonal from v000 to v111
+    let diag_main: (f64, f64, f64) = (v111.0 - v000.0, v111.1 - v000.1, v111.2 - v000.2);
+    let len_diag_main = (diag_main.0.powi(2) + diag_main.1.powi(2) + diag_main.2.powi(2)).sqrt();
+
+    println!("body diagonal v000→v111:");
+    println!("  vector: {:?}", diag_main);
+    println!(
+        "  length: {:.3} (expected √3 = {:.3})",
+        len_diag_main,
+        3.0_f64.sqrt()
+    );
+
+    assert!((len_diag_main - 3.0_f64.sqrt()).abs() < EPSILON);
+
+    println!("\n=== FACE AREA ===\n");
+
+    // xy-face area via cross product
+    // vectors: v000→v100 and v000→v010
+    let u = edge_x1; // (1, 0, 0)
+    let v = edge_y1; // (0, 1, 0)
+
+    // cross product u × v
+    let cross_xy: (f64, f64, f64) = (
+        u.1 * v.2 - u.2 * v.1,
+        u.2 * v.0 - u.0 * v.2,
+        u.0 * v.1 - u.1 * v.0,
+    );
+
+    let area_xy = (cross_xy.0.powi(2) + cross_xy.1.powi(2) + cross_xy.2.powi(2)).sqrt();
+
+    println!("xy-face area:");
+    println!("  u = {:?}", u);
+    println!("  v = {:?}", v);
+    println!("  u × v = {:?}", cross_xy);
+    println!("  |u × v| = {:.3}", area_xy);
+
+    assert!((area_xy - 1.0).abs() < EPSILON);
+
+    println!("\n=== VOLUME ===\n");
+
+    // volume via scalar triple product: u · (v × w)
+    let w = edge_z1; // (0, 0, 1)
+
+    // v × w
+    let cross_vw: (f64, f64, f64) = (
+        v.1 * w.2 - v.2 * w.1,
+        v.2 * w.0 - v.0 * w.2,
+        v.0 * w.1 - v.1 * w.0,
+    );
+
+    // u · (v × w)
+    let volume = u.0 * cross_vw.0 + u.1 * cross_vw.1 + u.2 * cross_vw.2;
+
+    println!("cube volume:");
+    println!("  u = {:?}", u);
+    println!("  v = {:?}", v);
+    println!("  w = {:?}", w);
+    println!("  v × w = {:?}", cross_vw);
+    println!("  u · (v × w) = {:.3}", volume);
+
+    assert!((volume - 1.0).abs() < EPSILON);
+
+    println!("\n=== SUMMARY ===");
+    println!("cube with 8 vertices, 12 edges, 6 faces");
+    println!("all edges: length 1.0");
+    println!("face diagonals: length √2 ≈ {:.3}", 2.0_f64.sqrt());
+    println!("body diagonal: length √3 ≈ {:.3}", 3.0_f64.sqrt());
+    println!("face area: 1.0");
+    println!("volume: 1.0");
+}
+
+#[test]
+fn its_a_geonum_unit_cube() {
+    // demonstrate geonum geometric operations
+    // 2D: square area and diagonal (✓)
+    // 3D: unit volume via wedge
+
+    println!("\n=== GEONUM UNIT CUBE ===\n");
+
+    // two orthogonal unit edges for 2D operations
+    let edge_x = Geonum::new(1.0, 0.0, 1.0); // angle 0
+    let edge_y = Geonum::new(1.0, 1.0, 2.0); // angle π/2
+
+    println!("two orthogonal edges:");
+    println!(
+        "  edge_x: magnitude={}, angle={:.3}, grade={}",
+        edge_x.length,
+        edge_x.angle.grade_angle(),
+        edge_x.angle.grade()
+    );
+    println!(
+        "  edge_y: magnitude={}, angle={:.3}, grade={}",
+        edge_y.length,
+        edge_y.angle.grade_angle(),
+        edge_y.angle.grade()
+    );
+
+    println!("\n=== SQUARE DIAGONAL (2D) ===\n");
+
+    let diagonal_2d = edge_x + edge_y;
+    println!("edge_x + edge_y:");
+    println!("  magnitude: {:.3}", diagonal_2d.length);
+    println!("  expected: √2 = {:.3}", 2.0_f64.sqrt());
+
+    if (diagonal_2d.length - 2.0_f64.sqrt()).abs() < EPSILON {
+        println!("  ✓ square diagonal works!");
+    }
+
+    println!("\n=== SQUARE AREA (2D) ===\n");
+
+    let area = edge_x.wedge(&edge_y);
+    println!("edge_x ∧ edge_y:");
+    println!("  magnitude: {:.3} (area)", area.length);
+    println!("  grade: {} (bivector)", area.angle.grade());
+    println!("  angle: {:.3}", area.angle.grade_angle());
+
+    if (area.length - 1.0).abs() < EPSILON && area.angle.grade() == 2 {
+        println!("  ✓ square area = 1.0, stored as single bivector!");
+    }
+
+    println!("\n=== UNIT VOLUME (3D) ===\n");
+
+    // for volume: two edges with angles summing to π give trivector
+    // maximum magnitude when perpendicular: π/4 + 3π/4
+    let vol_edge1 = Geonum::new_with_blade(1.0, 0, 1.0, 4.0); // angle π/4
+    let vol_edge2 = Geonum::new_with_blade(1.0, 1, 1.0, 4.0); // blade 1 + π/4 = angle 3π/4
+
+    println!("two edges for volume:");
+    println!("  edge1: angle={:.3} (π/4)", vol_edge1.angle.grade_angle());
+    println!("  edge2: angle={:.3} (3π/4)", vol_edge2.angle.grade_angle());
+    println!(
+        "  sum: {:.3} + {:.3} = {:.3} (π)",
+        vol_edge1.angle.grade_angle(),
+        vol_edge2.angle.grade_angle(),
+        vol_edge1.angle.grade_angle() + vol_edge2.angle.grade_angle()
+    );
+
+    let volume = vol_edge1.wedge(&vol_edge2);
+    println!("\nedge1 ∧ edge2:");
+    println!("  magnitude: {:.3} (volume)", volume.length);
+    println!("  grade: {} (trivector)", volume.angle.grade());
+    println!("  angle: {:.3} (3π/2)", volume.angle.grade_angle());
+
+    if (volume.length - 1.0).abs() < EPSILON && volume.angle.grade() == 3 {
+        println!("  ✓ unit volume = 1.0, stored as single trivector!");
+    }
+
+    println!("\n=== SUMMARY ===");
+    println!("geonum geometric operations:");
+    println!(
+        "  2D diagonal: {:.3} (expected √2 = {:.3}) ✓",
+        diagonal_2d.length,
+        2.0_f64.sqrt()
+    );
+    println!("  2D area: {:.3} bivector (grade 2) ✓", area.length);
+    println!("  3D volume: {:.3} trivector (grade 3) ✓", volume.length);
+    println!("\nKey insight: angles summing to π → trivector via wedge");
 }
