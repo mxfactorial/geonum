@@ -16,11 +16,11 @@ dimensions need to ship with the cost of their transformation attached
 
 and they need to be programmed with that value **before learning** which sets and operations they support
 
-so a scalable algebra depends not on defining numbers and operations first, but on a choice of dimension that enables defining how length **and** angle change between all the others, or the *shape of change*
+so a scalable algebra depends not on defining numbers and operations first, but on a choice of dimension that enables defining how magnitude **and** angle change between all the others, or the *shape of change*
 
 #### the geometric number
 
-physics and compute friendly math depends on dimensions referencing at least 2 values, or a 2-tuple, if they are to *cooperate* with each other when *operating* on a number: `[length, angle]`
+physics and compute friendly math depends on dimensions referencing at least 2 values, or a 2-tuple, if they are to *cooperate* with each other when *operating* on a number: `[magnitude, angle]`
 
 requiring an explicit angle for numbers in a polar vector avoids a "negative number":
 
@@ -41,15 +41,15 @@ now "complex numbers" are just `pi/2` multiples instead of some device people re
 [1, 3pi/2]
 ```
 
-and building a "vector space" supporting an unlimited number of dimensions is just a recursion that starts with duplicating the first `[length, angle]`, *orthogonally adding* the duplicate vector to the first to provide "quadratic closure", then "extending" the space by *orthogonally adding* as many dimensions as you want
+and building a "vector space" supporting an unlimited number of dimensions is just a recursion that starts with duplicating the first `[magnitude, angle]`, *orthogonally adding* the duplicate vector to the first to provide "quadratic closure", then "extending" the space by *orthogonally adding* as many dimensions as you want
 
 the phrase "orthogonally adding" or `+ pi/2` is important here because it reveals the [minimum](https://en.wikipedia.org/wiki/Geodesic) angular toll added dimensions must pay to cross the discrete continuity constructed by the [initial](https://en.wikipedia.org/wiki/Initial_and_terminal_objects) `[[1, 0], [1, pi/2]]` pair:
 
 `∫1dθ from 0 to pi/2 = + pi/2`
 
-#### angles add, lengths multiply
+#### angles add, mags multiply
 
-the definite integral explicitly reveals the "angles add, lengths multiply" rule
+the definite integral explicitly reveals the "angles add, mags multiply" rule
 
 this rule not only frees everyone up from toiling in a "matrix":
 ```
@@ -75,7 +75,7 @@ v ∧ v = 0 when sin(0) = 0
 ```
 "differentiation" is automatic here: `v' = [r, θ + pi/2] when sin(x)' = cos(x) = sin(x + pi/2)`
 
-and `[4, 0] ⋅ [4, pi] + [4, 0] ∧ [4, pi] = [16, pi] + [0, 0]` isnt an [apples and oranges](https://math.stackexchange.com/questions/3193125/intuition-for-geometric-product-being-dot-wedge-product) problem anymore: `[length, angle]` and `[area, orientation]`
+and `[4, 0] ⋅ [4, pi] + [4, 0] ∧ [4, pi] = [16, pi] + [0, 0]` isnt an [apples and oranges](https://math.stackexchange.com/questions/3193125/intuition-for-geometric-product-being-dot-wedge-product) problem anymore: `[magnitude, angle]` and `[area, orientation]`
 
 #### capture the flag
 
@@ -87,7 +87,7 @@ someone ran off with the equal sign and used it to say `let set = {}`
 
 rejecting the assignment to a fictional data type captures the flag from "mathematicians"
 
-and `let space = sin(pi/2)` brings it back home to physics
+and `let space = sin(n pi/2)` brings it back home to physics
 
 so goodbye "negative scalars" and goodbye to all the complexity you gave us
 
