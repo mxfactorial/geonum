@@ -13,7 +13,7 @@ fn its_a_scalar() {
     let scalar = Geonum::new(1.0, 0.0, 1.0);
 
     // test if scalar has expected properties
-    assert_eq!(scalar.length, 1.0);
+    assert_eq!(scalar.mag, 1.0);
     assert_eq!(scalar.angle.grade_angle(), 0.0);
 
     // multiplying scalars follows "angles add, lengths multiply" rule
@@ -22,7 +22,7 @@ fn its_a_scalar() {
     let product = scalar * scalar2;
 
     // 1 × 2 = 2
-    assert_eq!(product.length, 2.0);
+    assert_eq!(product.mag, 2.0);
     assert_eq!(product.angle.grade_angle(), 0.0);
 
     // multiplication with negative scalar
@@ -31,7 +31,7 @@ fn its_a_scalar() {
     let neg_product = scalar * neg_scalar;
 
     // 1 × (-3) = -3
-    assert_eq!(neg_product.length, 3.0);
+    assert_eq!(neg_product.mag, 3.0);
     assert_eq!(neg_product.angle.grade_angle(), PI);
 }
 
@@ -47,9 +47,9 @@ fn its_a_vector() {
                                              // blade 1 (vector grade) + π/4 remainder
 
     // test vector properties
-    assert_eq!(vector.length, 2.0);
+    assert_eq!(vector.mag, 2.0);
     assert_eq!(vector.angle.blade(), 1); // blade 1 = vector (grade 1) in geometric algebra
-    assert!((vector.angle.value() - PI / 4.0).abs() < EPSILON); // π/4 remainder after π/2 rotation
+    assert!((vector.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder after π/2 rotation
 
     // test dot product with another vector
     let vector2 = Geonum::new(3.0, 3.0, 4.0); // same 3π/4 angle = blade 1 + π/4
@@ -57,18 +57,18 @@ fn its_a_vector() {
     // compute dot product as |a|*|b|*cos(angle between)
     // with same direction, cos(0) = 1
     let dot_same = vector.dot(&vector2);
-    assert!((dot_same.length - 6.0).abs() < EPSILON); // 2*3*cos(0) = 6
+    assert!((dot_same.mag - 6.0).abs() < EPSILON); // 2*3*cos(0) = 6
 
     // test perpendicular vectors for zero dot product
     // 5π/4 = 225° = π + π/4, which is perpendicular to 3π/4
     let perp_vector = Geonum::new(3.0, 5.0, 4.0); // 5 * π/4 = 5π/4 = blade 2 + π/4
 
     let dot_perp = vector.dot(&perp_vector);
-    assert!(dot_perp.length.abs() < EPSILON); // test value is very close to zero
+    assert!(dot_perp.mag.abs() < EPSILON); // test value is very close to zero
 
     // test wedge product of vector with itself equals zero (nilpotency)
     let wedge_self = vector.wedge(&vector);
-    assert!(wedge_self.length < EPSILON);
+    assert!(wedge_self.mag < EPSILON);
 }
 
 #[test]
@@ -82,11 +82,11 @@ fn its_a_real_number() {
     let real2 = Geonum::new(4.0, 0.0, 1.0); // real number as scalar
 
     // convert to cartesian for addition
-    let sum_cartesian = real.length + real2.length; // 3 + 4 = 7
+    let sum_cartesian = real.mag + real2.mag; // 3 + 4 = 7
 
     let sum = Geonum::new(sum_cartesian, 0.0, 1.0); // real number sum as scalar
 
-    assert_eq!(sum.length, 7.0);
+    assert_eq!(sum.mag, 7.0);
     assert_eq!(sum.angle, Angle::new(0.0, 1.0));
 
     // test subtraction
@@ -95,7 +95,7 @@ fn its_a_real_number() {
     let real4 = Geonum::new(7.0, 0.0, 1.0); // real number as scalar
 
     // convert to cartesian for subtraction
-    let diff_cartesian = real3.length - real4.length; // 10 - 7 = 3
+    let diff_cartesian = real3.mag - real4.mag; // 10 - 7 = 3
 
     let diff = Geonum::new(
         diff_cartesian.abs(),
@@ -103,7 +103,7 @@ fn its_a_real_number() {
         if diff_cartesian >= 0.0 { 1.0 } else { 2.0 },
     ); // real number difference as scalar
 
-    assert_eq!(diff.length, 3.0);
+    assert_eq!(diff.mag, 3.0);
     assert_eq!(diff.angle, Angle::new(0.0, 1.0));
 }
 
@@ -117,7 +117,7 @@ fn its_an_imaginary_number() {
     // i * i = -1
     let squared = imaginary * imaginary;
 
-    assert_eq!(squared.length, 1.0);
+    assert_eq!(squared.mag, 1.0);
     assert_eq!(squared.angle, Angle::new(2.0, 2.0)); // this is -1 in geometric number form (π)
 
     // rotation property: i rotates by 90 degrees
@@ -125,7 +125,7 @@ fn its_an_imaginary_number() {
 
     let rotated = imaginary * real;
 
-    assert_eq!(rotated.length, 2.0);
+    assert_eq!(rotated.mag, 2.0);
     assert_eq!(rotated.angle, Angle::new(1.0, 2.0)); // rotated 90 degrees
 
     // multiplying by i four times returns to original number
@@ -134,7 +134,7 @@ fn its_an_imaginary_number() {
     let rot3 = imaginary * rot2; // rotate three times
     let rot4 = imaginary * rot3; // rotate four times
 
-    assert_eq!(rot4.length, real.length);
+    assert_eq!(rot4.mag, real.mag);
     assert!(rot4.angle.grade_angle().abs() < EPSILON); // back to original angle
 }
 
@@ -148,7 +148,7 @@ fn its_a_complex_number() {
     let imag = Geonum::new(1.0, 1.0, 2.0); // i at π/2
     let complex = real + imag; // 2+i via addition operator
     let expected_length = (4.0_f64 + 1.0).sqrt(); // |2+i| = √(2²+1²) = √5
-    let length_diff = (complex.length - expected_length).abs();
+    let length_diff = (complex.mag - expected_length).abs();
     assert!(length_diff < EPSILON);
     let expected_angle = Angle::new_from_cartesian(2.0, 1.0); // arg(2+i) from cartesian
                                                               // forward-only comparison: ignore blade history from addition
@@ -167,8 +167,8 @@ fn its_a_complex_number() {
     let one = Geonum::new(1.0, 0.0, 1.0); // scalar unit
 
     // in cartesian: -1 + 1 = 0
-    let result_cartesian = e_i_pi.length * e_i_pi.angle.grade_angle().cos()
-        + one.length * one.angle.grade_angle().cos();
+    let result_cartesian =
+        e_i_pi.mag * e_i_pi.angle.grade_angle().cos() + one.mag * one.angle.grade_angle().cos();
 
     assert!(result_cartesian.abs() < EPSILON); // test value is close to zero
 }
@@ -192,7 +192,7 @@ fn its_a_dual_number() {
 
     // verify differentiation produces correct grade
     assert_eq!(f_prime.angle.grade(), 1, "derivative at grade 1 (vector)");
-    assert_eq!(f_prime.length, 9.0, "differentiation preserves magnitude");
+    assert_eq!(f_prime.mag, 9.0, "differentiation preserves magnitude");
 
     // test the dual unit property
     // in dual numbers, ε represents the infinitesimal unit where ε² = 0
@@ -201,7 +201,7 @@ fn its_a_dual_number() {
     let epsilon_squared = epsilon * epsilon;
 
     // ε² should map back to scalar (blade 0 or 4)
-    assert_eq!(epsilon_squared.length, 1.0);
+    assert_eq!(epsilon_squared.mag, 1.0);
     // angle doubles: π + π = 2π ≡ 0 (mod 2π)
     let angle_mod = epsilon_squared.angle.grade_angle();
     assert!(
@@ -220,7 +220,7 @@ fn its_a_dual_number() {
         1,
         "cubic derivative at grade 1"
     );
-    assert_eq!(f_cubic_prime.length, 27.0, "magnitude preserved as 27");
+    assert_eq!(f_cubic_prime.mag, 27.0, "magnitude preserved as 27");
 
     // second derivative: f''(x) = 6x = 18
     let f_cubic_double_prime = f_cubic_prime.differentiate();
@@ -229,10 +229,7 @@ fn its_a_dual_number() {
         2,
         "second derivative at grade 2"
     );
-    assert_eq!(
-        f_cubic_double_prime.length, 27.0,
-        "magnitude still preserved"
-    );
+    assert_eq!(f_cubic_double_prime.mag, 27.0, "magnitude still preserved");
 
     // for comparison with traditional dual numbers
     // traditional: f(x+ε) = f(x) + f'(x)ε where ε² = 0
@@ -244,7 +241,7 @@ fn its_a_dual_number() {
 
     // f'(x) = 2x + 2 = 8 at x=3
     // the magnitude is preserved, angle encodes derivative relationship
-    assert_eq!(f_complex_prime.length, 16.0, "complex function magnitude");
+    assert_eq!(f_complex_prime.mag, 16.0, "complex function magnitude");
     assert_eq!(f_complex_prime.angle.grade(), 1, "derivative grade");
 
     // demonstrate dual number collection for tracking multiple derivatives
@@ -254,8 +251,8 @@ fn its_a_dual_number() {
     ]);
 
     // extract function value and derivative
-    let function_value = f_dual_collection[0].length; // 9
-    let derivative_value = f_dual_collection[1].length; // 6
+    let function_value = f_dual_collection[0].mag; // 9
+    let derivative_value = f_dual_collection[1].mag; // 6
 
     assert_eq!(function_value, 9.0, "f(3) = 9");
     assert_eq!(derivative_value, 6.0, "f'(3) = 6");
@@ -271,13 +268,13 @@ fn its_a_dual_number() {
     let dual_squared = dual_sum * dual_sum;
 
     // verify the result maintains dual structure
-    assert!(dual_squared.length > 0.0, "squared dual has magnitude");
+    assert!(dual_squared.mag > 0.0, "squared dual has magnitude");
 
     // test chain rule with dual numbers
     // for f(g(x)), derivative is f'(g(x)) * g'(x)
 
     let g_x = Geonum::new(2.0 * x, 0.0, 1.0); // g(x) = 2x = 6
-    let f_of_g = Geonum::new(g_x.length * g_x.length, 0.0, 1.0); // f(g(x)) = (2x)² = 36
+    let f_of_g = Geonum::new(g_x.mag * g_x.mag, 0.0, 1.0); // f(g(x)) = (2x)² = 36
 
     let f_of_g_prime = f_of_g.differentiate();
     assert_eq!(
@@ -285,14 +282,14 @@ fn its_a_dual_number() {
         1,
         "chain rule derivative at grade 1"
     );
-    assert_eq!(f_of_g_prime.length, 36.0, "chain rule preserves magnitude");
+    assert_eq!(f_of_g_prime.mag, 36.0, "chain rule preserves magnitude");
 
     // key insight: dual numbers in traditional math require ε² = 0 constraint
     // geonum achieves this naturally through angle arithmetic
     // π/2 rotations encode differentiation without special dual algebra
 
     println!("Dual number autodiff via π/2 rotation:");
-    println!("  f(x) = x² at x=3: {}", f_x.length);
+    println!("  f(x) = x² at x=3: {}", f_x.mag);
     println!("  f'(x) via rotation: grade {}", f_prime.angle.grade());
     println!("  No ε² = 0 constraint needed");
 }
@@ -334,7 +331,7 @@ fn its_an_octonion() {
 
     // test that they're not equal (non-associative)
     // test if lengths or angles differ
-    let _equal = (e1e2e4.length - e1e2e4_alt.length).abs() < EPSILON
+    let _equal = (e1e2e4.mag - e1e2e4_alt.mag).abs() < EPSILON
         && (e1e2e4.angle.grade_angle() - e1e2e4_alt.angle.grade_angle()).abs() < EPSILON;
 
     // if they're not exactly equal, non-associativity is demonstrated
@@ -356,28 +353,28 @@ fn its_a_matrix() {
 
     // test vector [3, 4] → [5, arctan(4/3)]
     let vector = Geonum::new_from_cartesian(3.0, 4.0);
-    assert_eq!(vector.length, 5.0); // magnitude √(3²+4²) = 5
+    assert_eq!(vector.mag, 5.0); // magnitude √(3²+4²) = 5
 
     // identity transformation: v * identity = v
     let identity_result = vector * identity;
-    assert_eq!(identity_result.length, vector.length);
+    assert_eq!(identity_result.mag, vector.mag);
     assert_eq!(identity_result.angle, vector.angle);
 
     // rotation transformation: rotate vector by 45°
     let rotated = vector.rotate(Angle::new(1.0, 4.0)); // π/4
-    assert_eq!(rotated.length, 5.0); // rotation preserves length
+    assert_eq!(rotated.mag, 5.0); // rotation preserves length
     assert_ne!(rotated.angle, vector.angle); // angle changed
 
     // scale transformation: 2× scaling
     let scale_2x = Geonum::scalar(2.0);
     let scaled = vector * scale_2x;
-    assert_eq!(scaled.length, 10.0); // 5 * 2 = 10
+    assert_eq!(scaled.mag, 10.0); // 5 * 2 = 10
     assert_eq!(scaled.angle, vector.angle); // scaling preserves angle
 
     // combined transformation: rotate then scale
     let transform = rotation_45 * scale_2x; // compose transformations
     let result = vector * transform;
-    assert_eq!(result.length, 10.0); // scaled by 2
+    assert_eq!(result.mag, 10.0); // scaled by 2
 
     // traditional matrix approach for comparison:
     // [cos(θ) -sin(θ)] [s  0] = complex 8-component operation
@@ -392,12 +389,12 @@ fn its_a_matrix() {
     // O(1) transformation vs O(n²) matrix multiplication
     let vector_3d = Geonum::new(7.0, 1.0, 3.0);
     let result_3d = vector_3d * transform_3d;
-    assert_eq!(result_3d.length, 17.5); // 7 * 2.5
+    assert_eq!(result_3d.mag, 17.5); // 7 * 2.5
 
     // matrix inverse: traditional O(n³), geonum O(1)
     let transform_inv = transform_3d.inv();
     let identity_check = transform_3d * transform_inv;
-    assert!((identity_check.length - 1.0).abs() < EPSILON);
+    assert!((identity_check.mag - 1.0).abs() < EPSILON);
 }
 
 #[test]
@@ -419,7 +416,7 @@ fn its_a_tensor() {
     let test_vector = Geonum::scalar(1.0);
     let result = tensor_transform(test_vector);
 
-    assert_eq!(result.length, 1.0, "tensor preserves magnitude");
+    assert_eq!(result.mag, 1.0, "tensor preserves magnitude");
     let expected_angle = Angle::new(1.0, 6.0) + Angle::new(1.0, 4.0) + Angle::new(1.0, 3.0);
     assert_eq!(result.angle, expected_angle, "tensor rotations compose");
 
@@ -435,7 +432,7 @@ fn its_a_tensor() {
     // contract tensor with three vectors
     let contraction = v * w * u;
 
-    assert_eq!(contraction.length, 9.0, "2 * 3 * 1.5 = 9");
+    assert_eq!(contraction.mag, 9.0, "2 * 3 * 1.5 = 9");
     // blade arithmetic depends on the angles within each blade-1 vector
     // the actual blade count comes from how the angles compose
     assert_eq!(
@@ -457,13 +454,13 @@ fn its_a_tensor() {
     // blade 4 has grade 0 (4 % 4 = 0)
     assert_eq!(outer.angle.blade(), 4, "e1 ∧ e2 gives blade 4");
     assert_eq!(outer.angle.grade(), 0, "blade 4 has grade 0");
-    assert_eq!(outer.length, 1.0, "wedge preserves unit magnitude");
-    assert_eq!(outer.angle.value(), 0.0, "wedge result at angle 0");
+    assert_eq!(outer.mag, 1.0, "wedge preserves unit magnitude");
+    assert_eq!(outer.angle.rem(), 0.0, "wedge result at angle 0");
 
     // verify orthogonality through dot product
     let dot = e1.dot(&e2);
     assert!(
-        dot.length < EPSILON,
+        dot.mag < EPSILON,
         "perpendicular vectors have zero dot product"
     );
 
@@ -477,7 +474,7 @@ fn its_a_tensor() {
     };
 
     let trace_result = trace_transform(test_vector);
-    assert_eq!(trace_result.length, 2.0, "trace sums diagonal");
+    assert_eq!(trace_result.mag, 2.0, "trace sums diagonal");
     assert_eq!(
         trace_result.angle,
         Angle::new(0.0, 1.0),
@@ -512,19 +509,19 @@ fn its_a_tensor() {
     let r3 = rank3(test_vector);
 
     // rank-1: pure rotation by π/5
-    assert_eq!(r1.length, 1.0, "rank-1 preserves unit length");
+    assert_eq!(r1.mag, 1.0, "rank-1 preserves unit length");
     assert_eq!(r1.angle, Angle::new(1.0, 5.0), "rank-1 rotates by π/5");
 
     // rank-2: weighted sum of two rotations gives specific angle
     assert!(
-        (r2.length - 0.9714580122627351).abs() < EPSILON,
+        (r2.mag - 0.9714580122627351).abs() < EPSILON,
         "rank-2 combined magnitude"
     );
     // r2.angle is the result of vector addition, not simple angle addition
 
     // rank-3: sum of three components (0.5 + 0.3 + 0.2 vectors at different angles)
     assert!(
-        (r3.length - 0.9047393878729882).abs() < EPSILON,
+        (r3.mag - 0.9047393878729882).abs() < EPSILON,
         "rank-3 combined magnitude"
     );
 
@@ -542,8 +539,8 @@ fn its_a_tensor() {
     // timelike² gives negative contribution (cos(π) = -1)
     // spacelike² gives positive contribution (cos(0) = 1)
     // both squares have length 1 at angle 0, sum gives length 2
-    assert_eq!(interval.length, 2.0, "interval magnitude");
-    assert_eq!(interval.angle.value(), 0.0, "interval at angle 0");
+    assert_eq!(interval.mag, 2.0, "interval magnitude");
+    assert_eq!(interval.angle.rem(), 0.0, "interval at angle 0");
     assert_eq!(
         interval.angle.grade(),
         0,
@@ -556,7 +553,7 @@ fn its_a_tensor() {
 
     let christoffel = |position: Geonum| -> Angle {
         // connection at this point: how angles change with position
-        Angle::new(position.length / 10.0, 1.0) // simple linear connection
+        Angle::new(position.mag / 10.0, 1.0) // simple linear connection
     };
 
     let pos1 = Geonum::new(5.0, 0.0, 1.0);
@@ -588,7 +585,7 @@ fn its_a_tensor() {
         Angle::new(0.1, 1.0),
         "curvature rotates by 0.1π"
     );
-    assert_eq!(after_loop.length, 1.0, "curvature preserves magnitude");
+    assert_eq!(after_loop.mag, 1.0, "curvature preserves magnitude");
 
     println!("Tensor operations via angle arithmetic:");
     println!("  2×2×2 tensor: O(1) instead of O(8) storage");
@@ -608,7 +605,7 @@ fn its_a_rational_number() {
     let rational = three / four; // 3/4 computed via overloaded Div
 
     // test result is 3/4 = 0.75
-    assert!((rational.length - 0.75).abs() < EPSILON);
+    assert!((rational.mag - 0.75).abs() < EPSILON);
 
     // test addition of fractions (3/4 + 1/2)
     let one = Geonum::scalar(1.0);
@@ -617,7 +614,7 @@ fn its_a_rational_number() {
 
     // addition of fractions: 3/4 + 1/2 = 5/4 = 1.25
     let fraction_sum = rational + rational2;
-    assert!((fraction_sum.length - 1.25).abs() < EPSILON);
+    assert!((fraction_sum.mag - 1.25).abs() < EPSILON);
 }
 
 #[test]
@@ -630,15 +627,15 @@ fn its_an_algebraic_number() {
     let sqrt2 = two.pow(0.5); // √2 via pow(0.5)
                               // pow() preserves length relationships but accumulates blade count
     let sqrt2_pow2 = sqrt2.pow(2.0); // [r^n, n*θ] formula: [√2^2, 2*angle] = [2, 2*angle]
-    assert!((sqrt2_pow2.length - 2.0).abs() < EPSILON); // length: √2^2 = 2 ✓
-                                                        // blade accumulation from pow() means algebraic identity exists at different grade
+    assert!((sqrt2_pow2.mag - 2.0).abs() < EPSILON); // length: √2^2 = 2 ✓
+                                                     // blade accumulation from pow() means algebraic identity exists at different grade
     assert_eq!(sqrt2_pow2.angle.blade(), 5); // angle multiplication: 2 * angle accumulates blades
 
     // square it
     let sqrt2_squared = sqrt2 * sqrt2;
 
     // test result is 2
-    assert!((sqrt2_squared.length - 2.0).abs() < EPSILON);
+    assert!((sqrt2_squared.mag - 2.0).abs() < EPSILON);
     let expected_angle = sqrt2.angle + sqrt2.angle; // blade arithmetic: 1 + 1 = 2
     assert_eq!(sqrt2_squared.angle, expected_angle);
 
@@ -659,10 +656,10 @@ fn it_dualizes_log2_geometric_algebra_components() {
     // we can extract grade-specific components to demonstrate this
 
     // extract grade 0 (scalar part)
-    let scalar = g.length * g.angle.grade_angle().cos();
+    let scalar = g.mag * g.angle.grade_angle().cos();
 
     // extract grade 1 (vector part, magnitude)
-    let vector_magnitude = g.length * g.angle.grade_angle().sin();
+    let vector_magnitude = g.mag * g.angle.grade_angle().sin();
 
     // extract grade 2 (bivector part)
     // in 2D GA, bivector represents rotation in the e1^e2 plane
@@ -694,19 +691,19 @@ fn it_keeps_information_entropy_zero() {
     // create a dual geometric number
     // which is perpendicular to the original in angle
     let g2 = Geonum::new_with_angle(
-        g1.length,
+        g1.mag,
         g1.angle + Angle::new(1.0, 2.0), // add π/2 for dual
     );
 
     // demonstrate that these dual numbers preserve all original information
     // we can recover the original from its dual
     let recovered = Geonum::new_with_angle(
-        g2.length,
+        g2.mag,
         g2.angle - Angle::new(1.0, 2.0), // subtract π/2 to recover
     );
 
     // test that the recovered geonum equals the original
-    assert!((g1.length - recovered.length).abs() < EPSILON);
+    assert!((g1.mag - recovered.mag).abs() < EPSILON);
     assert_eq!(g1.angle, recovered.angle);
 
     // compute the entropy of transformation between the original and its dual
@@ -714,8 +711,8 @@ fn it_keeps_information_entropy_zero() {
     // but for a perfect dualization, this equals 0 (no information is lost)
 
     // reconstruct original data from both geonums
-    let original_data = (g1.length, g1.angle.grade_angle());
-    let dual_data = (g2.length, g2.angle.grade_angle() - PI / 2.0);
+    let original_data = (g1.mag, g1.angle.grade_angle());
+    let dual_data = (g2.mag, g2.angle.grade_angle() - PI / 2.0);
 
     // compute difference (represents information loss if any)
     let length_diff = (original_data.0 - dual_data.0).abs();
@@ -748,10 +745,10 @@ fn its_a_bernoulli_number() {
     let b4 = neg_one / thirty; // (-1)/30: blade 2 + blade 2 = blade 4 ≡ blade 0 = +1/30
 
     // compute values directly from division results
-    let b0_value = b0.length; // 1
-    let b1_value = b1.length; // 0.5
-    let b2_value = b2.length; // ≈ 0.1667
-    let b4_value = b4.length * b4.angle.grade_angle().cos(); // division result projected to scalar
+    let b0_value = b0.mag; // 1
+    let b1_value = b1.mag; // 0.5
+    let b2_value = b2.mag; // ≈ 0.1667
+    let b4_value = b4.mag * b4.angle.grade_angle().cos(); // division result projected to scalar
 
     // test the computed values
     assert_eq!(b0_value, 1.0);
@@ -837,7 +834,7 @@ fn its_a_quadrature() {
     let result = f_upper - f_lower;
 
     // the length is 1/3
-    assert!((result.length - exact_result).abs() < EPSILON);
+    assert!((result.mag - exact_result).abs() < EPSILON);
     // integrate() adds 3 blades, so blade 0 → blade 3 for x³/3
     // then another integrate() adds 3 more: blade 3 → blade 5
     assert_eq!(result.angle.blade(), 5);
@@ -852,12 +849,12 @@ fn its_a_quadrature() {
     // for f(x) = x², the derivative f'(x) = 2x
 
     // compute the derivative at x = 0.5 analytically
-    let analytical_derivative = 2.0 * x.length; // f'(0.5) = 2*0.5 = 1.0
+    let analytical_derivative = 2.0 * x.mag; // f'(0.5) = 2*0.5 = 1.0
 
     // for polynomial functions in geonum representation, the derivative
     // involves both magnitude scaling and angle rotation
     // for f(x) = x² = [x², 0], the derivative is f'(x) = 2x = [2x, 0]
-    let numerical_derivative = 2.0 * x.length;
+    let numerical_derivative = 2.0 * x.mag;
 
     assert!((numerical_derivative - analytical_derivative).abs() < EPSILON);
 
@@ -865,18 +862,18 @@ fn its_a_quadrature() {
     // a geonum and its dual (rotated by π/2) preserve all information
     let g = Geonum::new(0.5, 1.0, 4.0); // π/4
     let g_dual = Geonum::new_with_angle(
-        g.length,
+        g.mag,
         g.angle + Angle::new(1.0, 2.0), // add π/2
     );
 
     // recover original from dual
     let recovered = Geonum::new_with_angle(
-        g_dual.length,
+        g_dual.mag,
         g_dual.angle - Angle::new(1.0, 2.0), // subtract π/2
     );
 
     // prove perfect information preservation (zero entropy)
-    assert!((g.length - recovered.length).abs() < EPSILON);
+    assert!((g.mag - recovered.mag).abs() < EPSILON);
     assert_eq!(g.angle, recovered.angle);
 
     // demonstrate O(1) integration regardless of complexity
@@ -916,7 +913,7 @@ fn its_a_quadrature() {
     let sin_shifted = Geonum::new(1.0, 1.0, 2.0); // sin(π/2) = 1
 
     // prove sin(π/2) = cos(0) = 1
-    assert!((sin_shifted.length - cos_at_zero.length).abs() < EPSILON);
+    assert!((sin_shifted.mag - cos_at_zero.mag).abs() < EPSILON);
 
     // similarly, verify the relationship cos(x+π/2) = -sin(x)
     // at x = 0: cos(0+π/2) = cos(π/2) = 0 and -sin(0) = 0
@@ -924,8 +921,8 @@ fn its_a_quadrature() {
     let neg_sin_at_zero = Geonum::new(0.0, 3.0, 2.0); // -sin(0) = 0 [angle π/2 + π = 3π/2]
 
     // test equality of magnitudes (both are 0)
-    assert!((cos_shifted.length - 0.0).abs() < EPSILON);
-    assert!((neg_sin_at_zero.length - 0.0).abs() < EPSILON);
+    assert!((cos_shifted.mag - 0.0).abs() < EPSILON);
+    assert!((neg_sin_at_zero.mag - 0.0).abs() < EPSILON);
 
     // prove the fundamental quadrature relationship in geonum:
     // functions that differ by a π/2 phase represent derivatives/integrals of each other
@@ -996,7 +993,7 @@ fn its_a_clifford_number() {
 
     // operations on this component remain O(1) regardless of the blade grade
     let rotated = high_dim_component.rotate(Angle::new(1.0, 6.0)); // rotate by π/6
-    assert_eq!(rotated.length, 1.0);
+    assert_eq!(rotated.mag, 1.0);
     assert_eq!(rotated.angle.blade(), 500); // blade grade preserved
 
     // million-D clifford algebra - impossible traditionally, trivial with geonum:
@@ -1056,7 +1053,7 @@ fn its_a_eulers_identity() {
     // but in history-preserving, forward-only geometry,
     // inv() explicitly adds a π rotation instead of obscuring
     // it with a scalar sign flip: [1, π].inv() = [1, 2π]
-    assert_eq!(multiplicative_inverse.length, e_to_ipi.length);
+    assert_eq!(multiplicative_inverse.mag, e_to_ipi.mag);
     let expected_inv_angle = e_to_ipi.angle + Angle::new(1.0, 1.0); // π + π = 2π (blade 4)
     assert_eq!(multiplicative_inverse.angle, expected_inv_angle);
 
@@ -1065,7 +1062,7 @@ fn its_a_eulers_identity() {
     let self_product = e_to_ipi * e_to_ipi;
 
     // Test that e^(iπ) × e^(iπ) = 1 (multiplicative identity)
-    assert_eq!(self_product.length, 1.0);
+    assert_eq!(self_product.mag, 1.0);
     assert!(self_product.angle.grade_angle().abs() < EPSILON); // 2π ≡ 0 (mod 2π)
 
     // STEP 6: This is what Euler's identity actually demonstrates
@@ -1077,15 +1074,15 @@ fn its_a_eulers_identity() {
     assert_eq!(traditional_check, 1.0);
 
     // Same relationship in geonum: [1, π] × [1, π] = [1, 0]
-    assert_eq!(self_product.length, traditional_check);
+    assert_eq!(self_product.mag, traditional_check);
 
     // STEP 7: The additive part of Euler's identity
     // e^(iπ) + 1 = 0 shows that [1, π] and [1, 0] are additive inverses
     let one = Geonum::new(1.0, 0.0, 1.0); // [1, 0] = pointing forwards = +1
 
     // Verify they're additive inverses (opposite directions, same magnitude)
-    let cartesian_sum = e_to_ipi.length * e_to_ipi.angle.grade_angle().cos()
-        + one.length * one.angle.grade_angle().cos();
+    let cartesian_sum =
+        e_to_ipi.mag * e_to_ipi.angle.grade_angle().cos() + one.mag * one.angle.grade_angle().cos();
     assert!(cartesian_sum.abs() < EPSILON);
 
     // STEP 8: The complete picture
@@ -1108,12 +1105,12 @@ fn its_a_eulers_identity() {
 
     // Test the multiplicative relationship one more time for clarity
     let twice_rotated = Geonum::new_with_angle(
-        e_to_ipi.length * e_to_ipi.length, // 1 × 1 = 1
-        e_to_ipi.angle + e_to_ipi.angle,   // π + π = 2π
+        e_to_ipi.mag * e_to_ipi.mag,     // 1 × 1 = 1
+        e_to_ipi.angle + e_to_ipi.angle, // π + π = 2π
     );
 
     // 2π ≡ 0 (mod 2π), so we're back to [1, 0] = multiplicative identity
-    assert_eq!(twice_rotated.length, 1.0);
+    assert_eq!(twice_rotated.mag, 1.0);
     assert!(twice_rotated.angle.grade_angle().abs() < EPSILON);
 
     // CONCLUSION: Euler's identity reveals fundamental geometric inverse properties

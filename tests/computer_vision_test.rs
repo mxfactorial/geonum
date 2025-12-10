@@ -53,7 +53,7 @@ fn its_a_feature_detector() {
 
     // gradient can be directly encoded in the feature angle
     let gradient_direction = corner_feature.angle.grade_angle();
-    let gradient_magnitude = corner_feature.length;
+    let gradient_magnitude = corner_feature.mag;
 
     // verify gradient direction is correct
     assert!((gradient_direction - PI / 4.0).abs() < EPSILON);
@@ -123,14 +123,14 @@ fn its_a_feature_detector() {
     // compute total descriptor norm for normalization
     let norm: f64 = high_dim_descriptor
         .iter()
-        .map(|g| g.length * g.length)
+        .map(|g| g.mag * g.mag)
         .sum::<f64>()
         .sqrt();
 
     // normalize descriptor (constant time regardless of dimensions)
     let _normalized_descriptor: Vec<Geonum> = high_dim_descriptor
         .iter()
-        .map(|g| Geonum::new_with_angle(g.length / norm, g.angle))
+        .map(|g| Geonum::new_with_angle(g.mag / norm, g.angle))
         .collect();
 
     let elapsed = start_time.elapsed();
@@ -164,11 +164,11 @@ fn its_an_optical_flow_estimator() {
 
     // flow vector is the difference between frame2 and frame1 points
     // convert to cartesian for illustrative purposes
-    let frame1_x = frame1_point.length * frame1_point.angle.grade_angle().cos();
-    let frame1_y = frame1_point.length * frame1_point.angle.grade_angle().sin();
+    let frame1_x = frame1_point.mag * frame1_point.angle.grade_angle().cos();
+    let frame1_y = frame1_point.mag * frame1_point.angle.grade_angle().sin();
 
-    let frame2_x = frame2_point.length * frame2_point.angle.grade_angle().cos();
-    let frame2_y = frame2_point.length * frame2_point.angle.grade_angle().sin();
+    let frame2_x = frame2_point.mag * frame2_point.angle.grade_angle().cos();
+    let frame2_y = frame2_point.mag * frame2_point.angle.grade_angle().sin();
 
     // flow vector components
     let flow_x = frame2_x - frame1_x;
@@ -178,10 +178,7 @@ fn its_an_optical_flow_estimator() {
     let flow_vector = Geonum::new_from_cartesian(flow_x, flow_y);
 
     // verify flow magnitude and direction
-    assert!(
-        flow_vector.length > 0.0,
-        "Flow should have non-zero magnitude"
-    );
+    assert!(flow_vector.mag > 0.0, "Flow should have non-zero magnitude");
 
     // 3. demonstrate scale-space optical flow
 
@@ -191,7 +188,7 @@ fn its_an_optical_flow_estimator() {
     // With geonum, scales can be encoded directly in the blade grade
     // Ensure flow_vector is grade 1 (vector)
     let flow_grade_1 = Geonum::new_with_blade(
-        flow_vector.length,
+        flow_vector.mag,
         1, // ensure vector (grade 1)
         flow_vector.angle.grade_angle(),
         PI,
@@ -200,14 +197,14 @@ fn its_an_optical_flow_estimator() {
     let multiscale_flow = GeoCollection::from(vec![
         flow_grade_1, // vector (grade 1) - original scale flow
         Geonum::new_with_blade(
-            flow_vector.length * 0.5, // half magnitude at coarser scale
-            2,                        // bivector (grade 2) - coarser scale flow
+            flow_vector.mag * 0.5, // half magnitude at coarser scale
+            2,                     // bivector (grade 2) - coarser scale flow
             flow_vector.angle.grade_angle(),
             PI,
         ),
         Geonum::new_with_blade(
-            flow_vector.length * 0.25, // quarter magnitude at coarsest scale
-            3,                         // trivector (grade 3) - coarsest scale flow
+            flow_vector.mag * 0.25, // quarter magnitude at coarsest scale
+            3,                      // trivector (grade 3) - coarsest scale flow
             flow_vector.angle.grade_angle(),
             PI,
         ),
@@ -295,8 +292,8 @@ fn its_a_camera_calibration() {
 
     // simplified projection without distortion
     let projected_point = Geonum::new_with_angle(
-        focal_length * world_point.length / (10.0 * world_point.length), // perspective division
-        world_point.angle, // preserve angle in simple model
+        focal_length * world_point.mag / (10.0 * world_point.mag), // perspective division
+        world_point.angle,                                         // preserve angle in simple model
     );
 
     // verify projection preserves angles in this simplified case
@@ -306,7 +303,7 @@ fn its_a_camera_calibration() {
 
     // simulated observed point (with noise)
     let observed_point = Geonum::new_with_angle(
-        projected_point.length + 0.1,                 // add noise to length
+        projected_point.mag + 0.1,                    // add noise to length
         projected_point.angle + Angle::new(0.01, PI), // add noise to angle
     );
 
@@ -326,7 +323,7 @@ fn its_a_camera_calibration() {
     // radial distortion as angle transformation
     let distortion_factor = 0.05; // distortion strength
     let distorted_point = Geonum::new_with_angle(
-        projected_point.length * (1.0 + distortion_factor * projected_point.length),
+        projected_point.mag * (1.0 + distortion_factor * projected_point.mag),
         projected_point.angle, // preserve angle in radial distortion
     );
 
@@ -356,7 +353,7 @@ fn its_a_camera_calibration() {
 
             if visible {
                 Some(Geonum::new(
-                    focal_length * world_point.length / (10.0 * world_point.length),
+                    focal_length * world_point.mag / (10.0 * world_point.mag),
                     relative_angle, // angle in camera frame
                     PI,
                 ))
@@ -376,7 +373,7 @@ fn its_a_camera_calibration() {
     );
 
     // verify that distortion changes point location
-    assert!(distorted_point.length > projected_point.length);
+    assert!(distorted_point.mag > projected_point.mag);
 }
 
 #[test]
@@ -454,7 +451,7 @@ fn its_a_3d_reconstruction() {
 
     // verify reconstruction has positive depth
     assert!(
-        reconstructed_point.length > 0.0,
+        reconstructed_point.mag > 0.0,
         "Reconstructed point should have positive depth"
     );
 
@@ -471,7 +468,7 @@ fn its_a_3d_reconstruction() {
     ];
 
     // compute averaged 3D position (simplified bundle adjustment)
-    let avg_length = observations.iter().map(|o| o.length).sum::<f64>() / observations.len() as f64;
+    let avg_length = observations.iter().map(|o| o.mag).sum::<f64>() / observations.len() as f64;
     let avg_angle = observations
         .iter()
         .map(|o| o.angle.grade_angle())
@@ -631,7 +628,7 @@ fn it_proves_computational_complexity_elimination() {
 
     // complexity proof through timing bounds
     assert_eq!(transformed_features.len(), num_features);
-    assert!(multiscale_result.length.is_finite());
+    assert!(multiscale_result.mag.is_finite());
     assert!(elapsed.as_micros() < 10000); // <10ms for 10k features across 3 scales
 
     // COMPLEXITY COMPARISON:
@@ -676,7 +673,7 @@ fn its_a_neural_image_processing() {
     // ReLU-like activation: preserve positive parts of signal
     let activated_output = if layer_output.angle.grade_angle().cos() > 0.0 {
         Geonum::new_with_angle(
-            layer_output.length * layer_output.angle.grade_angle().cos(),
+            layer_output.mag * layer_output.angle.grade_angle().cos(),
             layer_output.angle,
         )
     } else {
@@ -686,12 +683,12 @@ fn its_a_neural_image_processing() {
     // verify activation has expected behavior
     if layer_output.angle.grade_angle().cos() > 0.0 {
         assert!(
-            activated_output.length > 0.0,
+            activated_output.mag > 0.0,
             "ReLU should preserve positive signals"
         );
     } else {
         assert_eq!(
-            activated_output.length, 0.0,
+            activated_output.mag, 0.0,
             "ReLU should zero out negative signals"
         );
     }
@@ -727,14 +724,14 @@ fn its_a_neural_image_processing() {
             .iter()
             .map(|feature| {
                 let output = Geonum::new_with_angle(
-                    feature.length * 0.95,                // slight attenuation
+                    feature.mag * 0.95,                   // slight attenuation
                     feature.angle + Angle::new(0.01, PI), // slight rotation
                 );
 
                 // simplified activation
                 if output.angle.grade_angle().cos() > 0.0 {
                     Geonum::new_with_angle(
-                        output.length * output.angle.grade_angle().cos(),
+                        output.mag * output.angle.grade_angle().cos(),
                         output.angle,
                     )
                 } else {
@@ -876,19 +873,19 @@ fn its_an_object_detection() {
 
     // bounding box as center position + scale
     let bbox_angle = Geonum::new_from_cartesian(center_x, center_y).angle;
-    let bbox = Geonum::new_with_angle(object.length, bbox_angle);
+    let bbox = Geonum::new_with_angle(object.mag, bbox_angle);
 
     // 3. compute IoU using angle-based overlap
 
     // create another bounding box for the same object (slight variation)
     let bbox2 = Geonum::new_with_angle(
-        object.length * 1.05,              // slightly larger
+        object.mag * 1.05,                 // slightly larger
         bbox.angle + Angle::new(0.02, PI), // slightly rotated
     );
 
     // compute IoU-like similarity directly from angles and scales
     let angle_diff = (bbox2.angle - bbox.angle).grade_angle();
-    let scale_ratio = bbox.length.min(bbox2.length) / bbox.length.max(bbox2.length);
+    let scale_ratio = bbox.mag.min(bbox2.mag) / bbox.mag.max(bbox2.mag);
 
     // combine angle and scale similarity
     let similarity = scale_ratio * (1.0 - angle_diff / PI);

@@ -32,7 +32,7 @@ fn it_finds_minimum_distance_from_point_to_line() {
     let closest_point = Geonum::new_with_angle(perpendicular_length, normal_angle);
 
     // distance from origin = length of closest point
-    let geonum_distance = closest_point.length;
+    let geonum_distance = closest_point.mag;
 
     assert!(
         (geonum_distance - traditional_distance).abs() < EPSILON,
@@ -103,7 +103,7 @@ fn it_reduces_optimization_to_angle_matching() {
 
     // construct solution as geonum
     let solution = Geonum::new_with_angle(optimal_length, optimal_angle);
-    let angle_min = solution.length * solution.length;
+    let angle_min = solution.mag * solution.mag;
 
     assert!(
         (angle_min - traditional_min).abs() < EPSILON,
@@ -127,7 +127,7 @@ fn it_exposes_scalar_dependency_as_projection_reconstruction() {
 
     // start with geometric object
     let original = Geonum::new_with_angle(1.0 / 2.0_f64.sqrt(), Angle::new(1.0, 4.0));
-    let original_objective = original.length * original.length;
+    let original_objective = original.mag * original.mag;
 
     // projecting to scalars destroys geometric information
     let x = original.project_to_dimension(0);
@@ -165,7 +165,7 @@ fn it_proves_quadratic_forms_reconstruct_pre_projection_angles() {
 
     // pre-projection form
     let pre_projection = Geonum::new_with_angle(length, angle);
-    let pre_value = pre_projection.length * pre_projection.length;
+    let pre_value = pre_projection.mag * pre_projection.mag;
 
     // project (information loss)
     let x = pre_projection.project_to_dimension(0);

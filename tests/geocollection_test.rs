@@ -28,7 +28,7 @@ fn it_tracks_multiple_light_rays_intersection() {
             let intersection = light_rays[i].meet(&light_rays[j]);
 
             // if intersection has significant magnitude, rays converge
-            if intersection.length > EPSILON {
+            if intersection.mag > EPSILON {
                 convergent_pairs.push((i, j, intersection));
             }
         }
@@ -40,12 +40,12 @@ fn it_tracks_multiple_light_rays_intersection() {
     // Test that each convergence point is well-defined
     for (i, j, intersection) in convergent_pairs {
         assert!(
-            intersection.length.is_finite(),
+            intersection.mag.is_finite(),
             "ray {} and {} convergence point is finite",
             i,
             j
         );
-        assert!(intersection.length > 0.0, "positive magnitude convergence");
+        assert!(intersection.mag > 0.0, "positive magnitude convergence");
     }
 }
 
@@ -63,7 +63,7 @@ fn it_manages_building_wireframe_edges() {
     ]);
 
     // calculate total structural length
-    let total_length: f64 = building_edges.iter().map(|edge| edge.length).sum();
+    let total_length: f64 = building_edges.iter().map(|edge| edge.mag).sum();
     assert!(
         total_length > 40.0,
         "substantial total edge length of building"
@@ -77,7 +77,7 @@ fn it_manages_building_wireframe_edges() {
             let joint = building_edges[i].meet(&building_edges[j]);
 
             // critical joints have significant intersection magnitude
-            if joint.length > 0.1 {
+            if joint.mag > 0.1 {
                 joints.push(joint);
             }
         }
@@ -88,8 +88,8 @@ fn it_manages_building_wireframe_edges() {
 
     // Each joint should be a well-defined point
     for joint in joints {
-        assert!(joint.length.is_finite());
-        assert!(!joint.length.is_nan());
+        assert!(joint.mag.is_finite());
+        assert!(!joint.mag.is_nan());
     }
 }
 
@@ -126,9 +126,9 @@ fn it_handles_scanning_laser_beams() {
     for i in 0..laser_beams.len() {
         for j in (i + 1)..laser_beams.len() {
             let interference = laser_beams[i].meet(&laser_beams[j]);
-            if interference.length > 1.0 {
+            if interference.mag > 1.0 {
                 // Significant interference
-                interference_points.push((i, j, interference.length));
+                interference_points.push((i, j, interference.mag));
             }
         }
     }
@@ -178,7 +178,7 @@ fn it_models_planetary_orbit_system() {
             let orbit2 = &planetary_orbits[j];
 
             // Simple resonance check: ratio of orbital radii
-            let radius_ratio = orbit2.length / orbit1.length;
+            let radius_ratio = orbit2.mag / orbit1.mag;
 
             // Look for simple integer ratios (2:1, 3:2, etc.)
             let closest_ratio = radius_ratio.round();
@@ -200,11 +200,11 @@ fn it_models_planetary_orbit_system() {
             let intersection = planetary_orbits[i].meet(&planetary_orbits[j]);
 
             // Orbital intersection points should be well-defined
-            assert!(intersection.length.is_finite());
+            assert!(intersection.mag.is_finite());
 
             // Different orbits should have non-zero intersection (crossing points)
-            if planetary_orbits[i].length != planetary_orbits[j].length {
-                assert!(intersection.length >= 0.0);
+            if planetary_orbits[i].mag != planetary_orbits[j].mag {
+                assert!(intersection.mag >= 0.0);
             }
         }
     }
@@ -252,7 +252,7 @@ fn it_represents_electromagnetic_field_lines() {
             let convergence = field_lines[i].meet(&field_lines[j]);
 
             // Field lines from the same source should converge
-            if convergence.length > EPSILON {
+            if convergence.mag > EPSILON {
                 convergence_points.push(convergence);
             }
         }
@@ -266,8 +266,8 @@ fn it_represents_electromagnetic_field_lines() {
 
     // Each convergence point should represent a physical location
     for point in convergence_points {
-        assert!(point.length.is_finite());
-        assert!(point.length >= 0.0);
+        assert!(point.mag.is_finite());
+        assert!(point.mag >= 0.0);
     }
 }
 
@@ -315,12 +315,12 @@ fn it_demonstrates_why_single_geonum_fails_here() {
     let beam2_beam3_meet = separate_beams[1].meet(&separate_beams[2]);
 
     // Each intersection is well-defined and distinct
-    assert!(beam1_beam2_meet.length.is_finite());
-    assert!(beam1_beam3_meet.length.is_finite());
-    assert!(beam2_beam3_meet.length.is_finite());
+    assert!(beam1_beam2_meet.mag.is_finite());
+    assert!(beam1_beam3_meet.mag.is_finite());
+    assert!(beam2_beam3_meet.mag.is_finite());
 
     // 3. Maintain individual beam intensities
-    let total_power: f64 = separate_beams.iter().map(|beam| beam.length).sum();
+    let total_power: f64 = separate_beams.iter().map(|beam| beam.mag).sum();
     assert!((total_power - 293.0).abs() < EPSILON); // 100 + 95 + 98 = 293
 
     // This demonstrates the clear utility of GeoCollection as a collection

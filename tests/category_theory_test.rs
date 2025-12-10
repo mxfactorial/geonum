@@ -72,8 +72,8 @@ fn its_a_category() {
     // Since both f and g have blade: 1, f_compose_g will also have blade: 1
 
     // test composed transformation properties
-    assert!((f_compose_g.length - 6.0).abs() < EPSILON); // lengths multiply: 2*3=6
-                                                         // angles add: pi/4 + pi/6 = 5pi/12
+    assert!((f_compose_g.mag - 6.0).abs() < EPSILON); // lengths multiply: 2*3=6
+                                                      // angles add: pi/4 + pi/6 = 5pi/12
     let expected_angle = PI / 4.0 + PI / 6.0;
     assert!((f_compose_g.angle.grade_angle() - expected_angle).abs() < EPSILON);
 
@@ -81,7 +81,7 @@ fn its_a_category() {
     // a natural transformation is just a rotation that preserves structure
     let transform = |x: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            x.length,
+            x.mag,
             x.angle + Angle::new(2.0, 6.0), // rotate everything by π/3
         )
     };
@@ -125,7 +125,7 @@ fn its_a_functor() {
     let functor = |g: &Geonum| -> Geonum {
         // scale lengths and double angles
         Geonum::new_with_angle(
-            g.length * 2.0,
+            g.mag * 2.0,
             g.angle + g.angle, // double angles by adding to itself
         )
     };
@@ -197,13 +197,13 @@ fn its_an_adjunction() {
     // define a "left adjoint" functor from C to D by doubling angles
     let left_adjoint = |g: &Geonum| -> Geonum {
         // double angles
-        Geonum::new_with_angle(g.length, g.angle + g.angle)
+        Geonum::new_with_angle(g.mag, g.angle + g.angle)
     };
 
     // define a "right adjoint" functor from D to C by halving angles
     let right_adjoint = |g: &Geonum| -> Geonum {
         // halve angles using angle division
-        Geonum::new_with_angle(g.length, g.angle / 2.0)
+        Geonum::new_with_angle(g.mag, g.angle / 2.0)
     };
 
     // test adjoint relationship through angle reflection
@@ -278,7 +278,7 @@ fn its_a_limit() {
     // artifact of geonum automation: categorical projection maps replaced by direct angle relationships
     let _projections: Vec<Geonum> = points
         .iter()
-        .map(|p| Geonum::new_with_angle(p.length, p.angle))
+        .map(|p| Geonum::new_with_angle(p.mag, p.angle))
         .collect();
 
     // test universal property through geometric measurement
@@ -293,10 +293,10 @@ fn its_a_limit() {
     let _other_projections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let p_x = p.length * p.angle.grade_angle().cos();
-            let p_y = p.length * p.angle.grade_angle().sin();
-            let o_x = other_point.length * other_point.angle.grade_angle().cos();
-            let o_y = other_point.length * other_point.angle.grade_angle().sin();
+            let p_x = p.mag * p.angle.grade_angle().cos();
+            let p_y = p.mag * p.angle.grade_angle().sin();
+            let o_x = other_point.mag * other_point.angle.grade_angle().cos();
+            let o_y = other_point.mag * other_point.angle.grade_angle().sin();
             let dx = p_x - o_x;
             let dy = p_y - o_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -305,7 +305,7 @@ fn its_a_limit() {
 
     // test the existence of a unique projection to the center (the limit)
     // artifact of geonum automation: categorical universal property replaced by direct geometric measurement
-    let _to_center = Geonum::new_with_angle(other_point.length, other_point.angle);
+    let _to_center = Geonum::new_with_angle(other_point.mag, other_point.angle);
 
     // prove existence through angle construction
     // the projection to the limit must commute with all other projections
@@ -361,10 +361,10 @@ fn its_a_colimit() {
     let _injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let c_x = colimit.length * colimit.angle.grade_angle().cos();
-            let c_y = colimit.length * colimit.angle.grade_angle().sin();
-            let p_x = p.length * p.angle.grade_angle().cos();
-            let p_y = p.length * p.angle.grade_angle().sin();
+            let c_x = colimit.mag * colimit.angle.grade_angle().cos();
+            let c_y = colimit.mag * colimit.angle.grade_angle().sin();
+            let p_x = p.mag * p.angle.grade_angle().cos();
+            let p_y = p.mag * p.angle.grade_angle().sin();
             let dx = c_x - p_x;
             let dy = c_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -383,10 +383,10 @@ fn its_a_colimit() {
     let _other_injections: Vec<Geonum> = points
         .iter()
         .map(|p| {
-            let o_x = other_point.length * other_point.angle.grade_angle().cos();
-            let o_y = other_point.length * other_point.angle.grade_angle().sin();
-            let p_x = p.length * p.angle.grade_angle().cos();
-            let p_y = p.length * p.angle.grade_angle().sin();
+            let o_x = other_point.mag * other_point.angle.grade_angle().cos();
+            let o_y = other_point.mag * other_point.angle.grade_angle().sin();
+            let p_x = p.mag * p.angle.grade_angle().cos();
+            let p_y = p.mag * p.angle.grade_angle().sin();
             let dx = o_x - p_x;
             let dy = o_y - p_y;
             Geonum::new_from_cartesian(dx, dy)
@@ -395,15 +395,15 @@ fn its_a_colimit() {
 
     // test the existence of a unique map from colimit to other_point
     // artifact of geonum automation: categorical universal cocone property replaced by direct angle path
-    let o_x = other_point.length * other_point.angle.grade_angle().cos();
-    let o_y = other_point.length * other_point.angle.grade_angle().sin();
-    let c_x = colimit.length * colimit.angle.grade_angle().cos();
-    let c_y = colimit.length * colimit.angle.grade_angle().sin();
+    let o_x = other_point.mag * other_point.angle.grade_angle().cos();
+    let o_y = other_point.mag * other_point.angle.grade_angle().sin();
+    let c_x = colimit.mag * colimit.angle.grade_angle().cos();
+    let c_y = colimit.mag * colimit.angle.grade_angle().sin();
     let _to_other = Geonum::new_from_cartesian(o_x - c_x, o_y - c_y);
 
     // prove colimit construction through direct angle operations
     // for a simplified example, just verify the colimit has greater length than the diagram points
-    assert!(colimit.length > points[0].length);
+    assert!(colimit.mag > points[0].mag);
 
     // test coproducts as special cases of angle divergence
     // a coproduct is a colimit of a diagram with just objects (no connecting morphisms)
@@ -421,8 +421,8 @@ fn its_a_colimit() {
     let _inj_from_b = Geonum::new(1.5, 3.0, 8.0); // 3π/8
 
     // verify injections exist with correct directionality (from points to coproduct)
-    assert!(coproduct.length > a.length);
-    assert!(coproduct.length > b.length);
+    assert!(coproduct.mag > a.mag);
+    assert!(coproduct.mag > b.mag);
 }
 
 #[test]
@@ -440,11 +440,11 @@ fn its_a_natural_transformation() {
     let b = Geonum::new(1.0, 1.0, 2.0); // π/2
 
     // define two "functors" from C to D
-    let functor_f = |g: &Geonum| -> Geonum { Geonum::new_with_angle(g.length * 2.0, g.angle) };
+    let functor_f = |g: &Geonum| -> Geonum { Geonum::new_with_angle(g.mag * 2.0, g.angle) };
 
     let functor_g = |g: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            g.length,
+            g.mag,
             g.angle + Angle::new(1.0, 6.0), // add π/6
         )
     };
@@ -461,14 +461,14 @@ fn its_a_natural_transformation() {
 
     // apply the natural transformation to F(a) to get G(a)
     let transform_fa = Geonum::new(
-        f_a.length / g_a.length, // adjust length ratio
+        f_a.mag / g_a.mag, // adjust length ratio
         eta * 4.0 / PI,
         4.0, // fixed angle transformation - eta is π/4
     );
 
     // apply the natural transformation to F(b) to get G(b)
     let transform_fb = Geonum::new(
-        f_b.length / g_b.length, // adjust length ratio
+        f_b.mag / g_b.mag, // adjust length ratio
         eta * 4.0 / PI,
         4.0, // same angle transformation - eta is π/4
     );
@@ -487,13 +487,13 @@ fn its_a_natural_transformation() {
 
     // compute F(morphism_ab)
     let f_morphism = Geonum::new_with_angle(
-        morphism_ab.length * functor_f(&a).length / a.length,
+        morphism_ab.mag * functor_f(&a).mag / a.mag,
         morphism_ab.angle,
     );
 
     // compute G(morphism_ab)
     let g_morphism = Geonum::new_with_angle(
-        morphism_ab.length * functor_g(&a).length / a.length,
+        morphism_ab.mag * functor_g(&a).mag / a.mag,
         morphism_ab.angle,
     );
 
@@ -515,7 +515,7 @@ fn its_a_monad() {
     // define a "monad" as an angle transformation with bind operation
     let transform = |g: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            g.length,
+            g.mag,
             g.angle + g.angle, // double the angle
         )
     };
@@ -530,7 +530,7 @@ fn its_a_monad() {
     // this flattens a nested application of the monad
     let join = |g: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            g.length,
+            g.mag,
             g.angle / 2.0, // halve the angle (to compensate for double application)
         )
     };
@@ -549,7 +549,7 @@ fn its_a_monad() {
     // create a function to bind with
     let f = |g: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            g.length * 3.0,
+            g.mag * 3.0,
             g.angle + Angle::new(1.0, 2.0), // add π/2
         )
     };
@@ -562,7 +562,7 @@ fn its_a_monad() {
     // (using another function for second bind)
     let g = |g: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            g.length / 2.0,
+            g.mag / 2.0,
             g.angle - Angle::new(2.0, 6.0), // subtract π/3
         )
     };
@@ -572,12 +572,12 @@ fn its_a_monad() {
     let g_result = g(&f_result);
 
     // verify transformations maintain expected properties
-    assert!(g_result.length > 0.0);
-    assert!(g_result.angle.value() > EPSILON || g_result.angle.blade() > 0);
+    assert!(g_result.mag > 0.0);
+    assert!(g_result.angle.rem() > EPSILON || g_result.angle.blade() > 0);
 
     // test unit laws
     let unit_result = unit(&x);
-    assert_eq!(unit_result.length, x.length);
+    assert_eq!(unit_result.mag, x.mag);
     assert_eq!(unit_result.angle, x.angle);
 }
 
@@ -624,7 +624,7 @@ fn it_rejects_category_theory() {
     let left_assoc = (r1 * r2) * r3;
     let right_assoc = r1 * (r2 * r3);
 
-    assert_eq!(left_assoc.length, right_assoc.length);
+    assert_eq!(left_assoc.mag, right_assoc.mag);
     assert_eq!(left_assoc.angle, right_assoc.angle);
 
     // test category theory as unnecessary abstraction
