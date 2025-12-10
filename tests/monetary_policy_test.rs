@@ -66,7 +66,7 @@ fn it_models_causal_transaction_structure() {
 
             // return transaction bivector
             // convert angle to geometric representation
-            Geonum::new_with_blade(amount.length, 2, transaction_angle, PI)
+            Geonum::new_with_blade(amount.mag, 2, transaction_angle, PI)
         };
 
     // apply the bivector conversion to each transaction item
@@ -100,18 +100,17 @@ fn it_models_causal_transaction_structure() {
     // account balance = sum(creditor) - sum(debitor)
 
     // Sarah's balance change (consumer)
-    let sarah_debitor_sum =
-        ground_coffee.length + pasta.length + paper_towels.length + sales_tax.length;
+    let sarah_debitor_sum = ground_coffee.mag + pasta.mag + paper_towels.mag + sales_tax.mag;
     let sarah_creditor_sum = 0.0; // no credits in this transaction
     let sarah_balance = sarah_creditor_sum - sarah_debitor_sum;
 
     // GroceryCo's balance change (producer)
-    let grocery_creditor_sum = ground_coffee.length + pasta.length + paper_towels.length;
+    let grocery_creditor_sum = ground_coffee.mag + pasta.mag + paper_towels.mag;
     let grocery_debitor_sum = 0.0; // no debits in this transaction
     let grocery_balance = grocery_creditor_sum - grocery_debitor_sum;
 
     // StateOfCalifornia's balance change (tax recipient)
-    let state_creditor_sum = sales_tax.length;
+    let state_creditor_sum = sales_tax.mag;
     let state_debitor_sum = 0.0; // no debits in this transaction
     let state_balance = state_creditor_sum - state_debitor_sum;
 
@@ -150,7 +149,7 @@ fn it_models_causal_transaction_structure() {
 
     // create spacetime events for each transaction item
     let _coffee_event = create_spacetime_event(
-        ground_coffee.length,
+        ground_coffee.mag,
         food_service_angle,
         software_engineer_angle,
         creditor_time,
@@ -188,7 +187,7 @@ fn it_models_causal_transaction_structure() {
     .iter()
     .fold(Geonum::new_with_blade(0.0, 2, 0.0, 1.0), |acc, bivector| {
         // geometric sum preserving directional information
-        let new_length = acc.length + bivector.length;
+        let new_length = acc.mag + bivector.mag;
 
         if new_length == 0.0 {
             return acc; // avoid division by zero
@@ -197,8 +196,8 @@ fn it_models_causal_transaction_structure() {
         // weighted average of angles
         let acc_angle = acc.angle.grade_angle();
         let biv_angle = bivector.angle.grade_angle();
-        let new_angle = if acc.length > 0.0 {
-            (acc_angle * acc.length + biv_angle * bivector.length) / new_length
+        let new_angle = if acc.mag > 0.0 {
+            (acc_angle * acc.mag + biv_angle * bivector.mag) / new_length
         } else {
             biv_angle
         };
@@ -212,8 +211,8 @@ fn it_models_causal_transaction_structure() {
 
     // prove the combined flow has the expected magnitude
     assert_eq!(
-        economic_flow.length,
-        ground_coffee.length + pasta.length + paper_towels.length + sales_tax.length
+        economic_flow.mag,
+        ground_coffee.mag + pasta.mag + paper_towels.mag + sales_tax.mag
     );
 
     // prove constant-time calculation regardless of transaction count
@@ -226,7 +225,7 @@ fn it_models_causal_transaction_structure() {
     ]
     .iter()
     .fold(Geonum::new_with_blade(0.0, 2, 0.0, 1.0), |acc, bivector| {
-        let new_length = acc.length + bivector.length;
+        let new_length = acc.mag + bivector.mag;
 
         if new_length == 0.0 {
             return acc;
@@ -234,8 +233,8 @@ fn it_models_causal_transaction_structure() {
 
         let acc_angle = acc.angle.grade_angle();
         let biv_angle = bivector.angle.grade_angle();
-        let new_angle = if acc.length > 0.0 {
-            (acc_angle * acc.length + biv_angle * bivector.length) / new_length
+        let new_angle = if acc.mag > 0.0 {
+            (acc_angle * acc.mag + biv_angle * bivector.mag) / new_length
         } else {
             biv_angle
         };
@@ -312,18 +311,16 @@ fn it_models_investment_network_resilience() {
 
             // calculate losses for each investor
             for (investor_idx, investment) in investors {
-                let loss_amount = investment.length * (1.0 - recovery);
+                let loss_amount = investment.mag * (1.0 - recovery);
 
                 // apply loss to investor balance
                 acct_balances[investor_idx] = Geonum::new_with_angle(
-                    acct_balances[investor_idx].length - loss_amount,
+                    acct_balances[investor_idx].mag - loss_amount,
                     acct_balances[investor_idx].angle,
                 );
 
                 // check if this investor now defaults and add to queue if so
-                if acct_balances[investor_idx].length < 0.0
-                    && !default_queue.contains(&investor_idx)
-                {
+                if acct_balances[investor_idx].mag < 0.0 && !default_queue.contains(&investor_idx) {
                     default_queue.push(investor_idx);
                 }
             }
@@ -333,10 +330,10 @@ fn it_models_investment_network_resilience() {
     // analyze network stability - completely different from traditional systemic risk
     let compute_network_impact = |original: &[Geonum], after_default: &[Geonum]| -> Geonum {
         // total value in system before default
-        let initial_value: f64 = original.iter().map(|b| b.length).sum();
+        let initial_value: f64 = original.iter().map(|b| b.mag).sum();
 
         // total value in system after default
-        let final_value: f64 = after_default.iter().map(|b| b.length).sum();
+        let final_value: f64 = after_default.iter().map(|b| b.mag).sum();
 
         // compute system impact - limited to direct investment chains
         let loss_ratio = (initial_value - final_value) / initial_value;
@@ -344,14 +341,14 @@ fn it_models_investment_network_resilience() {
         // compute directional impact
         let avg_angle_before = original
             .iter()
-            .map(|b| b.angle.grade_angle() * b.length)
+            .map(|b| b.angle.grade_angle() * b.mag)
             .sum::<f64>()
             / initial_value;
 
         let avg_angle_after = after_default
             .iter()
-            .filter(|b| b.length > 0.0) // exclude defaulted entities
-            .map(|b| b.angle.grade_angle() * b.length)
+            .filter(|b| b.mag > 0.0) // exclude defaulted entities
+            .map(|b| b.angle.grade_angle() * b.mag)
             .sum::<f64>()
             / final_value;
 
@@ -381,7 +378,7 @@ fn it_models_investment_network_resilience() {
     // key insight: theres no systemic risk - only direct investment chain impacts
     // the same money cant be in two places at once, eliminating leveraged contagion
 
-    println!("network loss: {:.2}%", impact.length * 100.0);
+    println!("network loss: {:.2}%", impact.mag * 100.0);
     println!(
         "investment direction shift: {:.4}",
         impact.angle.grade_angle()
@@ -397,7 +394,7 @@ fn it_models_investment_network_resilience() {
     // test that impact is contained to direct investment chains
     // this fundamentally transforms traditional "systemic risk"
     assert!(
-        impact.length < 0.1, // loss is limited to direct investment chains
+        impact.mag < 0.1, // loss is limited to direct investment chains
         "in bivector economy, defaults impact only direct investment chains"
     );
 }
@@ -477,7 +474,7 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
             // calculate geometric mean of profit rates
             let mean_length = profit_rates
                 .iter()
-                .map(|g| g.length)
+                .map(|g| g.mag)
                 .fold(1.0, |acc, rate| acc * (1.0 + rate))
                 .powf(1.0 / profit_rates.len() as f64)
                 - 1.0;
@@ -567,35 +564,29 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
     let total_investment = tech_investment + mfg_investment + retail_investment + health_investment;
 
     // weighted average cost of capital across market
-    let market_cost = (tech_capital_cost.length * tech_investment
-        + mfg_capital_cost.length * mfg_investment
-        + retail_capital_cost.length * retail_investment
-        + health_capital_cost.length * health_investment)
+    let market_cost = (tech_capital_cost.mag * tech_investment
+        + mfg_capital_cost.mag * mfg_investment
+        + retail_capital_cost.mag * retail_investment
+        + health_capital_cost.mag * health_investment)
         / total_investment;
 
     // the fundamental advantage: capital costs emerge naturally
     // from actual economic returns rather than central bank manipulation
     println!("Natural cost of capital by sector (no Federal Reserve needed):");
-    println!("  Technology:    {:.2}%", tech_capital_cost.length * 100.0);
-    println!("  Manufacturing: {:.2}%", mfg_capital_cost.length * 100.0);
-    println!(
-        "  Retail:        {:.2}%",
-        retail_capital_cost.length * 100.0
-    );
-    println!(
-        "  Healthcare:    {:.2}%",
-        health_capital_cost.length * 100.0
-    );
+    println!("  Technology:    {:.2}%", tech_capital_cost.mag * 100.0);
+    println!("  Manufacturing: {:.2}%", mfg_capital_cost.mag * 100.0);
+    println!("  Retail:        {:.2}%", retail_capital_cost.mag * 100.0);
+    println!("  Healthcare:    {:.2}%", health_capital_cost.mag * 100.0);
     println!("Market-wide cost of capital: {:.2}%", market_cost * 100.0);
     println!("Calculation time: {:.2} nanoseconds", duration.as_nanos());
 
     // verify meaningful results
     assert!(
-        tech_capital_cost.length > 0.0,
+        tech_capital_cost.mag > 0.0,
         "cost of capital should be positive"
     );
     assert!(
-        tech_capital_cost.length > mfg_capital_cost.length,
+        tech_capital_cost.mag > mfg_capital_cost.mag,
         "higher risk sectors should have higher capital costs"
     );
 

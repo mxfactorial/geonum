@@ -1,5 +1,11 @@
 # changelog
 
+## 0.10.0 (2025-12-10)
+
+### changed
+- renamed Geonum length struct field to mag (magnitude)
+- renamed Angle value struct field to rem (remainder)
+
 ## 0.9.3 (2025-11-14)
 
 ### added

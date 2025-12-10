@@ -15,8 +15,8 @@ fn it_adds_scalars() {
     let b = Geonum::new_with_blade(4.0, 0, 0.0, 1.0); // [4, 0] = positive 4, scalar
 
     // convert to cartesian (for scalars, just the length)
-    let a_cartesian = a.length * a.angle.grade_angle().cos(); // 3
-    let b_cartesian = b.length * b.angle.grade_angle().cos(); // 4
+    let a_cartesian = a.mag * a.angle.grade_angle().cos(); // 3
+    let b_cartesian = b.mag * b.angle.grade_angle().cos(); // 4
 
     // add them
     let sum_cartesian = a_cartesian + b_cartesian; // 7
@@ -30,7 +30,7 @@ fn it_adds_scalars() {
     };
 
     // verify result is [7, 0]
-    assert_eq!(result.length, 7.0);
+    assert_eq!(result.mag, 7.0);
     assert_eq!(result.angle, Angle::new(0.0, 1.0));
 
     // test with negative scalar (on the negative real axis)
@@ -39,8 +39,8 @@ fn it_adds_scalars() {
     let d = Geonum::new_with_blade(8.0, 0, 1.0, 1.0); // [8, pi] = negative 8, scalar
 
     // convert to cartesian for operation
-    let c_cartesian = c.length * c.angle.grade_angle().cos(); // 5
-    let d_cartesian = d.length * d.angle.grade_angle().cos(); // -8
+    let c_cartesian = c.mag * c.angle.grade_angle().cos(); // 5
+    let d_cartesian = d.mag * d.angle.grade_angle().cos(); // -8
 
     // add them
     let difference = c_cartesian + d_cartesian; // -3
@@ -53,7 +53,7 @@ fn it_adds_scalars() {
     };
 
     // verify result is [3, pi] (negative 3)
-    assert_eq!(result2.length, 3.0);
+    assert_eq!(result2.mag, 3.0);
     assert_eq!(result2.angle, Angle::new(1.0, 1.0));
 }
 
@@ -71,7 +71,7 @@ fn it_multiplies_scalars() {
     let product1 = a * b;
 
     // verify result is [12, 0]
-    assert_eq!(product1.length, 12.0);
+    assert_eq!(product1.mag, 12.0);
     assert_eq!(product1.angle, Angle::new(0.0, 1.0));
 
     // multiply positive by negative
@@ -83,7 +83,7 @@ fn it_multiplies_scalars() {
     let product2 = c * d;
 
     // verify result is [10, pi] (negative 10)
-    assert_eq!(product2.length, 10.0);
+    assert_eq!(product2.mag, 10.0);
     assert_eq!(product2.angle, Angle::new(1.0, 1.0));
 
     // multiply two negative numbers
@@ -95,7 +95,7 @@ fn it_multiplies_scalars() {
     let product3 = e * f;
 
     // verify result is [6, 2pi] which reduces to [6, 0] (positive 6)
-    assert_eq!(product3.length, 6.0);
+    assert_eq!(product3.mag, 6.0);
     assert_eq!(product3.angle, Angle::new(4.0, 2.0)); // 2pi = 4 * pi/2
 }
 
@@ -110,11 +110,11 @@ fn it_adds_vectors() {
     let b = Geonum::new_with_blade(4.0, 1, 1.0, 2.0); // [4, pi/2] = 4 along y-axis, vector
 
     // convert to cartesian coordinates
-    let a_x = a.length * a.angle.grade_angle().cos(); // 3
-    let a_y = a.length * a.angle.grade_angle().sin(); // 0
+    let a_x = a.mag * a.angle.grade_angle().cos(); // 3
+    let a_y = a.mag * a.angle.grade_angle().sin(); // 0
 
-    let b_x = b.length * b.angle.grade_angle().cos(); // 0
-    let b_y = b.length * b.angle.grade_angle().sin(); // 4
+    let b_x = b.mag * b.angle.grade_angle().cos(); // 0
+    let b_y = b.mag * b.angle.grade_angle().sin(); // 4
 
     // add the components
     let sum_x = a_x + b_x; // 3
@@ -129,11 +129,11 @@ fn it_adds_vectors() {
     let result = Geonum::new_from_cartesian(sum_x, sum_y);
 
     // verify the result is a vector with length 5 and angle arctan(4/3)
-    assert!((result.length - 5.0).abs() < EPSILON);
+    assert!((result.mag - 5.0).abs() < EPSILON);
     // angle atan2(4,3) ≈ 0.927 radians ≈ 53.13°
     // new_from_cartesian decomposes this into blade and value
     assert_eq!(result.angle.blade(), 1); // first quadrant angle
-    assert!((result.angle.value() - 4.0_f64.atan2(3.0)).abs() < EPSILON);
+    assert!((result.angle.rem() - 4.0_f64.atan2(3.0)).abs() < EPSILON);
 
     // test adding vectors in opposite directions
     let c = Geonum::new_with_blade(5.0, 1, 0.0, 1.0); // [5, 0] = 5 along x-axis, vector
@@ -141,11 +141,11 @@ fn it_adds_vectors() {
     let d = Geonum::new_with_blade(5.0, 1, 1.0, 1.0); // [5, pi] = 5 along negative x-axis, vector
 
     // convert to cartesian
-    let c_x = c.length * c.angle.grade_angle().cos(); // 5
-    let c_y = c.length * c.angle.grade_angle().sin(); // 0
+    let c_x = c.mag * c.angle.grade_angle().cos(); // 5
+    let c_y = c.mag * c.angle.grade_angle().sin(); // 0
 
-    let d_x = d.length * d.angle.grade_angle().cos(); // -5
-    let d_y = d.length * d.angle.grade_angle().sin(); // 0
+    let d_x = d.mag * d.angle.grade_angle().cos(); // -5
+    let d_y = d.mag * d.angle.grade_angle().sin(); // 0
 
     // add components
     let sum2_x = c_x + d_x; // 0
@@ -172,14 +172,14 @@ fn it_multiplies_vectors() {
     let product = a * b;
 
     // verify the result has length 2*3=6 and angle pi/4+pi/3=7pi/12
-    assert_eq!(product.length, 6.0);
+    assert_eq!(product.mag, 6.0);
     // product of two blade-1 vectors: blade accumulates, angles add
     // blade: 1 + 1 = 2
     // angle: PI/4 + PI/3 = 3PI/12 + 4PI/12 = 7PI/12
     // 7PI/12 > PI/2, so crosses boundary: blade += 1, angle -= PI/2
     // final: blade 3, angle 7PI/12 - PI/2 = PI/12
     assert_eq!(product.angle.blade(), 3);
-    assert!((product.angle.value() - PI / 12.0).abs() < EPSILON);
+    assert!((product.angle.rem() - PI / 12.0).abs() < EPSILON);
 
     // test multiplication of perpendicular vectors (90 degrees apart)
     let c = Geonum::new_with_blade(2.0, 1, 0.0, 1.0); // [2, 0] = 2 along x-axis, vector
@@ -194,11 +194,11 @@ fn it_multiplies_vectors() {
     let perpendicular_product = c * d;
 
     // verify result has length 2*4=8 and angle 0+pi/2=pi/2
-    assert_eq!(perpendicular_product.length, 8.0);
+    assert_eq!(perpendicular_product.mag, 8.0);
     // c: blade 1, angle 0; d: blade 1, angle PI/2
     // product: blade 2, angle PI/2, but PI/2 is boundary so blade 3, angle 0
     assert_eq!(perpendicular_product.angle.blade(), 3);
-    assert!(perpendicular_product.angle.value().abs() < EPSILON);
+    assert!(perpendicular_product.angle.rem().abs() < EPSILON);
 
     // test multiplication of opposite vectors
     let e = Geonum::new_with_blade(
@@ -217,12 +217,12 @@ fn it_multiplies_vectors() {
     let opposite_product = e * f;
 
     // verify result has length 5*2=10
-    assert_eq!(opposite_product.length, 10.0);
+    assert_eq!(opposite_product.mag, 10.0);
     // e: blade 1, angle PI/6; f: blade 1, angle -PI/6 (normalizes to 11PI/6)
     // When f is created with negative angle, it normalizes to positive
     // The exact blade count depends on the normalization
     assert_eq!(opposite_product.angle.blade(), 6);
-    assert!(opposite_product.angle.value().abs() < EPSILON);
+    assert!(opposite_product.angle.rem().abs() < EPSILON);
 }
 
 #[test]
@@ -247,7 +247,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product1 = vector * scalar;
 
     // verify result has length 3*2=6 and angle remains pi/4 (unchanged)
-    assert_eq!(product1.length, 6.0);
+    assert_eq!(product1.mag, 6.0);
     // vector (blade 1) * scalar (blade 0) = vector (blade 1)
     assert_eq!(product1.angle, Angle::new_with_blade(1, 1.0, 4.0));
 
@@ -262,17 +262,17 @@ fn it_multiplies_vectors_with_scalars() {
     let product2 = vector * negative_scalar;
 
     // verify result has length 3*2=6 and angle is now pi/4+pi=5pi/4 (rotated 180 degrees)
-    assert_eq!(product2.length, 6.0);
+    assert_eq!(product2.mag, 6.0);
     // vector (blade 1, PI/4) * negative scalar (blade 0, PI) = blade 1, angle 5PI/4
     // 5PI/4 = 2.5 * PI/2, so 2 boundary crossings: blade 3, angle PI/4
     assert_eq!(product2.angle.blade(), 3);
-    assert!((product2.angle.value() - PI / 4.0).abs() < EPSILON);
+    assert!((product2.angle.rem() - PI / 4.0).abs() < EPSILON);
 
     // verify scalar multiplication is commutative
     let product3 = negative_scalar * vector;
 
     // should have same length and angle as product2
-    assert_eq!(product3.length, product2.length);
+    assert_eq!(product3.mag, product2.mag);
     assert_eq!(product3.angle, product2.angle);
 
     // test scaling a vector by zero
@@ -286,7 +286,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product4 = vector * zero_scalar;
 
     // verify result has length 0 (angle doesn't matter for zero vector)
-    assert_eq!(product4.length, 0.0);
+    assert_eq!(product4.mag, 0.0);
 }
 
 #[test]
@@ -311,7 +311,7 @@ fn it_computes_ijk_product() {
     let ijk = ij * k; // blade 3 + blade 3 = blade 6, angle 3pi/2 + 3pi/2 = 3pi
 
     // check result
-    assert_eq!(ijk.length, 1.0);
+    assert_eq!(ijk.mag, 1.0);
     assert_eq!(ijk.angle, Angle::new(6.0, 2.0)); // 3pi = 6 * pi/2
 }
 
@@ -333,9 +333,9 @@ fn it_operates_in_extreme_dimensions() {
     let v2 = Geonum::create_dimension(1.0, 1); // second basis vector e₂
 
     // verify basic properties - constant time operations
-    assert_eq!(v1.length, 1.0);
+    assert_eq!(v1.mag, 1.0);
     assert_eq!(v1.angle, Angle::new(0.0, 1.0));
-    assert_eq!(v2.length, 1.0);
+    assert_eq!(v2.mag, 1.0);
     assert_eq!(v2.angle, Angle::new(1.0, 2.0));
 
     // compute operations in this million-dimensional space
@@ -360,18 +360,18 @@ fn it_operates_in_extreme_dimensions() {
     let duration = start.elapsed();
 
     // verify results
-    assert!(dot.length.abs() < EPSILON); // orthogonal vectors have zero dot product
-    assert_eq!(wedge.length, 1.0); // unit bivector
-    assert_eq!(geo_product.length, 1.0);
+    assert!(dot.mag.abs() < EPSILON); // orthogonal vectors have zero dot product
+    assert_eq!(wedge.mag, 1.0); // unit bivector
+    assert_eq!(geo_product.mag, 1.0);
     // v1 (blade 0) * v2 (blade 1) = blade 0 + 1 = blade 1
     assert_eq!(geo_product.angle.blade(), 1);
-    assert!(geo_product.angle.value().abs() < EPSILON);
+    assert!(geo_product.angle.rem().abs() < EPSILON);
 
-    assert_eq!(result.length, 2.0); // length of v3
-                                    // (v1*v2) has blade 1, angle 0; v3 has blade 1, angle PI/3
-                                    // result: blade 1 + 1 = 2, angle PI/3
+    assert_eq!(result.mag, 2.0); // length of v3
+                                 // (v1*v2) has blade 1, angle 0; v3 has blade 1, angle PI/3
+                                 // result: blade 1 + 1 = 2, angle PI/3
     assert_eq!(result.angle.blade(), 2);
-    assert!((result.angle.value() - PI / 3.0).abs() < EPSILON);
+    assert!((result.angle.rem() - PI / 3.0).abs() < EPSILON);
 
     // confirm operation completed in reasonable time (should be milliseconds)
     // if this were a traditional GA implementation, it would take longer than
@@ -399,7 +399,7 @@ fn it_keeps_angles_less_than_2pi() {
     let wedge = a.wedge(&b);
     // a has blade 1, b has blade 5, but both have value 0 within their blade
     // angle difference is 4*(π/2) = 2π ≡ 0, so sin(0) = 0
-    assert!(wedge.length.abs() < EPSILON); // Parallel vectors have zero wedge product
+    assert!(wedge.mag.abs() < EPSILON); // Parallel vectors have zero wedge product
 
     // Differentiation increases blade grade
     let a_diff = a.differentiate();

@@ -8,44 +8,44 @@ use std::ops::{Add, Div, Mul, Sub};
 pub const EPSILON: f64 = 1e-10;
 
 /// `Geonum` represents a single directed quantity:
-/// - `length`: the magnitude
+/// - `mag`: the magnitude
 /// - `angle`: the orientation and blade information (encoded as an Angle struct)
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Geonum {
-    /// length component
-    pub length: f64,
+    /// magnitude component
+    pub mag: f64,
     /// angle component
     pub angle: Angle,
 }
 
 impl Geonum {
-    /// creates a geometric number from length and angle
+    /// creates a geometric number from magnitude and angle
     ///
     /// # arguments
-    /// * `length` - magnitude component
+    /// * `mag` - magnitude component
     /// * `pi_radians` - number of π radians
     /// * `divisor` - denominator of π (2 means π/2, 4 means π/4, etc)
     ///
     /// # returns
-    /// a new geometric number with encoded length and unified angle-blade
-    pub fn new(length: f64, pi_radians: f64, divisor: f64) -> Self {
+    /// a new geometric number with encoded magnitude and unified angle-blade
+    pub fn new(mag: f64, pi_radians: f64, divisor: f64) -> Self {
         Geonum {
-            length,
+            mag,
             angle: Angle::new(pi_radians, divisor),
         }
     }
 
-    /// creates a geometric number from length and angle components
+    /// creates a geometric number from magnitude and angle components
     ///
     /// # args
-    /// * `length` - magnitude component
+    /// * `mag` - magnitude component
     /// * `angle` - directional component
     ///
     /// # returns
     /// a new geometric number
-    pub fn new_with_angle(length: f64, angle: Angle) -> Self {
-        Self { length, angle }
+    pub fn new_with_angle(mag: f64, angle: Angle) -> Self {
+        Self { mag, angle }
     }
 
     /// creates a geometric number from cartesian components
@@ -57,10 +57,10 @@ impl Geonum {
     /// # returns
     /// a new geometric number
     pub fn new_from_cartesian(x: f64, y: f64) -> Self {
-        let length = (x * x + y * y).sqrt();
+        let mag = (x * x + y * y).sqrt();
         let angle = Angle::new_from_cartesian(x, y);
 
-        Self { length, angle }
+        Self { mag, angle }
     }
 
     /// creates a new geonum with specified blade count and basic angle
@@ -70,16 +70,16 @@ impl Geonum {
     /// for simple cases, use `new()` which automatically computes blade from angle.
     ///
     /// # args
-    /// * `length` - magnitude component
+    /// * `mag` - magnitude component
     /// * `blade` - the blade grade to set (number of π/2 rotations)
     /// * `pi_radians` - additional π radians beyond blade rotations
     /// * `divisor` - denominator of π
     ///
     /// # returns
     /// a new geometric number with specified blade and angle
-    pub fn new_with_blade(length: f64, blade: usize, pi_radians: f64, divisor: f64) -> Self {
+    pub fn new_with_blade(mag: f64, blade: usize, pi_radians: f64, divisor: f64) -> Self {
         Self {
-            length,
+            mag,
             angle: Angle::new_with_blade(blade, pi_radians, divisor),
         }
     }
@@ -87,14 +87,14 @@ impl Geonum {
     /// creates a geometric number at a standardized dimensional angle
     ///
     /// # args
-    /// * `length` - magnitude component  
+    /// * `mag` - magnitude component
     /// * `dimension_index` - which dimension (sets angle = dimension_index * PI/2)
     ///
     /// # returns
     /// geometric number with blade = dimension_index and angle = dimension_index * PI/2
-    pub fn create_dimension(length: f64, dimension_index: usize) -> Self {
+    pub fn create_dimension(mag: f64, dimension_index: usize) -> Self {
         Self {
-            length,
+            mag,
             angle: Angle::new(dimension_index as f64, 2.0), // dimension_index * π/2
         }
     }
@@ -108,7 +108,7 @@ impl Geonum {
     /// a new scalar geometric number
     pub fn scalar(value: f64) -> Self {
         Self {
-            length: value.abs(),
+            mag: value.abs(),
             angle: if value >= 0.0 {
                 Angle::new(0.0, 1.0)
             } else {
@@ -125,7 +125,7 @@ impl Geonum {
     pub fn increment_blade(&self) -> Self {
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
         Self {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + quarter_turn,
         }
     }
@@ -138,7 +138,7 @@ impl Geonum {
     pub fn decrement_blade(&self) -> Self {
         let neg_quarter_turn = Angle::new(-1.0, 2.0); // -π/2
         Self {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + neg_quarter_turn,
         }
     }
@@ -151,7 +151,7 @@ impl Geonum {
     /// grade 2 → grade 0 (bivector → scalar)
     /// grade 3 → grade 1 (trivector → vector)
     pub fn dual(&self) -> Self {
-        Geonum::new_with_angle(self.length, self.angle.dual())
+        Geonum::new_with_angle(self.mag, self.angle.dual())
     }
 
     /// computes the undual (inverse dual) of this geometric object
@@ -159,7 +159,7 @@ impl Geonum {
     /// in geonum's 4-cycle structure, undual is identical to dual
     /// because the grade mapping is self-inverse
     pub fn undual(&self) -> Self {
-        Geonum::new_with_angle(self.length, self.angle.undual())
+        Geonum::new_with_angle(self.mag, self.angle.undual())
     }
 
     /// creates a new geonum with the same blade as another
@@ -169,14 +169,14 @@ impl Geonum {
     /// * `other` - the geonum whose blade to copy
     ///
     /// # returns
-    /// a new geonum with this length and angle but other's blade
+    /// a new geonum with this magnitude and angle but other's blade
     pub fn copy_blade(&self, other: &Geonum) -> Self {
         let current_blade = self.angle.blade();
         let target_blade = other.angle.blade();
         let blade_diff = target_blade as i64 - current_blade as i64;
         let rotation = Angle::new(blade_diff as f64, 2.0); // blade_diff * π/2
         Self {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + rotation,
         }
     }
@@ -192,7 +192,7 @@ impl Geonum {
     pub fn differentiate(&self) -> Geonum {
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + quarter_turn, // differentiation rotates by π/2
         }
     }
@@ -208,7 +208,7 @@ impl Geonum {
     pub fn integrate(&self) -> Geonum {
         let three_quarter_turns = Angle::new(3.0, 2.0); // 3π/2
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + three_quarter_turns,
         }
     }
@@ -224,14 +224,14 @@ impl Geonum {
     /// the inverse as a new geometric number
     ///
     /// # panics
-    /// if the length is zero
+    /// if the magnitude is zero
     pub fn inv(&self) -> Geonum {
-        if self.length == 0.0 {
-            panic!("cannot invert a geometric number with zero length");
+        if self.mag == 0.0 {
+            panic!("cannot invert a geometric number with zero mag");
         }
 
         Geonum {
-            length: 1.0 / self.length,
+            mag: 1.0 / self.mag,
             angle: self.angle.negate(),
         }
     }
@@ -246,26 +246,26 @@ impl Geonum {
     /// the quotient as a new geometric number
     ///
     /// # panics
-    /// if the divisor has zero length
+    /// if the divisor has zero magnitude
     pub fn div(&self, other: &Geonum) -> Geonum {
         *self * other.inv()
     }
 
-    /// normalizes a geometric number to unit length
-    /// preserves the angle but sets length to 1
+    /// normalizes a geometric number to unit magnitude
+    /// preserves the angle but sets magnitude to 1
     ///
     /// # returns
-    /// a new geometric number with length 1 and the same angle
+    /// a new geometric number with magnitude 1 and the same angle
     ///
     /// # panics
-    /// if the length is zero
+    /// if the magnitude is zero
     pub fn normalize(&self) -> Geonum {
-        if self.length == 0.0 {
-            panic!("cannot normalize a geometric number with zero length");
+        if self.mag == 0.0 {
+            panic!("cannot normalize a geometric number with zero mag");
         }
 
         Geonum {
-            length: 1.0,
+            mag: 1.0,
             angle: self.angle,
         }
     }
@@ -281,7 +281,7 @@ impl Geonum {
     pub fn dot(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
         let cos_component = angle_diff.grade_angle().cos();
-        let scalar_value = self.length * other.length * cos_component;
+        let scalar_value = self.mag * other.mag * cos_component;
         // encode sign in angle so consumers read grade based polarity instead of raw negatives
         Self::signed_at(scalar_value, Angle::new(0.0, 1.0))
     }
@@ -296,7 +296,7 @@ impl Geonum {
     /// scalar projection component in the specified dimension
     pub fn project_to_dimension(&self, dimension_index: usize) -> f64 {
         let target_axis = Angle::new_with_blade(dimension_index, 0.0, 1.0);
-        self.length * self.angle.project(target_axis)
+        self.mag * self.angle.project(target_axis)
     }
 
     /// computes the wedge product of two geometric numbers
@@ -310,7 +310,7 @@ impl Geonum {
     pub fn wedge(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
         let sin_value = angle_diff.grade_angle().sin();
-        let length = self.length * other.length * sin_value.abs();
+        let mag = self.mag * other.mag * sin_value.abs();
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
                                                  // wedge product creates bivector (oriented area) by adding π/2 to combined angles
                                                  // this blade increment transforms scalar→vector or vector→bivector grades
@@ -320,7 +320,7 @@ impl Geonum {
             angle = angle + Angle::new(1.0, 1.0); // add π
         }
 
-        Geonum { length, angle }
+        Geonum { mag, angle }
     }
 
     /// computes the geometric product of two geometric numbers
@@ -347,7 +347,7 @@ impl Geonum {
     /// a new geometric number representing the rotated value
     pub fn rotate(&self, rotation: Angle) -> Geonum {
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle.rotate(rotation),
         }
     }
@@ -367,13 +367,13 @@ impl Geonum {
     /// let v = Geonum::new(2.0, 1.0, 4.0); // [2, PI/4]
     /// let neg_v = v.negate();
     ///
-    /// // negation preserves length but rotates angle by π
-    /// assert_eq!(neg_v.length, v.length);
+    /// // negation preserves magnitude but rotates angle by π
+    /// assert_eq!(neg_v.mag, v.mag);
     /// // angle rotated by π: PI/4 + PI = 5*PI/4
     /// ```
     pub fn negate(&self) -> Self {
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle.negate(),
         }
     }
@@ -398,7 +398,7 @@ impl Geonum {
         // pure forward addition
         let reflected_angle = axis.angle + axis.angle + complement;
 
-        Geonum::new_with_angle(self.length, reflected_angle)
+        Geonum::new_with_angle(self.mag, reflected_angle)
     }
 
     /// projects this geometric number onto another
@@ -410,21 +410,21 @@ impl Geonum {
     /// a new geometric number representing the projection
     pub fn project(&self, onto: &Geonum) -> Geonum {
         // avoid division by zero
-        if onto.length.abs() < EPSILON {
+        if onto.mag.abs() < EPSILON {
             return Geonum {
-                length: 0.0,
+                mag: 0.0,
                 angle: Angle::new_with_blade(self.angle.blade(), 0.0, 1.0), // preserve blade, zero angle
             };
         }
-        // polar projection encoding: length nonnegative, sign via +π
+        // polar projection encoding: magnitude nonnegative, sign via +π
         let projection_factor = self.angle.project(onto.angle);
-        let length = self.length * projection_factor.abs();
+        let mag = self.mag * projection_factor.abs();
         let angle = if projection_factor >= 0.0 {
             onto.angle
         } else {
             onto.angle + Angle::new(1.0, 1.0)
         };
-        Geonum::new_with_angle(length, angle)
+        Geonum::new_with_angle(mag, angle)
     }
 
     /// computes the rejection of this geometric number from another
@@ -470,10 +470,10 @@ impl Geonum {
         // due to floating point precision, we check if the absolute value
         // of the dot product magnitude is less than a small epsilon value
         let dot_result = self.dot(other);
-        dot_result.length.abs() < EPSILON
+        dot_result.mag.abs() < EPSILON
     }
 
-    /// computes the absolute difference between the lengths of two geometric numbers
+    /// computes the absolute difference between the magnitudes of two geometric numbers
     ///
     /// useful for comparing field strengths in electromagnetic contexts
     /// or for testing convergence in iterative algorithms
@@ -482,7 +482,7 @@ impl Geonum {
     /// * `other` - the geometric number to compare with
     ///
     /// # returns
-    /// the absolute difference between lengths as a scalar (f64)
+    /// the absolute difference between magnitudes as a scalar (f64)
     ///
     /// # examples
     /// ```
@@ -492,11 +492,11 @@ impl Geonum {
     /// // pi/2 represents 90 degrees (blade 1)
     /// let b = Geonum::new(3.0, 1.0, 2.0); // 1 * PI/2
     ///
-    /// let diff = a.length_diff(&b);
+    /// let diff = a.mag_diff(&b);
     /// assert_eq!(diff, 1.0);
     /// ```
-    pub fn length_diff(&self, other: &Geonum) -> f64 {
-        (self.length - other.length).abs()
+    pub fn mag_diff(&self, other: &Geonum) -> f64 {
+        (self.mag - other.mag).abs()
     }
 
     /// raises this geometric number to a power
@@ -509,7 +509,7 @@ impl Geonum {
     /// a new geometric number representing self^n
     pub fn pow(self, n: f64) -> Self {
         Self {
-            length: self.length.powf(n),
+            mag: self.mag.powf(n),
             angle: self.angle * Angle::new(n, 1.0),
         }
     }
@@ -531,9 +531,9 @@ impl Geonum {
         dual_join.dual()
     }
 
-    /// returns the length (magnitude) of this geometric number
-    pub fn length(&self) -> f64 {
-        self.length
+    /// returns the magnitude of this geometric number
+    pub fn mag(&self) -> f64 {
+        self.mag
     }
 
     /// returns the angle of this geometric number
@@ -563,13 +563,13 @@ impl Geonum {
     /// if the point is at the circle center (zero offset)
     pub fn invert_circle(&self, center: &Geonum, radius: f64) -> Geonum {
         let offset = *self - *center;
-        if offset.length == 0.0 {
+        if offset.mag == 0.0 {
             panic!("cannot invert point at circle center");
         }
 
         // circle inversion: center + r²/(point - center)
         // preserves angle, scales by r²/distance
-        let inverted_offset = Geonum::new_with_angle(radius * radius / offset.length, offset.angle);
+        let inverted_offset = Geonum::new_with_angle(radius * radius / offset.mag, offset.angle);
         *center + inverted_offset
     }
 
@@ -600,7 +600,7 @@ impl Geonum {
     /// ```
     pub fn base_angle(&self) -> Geonum {
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle.base_angle(),
         }
     }
@@ -612,29 +612,29 @@ impl Geonum {
     /// and conformal geometry
     ///
     /// # arguments
-    /// * `scale_factor` - multiplicative factor for length
+    /// * `scale_factor` - multiplicative factor for magnitude
     /// * `rotation` - angle to add for rotation
     ///
     /// # returns
-    /// transformed geometric number with scaled length and rotated angle
+    /// transformed geometric number with scaled magnitude and rotated angle
     ///
     /// # example
     /// ```
     /// use geonum::{Geonum, Angle};
-    /// let p = Geonum::new(1.0, 0.0, 1.0);  // unit length at angle 0
+    /// let p = Geonum::new(1.0, 0.0, 1.0);  // unit magnitude at angle 0
     /// let spiral = p.scale_rotate(2.0, Angle::new(1.0, 6.0));  // double and rotate π/6
-    /// assert_eq!(spiral.length, 2.0);
+    /// assert_eq!(spiral.mag, 2.0);
     /// assert_eq!(spiral.angle, Angle::new(1.0, 6.0));
     /// ```
     pub fn scale_rotate(&self, scale_factor: f64, rotation: Angle) -> Geonum {
         if scale_factor < 0.0 {
-            // negative scale: add π to angle and use absolute value for length
+            // negative scale: add π to angle and use absolute value for magnitude
             Geonum::new_with_angle(
-                self.length * scale_factor.abs(),
+                self.mag * scale_factor.abs(),
                 self.angle.negate() + rotation,
             )
         } else {
-            Geonum::new_with_angle(self.length * scale_factor, self.angle + rotation)
+            Geonum::new_with_angle(self.mag * scale_factor, self.angle + rotation)
         }
     }
 
@@ -643,8 +643,8 @@ impl Geonum {
     pub fn distance_to(&self, other: &Geonum) -> Geonum {
         // law of cosines: c² = a² + b² - 2ab·cos(θ)
         let angle_between = other.angle - self.angle;
-        let distance_squared = self.length * self.length + other.length * other.length
-            - 2.0 * self.length * other.length * angle_between.grade_angle().cos();
+        let distance_squared = self.mag * self.mag + other.mag * other.mag
+            - 2.0 * self.mag * other.mag * angle_between.grade_angle().cos();
         let distance = distance_squared.sqrt();
 
         // return as scalar geonum (blade 0)
@@ -653,15 +653,15 @@ impl Geonum {
 
     /// adjacent projection onto the even pair (φ = 0): hypotenuse × |cos(θ)| with sign in angle
     pub fn adj(&self) -> Geonum {
-        Geonum::cos(self.angle).scale(self.length)
+        Geonum::cos(self.angle).scale(self.mag)
     }
 
     /// opposite projection onto the odd pair (φ = π/2): hypotenuse × |sin(θ)| with sign in angle
     pub fn opp(&self) -> Geonum {
-        Geonum::sin(self.angle).scale(self.length)
+        Geonum::sin(self.angle).scale(self.mag)
     }
 
-    // helper: encode sign via +π at a base angle, keep length nonnegative
+    // helper: encode sign via +π at a base angle, keep magnitude nonnegative
     fn signed_at(value: f64, base: Angle) -> Geonum {
         let angle = if value < 0.0 {
             base + Angle::new(1.0, 1.0)
@@ -672,14 +672,14 @@ impl Geonum {
     }
 
     /// geonum cosine anchored to even pair 0↔π
-    /// length = |cos(θ)|, sign becomes +π rotation in angle
+    /// magnitude = |cos(θ)|, sign becomes +π rotation in angle
     pub fn cos(a: Angle) -> Geonum {
         let v = a.grade_angle().cos();
         Geonum::signed_at(v, Angle::new(0.0, 1.0))
     }
 
     /// geonum sine anchored to odd pair π/2↔3π/2
-    /// length = |sin(θ)|, sign becomes +π rotation in angle
+    /// magnitude = |sin(θ)|, sign becomes +π rotation in angle
     pub fn sin(a: Angle) -> Geonum {
         let v = a.grade_angle().sin();
         Geonum::signed_at(v, Angle::new(1.0, 2.0))
@@ -700,9 +700,9 @@ impl Geonum {
 
         // encode sign in grade: positive at grade 0, negative at grade 2
         if cos_component >= 0.0 {
-            Geonum::new_with_angle(self.length * cos_component, Angle::new(0.0, 1.0))
+            Geonum::new_with_angle(self.mag * cos_component, Angle::new(0.0, 1.0))
         } else {
-            Geonum::new_with_angle(self.length * (-cos_component), Angle::new(1.0, 1.0))
+            Geonum::new_with_angle(self.mag * (-cos_component), Angle::new(1.0, 1.0))
         }
     }
 }
@@ -714,36 +714,36 @@ impl Add for Geonum {
         // natural addition: combine geometric objects in polar form
         // no blade accumulation - result blade comes from result's natural angle
 
-        // special case: same angles add lengths directly
+        // special case: same angles add magnitudes directly
         if self.angle == other.angle {
             return Self {
-                length: self.length + other.length,
+                mag: self.mag + other.mag,
                 angle: self.angle,
             };
         }
 
-        // special case: opposite angles (π apart) subtract lengths
+        // special case: opposite angles (π apart) subtract magnitudes
         let pi_rotation = Angle::new(1.0, 1.0);
         if self.angle + pi_rotation == other.angle || other.angle + pi_rotation == self.angle {
-            let diff = self.length - other.length;
+            let diff = self.mag - other.mag;
 
             if diff.abs() < EPSILON {
                 // complete cancellation - preserve blade history
                 let combined_blade_count = self.angle.blade() + other.angle.blade();
                 return Self {
-                    length: 0.0,
+                    mag: 0.0,
                     angle: Angle::new_with_blade(combined_blade_count, 0.0, 1.0),
                 };
             } else if diff > 0.0 {
                 // first dominates - preserve its blade history
                 return Self {
-                    length: diff,
+                    mag: diff,
                     angle: self.angle,
                 };
             } else {
                 // second dominates - preserve its blade history
                 return Self {
-                    length: -diff,
+                    mag: -diff,
                     angle: other.angle,
                 };
             }
@@ -755,16 +755,15 @@ impl Add for Geonum {
         let angle2 = other.angle.grade_angle();
 
         // compute result angle from opposite and adjacent projections
-        let opp_sum = self.length * angle1.sin() + other.length * angle2.sin();
-        let adj_sum = self.length * angle1.cos() + other.length * angle2.cos();
+        let opp_sum = self.mag * angle1.sin() + other.mag * angle2.sin();
+        let adj_sum = self.mag * angle1.cos() + other.mag * angle2.cos();
         let result_angle = opp_sum.atan2(adj_sum);
 
-        // compute result length using cosine rule for rotation interference
+        // compute result magnitude using cosine rule for rotation interference
         let angle_diff = angle2 - angle1;
-        let result_length = (self.length.powi(2)
-            + other.length.powi(2)
-            + 2.0 * self.length * other.length * angle_diff.cos())
-        .sqrt();
+        let result_mag =
+            (self.mag.powi(2) + other.mag.powi(2) + 2.0 * self.mag * other.mag * angle_diff.cos())
+                .sqrt();
 
         // combine transformation histories
         let combined_blade_count = self.angle.blade() + other.angle.blade();
@@ -773,7 +772,7 @@ impl Add for Geonum {
         let blade_shift = (combined_blade_count as f64) * std::f64::consts::PI / 2.0;
         let adjusted_angle = result_angle - blade_shift;
         Self::new_with_blade(
-            result_length,
+            result_mag,
             combined_blade_count,
             adjusted_angle,
             std::f64::consts::PI,
@@ -854,9 +853,9 @@ impl Mul for Geonum {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        // angles add, lengths multiply
+        // angles add, magnitudes multiply
         Self {
-            length: self.length * other.length,
+            mag: self.mag * other.mag,
             angle: self.angle + other.angle,
         }
     }
@@ -892,14 +891,14 @@ impl Mul<&Geonum> for Geonum {
     }
 }
 
-// Angle * Geonum multiplication - creates geonum with angle and scaled length
+// Angle * Geonum multiplication - creates geonum with angle and scaled magnitude
 #[allow(clippy::suspicious_arithmetic_impl)]
 impl Mul<Geonum> for Angle {
     type Output = Geonum;
 
     fn mul(self, geonum: Geonum) -> Geonum {
         Geonum {
-            length: geonum.length,
+            mag: geonum.mag,
             angle: self + geonum.angle,
         }
     }
@@ -912,19 +911,19 @@ impl Mul<&Geonum> for Angle {
 
     fn mul(self, geonum: &Geonum) -> Geonum {
         Geonum {
-            length: geonum.length,
+            mag: geonum.mag,
             angle: self + geonum.angle,
         }
     }
 }
 
-// Angle + Geonum addition - adds angle while preserving length
+// Angle + Geonum addition - adds angle while preserving magnitude
 impl Add<Geonum> for Angle {
     type Output = Geonum;
 
     fn add(self, geonum: Geonum) -> Geonum {
         Geonum {
-            length: geonum.length,
+            mag: geonum.mag,
             angle: self + geonum.angle,
         }
     }
@@ -936,7 +935,7 @@ impl Add<&Geonum> for Angle {
 
     fn add(self, geonum: &Geonum) -> Geonum {
         Geonum {
-            length: geonum.length,
+            mag: geonum.mag,
             angle: self + geonum.angle,
         }
     }
@@ -991,11 +990,11 @@ impl PartialOrd for Geonum {
 
 impl Ord for Geonum {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // order by angle first (which includes blade), then by length
+        // order by angle first (which includes blade), then by magnitude
         match self.angle.cmp(&other.angle) {
             std::cmp::Ordering::Equal => self
-                .length
-                .partial_cmp(&other.length)
+                .mag
+                .partial_cmp(&other.mag)
                 .unwrap_or(std::cmp::Ordering::Equal),
             other => other,
         }
@@ -1011,8 +1010,8 @@ mod tests {
     fn geonum_constructor_sets_components() {
         let g = Geonum::new(1.0, 0.5, 2.0);
 
-        assert!((g.length - 1.0).abs() < EPSILON);
-        assert!((g.angle.value() - PI / 4.0).abs() < EPSILON);
+        assert!((g.mag - 1.0).abs() < EPSILON);
+        assert!((g.angle.rem() - PI / 4.0).abs() < EPSILON);
         assert_eq!(g.angle.blade(), 0);
     }
 
@@ -1025,8 +1024,8 @@ mod tests {
         // compute dot product
         let dot_product = a.dot(&b);
 
-        // for aligned vectors, result is product of lengths: cos(0) = 1
-        assert_eq!(dot_product.length, 12.0);
+        // for aligned vectors, result is product of magnitudes: cos(0) = 1
+        assert_eq!(dot_product.mag, 12.0);
 
         // create perpendicular vectors
         let c = Geonum::new(2.0, 0.0, 1.0); // [2, 0] = 2 on x-axis
@@ -1034,7 +1033,7 @@ mod tests {
 
         // dot product of perpendicular vectors is zero: cos(π/2) = 0
         let perpendicular_dot = c.dot(&d);
-        assert!(perpendicular_dot.length.abs() < EPSILON);
+        assert!(perpendicular_dot.mag.abs() < EPSILON);
     }
 
     #[test]
@@ -1048,7 +1047,7 @@ mod tests {
 
         // for perpendicular vectors, wedge product magnitude: sin(π/2) = 1
         // area of rectangle = 2 * 3 * sin(π/2) = 6
-        assert_eq!(wedge.length, 6.0);
+        assert_eq!(wedge.mag, 6.0);
         let expected_angle = a.angle + b.angle + Angle::new(1.0, 2.0); // 0 + π/2 + π/2 = π
         assert_eq!(wedge.angle, expected_angle);
 
@@ -1058,7 +1057,7 @@ mod tests {
 
         // wedge product of parallel vectors is zero: sin(0) = 0
         let parallel_wedge = c.wedge(&d);
-        assert!(parallel_wedge.length < EPSILON);
+        assert!(parallel_wedge.mag < EPSILON);
 
         // test anti-commutativity: v ∧ w = -(w ∧ v)
         let e = Geonum::new(2.0, 1.0, 6.0); // [2, π/6] = 2 at 30 degrees
@@ -1069,15 +1068,15 @@ mod tests {
         let fe_wedge = f.wedge(&e);
 
         // anti-commutativity: equal magnitudes
-        assert!((ef_wedge.length - fe_wedge.length).abs() < EPSILON);
+        assert!((ef_wedge.mag - fe_wedge.mag).abs() < EPSILON);
 
         // the current implementation may give different grades due to π sign flip
-        // this is acceptable since the anti-commutativity is preserved in the length calculation
+        // this is acceptable since the anti-commutativity is preserved in the magnitude calculation
         // and the geometric relationship is maintained through the angle difference
 
         // prove nilpotency: v ∧ v = 0
         let self_wedge = e.wedge(&e);
-        assert!(self_wedge.length < EPSILON);
+        assert!(self_wedge.mag < EPSILON);
     }
 
     #[test]
@@ -1094,13 +1093,13 @@ mod tests {
         let e2e1 = e2.geo(&e1);
 
         // for orthogonal unit vectors: e1·e2 = 0, so e1e2 = e1∧e2 (pure bivector)
-        assert!(e1.dot(&e2).length.abs() < EPSILON); // dot product is zero
+        assert!(e1.dot(&e2).mag.abs() < EPSILON); // dot product is zero
         let expected_wedge = e1.wedge(&e2);
-        assert!((e1e2.length - expected_wedge.length).abs() < EPSILON);
+        assert!((e1e2.mag - expected_wedge.mag).abs() < EPSILON);
 
         // fundamental identity: e1e2 = -e2e1 (anti-commutativity)
         let neg_e2e1 = e2e1.negate();
-        assert!((e1e2.length - neg_e2e1.length).abs() < EPSILON);
+        assert!((e1e2.mag - neg_e2e1.mag).abs() < EPSILON);
 
         // test 2: parallel vectors
         let v1 = Geonum::new(2.0, 1.0, 6.0); // [2, π/6] = 2 at 30 degrees
@@ -1109,9 +1108,9 @@ mod tests {
         let v1v2 = v1.geo(&v2);
 
         // for parallel vectors: v1∧v2 = 0, so v1v2 = v1·v2 (pure scalar)
-        assert!(v1.wedge(&v2).length < EPSILON); // wedge is zero
+        assert!(v1.wedge(&v2).mag < EPSILON); // wedge is zero
         let expected_dot = v1.dot(&v2);
-        assert!((v1v2.length - expected_dot.length.abs()).abs() < EPSILON);
+        assert!((v1v2.mag - expected_dot.mag.abs()).abs() < EPSILON);
 
         // test 3: general case with both dot and wedge components
         let u = Geonum::new(3.0, 1.0, 4.0); // [3, π/4] = 3 at 45 degrees
@@ -1126,15 +1125,15 @@ mod tests {
         // test that parallel vectors give zero wedge product (nilpotency)
         let parallel_v = Geonum::new(5.0, 1.0, 4.0); // same angle as u
         let parallel_wedge = u.wedge(&parallel_v);
-        assert!(parallel_wedge.length < EPSILON);
+        assert!(parallel_wedge.mag < EPSILON);
 
         // test that dot product is commutative: u·w = w·u
         let wu_dot = w.dot(&u);
-        assert!((uw_dot.length - wu_dot.length).abs() < EPSILON);
+        assert!((uw_dot.mag - wu_dot.mag).abs() < EPSILON);
 
         // test that geometric product has the right magnitude scale
-        assert!(uw_geo.length > 0.0);
-        assert!(uw_geo.length <= u.length * w.length + EPSILON); // reasonable upper bound
+        assert!(uw_geo.mag > 0.0);
+        assert!(uw_geo.mag <= u.mag * w.mag + EPSILON); // reasonable upper bound
 
         // test 4: the crucial O(1) vs O(2^n) advantage
         // traditional GA in n dimensions requires 2^n components
@@ -1147,9 +1146,9 @@ mod tests {
         let high_geo = high_dim_a.geo(&high_dim_b);
 
         // test exact mathematical result: since blade difference is 1 (1001-1000=1)
-        // this behaves like orthogonal unit vectors scaled by lengths 2 and 3
+        // this behaves like orthogonal unit vectors scaled by magnitudes 2 and 3
         // expected magnitude: 2 * 3 = 6 (like orthogonal vectors)
-        assert!((high_geo.length - 6.0).abs() < EPSILON);
+        assert!((high_geo.mag - 6.0).abs() < EPSILON);
 
         // test 5: geometric product preserves geometric relationships
         let a = Geonum::new(2.0, 1.0, 8.0); // [2, π/8]
@@ -1161,7 +1160,7 @@ mod tests {
         let wedge_ba = b.wedge(&a);
 
         // test the relationship: b∧a = -(a∧b)
-        assert!((wedge_ab.length - wedge_ba.length).abs() < EPSILON);
+        assert!((wedge_ab.mag - wedge_ba.mag).abs() < EPSILON);
 
         // this test proves geonum implements the complete geometric product
         // achieving constant-time complexity that scales to infinite dimensions
@@ -1176,15 +1175,15 @@ mod tests {
         // compute its inverse
         let inv_a = a.inv();
 
-        // inverse has reciprocal length and angle rotated by π
-        assert!((inv_a.length - 0.5).abs() < EPSILON);
+        // inverse has reciprocal magnitude and angle rotated by π
+        assert!((inv_a.mag - 0.5).abs() < EPSILON);
         let expected_inv_angle = a.angle + Angle::new(1.0, 1.0); // π rotation
         assert_eq!(inv_a.angle, expected_inv_angle);
 
-        // multiplying a number by its inverse gives unit length
+        // multiplying a number by its inverse gives unit magnitude
         // but preserves geometric structure through blade accumulation
         let product = a * inv_a;
-        assert!((product.length - 1.0).abs() < EPSILON);
+        assert!((product.mag - 1.0).abs() < EPSILON);
         // the result is at grade 3 (trivector) for this input
         // a at π/3 → inv at π/3 + π → product at π/3 + (π/3 + π) = 5π/3 (blade 3)
         assert_eq!(product.angle.blade(), 3);
@@ -1199,22 +1198,22 @@ mod tests {
         // prove a / b = a * (1/b)
         let inv_b = b.inv();
         let expected = a * inv_b;
-        assert!((quotient.length - expected.length).abs() < EPSILON);
+        assert!((quotient.mag - expected.mag).abs() < EPSILON);
         assert_eq!(quotient.angle, expected.angle);
 
         // explicit computation verification
-        assert!((quotient.length - (a.length / b.length)).abs() < EPSILON);
+        assert!((quotient.mag - (a.mag / b.mag)).abs() < EPSILON);
 
         // division through inv() accumulates blades differently than direct subtraction
         // multiplicative inverse adds π rotation, making the results geometrically different
-        // quotient = a * inv(b) where inv(b) = [1/b.length, b.angle + π]
+        // quotient = a * inv(b) where inv(b) = [1/b.mag, b.angle + π]
         // this π rotation is fundamental to inversion through the unit circle
 
         // the quotient and direct subtraction differ by π in angle
         let direct_angle = a.angle - b.angle;
 
-        // both operations give the same length ratio
-        assert!((quotient.length - (a.length / b.length)).abs() < EPSILON);
+        // both operations give the same magnitude ratio
+        assert!((quotient.mag - (a.mag / b.mag)).abs() < EPSILON);
 
         // division through multiplicative inverse is geometrically different from direct subtraction
         // inv(b) adds π rotation, so a/b = a * inv(b) has π more rotation than a.angle - b.angle
@@ -1228,19 +1227,19 @@ mod tests {
         assert_eq!(direct_angle.grade(), 0);
 
         // the fractional angles within each blade are the same
-        assert!((quotient.angle.value() - direct_angle.value()).abs() < EPSILON);
+        assert!((quotient.angle.rem() - direct_angle.rem()).abs() < EPSILON);
     }
 
     #[test]
     fn it_normalizes_vectors() {
-        // create a geometric number with non-unit length
+        // create a geometric number with non-unit magnitude
         let a = Geonum::new(5.0, 1.0, 6.0); // [5, π/6]
 
         // normalize it
         let normalized = a.normalize();
 
-        // normalized vector has length 1 and same angle
-        assert_eq!(normalized.length, 1.0);
+        // normalized vector has magnitude 1 and same angle
+        assert_eq!(normalized.mag, 1.0);
         assert_eq!(normalized.angle, a.angle);
 
         // normalize a vector with negative angle
@@ -1248,26 +1247,26 @@ mod tests {
 
         let normalized_b = b.normalize();
 
-        // has length 1 and preserve angle
-        assert_eq!(normalized_b.length, 1.0);
+        // has magnitude 1 and preserve angle
+        assert_eq!(normalized_b.mag, 1.0);
         assert_eq!(normalized_b.angle, b.angle);
 
         // normalizing an already normalized vector is idempotent
         let twice_normalized = normalized.normalize();
-        assert_eq!(twice_normalized.length, 1.0);
+        assert_eq!(twice_normalized.mag, 1.0);
         assert_eq!(twice_normalized.angle, normalized.angle);
     }
 
     #[test]
     fn it_multiplies_geometric_numbers() {
-        // test basic multiplication: angles add, lengths multiply
+        // test basic multiplication: angles add, magnitudes multiply
         let a = Geonum::new(2.0, 1.0, 4.0); // [2, π/4]
         let b = Geonum::new(3.0, 1.0, 6.0); // [3, π/6]
 
         let product = a * b;
 
-        // lengths multiply: 2 * 3 = 6
-        assert_eq!(product.length, 6.0);
+        // magnitudes multiply: 2 * 3 = 6
+        assert_eq!(product.mag, 6.0);
 
         // angles add: π/4 + π/6 = 3π/12 + 2π/12 = 5π/12
         let expected_angle = Angle::new(1.0, 4.0) + Angle::new(1.0, 6.0);
@@ -1279,8 +1278,8 @@ mod tests {
 
         let product2 = c * d;
 
-        // lengths multiply: 2 * 1.5 = 3
-        assert_eq!(product2.length, 3.0);
+        // magnitudes multiply: 2 * 1.5 = 3
+        assert_eq!(product2.mag, 3.0);
 
         // angles add: π/3 + π/4 = 4π/12 + 3π/12 = 7π/12 > π/2
         let expected_angle2 = Angle::new(1.0, 3.0) + Angle::new(1.0, 4.0);
@@ -1291,13 +1290,13 @@ mod tests {
         let e = Geonum::new(5.0, 1.0, 2.0); // [5, π/2]
 
         let product3 = e * identity;
-        assert_eq!(product3.length, e.length);
+        assert_eq!(product3.mag, e.mag);
         assert_eq!(product3.angle, e.angle);
 
         // test commutativity: a * b = b * a
         let ab = a * b;
         let ba = b * a;
-        assert_eq!(ab.length, ba.length);
+        assert_eq!(ab.mag, ba.mag);
         assert_eq!(ab.angle, ba.angle);
     }
 
@@ -1311,17 +1310,17 @@ mod tests {
         let rotated = x.rotate(rotation);
 
         // now pointing along y-axis
-        assert_eq!(rotated.length, 2.0); // length unchanged
+        assert_eq!(rotated.mag, 2.0); // magnitude unchanged
         assert_eq!(rotated.angle.blade(), 1); // crossed π/2 boundary
-        assert!(rotated.angle.value().abs() < EPSILON); // exact π/2
+        assert!(rotated.angle.rem().abs() < EPSILON); // exact π/2
 
         // rotate another 90 degrees
         let rotated_again = rotated.rotate(rotation);
 
         // now pointing along negative x-axis
-        assert_eq!(rotated_again.length, 2.0);
+        assert_eq!(rotated_again.mag, 2.0);
         assert_eq!(rotated_again.angle.blade(), 2); // crossed second π/2 boundary
-        assert!(rotated_again.angle.value().abs() < EPSILON); // exact π
+        assert!(rotated_again.angle.rem().abs() < EPSILON); // exact π
 
         // test with arbitrary angle
         let v = Geonum::new(3.0, 1.0, 4.0); // [3, π/4] = 3 at 45 degrees
@@ -1330,10 +1329,10 @@ mod tests {
         let v_rotated = v.rotate(rot_angle);
 
         // at original angle + rotation angle
-        assert_eq!(v_rotated.length, 3.0);
+        assert_eq!(v_rotated.mag, 3.0);
         // π/4 + π/6 = 3π/12 + 2π/12 = 5π/12 < π/2, so blade=0
         assert_eq!(v_rotated.angle.blade(), 0);
-        assert!((v_rotated.angle.value() - (5.0 * PI / 12.0)).abs() < EPSILON);
+        assert!((v_rotated.angle.rem() - (5.0 * PI / 12.0)).abs() < EPSILON);
     }
 
     #[test]
@@ -1345,8 +1344,8 @@ mod tests {
         let x_axis = Geonum::new(1.0, 0.0, 1.0); // [1, 0] = unit vector along x-axis
         let reflected_x = v.reflect(&x_axis);
 
-        // reflection preserves length
-        assert!((reflected_x.length - 2.0).abs() < EPSILON);
+        // reflection preserves magnitude
+        assert!((reflected_x.mag - 2.0).abs() < EPSILON);
 
         // reflection changes the angle
         assert!(reflected_x.angle != v.angle);
@@ -1355,8 +1354,8 @@ mod tests {
         let line = Geonum::new(1.0, 1.0, 6.0); // [1, π/6] = line at 30 degrees
         let reflected = v.reflect(&line);
 
-        // reflection preserves length and changes angle
-        assert!((reflected.length - 2.0).abs() < EPSILON);
+        // reflection preserves magnitude and changes angle
+        assert!((reflected.mag - 2.0).abs() < EPSILON);
         assert!(reflected.angle != v.angle);
     }
 
@@ -1369,8 +1368,8 @@ mod tests {
         // project a onto b
         let proj = a.project(&b);
 
-        // test projection has non-zero length for non-perpendicular vectors
-        assert!(proj.length > EPSILON);
+        // test projection has non-zero magnitude for non-perpendicular vectors
+        assert!(proj.mag > EPSILON);
 
         // test with perpendicular vectors
         let d = Geonum::new(4.0, 0.0, 1.0); // [4, 0] = 4 along x-axis
@@ -1378,7 +1377,7 @@ mod tests {
 
         // projection of perpendicular vectors is zero
         let proj_perp = d.project(&e);
-        assert!(proj_perp.length < EPSILON);
+        assert!(proj_perp.mag < EPSILON);
     }
 
     #[test]
@@ -1390,50 +1389,50 @@ mod tests {
         // compute rejection (perpendicular component)
         let rej = a.reject(&b);
 
-        // test rejection has non-zero length for non-parallel vectors
-        assert!(rej.length > EPSILON);
+        // test rejection has non-zero magnitude for non-parallel vectors
+        assert!(rej.mag > EPSILON);
 
         // test parallel vectors have zero rejection
         let c = Geonum::new(4.0, 0.0, 1.0); // parallel to b
         let rej_parallel = c.reject(&b);
-        assert!(rej_parallel.length < EPSILON);
+        assert!(rej_parallel.mag < EPSILON);
     }
 
     #[test]
-    fn it_computes_length_difference() {
-        // test length differences between various vectors using geometric number representation
+    fn it_computes_mag_difference() {
+        // test magnitude differences between various vectors using geometric number representation
         let a = Geonum::new(2.0, 0.0, 1.0); // vector (grade 1) at 0 radians
         let b = Geonum::new(3.0, 1.0, 2.0); // vector (grade 1) at PI/2 radians
         let c = Geonum::new(1.0, 1.0, 1.0); // vector (grade 1) at PI radians
         let d = Geonum::new(0.0, 0.0, 1.0); // zero vector (grade 1)
 
         // basic difference checking
-        assert_eq!(a.length_diff(&b), 1.0);
-        assert_eq!(b.length_diff(&a), 1.0); // symmetry
-        assert_eq!(a.length_diff(&c), 1.0);
-        assert_eq!(b.length_diff(&c), 2.0);
+        assert_eq!(a.mag_diff(&b), 1.0);
+        assert_eq!(b.mag_diff(&a), 1.0); // symmetry
+        assert_eq!(a.mag_diff(&c), 1.0);
+        assert_eq!(b.mag_diff(&c), 2.0);
 
         // test with zero vector
-        assert_eq!(a.length_diff(&d), 2.0);
-        assert_eq!(d.length_diff(&b), 3.0);
+        assert_eq!(a.mag_diff(&d), 2.0);
+        assert_eq!(d.mag_diff(&b), 3.0);
 
         // self comparison results in zero
-        assert_eq!(a.length_diff(&a), 0.0);
-        assert_eq!(d.length_diff(&d), 0.0);
+        assert_eq!(a.mag_diff(&a), 0.0);
+        assert_eq!(d.mag_diff(&d), 0.0);
 
-        // test vectors with different angles but same length
+        // test vectors with different angles but same magnitude
         let e = Geonum::new(2.0, 1.0, 4.0); // vector (grade 1) at PI/4 radians
         assert_eq!(
-            a.length_diff(&e),
+            a.mag_diff(&e),
             0.0,
-            "vectors with different angles but same length have zero length difference"
+            "vectors with different angles but same magnitude have zero magnitude difference"
         );
     }
 
     #[test]
     fn it_negates_vectors() {
         // test vectors at different angles using geometric number representation
-        // each vector preserves both magnitude and direction in [length, angle] format
+        // each vector preserves both magnitude and direction in [magnitude, angle] format
         let vectors = [
             Geonum::new(2.0, 0.0, 1.0), // along positive x-axis (0 radians)
             Geonum::new(3.0, 1.0, 2.0), // along positive y-axis (PI/2 radians)
@@ -1447,11 +1446,8 @@ mod tests {
             // Create the negated vector
             let neg_vec = vec.negate();
 
-            // Verify length is preserved
-            assert_eq!(
-                neg_vec.length, vec.length,
-                "negation preserves vector length"
-            );
+            // Verify magnitude is preserved
+            assert_eq!(neg_vec.mag, vec.mag, "negation preserves vector magnitude");
 
             // prove angle is rotated by π
             let pi_rotation = Angle::new(1.0, 1.0); // π radians
@@ -1468,19 +1464,18 @@ mod tests {
                 "double negation returns to same geometric grade"
             );
             assert!(
-                (double_neg.angle.value() - vec.angle.value()).abs() < EPSILON,
+                (double_neg.angle.rem() - vec.angle.rem()).abs() < EPSILON,
                 "double negation preserves angle value within grade"
             );
             assert_eq!(
-                double_neg.length, vec.length,
-                "double negation preserves vector length"
+                double_neg.mag, vec.mag,
+                "double negation preserves vector magnitude"
             );
 
             // test that the dot product with the original vector is negative
             let dot_product = vec.dot(&neg_vec);
             assert!(
-                dot_product.length * dot_product.angle.grade_angle().cos() < 0.0
-                    || vec.length < EPSILON,
+                dot_product.mag * dot_product.angle.grade_angle().cos() < 0.0 || vec.mag < EPSILON,
                 "vector and its negation have negative dot product unless vector is zero"
             );
         }
@@ -1488,7 +1483,7 @@ mod tests {
         // test zero vector
         let zero_vec = Geonum::new(0.0, 0.0, 1.0); // vector (grade 1)
         let neg_zero = zero_vec.negate();
-        assert_eq!(neg_zero.length, 0.0, "negation of zero vector remains zero");
+        assert_eq!(neg_zero.mag, 0.0, "negation of zero vector remains zero");
     }
 
     #[test]
@@ -1541,7 +1536,7 @@ mod tests {
 
         let result = a + b;
 
-        assert_eq!(result.length, 8.0);
+        assert_eq!(result.mag, 8.0);
         assert!((result.angle.grade_angle().sin()).abs() < EPSILON);
         assert_eq!(result.angle.blade(), 0); // adding scalars gives a scalar
     }
@@ -1553,7 +1548,7 @@ mod tests {
 
         let result = a + b;
 
-        assert_eq!(result.length, 0.0);
+        assert_eq!(result.mag, 0.0);
         assert!((result.angle.grade_angle().sin()).abs() < EPSILON);
         // blade preservation: 0 + 2 = 2 when equal opposites cancel
         assert_eq!(result.angle.blade(), 2);
@@ -1564,7 +1559,7 @@ mod tests {
 
         let result2 = c + d;
 
-        assert_eq!(result2.length, 2.0);
+        assert_eq!(result2.mag, 2.0);
         assert!((result2.angle.grade_angle().sin()).abs() < EPSILON);
         // dominant component (c) preserves its blade
         assert_eq!(result2.angle.blade(), 0);
@@ -1578,8 +1573,8 @@ mod tests {
         let result = a + b;
 
         // cartesian: 3π/4 = 135° → (-√2/2, √2/2), π/4 = 45° → (√2/2, √2/2)
-        // sum: (0, √2), length = √2, angle = π/2
-        assert!((result.length - 2.0_f64.sqrt()).abs() < EPSILON);
+        // sum: (0, √2), magnitude = √2, angle = π/2
+        assert!((result.mag - 2.0_f64.sqrt()).abs() < EPSILON);
         // combined blade count: 1 + 0 = 1, large resulting angle avoids wrapping
         assert_eq!(result.angle.blade(), 1); // blade preservation: 1 + 0 = 1
     }
@@ -1599,14 +1594,14 @@ mod tests {
         let scalar2 = Geonum::new(2.0, 0.0, 2.0); // [2, 0] blade=0
         let scalar3 = Geonum::new(3.0, 0.0, 2.0); // [3, 0] blade=0
         let result2 = scalar2 + scalar3;
-        assert_eq!(result2.length, 5.0); // lengths add directly
+        assert_eq!(result2.mag, 5.0); // magnitudes add directly
         assert_eq!(result2.angle.blade(), 0); // blade preserved
 
         // test opposite angles
         let pos = Geonum::new(4.0, 0.0, 1.0); // [4, 0] blade=0
         let neg = Geonum::new(2.0, 1.0, 1.0); // [2, π] blade=2
         let result3 = pos + neg;
-        assert_eq!(result3.length, 2.0); // 4 - 2 = 2
+        assert_eq!(result3.mag, 2.0); // 4 - 2 = 2
         assert_eq!(result3.angle.blade(), 0); // result points right
     }
 
@@ -1617,7 +1612,7 @@ mod tests {
 
         // project onto dimension 0 (x-axis)
         let proj_0 = geonum.project_to_dimension(0);
-        // compute expected: length * cos(0 - (0 * PI/2 + PI/4)) = 2 * cos(-PI/4)
+        // compute expected: magnitude * cos(0 - (0 * PI/2 + PI/4)) = 2 * cos(-PI/4)
         let expected_0 = 2.0 * (0.0 - PI / 4.0).cos();
         assert!((proj_0 - expected_0).abs() < EPSILON);
 
@@ -1643,7 +1638,7 @@ mod tests {
         let b = Geonum::new(3.0, 0.0, 1.0); // 3 units at 0 radians
         let result = a - b;
 
-        assert_eq!(result.length, 2.0);
+        assert_eq!(result.mag, 2.0);
         assert!((result.angle.grade_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction with opposite angles
@@ -1651,7 +1646,7 @@ mod tests {
         let d = Geonum::new(4.0, 1.0, 1.0); // 4 units at π radians
         let result2 = c - d;
 
-        assert_eq!(result2.length, 8.0); // 4 - (-4) = 8
+        assert_eq!(result2.mag, 8.0); // 4 - (-4) = 8
         assert!((result2.angle.grade_angle().sin()).abs() < EPSILON); // angle ≈ 0
 
         // test subtraction resulting in zero
@@ -1659,15 +1654,15 @@ mod tests {
         let f = Geonum::new(3.0, 1.0, 4.0); // same vector
         let result3 = e - f;
 
-        assert!(result3.length < EPSILON); // approximately zero
+        assert!(result3.mag < EPSILON); // approximately zero
 
         // test subtraction with perpendicular vectors
         let g = Geonum::new(3.0, 0.0, 1.0); // 3 units at 0 radians
         let h = Geonum::new(4.0, 1.0, 2.0); // 4 units at π/2 radians
         let result4 = g - h;
 
-        // result has length sqrt(3² + 4²) = 5
-        assert!((result4.length - 5.0).abs() < EPSILON);
+        // result has magnitude sqrt(3² + 4²) = 5
+        assert!((result4.mag - 5.0).abs() < EPSILON);
     }
 
     #[test]
@@ -1675,25 +1670,25 @@ mod tests {
         let g = Geonum::new(2.0, 1.0, 4.0); // [2, PI/4] blade=0, value=PI/4
 
         let squared = g.pow(2.0);
-        assert_eq!(squared.length, 4.0); // 2^2 = 4
-                                         // pow(2.0) adds Angle::new(2.0, 1.0) which is 2*PI radians = 4 quarter-turns
-                                         // original blade=0, added blade=4, final blade=4
+        assert_eq!(squared.mag, 4.0); // 2^2 = 4
+                                      // pow(2.0) adds Angle::new(2.0, 1.0) which is 2*PI radians = 4 quarter-turns
+                                      // original blade=0, added blade=4, final blade=4
         assert_eq!(squared.angle.blade(), 4);
-        assert!((squared.angle.value() - PI / 4.0).abs() < EPSILON);
+        assert!((squared.angle.rem() - PI / 4.0).abs() < EPSILON);
 
         let identity = g.pow(1.0);
-        assert!((identity.length - g.length).abs() < EPSILON);
+        assert!((identity.mag - g.mag).abs() < EPSILON);
         // pow(1.0) adds Angle::new(1.0, 1.0) which is PI radians = 2 quarter-turns
         // original blade=0, added blade=2, final blade=2
         assert_eq!(identity.angle.blade(), 2);
-        assert!((identity.angle.value() - g.angle.value()).abs() < EPSILON);
+        assert!((identity.angle.rem() - g.angle.rem()).abs() < EPSILON);
 
         let cubed = g.pow(3.0);
-        assert_eq!(cubed.length, 8.0); // 2^3 = 8
-                                       // pow(3.0) adds Angle::new(3.0, 1.0) which is 3*PI radians = 6 quarter-turns
-                                       // original blade=0, added blade=6, final blade=6
+        assert_eq!(cubed.mag, 8.0); // 2^3 = 8
+                                    // pow(3.0) adds Angle::new(3.0, 1.0) which is 3*PI radians = 6 quarter-turns
+                                    // original blade=0, added blade=6, final blade=6
         assert_eq!(cubed.angle.blade(), 6);
-        assert!((cubed.angle.value() - PI / 4.0).abs() < EPSILON);
+        assert!((cubed.angle.rem() - PI / 4.0).abs() < EPSILON);
     }
 
     #[test]
@@ -1704,27 +1699,27 @@ mod tests {
         let a1 = Geonum::new(2.0, 1.0, 4.0); // [2, π/4] blade=0
         let a2 = Geonum::new(3.0, 1.0, 4.0); // [3, π/4] blade=0
         let result1 = a1 + a2;
-        assert_eq!(result1.length, 5.0); // lengths add
+        assert_eq!(result1.mag, 5.0); // magnitudes add
         assert_eq!(result1.angle.blade(), 0); // blade preserved
-        assert!((result1.angle.value() - PI / 4.0).abs() < EPSILON); // angle preserved
+        assert!((result1.angle.rem() - PI / 4.0).abs() < EPSILON); // angle preserved
 
         // case 2: blade accumulates through general addition
         let b1 = Geonum::new(1.0, 0.0, 1.0); // [1, 0] blade=0, pointing right
         let b2 = Geonum::new(1.0, 1.0, 2.0); // [1, π/2] blade=1, pointing up
         let result2 = b1 + b2;
         // cartesian: [1,0] + [0,1] = [1,1], angle = atan2(1,1) = π/4
-        assert!((result2.length - 2.0_f64.sqrt()).abs() < EPSILON);
+        assert!((result2.mag - 2.0_f64.sqrt()).abs() < EPSILON);
         // blade accumulation: combined=1, wrapped_angle=-π/4 wraps to 7π/4 = blade 3
         // total blade = 3 + 1 = 4
         assert_eq!(result2.angle.blade(), 4);
-        assert!((result2.angle.value() - PI / 4.0).abs() < EPSILON);
+        assert!((result2.angle.rem() - PI / 4.0).abs() < EPSILON);
 
         // case 3: opposite angles can reduce blade to zero
         let c1 = Geonum::new(5.0, 1.0, 1.0); // [5, π] blade=2
         let c2 = Geonum::new(3.0, 0.0, 1.0); // [3, 0] blade=0
         let result3 = c1 + c2;
         // opposite directions: [5,π] + [3,0] = [-5,0] + [3,0] = [-2,0] = [2,π]
-        assert_eq!(result3.length, 2.0);
+        assert_eq!(result3.mag, 2.0);
         assert_eq!(result3.angle.blade(), 2); // still pointing left (π)
 
         // case 4: small angles with blade accumulation
@@ -1750,26 +1745,26 @@ mod tests {
         // test dual of scalar (blade 0 → blade 2)
         let dual_e1 = e1.dual();
         assert_eq!(dual_e1.angle.grade(), 2); // scalar dualizes to bivector (π-rotation)
-        assert_eq!(dual_e1.length, 1.0);
+        assert_eq!(dual_e1.mag, 1.0);
 
         // test dual of vector (blade 1 → blade 3)
         let dual_e2 = e2.dual();
         assert_eq!(dual_e2.angle.grade(), 3); // vector dualizes to trivector
-        assert_eq!(dual_e2.length, 1.0);
+        assert_eq!(dual_e2.mag, 1.0);
 
         // test dual of bivector (blade 2 → blade 4 = 0 mod 4)
         let dual_bivector = bivector.dual();
         assert_eq!(dual_bivector.angle.grade(), 0); // bivector dualizes to scalar
-        assert_eq!(dual_bivector.length, 1.0);
+        assert_eq!(dual_bivector.mag, 1.0);
     }
 
     #[test]
-    fn it_orders_geonums_by_angle_then_length() {
+    fn it_orders_geonums_by_angle_then_mag() {
         // geonums are ordered by angle first because angle encodes geometric grade
         // through the blade count. this ordering respects the algebraic structure where:
         // - blade 0 (scalars) < blade 1 (vectors) < blade 2 (bivectors) < blade 3 (trivectors)
         //
-        // why angles determine order regardless of length:
+        // why angles determine order regardless of magnitude:
         //
         // 1. dimensional hierarchy: a bivector is fundamentally "bigger" than a vector
         //    in dimensional terms, just as a 1m² area is geometrically more complex
@@ -1794,10 +1789,10 @@ mod tests {
         // because the bivector represents a 2D oriented area while the vector is just 1D
 
         // test basic ordering: scalar < vector < bivector < trivector
-        let scalar = Geonum::new(100.0, 0.0, 2.0); // blade 0, huge length
-        let vector = Geonum::new(1.0, 1.0, 2.0); // blade 1, small length
-        let bivector = Geonum::new(0.1, 2.0, 2.0); // blade 2, tiny length
-        let trivector = Geonum::new(0.01, 3.0, 2.0); // blade 3, minuscule length
+        let scalar = Geonum::new(100.0, 0.0, 2.0); // blade 0, huge magnitude
+        let vector = Geonum::new(1.0, 1.0, 2.0); // blade 1, small magnitude
+        let bivector = Geonum::new(0.1, 2.0, 2.0); // blade 2, tiny magnitude
+        let trivector = Geonum::new(0.01, 3.0, 2.0); // blade 3, minuscule magnitude
 
         // dimensional hierarchy overrides magnitude
         assert!(scalar < vector);
@@ -1809,7 +1804,7 @@ mod tests {
         let v2 = Geonum::new(1.0, 0.2, 1.0);
         assert!(v1 < v2);
 
-        // within same blade and angle value, length determines order
+        // within same blade and angle value, magnitude determines order
         let v3 = Geonum::new(1.0, 0.1, 1.0);
         let v4 = Geonum::new(2.0, 0.1, 1.0);
         assert!(v3 < v4);
@@ -1820,9 +1815,9 @@ mod tests {
         let g3 = Geonum::new(1.0, 1.1, 2.0); // small vector, larger angle within blade 1
         let g4 = Geonum::new(0.1, 2.0, 2.0); // tiny bivector (blade 2)
 
-        assert!(g1 < g2); // scalar < vector regardless of length
+        assert!(g1 < g2); // scalar < vector regardless of magnitude
         assert!(g2 < g3); // same blade, smaller angle < larger angle
-        assert!(g3 < g4); // vector < bivector regardless of length
+        assert!(g3 < g4); // vector < bivector regardless of magnitude
         assert!(g1 < g4); // transitivity: scalar < bivector
     }
 
@@ -1832,27 +1827,27 @@ mod tests {
 
         // dimension 0 (x-axis)
         let dim0 = Geonum::create_dimension(2.0, 0);
-        assert_eq!(dim0.length, 2.0);
+        assert_eq!(dim0.mag, 2.0);
         assert_eq!(dim0.angle.blade(), 0);
-        assert!(dim0.angle.value().abs() < EPSILON);
+        assert!(dim0.angle.rem().abs() < EPSILON);
 
         // dimension 1 (y-axis)
         let dim1 = Geonum::create_dimension(3.0, 1);
-        assert_eq!(dim1.length, 3.0);
+        assert_eq!(dim1.mag, 3.0);
         assert_eq!(dim1.angle.blade(), 1);
-        assert!(dim1.angle.value().abs() < EPSILON);
+        assert!(dim1.angle.rem().abs() < EPSILON);
 
         // dimension 2 (z-axis)
         let dim2 = Geonum::create_dimension(1.5, 2);
-        assert_eq!(dim2.length, 1.5);
+        assert_eq!(dim2.mag, 1.5);
         assert_eq!(dim2.angle.blade(), 2);
-        assert!(dim2.angle.value().abs() < EPSILON);
+        assert!(dim2.angle.rem().abs() < EPSILON);
 
         // high dimension (dimension 1000)
         let dim1000 = Geonum::create_dimension(5.0, 1000);
-        assert_eq!(dim1000.length, 5.0);
+        assert_eq!(dim1000.mag, 5.0);
         assert_eq!(dim1000.angle.blade(), 1000);
-        assert!(dim1000.angle.value().abs() < EPSILON);
+        assert!(dim1000.angle.rem().abs() < EPSILON);
 
         // verify orthogonality between dimensions
         let x = Geonum::create_dimension(1.0, 0);
@@ -1864,15 +1859,15 @@ mod tests {
         let dim3 = Geonum::create_dimension(1.0, 3);
         // 3 * π/2 = 3π/2, which is blade=3, value=0
         assert_eq!(dim3.angle.blade(), 3);
-        assert!(dim3.angle.value().abs() < EPSILON);
+        assert!(dim3.angle.rem().abs() < EPSILON);
 
-        // test that create_dimension produces unit-length basis vectors when length=1
+        // test that create_dimension produces unit-magnitude basis vectors when magnitude=1
         let basis_vectors: Vec<_> = (0..4).map(|i| Geonum::create_dimension(1.0, i)).collect();
 
         for (i, basis) in basis_vectors.iter().enumerate() {
-            assert_eq!(basis.length, 1.0);
+            assert_eq!(basis.mag, 1.0);
             assert_eq!(basis.angle.blade(), i);
-            assert!(basis.angle.value().abs() < EPSILON);
+            assert!(basis.angle.rem().abs() < EPSILON);
         }
     }
 
@@ -1891,7 +1886,7 @@ mod tests {
         // wedge(grade 3, grade 0) → depends on angle sum
         // final dual produces grade 2
         assert_eq!(intersection.angle.grade(), 2);
-        assert_eq!(intersection.length, 1.0);
+        assert_eq!(intersection.mag, 1.0);
     }
 
     #[test]
@@ -1906,8 +1901,8 @@ mod tests {
 
         // anticommutative means meet(A,B) and meet(B,A) differ by π rotation
         assert!(
-            (meet_ab.length - meet_ba.length).abs() < EPSILON,
-            "lengths must be equal"
+            (meet_ab.mag - meet_ba.mag).abs() < EPSILON,
+            "magnitudes must be equal"
         );
 
         // blade difference encodes the anticommutativity
@@ -1926,29 +1921,29 @@ mod tests {
         let self_meet = scalar.meet(&scalar);
 
         println!(
-            "scalar self-meet: length {}, grade {}, blade {}",
-            self_meet.length,
+            "scalar self-meet: magnitude {}, grade {}, blade {}",
+            self_meet.mag,
             self_meet.angle.grade(),
             self_meet.angle.blade()
         );
 
         // wedge of parallel objects (same angle) produces zero
         // this is geometrically consistent - an object doesn't intersect with itself
-        assert_eq!(self_meet.length, 0.0);
+        assert_eq!(self_meet.mag, 0.0);
 
         // test with actual vector (grade 1)
         let vector = Geonum::new_with_blade(3.0, 1, 1.0, 4.0); // grade 1 vector
         let vector_self_meet = vector.meet(&vector);
 
         println!(
-            "vector self-meet: length {}, grade {}, blade {}",
-            vector_self_meet.length,
+            "vector self-meet: magnitude {}, grade {}, blade {}",
+            vector_self_meet.mag,
             vector_self_meet.angle.grade(),
             vector_self_meet.angle.blade()
         );
 
         // parallel vectors have zero wedge product
-        assert_eq!(vector_self_meet.length, 0.0);
+        assert_eq!(vector_self_meet.mag, 0.0);
     }
 
     #[test]
@@ -1962,8 +1957,8 @@ mod tests {
 
         // test that meet produces a specific geometric result
         assert!(
-            intersection.length > 0.0 && intersection.length <= 1.0,
-            "meet produces bounded non-zero length"
+            intersection.mag > 0.0 && intersection.mag <= 1.0,
+            "meet produces bounded non-zero magnitude"
         );
         assert!(
             intersection.angle.blade() > 200,
@@ -1976,13 +1971,10 @@ mod tests {
 
         let extreme_meet = million_d.meet(&million_plus);
 
+        assert!(extreme_meet.mag > 0.0, "non-zero meet for different angles");
         assert!(
-            extreme_meet.length > 0.0,
-            "non-zero meet for different angles"
-        );
-        assert!(
-            extreme_meet.length > 5.0,
-            "meet length > 5 since 2×3×sin(angle) with sin near 1"
+            extreme_meet.mag > 5.0,
+            "meet magnitude > 5 since 2×3×sin(angle) with sin near 1"
         );
         assert_eq!(
             extreme_meet.angle.grade(),
@@ -1996,7 +1988,7 @@ mod tests {
 
         let billion_meet = billion_a.meet(&billion_b);
         assert!(
-            billion_meet.length > 0.0,
+            billion_meet.mag > 0.0,
             "billion-dimensional meet produces non-zero result"
         );
         assert!(
@@ -2022,7 +2014,7 @@ mod tests {
         let manual_meet = wedge_duals.dual();
 
         // with even-odd dual, the formula works for all cases
-        assert!((direct_meet.length - manual_meet.length).abs() < EPSILON);
+        assert!((direct_meet.mag - manual_meet.mag).abs() < EPSILON);
         assert_eq!(direct_meet.angle, manual_meet.angle);
 
         // test with different-grade objects
@@ -2032,7 +2024,7 @@ mod tests {
         let direct_meet_cd = c.meet(&d);
         let manual_meet_cd = c.dual().wedge(&d.dual()).dual();
 
-        assert!((direct_meet_cd.length - manual_meet_cd.length).abs() < EPSILON);
+        assert!((direct_meet_cd.mag - manual_meet_cd.mag).abs() < EPSILON);
         assert_eq!(direct_meet_cd.angle, manual_meet_cd.angle);
     }
 
@@ -2098,8 +2090,8 @@ mod tests {
         let time_ratio = time_large.as_nanos() as f64 / time_small.as_nanos().max(1) as f64;
 
         assert!(time_ratio < 100.0);
-        assert!(_result_small.length.is_finite());
-        assert!(_result_large.length.is_finite());
+        assert!(_result_small.mag.is_finite());
+        assert!(_result_large.mag.is_finite());
     }
 
     #[test]
@@ -2120,11 +2112,8 @@ mod tests {
         // dual(grade 1) → grade 3
 
         // the intersection exists and has non-zero magnitude
-        assert!(intersection.length > 0.0, "intersection exists");
-        assert_eq!(
-            intersection.length, 6.0,
-            "intersection magnitude = 3 * 2 = 6"
-        );
+        assert!(intersection.mag > 0.0, "intersection exists");
+        assert_eq!(intersection.mag, 6.0, "intersection magnitude = 3 * 2 = 6");
 
         // line-plane intersection produces grade 3 trivector
         // the intersection point exists at grade 3 rather than grade 0
@@ -2151,8 +2140,8 @@ mod tests {
         // scalars at different angles dual to different bivectors
         // their wedge product has non-zero area (sin of angle difference)
         // so the meet produces a non-zero result
-        assert!(meet.length > 0.0, "non-parallel scalars have non-zero meet");
-        assert!(meet.length.is_finite(), "meet has finite magnitude");
+        assert!(meet.mag > 0.0, "non-parallel scalars have non-zero meet");
+        assert!(meet.mag.is_finite(), "meet has finite magnitude");
     }
 
     #[test]
@@ -2165,7 +2154,7 @@ mod tests {
 
         // parallel vectors (same angle) dual to parallel trivectors
         // their wedge product is zero (no area between parallel objects)
-        assert_eq!(meet.length, 0.0, "parallel vectors have zero meet");
+        assert_eq!(meet.mag, 0.0, "parallel vectors have zero meet");
 
         // the meet of parallel objects produces zero magnitude
         // representing no intersection in finite space
@@ -2181,7 +2170,7 @@ mod tests {
 
         // antiparallel vectors (opposite directions) dual to opposite trivectors
         // their wedge product is zero (antiparallel lines don't intersect)
-        assert!(meet.length < EPSILON, "antiparallel vectors have zero meet");
+        assert!(meet.mag < EPSILON, "antiparallel vectors have zero meet");
 
         // in projective geometry, antiparallel lines meet at infinity
         // geonum represents this as zero magnitude rather than special infinity blade
@@ -2197,8 +2186,8 @@ mod tests {
 
         // grade 1 vector meets grade 2 bivector
         // this represents line-plane intersection in projective geometry
-        assert!(meet.length > 0.0, "non-parallel objects have non-zero meet");
-        assert_eq!(meet.length, 6.0, "meet magnitude = 2.0 * 3.0");
+        assert!(meet.mag > 0.0, "non-parallel objects have non-zero meet");
+        assert_eq!(meet.mag, 6.0, "meet magnitude = 2.0 * 3.0");
 
         // geonum represents intersection at grade 3 due to π-rotation dual
         assert_eq!(meet.angle.grade(), 3);
@@ -2214,7 +2203,7 @@ mod tests {
 
         // parallel planes (same angle bivectors) have zero meet
         // they don't intersect in finite projective space
-        assert!(meet.length < EPSILON, "parallel planes have zero meet");
+        assert!(meet.mag < EPSILON, "parallel planes have zero meet");
     }
 
     #[test]
@@ -2227,10 +2216,10 @@ mod tests {
 
         // grade 2 bivector meets grade 3 trivector
         // represents plane-volume intersection in projective geometry
-        assert!(meet.length > 0.0, "non-parallel planes have non-zero meet");
+        assert!(meet.mag > 0.0, "non-parallel planes have non-zero meet");
 
         // the intersection produces a geometric object encoding the line of intersection
-        assert!(meet.length.is_finite());
+        assert!(meet.mag.is_finite());
     }
 
     #[test]
@@ -2243,10 +2232,10 @@ mod tests {
 
         // non-parallel volumes intersect
         // the meet encodes their common 2D subspace (plane)
-        assert!(meet.length > 0.0, "non-parallel volumes have non-zero meet");
+        assert!(meet.mag > 0.0, "non-parallel volumes have non-zero meet");
 
         // geonum's π-rotation dual produces specific grade for volume-volume meet
-        assert!(meet.length.is_finite());
+        assert!(meet.mag.is_finite());
     }
 
     #[test]
@@ -2259,11 +2248,11 @@ mod tests {
 
         // high blade numbers still follow grade cycling
         // blade 7 % 4 = 3, blade 11 % 4 = 3 (both grade 3)
-        assert!(meet.length > 0.0, "non-parallel high-blade objects meet");
+        assert!(meet.mag > 0.0, "non-parallel high-blade objects meet");
 
         // the meet operation works consistently regardless of blade magnitude
         // demonstrating O(1) complexity even for high-dimensional spaces
-        assert!(meet.length.is_finite());
+        assert!(meet.mag.is_finite());
     }
 
     #[test]
@@ -2304,7 +2293,7 @@ mod tests {
             "manual formula matches meet implementation"
         );
         assert!(
-            (s_meet.length - actual_meet.length).abs() < 1e-10,
+            (s_meet.mag - actual_meet.mag).abs() < 1e-10,
             "manual formula produces same magnitude"
         );
 
@@ -2341,8 +2330,8 @@ mod tests {
         // use the reflect method
         let reflected = point.reflect(&axis_45);
 
-        // reflection preserves length and accumulates blades forward
-        assert_eq!(reflected.length, point.length);
+        // reflection preserves magnitude and accumulates blades forward
+        assert_eq!(reflected.mag, point.mag);
 
         // forward-only reflection adds ~4 blades per reflection
         let blade_added = reflected.angle.blade() as i32 - point.angle.blade() as i32;
@@ -2359,11 +2348,11 @@ mod tests {
         );
 
         // with base_angle(), returns to original position
-        let px = point.length * point.angle.grade_angle().cos();
-        let py = point.length * point.angle.grade_angle().sin();
-        let rx = reflected_twice.base_angle().length
+        let px = point.mag * point.angle.grade_angle().cos();
+        let py = point.mag * point.angle.grade_angle().sin();
+        let rx = reflected_twice.base_angle().mag
             * reflected_twice.base_angle().angle.grade_angle().cos();
-        let ry = reflected_twice.base_angle().length
+        let ry = reflected_twice.base_angle().mag
             * reflected_twice.base_angle().angle.grade_angle().sin();
         assert!(
             (px - rx).abs() < 1e-10 && (py - ry).abs() < 1e-10,
@@ -2375,12 +2364,12 @@ mod tests {
     fn it_multiplies_angle_by_geonum() {
         // test Angle * Geonum (owned version)
         let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
 
         let result = angle * geonum;
 
-        // test length preserved
-        assert_eq!(result.length, 3.0);
+        // test magnitude preserved
+        assert_eq!(result.mag, 3.0);
 
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
@@ -2391,19 +2380,19 @@ mod tests {
     fn it_multiplies_angle_by_geonum_ref() {
         // test Angle * &Geonum (borrow version)
         let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
 
         let result = angle * geonum;
 
-        // test length preserved
-        assert_eq!(result.length, 3.0);
+        // test magnitude preserved
+        assert_eq!(result.mag, 3.0);
 
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
         assert_eq!(result.angle, expected_angle);
 
         // test original geonum still usable after borrow
-        assert_eq!(geonum.length, 3.0);
+        assert_eq!(geonum.mag, 3.0);
         assert_eq!(geonum.angle, Angle::new(1.0, 4.0));
     }
 
@@ -2415,12 +2404,12 @@ mod tests {
 
         // owned version
         let result1 = angle * geonum;
-        assert_eq!(result1.length, 2.0);
+        assert_eq!(result1.mag, 2.0);
         assert_eq!(result1.angle.blade(), 8); // 3 + 5 = 8
 
         // borrow version
         let result2 = angle * geonum;
-        assert_eq!(result2.length, 2.0);
+        assert_eq!(result2.mag, 2.0);
         assert_eq!(result2.angle.blade(), 8); // 3 + 5 = 8
     }
 
@@ -2428,16 +2417,16 @@ mod tests {
     fn it_handles_zero_angle_multiplication() {
         // test multiplication with zero angle
         let zero_angle = Angle::new(0.0, 1.0); // 0 radians
-        let geonum = Geonum::new(5.0, 2.0, 3.0); // length 5, angle 2π/3
+        let geonum = Geonum::new(5.0, 2.0, 3.0); // magnitude 5, angle 2π/3
 
         // owned version
         let result1 = zero_angle * geonum;
-        assert_eq!(result1.length, 5.0);
+        assert_eq!(result1.mag, 5.0);
         assert_eq!(result1.angle, geonum.angle); // angle unchanged
 
         // borrow version
         let result2 = zero_angle * geonum;
-        assert_eq!(result2.length, 5.0);
+        assert_eq!(result2.mag, 5.0);
         assert_eq!(result2.angle, geonum.angle); // angle unchanged
     }
 
@@ -2445,23 +2434,23 @@ mod tests {
     fn it_handles_full_rotation_multiplication() {
         // test multiplication with full rotation (2π)
         let full_rotation = Angle::new(2.0, 1.0); // 2π
-        let geonum = Geonum::new(1.0, 1.0, 6.0); // length 1, angle π/6
+        let geonum = Geonum::new(1.0, 1.0, 6.0); // magnitude 1, angle π/6
 
         // owned version
         let result1 = full_rotation * geonum;
-        assert_eq!(result1.length, 1.0);
+        assert_eq!(result1.mag, 1.0);
         // 2π + π/6 = blade 4 + fractional part π/6
         assert_eq!(result1.angle.blade(), 4);
 
         // borrow version
         let result2 = full_rotation * geonum;
-        assert_eq!(result2.length, 1.0);
+        assert_eq!(result2.mag, 1.0);
         assert_eq!(result2.angle.blade(), 4);
     }
 
     #[test]
     fn it_meets_vector_trivector_based_on_angles() {
-        // meet finds intersection based on angle relationships, not length comparisons
+        // meet finds intersection based on angle relationships, not magnitude comparisons
         // parallel objects (same angle) have zero meet, perpendicular have non-zero
 
         // create vector and trivector with different angle relationships
@@ -2476,7 +2465,7 @@ mod tests {
         // wedge of two blade 3s with angle 0 gives sin(0) ≈ 0
         let meet_parallel = vector_0.meet(&trivector_0);
         assert!(
-            meet_parallel.length < EPSILON,
+            meet_parallel.mag < EPSILON,
             "parallel objects have zero meet"
         );
 
@@ -2485,7 +2474,7 @@ mod tests {
         // wedge gives non-zero result from sin(angle_diff)
         let meet_perpendicular = vector_0.meet(&trivector_90);
         assert!(
-            meet_perpendicular.length > EPSILON,
+            meet_perpendicular.mag > EPSILON,
             "perpendicular objects have non-zero meet"
         );
 
@@ -2493,7 +2482,7 @@ mod tests {
         // wedge gives sin(π/4) = √2/2
         let meet_angled = vector_45.meet(&trivector_0);
         assert!(
-            meet_angled.length > EPSILON,
+            meet_angled.mag > EPSILON,
             "angled objects have non-zero meet"
         );
     }
@@ -2524,10 +2513,10 @@ mod tests {
         );
 
         // test cartesian coordinates after reflection
-        let ox = point.length * point.angle.grade_angle().cos();
-        let oy = point.length * point.angle.grade_angle().sin();
-        let rx = reflected.length * reflected.angle.grade_angle().cos();
-        let ry = reflected.length * reflected.angle.grade_angle().sin();
+        let ox = point.mag * point.angle.grade_angle().cos();
+        let oy = point.mag * point.angle.grade_angle().sin();
+        let rx = reflected.mag * reflected.angle.grade_angle().cos();
+        let ry = reflected.mag * reflected.angle.grade_angle().sin();
 
         println!("Original: ({ox}, {oy})");
         println!("Reflected: ({rx}, {ry})");
@@ -2538,15 +2527,15 @@ mod tests {
     }
 
     #[test]
-    fn it_gets_length() {
+    fn it_gets_mag() {
         let g = Geonum::new(3.5, 1.0, 4.0); // [3.5, π/4]
-        assert_eq!(g.length(), 3.5);
+        assert_eq!(g.mag(), 3.5);
 
         let g2 = Geonum::new(0.0, 0.0, 1.0); // [0, 0]
-        assert_eq!(g2.length(), 0.0);
+        assert_eq!(g2.mag(), 0.0);
 
         let g3 = Geonum::new(10.0, 3.0, 2.0); // [10, 3π/2]
-        assert_eq!(g3.length(), 10.0);
+        assert_eq!(g3.mag(), 10.0);
     }
 
     #[test]
@@ -2567,17 +2556,17 @@ mod tests {
 
         // scale by 3
         let scaled = g.scale(3.0);
-        assert_eq!(scaled.length, 6.0);
+        assert_eq!(scaled.mag, 6.0);
         assert_eq!(scaled.angle, g.angle); // angle unchanged
 
         // scale by 0.5
         let scaled2 = g.scale(0.5);
-        assert_eq!(scaled2.length, 1.0);
+        assert_eq!(scaled2.mag, 1.0);
         assert_eq!(scaled2.angle, g.angle); // angle unchanged
 
         // scale by negative (adds π to angle)
         let scaled3 = g.scale(-2.0);
-        assert_eq!(scaled3.length, 4.0);
+        assert_eq!(scaled3.mag, 4.0);
         // angle should be π/4 + π
         let expected_angle = g.angle + Angle::new(1.0, 1.0);
         assert_eq!(scaled3.angle, expected_angle);
@@ -2589,9 +2578,9 @@ mod tests {
         let g = Geonum::new_with_blade(3.0, 2, 1.0, 6.0); // blade 2, value π/6
 
         let scaled = g.scale(5.0);
-        assert_eq!(scaled.length, 15.0);
+        assert_eq!(scaled.mag, 15.0);
         assert_eq!(scaled.angle.blade(), 2); // blade unchanged
-        assert!((scaled.angle.value() - g.angle.value()).abs() < 1e-10); // value unchanged
+        assert!((scaled.angle.rem() - g.angle.rem()).abs() < 1e-10); // value unchanged
     }
 
     #[test]
@@ -2605,7 +2594,7 @@ mod tests {
         let inverted = point.invert_circle(&center, radius);
 
         // maps to distance 1/2 (r²/d = 1/2)
-        assert!((inverted.length - 0.5).abs() < 1e-10);
+        assert!((inverted.mag - 0.5).abs() < 1e-10);
         // angle is preserved in circle inversion
         assert_eq!(inverted.angle, point.angle);
 
@@ -2614,15 +2603,15 @@ mod tests {
         let inv_inside = inside.invert_circle(&center, radius);
 
         // maps to distance 2 (r²/d = 1/0.5 = 2)
-        assert!((inv_inside.length - 2.0).abs() < 1e-10);
+        assert!((inv_inside.mag - 2.0).abs() < 1e-10);
         // circle inversion adds transformation blades through subtraction and addition operations
         let transformation_added_blades = Angle::new_with_blade(4, 0.0, 1.0); // 4 blades = 2π
         let expected_angle = inside.angle + transformation_added_blades;
         assert_eq!(inv_inside.angle, expected_angle);
 
-        // inversion is involutive: inverting twice returns original length, adds 8 total blades
+        // inversion is involutive: inverting twice returns original magnitude, adds 8 total blades
         let double_inv = inv_inside.invert_circle(&center, radius);
-        assert!((double_inv.length - inside.length).abs() < 1e-10);
+        assert!((double_inv.mag - inside.mag).abs() < 1e-10);
         let double_transformation_blades = Angle::new_with_blade(8, 0.0, 1.0); // 2 inversions × 4 blades each
         let expected_double_angle = inside.angle + double_transformation_blades;
         assert_eq!(double_inv.angle, expected_double_angle);
@@ -2635,7 +2624,7 @@ mod tests {
         let offset_inv = test_point.invert_circle(&offset_center, offset_radius);
 
         // distance from center is r²/d = 4/2 = 2
-        let dist_from_center = (offset_inv - offset_center).length;
+        let dist_from_center = (offset_inv - offset_center).mag;
         assert!((dist_from_center - 2.0).abs() < 1e-10);
 
         // angle from center preserved
@@ -2659,7 +2648,7 @@ mod tests {
         let inverted = z.invert_circle(&origin, unit_radius);
 
         // distance becomes 1/2
-        assert!((inverted.length - 0.5).abs() < 1e-10);
+        assert!((inverted.mag - 0.5).abs() < 1e-10);
 
         // circle inversion preserves angle value and grade, adds 4 transformation blades
         let transformation_blades = Angle::new_with_blade(4, 0.0, 1.0);
@@ -2675,10 +2664,10 @@ mod tests {
         // test spiral similarity transformation
 
         // test basic scale and rotate
-        let p = Geonum::new(1.0, 0.0, 1.0); // unit length at angle 0
+        let p = Geonum::new(1.0, 0.0, 1.0); // unit magnitude at angle 0
         let transformed = p.scale_rotate(2.0, Angle::new(1.0, 6.0)); // double and rotate π/6
 
-        assert_eq!(transformed.length, 2.0, "length scaled by factor");
+        assert_eq!(transformed.mag, 2.0, "magnitude scaled by factor");
         assert_eq!(
             transformed.angle,
             Angle::new(1.0, 6.0),
@@ -2687,17 +2676,17 @@ mod tests {
 
         // test identity transformation
         let identity = p.scale_rotate(1.0, Angle::new(0.0, 1.0));
-        assert_eq!(identity.length, p.length, "identity preserves length");
+        assert_eq!(identity.mag, p.mag, "identity preserves magnitude");
         assert_eq!(identity.angle, p.angle, "identity preserves angle");
 
         // test pure scaling (no rotation)
         let scaled = p.scale_rotate(3.0, Angle::new(0.0, 1.0));
-        assert_eq!(scaled.length, 3.0, "pure scaling triples length");
+        assert_eq!(scaled.mag, 3.0, "pure scaling triples magnitude");
         assert_eq!(scaled.angle, p.angle, "pure scaling preserves angle");
 
         // test pure rotation (no scaling)
         let rotated = p.scale_rotate(1.0, Angle::new(1.0, 2.0)); // rotate π/2
-        assert_eq!(rotated.length, 1.0, "pure rotation preserves length");
+        assert_eq!(rotated.mag, 1.0, "pure rotation preserves magnitude");
         assert_eq!(rotated.angle, Angle::new(1.0, 2.0), "pure rotation to π/2");
 
         // test composition property: SR(a,θ) ∘ SR(b,φ) = SR(ab, θ+φ)
@@ -2709,7 +2698,7 @@ mod tests {
         let combined = p2.scale_rotate(6.0, Angle::new(1.0, 2.0));
 
         assert!(
-            (second.length - combined.length).abs() < 1e-10,
+            (second.mag - combined.mag).abs() < 1e-10,
             "composition: scales multiply"
         );
         assert_eq!(second.angle, combined.angle, "composition: angles add");
@@ -2725,7 +2714,7 @@ mod tests {
         }
 
         assert!(
-            (current.length - 8.0).abs() < 1e-10,
+            (current.mag - 8.0).abs() < 1e-10,
             "6 iterations of √2 scaling gives 8"
         );
         assert_eq!(
@@ -2737,8 +2726,8 @@ mod tests {
         // test with negative scale (reflection + scaling)
         let reflected = p.scale_rotate(-2.0, Angle::new(0.0, 1.0));
         assert_eq!(
-            reflected.length, 2.0,
-            "negative scale becomes positive length"
+            reflected.mag, 2.0,
+            "negative scale becomes positive magnitude"
         );
         // negative scaling adds π to angle (changes blade by 2)
         assert_eq!(
@@ -2771,7 +2760,7 @@ mod tests {
         );
 
         let normalized = rotated_many.base_angle();
-        assert_eq!(normalized.length, rotated_many.length, "length preserved");
+        assert_eq!(normalized.mag, rotated_many.mag, "magnitude preserved");
         assert_eq!(
             normalized.angle.grade(),
             rotated_many.angle.grade(),
@@ -2819,8 +2808,8 @@ mod tests {
             "both orders reach same grade"
         );
         assert_eq!(
-            dual_then_base.length, base_then_dual.length,
-            "length preserved in both orders"
+            dual_then_base.mag, base_then_dual.mag,
+            "magnitude preserved in both orders"
         );
     }
 
@@ -2834,8 +2823,8 @@ mod tests {
         let wedge_without_blade = a.base_angle().wedge(&b);
 
         assert_eq!(
-            wedge_with_blade.length, wedge_without_blade.length,
-            "wedge product length unaffected by blade reset"
+            wedge_with_blade.mag, wedge_without_blade.mag,
+            "wedge product magnitude unaffected by blade reset"
         );
         assert_eq!(
             wedge_with_blade.angle.grade(),
@@ -2862,16 +2851,16 @@ mod tests {
         let inverted_once = point.invert_circle(&center, radius);
         let inverted_twice = inverted_once.invert_circle(&center, radius);
 
-        // circle inversion preserves angle value/grade, adds 4 blades per operation
+        // circle inversion preserves angle remainder/grade, adds 4 blades per operation
         // double inversion adds 8 total transformation blades (2 × 4)
         let double_transformation_blades = Angle::new_with_blade(8, 0.0, 1.0);
         let expected_angle = point.angle + double_transformation_blades;
-        // avoid stricter equality in PartialEq by comparing blade and value separately
+        // avoid stricter equality in PartialEq by comparing blade and remainder separately
         assert_eq!(inverted_twice.angle.blade(), expected_angle.blade());
-        assert!((inverted_twice.angle.value() - expected_angle.value()).abs() < 1e-12);
+        assert!((inverted_twice.angle.rem() - expected_angle.rem()).abs() < 1e-12);
         assert!(
-            (inverted_twice.length - point.length).abs() < 1e-12,
-            "double inversion returns to original length"
+            (inverted_twice.mag - point.mag).abs() < 1e-12,
+            "double inversion returns to original magnitude"
         );
 
         // blade accumulation comparison:
@@ -2945,12 +2934,12 @@ mod tests {
     fn it_adds_angle() {
         // test Angle + Geonum (owned version)
         let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
 
         let result = angle + geonum;
 
-        // test length preserved
-        assert_eq!(result.length, 3.0);
+        // test magnitude preserved
+        assert_eq!(result.mag, 3.0);
 
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
@@ -2961,19 +2950,19 @@ mod tests {
     fn it_adds_angle_to_ref() {
         // test Angle + &Geonum (borrow version)
         let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // length 3, angle π/4
+        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
 
         let result = angle + geonum;
 
-        // test length preserved
-        assert_eq!(result.length, 3.0);
+        // test magnitude preserved
+        assert_eq!(result.mag, 3.0);
 
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
         assert_eq!(result.angle, expected_angle);
 
         // test original geonum still usable after borrow
-        assert_eq!(geonum.length, 3.0);
+        assert_eq!(geonum.mag, 3.0);
         assert_eq!(geonum.angle, Angle::new(1.0, 4.0));
     }
 
@@ -2985,14 +2974,14 @@ mod tests {
 
         let scaled_image = scale_shift + image;
 
-        // test length preserved
-        assert_eq!(scaled_image.length, 1.0);
+        // test magnitude preserved
+        assert_eq!(scaled_image.mag, 1.0);
 
         // test blade shifted by 4 (2π = 4 × π/2)
         assert_eq!(scaled_image.angle.blade(), 4);
 
         // test angle value preserved
-        assert_eq!(scaled_image.angle.value(), 0.0);
+        assert_eq!(scaled_image.angle.rem(), 0.0);
     }
 
     #[test]
@@ -3004,7 +2993,7 @@ mod tests {
 
         // circle inversion accumulates blade through addition: 1000 + 0 + boundary crossings = 1004
         assert_eq!(inverted.angle.blade(), 1004); // blade accumulated through forward-only addition
-        assert!((inverted.angle.value() - high_blade_point.angle.value()).abs() < 1e-10);
+        assert!((inverted.angle.rem() - high_blade_point.angle.rem()).abs() < 1e-10);
     }
 
     #[test]
@@ -3018,7 +3007,7 @@ mod tests {
 
         // opposite angle addition preserves transformation history through blade accumulation
         assert_eq!(oppose_sum.angle.blade(), 202); // blade accumulated: 100 + 102 = 202
-        assert!(oppose_sum.length < 1e-10); // magnitude cancels
+        assert!(oppose_sum.mag < 1e-10); // magnitude cancels
     }
 
     #[test]
@@ -3033,7 +3022,7 @@ mod tests {
 
         // should get 5 for a 3-4-5 right triangle
         assert!(
-            (distance.length - 5.0).abs() < 1e-10,
+            (distance.mag - 5.0).abs() < 1e-10,
             "3-4-5 right triangle distance"
         );
         assert_eq!(distance.angle.blade(), 0, "distance is scalar at blade 0");
@@ -3041,10 +3030,7 @@ mod tests {
         // test same point gives zero distance
         let same_point = Geonum::new(3.0, 0.0, 1.0);
         let zero_distance = point_a.distance_to(&same_point);
-        assert!(
-            zero_distance.length < 1e-10,
-            "same point gives zero distance"
-        );
+        assert!(zero_distance.mag < 1e-10, "same point gives zero distance");
 
         // test with arbitrary angles
         let p1 = Geonum::new(5.0, 1.0, 6.0); // 5 units at π/6
@@ -3058,7 +3044,7 @@ mod tests {
         let expected = expected_sq.sqrt();
 
         assert!(
-            (d.length - expected).abs() < 1e-10,
+            (d.mag - expected).abs() < 1e-10,
             "arbitrary angle distance matches law of cosines"
         );
 
@@ -3079,7 +3065,7 @@ mod tests {
         let regular_distance = regular_a.distance_to(&regular_b);
 
         assert!(
-            (high_distance.length - regular_distance.length).abs() < 1e-10,
+            (high_distance.mag - regular_distance.mag).abs() < 1e-10,
             "distance computation independent of blade count"
         );
     }
@@ -3094,7 +3080,7 @@ mod tests {
         for a in samples {
             let theta = a.grade_angle();
             let g = Geonum::cos(a);
-            assert!((g.length - theta.cos().abs()).abs() < EPSILON);
+            assert!((g.mag - theta.cos().abs()).abs() < EPSILON);
             assert!(matches!(g.angle.grade(), 0 | 2));
             let expected = if theta.cos() < 0.0 {
                 Angle::new(0.0, 1.0) + Angle::new(1.0, 1.0)
@@ -3111,7 +3097,7 @@ mod tests {
         for a in samples {
             let theta = a.grade_angle();
             let g = Geonum::sin(a);
-            assert!((g.length - theta.sin().abs()).abs() < EPSILON);
+            assert!((g.mag - theta.sin().abs()).abs() < EPSILON);
             assert!(matches!(g.angle.grade(), 1 | 3));
             let base = Angle::new(1.0, 2.0);
             let expected = if theta.sin() < 0.0 {
@@ -3128,12 +3114,12 @@ mod tests {
         let a = Angle::new(3.0, 8.0);
         let t = Geonum::tan(a);
         let s_over_c = Geonum::sin(a).div(&Geonum::cos(a));
-        assert!((t.length - s_over_c.length).abs() < EPSILON);
+        assert!((t.mag - s_over_c.mag).abs() < EPSILON);
         assert_eq!(t.angle.base_angle(), s_over_c.angle.base_angle());
 
         // sanity: tan magnitude equals |sin|/|cos| for a non-singular sample
         let theta = a.grade_angle();
-        assert!((t.length - (theta.sin().abs() / theta.cos().abs())).abs() < 1e-10);
+        assert!((t.mag - (theta.sin().abs() / theta.cos().abs())).abs() < 1e-10);
 
         // tan inherits odd parity
         assert!(matches!(t.angle.grade(), 1 | 3));
@@ -3147,10 +3133,10 @@ mod tests {
         let opp = g.opp();
 
         let expected = 5.0 * (2.0_f64).sqrt() / 2.0;
-        assert!((adj.length - expected).abs() < EPSILON);
+        assert!((adj.mag - expected).abs() < EPSILON);
         assert_eq!(adj.angle, Angle::new(0.0, 1.0));
 
-        assert!((opp.length - expected).abs() < EPSILON);
+        assert!((opp.mag - expected).abs() < EPSILON);
         assert_eq!(opp.angle, Angle::new(1.0, 2.0));
     }
 
@@ -3160,35 +3146,35 @@ mod tests {
         let g = Geonum::new(3.0, 1.0, 1.0); // [3, π]
         let adj = g.adj();
         let opp = g.opp();
-        assert!((adj.length - 3.0).abs() < EPSILON);
+        assert!((adj.mag - 3.0).abs() < EPSILON);
         assert_eq!(adj.angle, Angle::new(1.0, 1.0));
-        assert!(opp.length < EPSILON);
+        assert!(opp.mag < EPSILON);
 
         // angle = 3π/2 → adj = [0, 0], opp = [r, 3π/2]
         let h = Geonum::new(7.0, 3.0, 2.0); // [7, 3π/2]
         let adj_h = h.adj();
         let opp_h = h.opp();
-        assert!(adj_h.length < EPSILON);
-        assert!((opp_h.length - 7.0).abs() < EPSILON);
+        assert!(adj_h.mag < EPSILON);
+        assert!((opp_h.mag - 7.0).abs() < EPSILON);
         assert_eq!(opp_h.angle, Angle::new(3.0, 2.0));
     }
 
     #[test]
     fn it_matches_cos_sin_gateways_for_adj_opp() {
-        let length = 4.0;
+        let mag = 4.0;
         let angle = Angle::new(1.0, 3.0); // π/3
-        let g = Geonum::new_with_angle(length, angle);
+        let g = Geonum::new_with_angle(mag, angle);
 
         let adj = g.adj();
         let opp = g.opp();
 
-        let adj_gateway = Geonum::cos(angle).scale(length);
-        let opp_gateway = Geonum::sin(angle).scale(length);
+        let adj_gateway = Geonum::cos(angle).scale(mag);
+        let opp_gateway = Geonum::sin(angle).scale(mag);
 
-        assert!((adj.length - adj_gateway.length).abs() < EPSILON);
+        assert!((adj.mag - adj_gateway.mag).abs() < EPSILON);
         assert_eq!(adj.angle, adj_gateway.angle);
 
-        assert!((opp.length - opp_gateway.length).abs() < EPSILON);
+        assert!((opp.mag - opp_gateway.mag).abs() < EPSILON);
         assert_eq!(opp.angle, opp_gateway.angle);
     }
 }

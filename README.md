@@ -51,10 +51,10 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 ```rs
 /// dimension-free, geometric number
 struct Geonum {
-    length: f64,      // multiply
+    magnitude: f64,   // multiply
     angle: Angle {    // add
-        blade: usize,     // counts π/2 rotations
-        value: f64        // current [0, π/2) angle
+        blade: usize,    // counts π/2 rotations
+        remainder: f64   // current [0, π/2) angle
     }
 }
 ```
@@ -74,10 +74,10 @@ Geonum: dimensions are rotational states - you rotate by π/2 increments
 
 | dimension | traditional | Geonum |
 |-----------|-------------|--------|
-| 1D | (x)  | `[length, 0]` |
-| 2D | (x, y)  | `[length, π/2]` |
-| 3D | (x, y, z) | `[length, π]` |
-| 4D | (x, y, z, w) | `[length, 3π/2]` |
+| 1D | (x)  | `[magnitude, 0]` |
+| 2D | (x, y)  | `[magnitude, π/2]` |
+| 3D | (x, y, z) | `[magnitude, π]` |
+| 4D | (x, y, z, w) | `[magnitude, 3π/2]` |
 
 geometric numbers break numbers free from pencil & paper math requiring everything to be described as scalars and roman numeral stacked arrays of scalars
 
@@ -91,7 +91,7 @@ cargo add geonum
 
 ### example
 
-compute components and length with angle.project — dimension free
+compute components and magnitude with angle.project — dimension free
 
 ```rust
 use geonum::*;
@@ -108,15 +108,15 @@ let ex = Angle::new(0.0, 1.0);
 let ey = Angle::new(1.0, 2.0); // +pi/2
 
 // compute projections via angle.project
-let px = end.length * end_angle.project(ex); // 7·cos
-let py = end.length * end_angle.project(ey); // 7·sin
+let px = end.mag * end_angle.project(ex); // 7·cos
+let py = end.mag * end_angle.project(ey); // 7·sin
 
 // quadratic identity: px² + py² = L²
-assert!(((px * px + py * py) - end.length * end.length).abs() < 1e-12);
+assert!(((px * px + py * py) - end.mag * end.mag).abs() < 1e-12);
 
 // dimension free: blade 1 vs 1_000_001 identical
-let p_small = end.length * end_angle.project(Angle::new(1.0, 2.0));
-let p_huge = end.length * end_angle.project(Angle::new(1_000_001.0, 2.0));
+let p_small = end.mag * end_angle.project(Angle::new(1.0, 2.0));
+let p_huge = end.mag * end_angle.project(Angle::new(1_000_001.0, 2.0));
 assert!((p_small - p_huge).abs() < 1e-12);
 ```
 
@@ -164,25 +164,25 @@ trigonometry_test.rs
 
 | implementation | size | time | speedup |
 |----------------|------|------|---------|
-| tensor (O(n³)) | 2 | 358 ns | baseline |
-| tensor (O(n³)) | 3 | 788 ns | baseline |
-| tensor (O(n³)) | 4 | 1.41 µs | baseline |
-| tensor (O(n³)) | 8 | 7.95 µs | baseline |
-| geonum (O(1)) | all | 17 ns | 21-468× |
+| tensor (O(n³)) | 2 | 342 ns | baseline |
+| tensor (O(n³)) | 3 | 772 ns | baseline |
+| tensor (O(n³)) | 4 | 1.35 µs | baseline |
+| tensor (O(n³)) | 8 | 6.88 µs | baseline |
+| geonum (O(1)) | all | 16 ns | 21-430× |
 
-geonum achieves constant 17ns regardless of size, while tensor operations scale cubically from 358ns to 7.95µs
+geonum achieves constant 16ns regardless of size, while tensor operations scale cubically from 342ns to 6.88µs
 
 #### extreme dimensions
 
 | implementation | dimensions | time | storage |
 |----------------|------------|------|---------|
-| traditional GA | 10 | 7.95 µs | 2^10 = 1024 components |
+| traditional GA | 10 | 7.18 µs | 2^10 = 1024 components |
 | traditional GA | 30+ | impossible | 2^30 = 1B+ components |
 | traditional GA | 1000+ | impossible | 2^1000 > atoms in universe |
 | geonum | 10 | 31 ns | 2 values |
-| geonum | 30 | 35 ns | 2 values |
-| geonum | 1000 | 31 ns | 2 values |
-| geonum | 1,000,000 | 31 ns | 2 values |
+| geonum | 30 | 30 ns | 2 values |
+| geonum | 1000 | 30 ns | 2 values |
+| geonum | 1,000,000 | 30 ns | 2 values |
 
 geonum enables million-dimensional geometric algebra with constant-time operations
 
@@ -190,11 +190,11 @@ geonum enables million-dimensional geometric algebra with constant-time operatio
 
 | operation | traditional | geonum | speedup |
 |-----------|------------|--------|---------|
-| jacobian (10×10) | 1.32 µs | 24 ns | 55× |
-| jacobian (100×100) | 98.5 µs | 24 ns | 4100× |
-| rotation 2D | 4.6 ns | 39 ns | comparable |
-| rotation 3D | 21 ns | 21 ns | equivalent |
-| rotation 10D | matrix O(n²) | 21 ns | constant |
+| jacobian (10×10) | 1.25 µs | 26 ns | 48× |
+| jacobian (100×100) | 91.7 µs | 25 ns | 3668× |
+| rotation 2D | 4.3 ns | 37 ns | comparable |
+| rotation 3D | 19 ns | 16 ns | 1.2× faster |
+| rotation 10D | 160 ns | 19 ns | 8× |
 | geometric product | decomposition | 17 ns | direct |
 | wedge product 2D | 1.9 ns | 60 ns | trigonometric |
 | wedge product 10D | 45 components | 60 ns | constant |
@@ -214,7 +214,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 - scale `.scale()`, scale-rotate `.scale_rotate()`, negate `.negate()`
 - differentiation `.differentiate()` via π/2 rotation, integration `.integrate()` via -π/2 rotation
 - meet `.meet()` for subspace intersection with geonum's π-rotation incidence structure
-- orthogonality test `.is_orthogonal()`, distance `.distance_to()`, length difference `.length_diff()`
+- orthogonality test `.is_orthogonal()`, distance `.distance_to()`, magnitude difference `.mag_diff()`
 
 #### angle-blade architecture
 - blade count tracks π/2 rotations: 0→scalar, 1→vector, 2→bivector, 3→trivector
@@ -246,17 +246,17 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 - no symbolic manipulation, no numerical approximation
 
 #### constructors
-- `Geonum::new(length, pi_radians, divisor)` - basic constructor
-- `Geonum::new_with_angle(length, angle)` - from angle struct
+- `Geonum::new(magnitude, pi_radians, divisor)` - basic constructor
+- `Geonum::new_with_angle(magnitude, angle)` - from angle struct
 - `Geonum::new_from_cartesian(x, y)` - from cartesian coordinates
-- `Geonum::new_with_blade(length, blade, pi_radians, divisor)` - explicit blade
+- `Geonum::new_with_blade(magnitude, blade, pi_radians, divisor)` - explicit blade
 - `Geonum::scalar(value)` - scalar at grade 0
 - `Angle::new(pi_radians, divisor)` - angle from π fractions
 - `Angle::new_with_blade(blade, pi_radians, divisor)` - angle with blade offset
 - `Angle::new_from_cartesian(x, y)` - angle from coordinates
 
 #### special operations
-- `.pow(n)` for exponentiation preserving angle-length relationship
+- `.pow(n)` for exponentiation preserving angle-magnitude relationship
 - `.invert_circle(center, radius)` for conformal inversions
 - angle predicates: `.is_scalar()`, `.is_vector()`, `.is_bivector()`, `.is_trivector()`
 - angle functions: `.sin()`, `.cos()`, `.tan()`, `.is_opposite()`
@@ -279,9 +279,9 @@ cargo llvm-cov # coverage
 geometric numbers depend on 2 rules:
 
 1. all numbers require a 2 component minimum:
-    1. length number
+    1. magnitude number
     2. angle radian
-2. angles add, lengths multiply
+2. angles add, mags multiply
 
 so:
 
@@ -299,7 +299,7 @@ higher dimensions just keep adding components rotated by +pi/2 each time
 
 dimensions are created by rotations and not stacking coordinates
 
-multiplying numbers adds their angles and multiplies their lengths:
+multiplying numbers adds their angles and multiplies their magnitudes:
 
 - `[2, 0] * [3, pi/2] = [6, pi/2]`
 
@@ -364,49 +364,49 @@ geometric numbers build dimensions by rotating—not stacking
 
     test suites:
     - tests/numbers_test.rs
-      - its_a_scalar:8-36
-      - its_a_vector:39-72
-      - its_a_real_number:75-108
-      - its_an_imaginary_number:111-139
-      - its_a_complex_number:142-174
-      - its_a_dual_number:177-298
-      - its_an_octonion:301-344
-      - its_a_matrix:347-401
-      - its_a_tensor:404-647
-      - it_dualizes_log2_geometric_algebra_components:650-683
-      - its_a_clifford_number:943-1023
+      - its_a_scalar:8-38
+      - its_a_vector:39-74
+      - its_a_real_number:75-110
+      - its_an_imaginary_number:111-141
+      - its_a_complex_number:142-176
+      - its_a_dual_number:177-297
+      - its_an_octonion:298-343
+      - its_a_matrix:344-400
+      - its_a_tensor:401-597
+      - it_dualizes_log2_geometric_algebra_components:647-682
+      - its_a_clifford_number:940-1022
 
     - tests/dimension_test.rs
-      - it_solves_the_exponential_complexity_explosion:521-583
-      - it_doesnt_need_a_pseudoscalar:596-792
-      - it_demonstrates_pseudoscalar_elimination_benefits:794-832
-      - it_proves_dualization_as_angle_ops_compresses_ga:834-898
-      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:900-983
-      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1132-1168
-      - it_proves_rotational_quadrature_expresses_quadratic_forms:1421-1595
+      - it_solves_the_exponential_complexity_explosion:520-594
+      - it_doesnt_need_a_pseudoscalar:595-792
+      - it_demonstrates_pseudoscalar_elimination_benefits:793-832
+      - it_proves_dualization_as_angle_ops_compresses_ga:833-898
+      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:899-983
+      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1131-1168
+      - it_proves_rotational_quadrature_expresses_quadratic_forms:1419-1593
 
     - tests/calculus_test.rs
-      - its_a_limit:40-121
-      - its_a_derivative:124-172
-      - its_an_integral:173-224
-      - it_proves_differentiation_cycles_grades:772-926
-      - its_a_gradient:318-367
-      - its_a_divergence:368-418
-      - its_a_curl:419-461
-      - its_a_laplacian:509-562
-      - its_a_line_integral:615-642
-      - its_a_surface_integral:643-669
-      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1013-1062
+      - its_a_limit:40-120
+      - its_a_derivative:121-166
+      - its_an_integral:167-218
+      - it_proves_differentiation_cycles_grades:766-918
+      - its_a_gradient:312-361
+      - its_a_divergence:362-412
+      - its_a_curl:413-455
+      - its_a_laplacian:503-556
+      - its_a_line_integral:609-636
+      - its_a_surface_integral:637-663
+      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1004-1053
 
     - tests/mechanics_test.rs
       - it_changes_kinematic_level_by_cycling_grade:46-195
-      - it_encodes_velocity:268-321
-      - it_encodes_acceleration:324-362
-      - it_encodes_jerk:365-412
-      - it_encodes_kinetic_energy:962-1050
-      - it_handles_energy_conservation:1793-1949
-      - it_handles_momentum_conservation:1952-2064
-      - it_handles_angular_momentum_conservation:2067-2175
+      - it_encodes_velocity:268-323
+      - it_encodes_acceleration:324-364
+      - it_encodes_jerk:365-414
+      - it_encodes_kinetic_energy:959-1046
+      - it_handles_energy_conservation:1783-1941
+      - it_handles_momentum_conservation:1942-2052
+      - it_handles_angular_momentum_conservation:2053-2157
 
     create tests/my_test.rs with use geonum::*;
     ```

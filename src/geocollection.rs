@@ -97,7 +97,7 @@ impl AsRef<[Geonum]> for GeoCollection {
 }
 
 impl GeoCollection {
-    /// removes geometric objects with length below threshold
+    /// removes geometric objects with magnitude below threshold
     ///
     /// useful for filtering out noise, negligible contributions, or
     /// implementing level-of-detail systems
@@ -105,7 +105,7 @@ impl GeoCollection {
         Self::from(
             self.objects
                 .iter()
-                .filter(|g| g.length > threshold)
+                .filter(|g| g.mag > threshold)
                 .cloned()
                 .collect::<Vec<_>>(),
         )
@@ -120,15 +120,14 @@ impl GeoCollection {
             self.objects
                 .iter()
                 .filter(|g| {
-                    let magnitude = g.length * direction.length;
+                    let magnitude = g.mag * direction.mag;
                     if magnitude == 0.0 {
                         return false;
                     }
 
                     // cos(θ) = (v1·v2) / (|v1||v2|) with sign encoded in dot.angle
                     let dot = g.dot(direction);
-                    let signed_cos =
-                        dot.length / magnitude * dot.angle.project(Angle::new(0.0, 1.0));
+                    let signed_cos = dot.mag / magnitude * dot.angle.project(Angle::new(0.0, 1.0));
 
                     let angle_between = signed_cos.clamp(-1.0, 1.0).acos();
                     angle_between <= half_angle
@@ -143,7 +142,7 @@ impl GeoCollection {
     /// useful for energy calculations, total force/field strength,
     /// or any domain where magnitudes sum meaningfully
     pub fn total_magnitude(&self) -> f64 {
-        self.objects.iter().map(|g| g.length).sum()
+        self.objects.iter().map(|g| g.mag).sum()
     }
 
     /// finds the dominant object (largest magnitude) in the collection
@@ -153,7 +152,7 @@ impl GeoCollection {
     pub fn dominant(&self) -> Option<&Geonum> {
         self.objects
             .iter()
-            .max_by(|a, b| a.length.partial_cmp(&b.length).unwrap())
+            .max_by(|a, b| a.mag.partial_cmp(&b.mag).unwrap())
     }
 
     /// scales all objects in the collection by a uniform factor
@@ -218,8 +217,8 @@ mod tests {
 
         let filtered = collection.truncate(0.5);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered.objects[0].length > 0.5);
-        assert!(filtered.objects[1].length > 0.5);
+        assert!(filtered.objects[0].mag > 0.5);
+        assert!(filtered.objects[1].mag > 0.5);
     }
 
     #[test]
@@ -257,7 +256,7 @@ mod tests {
         ]);
 
         let dominant = collection.dominant().unwrap();
-        assert_eq!(dominant.length, 7.0);
+        assert_eq!(dominant.mag, 7.0);
     }
 
     #[test]
@@ -275,9 +274,9 @@ mod tests {
         ]);
 
         let scaled = collection.scale_all(2.0);
-        assert_eq!(scaled.objects[0].length, 2.0);
-        assert_eq!(scaled.objects[1].length, 4.0);
-        assert_eq!(scaled.objects[2].length, 6.0);
+        assert_eq!(scaled.objects[0].mag, 2.0);
+        assert_eq!(scaled.objects[1].mag, 4.0);
+        assert_eq!(scaled.objects[2].mag, 6.0);
     }
 
     #[test]
@@ -327,7 +326,7 @@ mod tests {
             Geonum::scalar(3.0),
         ]);
 
-        let sum: f64 = collection.iter().map(|g| g.length).sum();
+        let sum: f64 = collection.iter().map(|g| g.mag).sum();
         assert_eq!(sum, 6.0);
     }
 
@@ -335,8 +334,8 @@ mod tests {
     fn it_indexes_into_collection() {
         let collection = GeoCollection::from(vec![Geonum::scalar(10.0), Geonum::scalar(20.0)]);
 
-        assert_eq!(collection[0].length, 10.0);
-        assert_eq!(collection[1].length, 20.0);
+        assert_eq!(collection[0].mag, 10.0);
+        assert_eq!(collection[1].mag, 20.0);
     }
 
     #[test]
@@ -358,7 +357,7 @@ mod tests {
         let collection: GeoCollection = (0..5).map(|i| Geonum::scalar(i as f64)).collect();
 
         assert_eq!(collection.len(), 5);
-        assert_eq!(collection[2].length, 2.0);
+        assert_eq!(collection[2].mag, 2.0);
     }
 
     #[test]
@@ -368,7 +367,7 @@ mod tests {
 
         let scaled = collection.scale_all(3.0);
         assert_eq!(scaled.objects[0].angle, angle); // angle unchanged
-        assert_eq!(scaled.objects[0].length, 6.0); // length scaled
+        assert_eq!(scaled.objects[0].mag, 6.0); // magnitude scaled
     }
 
     #[test]

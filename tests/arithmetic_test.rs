@@ -46,16 +46,16 @@ fn it_proves_subtraction_is_destructive_interference() {
 
     // geometric sum magnitude collapses to ~0 via destructive interference
     println!("\nDestructive interference result:");
-    println!("  magnitude: {:.10}", geometric_sum.length);
+    println!("  magnitude: {:.10}", geometric_sum.mag);
     println!(
         "  angle: {} (degenerate - no meaningful direction for zero magnitude)",
         geometric_sum.angle.grade_angle()
     );
 
     assert!(
-        geometric_sum.length < EPSILON,
+        geometric_sum.mag < EPSILON,
         "magnitude collapsed to ~0 via destructive interference: {}",
-        geometric_sum.length
+        geometric_sum.mag
     );
 
     // the degenerate case: zero magnitude has undefined angle
@@ -63,7 +63,7 @@ fn it_proves_subtraction_is_destructive_interference() {
     // you can't recover which directions interfered to create the zero
 
     // projection back to scalar
-    let projected_scalar = geometric_sum.length;
+    let projected_scalar = geometric_sum.mag;
     assert!(
         (projected_scalar - scalar_result).abs() < EPSILON,
         "projection to scalar: {} matches traditional result {}",
@@ -91,9 +91,8 @@ fn it_shows_subtraction_cost_vs_projection() {
 
     // compute via cosine rule
     let theta = PI;
-    let magnitude_squared = a_geo.length.powi(2)
-        + b_geo.length.powi(2)
-        + 2.0 * a_geo.length * b_geo.length * theta.cos();
+    let magnitude_squared =
+        a_geo.mag.powi(2) + b_geo.mag.powi(2) + 2.0 * a_geo.mag * b_geo.mag * theta.cos();
     let expected_magnitude = magnitude_squared.sqrt();
 
     println!("\n5 - 3 = 2 via cosine interference:");
@@ -105,16 +104,16 @@ fn it_shows_subtraction_cost_vs_projection() {
     let geometric_result = a_geo + b_geo;
 
     assert!(
-        (geometric_result.length - expected_magnitude).abs() < EPSILON,
+        (geometric_result.mag - expected_magnitude).abs() < EPSILON,
         "geometric magnitude {} matches cosine rule {}",
-        geometric_result.length,
+        geometric_result.mag,
         expected_magnitude
     );
 
     assert!(
-        (geometric_result.length - projection_result).abs() < EPSILON,
+        (geometric_result.mag - projection_result).abs() < EPSILON,
         "angle space {} matches projection space {}",
-        geometric_result.length,
+        geometric_result.mag,
         projection_result
     );
 
@@ -144,7 +143,7 @@ fn it_proves_negative_is_position_not_sign() {
 
     // verify magnitude is unsigned
     assert_eq!(
-        negative_one_geo.length, 1.0,
+        negative_one_geo.mag, 1.0,
         "magnitude is unsigned (no sign bit)"
     );
 
@@ -154,7 +153,7 @@ fn it_proves_negative_is_position_not_sign() {
 
     // both have same magnitude representation - difference is geometric position
     assert_eq!(
-        positive_one.length, negative_one.length,
+        positive_one.mag, negative_one.mag,
         "both have magnitude 1, no sign bit"
     );
 
@@ -181,46 +180,46 @@ fn it_demonstrates_interference_pattern_for_various_angles() {
     let same_result = a + b_same;
     let same_expected = (3.0_f64.powi(2) + 4.0_f64.powi(2) + 2.0 * 3.0 * 4.0 * 1.0).sqrt();
     assert!(
-        (same_result.length - same_expected).abs() < EPSILON,
+        (same_result.mag - same_expected).abs() < EPSILON,
         "θ=0: cos(0)=1, full constructive: 3+4=7, got {}",
-        same_result.length
+        same_result.mag
     );
-    assert!((same_result.length - 7.0).abs() < EPSILON);
+    assert!((same_result.mag - 7.0).abs() < EPSILON);
 
     // perpendicular: θ = π/2, cos(π/2) = 0 (pythagorean)
     let b_perp = Geonum::new(4.0, 1.0, 2.0); // π/2
     let perp_result = a + b_perp;
     let perp_expected = (3.0_f64.powi(2) + 4.0_f64.powi(2) + 2.0 * 3.0 * 4.0 * 0.0).sqrt();
     assert!(
-        (perp_result.length - perp_expected).abs() < EPSILON,
+        (perp_result.mag - perp_expected).abs() < EPSILON,
         "θ=π/2: cos(π/2)=0, pythagorean: sqrt(9+16)=5, got {}",
-        perp_result.length
+        perp_result.mag
     );
-    assert!((perp_result.length - 5.0).abs() < EPSILON);
+    assert!((perp_result.mag - 5.0).abs() < EPSILON);
 
     // opposite: θ = π, cos(π) = -1 (destructive)
     let b_opp = Geonum::new(4.0, 1.0, 1.0); // π
     let opp_result = a + b_opp;
     let opp_expected = (3.0_f64.powi(2) + 4.0_f64.powi(2) + 2.0 * 3.0 * 4.0 * (-1.0)).sqrt();
     assert!(
-        (opp_result.length - opp_expected).abs() < EPSILON,
+        (opp_result.mag - opp_expected).abs() < EPSILON,
         "θ=π: cos(π)=-1, destructive: |3-4|=1, got {}",
-        opp_result.length
+        opp_result.mag
     );
-    assert!((opp_result.length - 1.0).abs() < EPSILON);
+    assert!((opp_result.mag - 1.0).abs() < EPSILON);
 
     println!("\nInterference patterns:");
     println!(
         "  θ=0°   (cos=1):  [3,0] + [4,0]   → {} (constructive)",
-        same_result.length
+        same_result.mag
     );
     println!(
         "  θ=90°  (cos=0):  [3,0] + [4,π/2] → {} (pythagorean)",
-        perp_result.length
+        perp_result.mag
     );
     println!(
         "  θ=180° (cos=-1): [3,0] + [4,π]   → {} (destructive)",
-        opp_result.length
+        opp_result.mag
     );
     println!("\n  Subtraction is the θ=180° case");
 }

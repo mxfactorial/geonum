@@ -17,11 +17,11 @@ impl Projection for Geonum {
         let path_angle = path_encoder(data);
 
         // create a projection by encoding the path as an angle
-        Geonum::new_with_angle(self.length, self.angle + path_angle)
+        Geonum::new_with_angle(self.mag, self.angle + path_angle)
     }
 
     fn compose(&self, other: &Self) -> Self {
         // compose projections by angle addition
-        Geonum::new_with_angle(self.length * other.length, self.angle + other.angle)
+        Geonum::new_with_angle(self.mag * other.mag, self.angle + other.angle)
     }
 }

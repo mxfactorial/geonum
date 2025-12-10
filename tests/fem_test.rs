@@ -21,9 +21,9 @@ fn its_a_shape_function() {
     let n_at_1 = shape_function(1.0);
 
     // test values match expected linear function
-    assert_eq!(n_at_0.length, 1.0);
-    assert_eq!(n_at_half.length, 0.5);
-    assert_eq!(n_at_1.length, 0.0);
+    assert_eq!(n_at_0.mag, 1.0);
+    assert_eq!(n_at_half.mag, 0.5);
+    assert_eq!(n_at_1.mag, 0.0);
 
     // create quadratic shape function N(x) = 4x(1-x) as a geonum
     // this is the standard quadratic basis function on [0,1]
@@ -38,9 +38,9 @@ fn its_a_shape_function() {
     let q_at_1 = quadratic_shape(1.0);
 
     // test values match expected quadratic function
-    assert_eq!(q_at_0.length, 0.0);
-    assert_eq!(q_at_half.length, 1.0);
-    assert_eq!(q_at_1.length, 0.0);
+    assert_eq!(q_at_0.mag, 0.0);
+    assert_eq!(q_at_half.mag, 1.0);
+    assert_eq!(q_at_1.mag, 0.0);
 
     // demonstrate shape function derivatives using angle rotation
     // for a function f(x), f'(x) is represented by rotating angle by PI/2
@@ -52,7 +52,7 @@ fn its_a_shape_function() {
 
     // validate derivative at a point
     let deriv_at_half = shape_derivative(0.5);
-    assert_eq!(deriv_at_half.length, 1.0);
+    assert_eq!(deriv_at_half.mag, 1.0);
     assert_eq!(deriv_at_half.angle.grade_angle(), PI);
 
     // demonstrate ability to represent high-order shape functions
@@ -75,9 +75,9 @@ fn its_a_shape_function() {
     let c_at_1 = cubic_shape(1.0);
 
     // test values match expected cubic function
-    assert!((c_at_0.length - 0.0).abs() < EPSILON);
-    assert!((c_at_half.length - 0.5).abs() < EPSILON);
-    assert!((c_at_1.length - 1.0).abs() < EPSILON);
+    assert!((c_at_0.mag - 0.0).abs() < EPSILON);
+    assert!((c_at_half.mag - 0.5).abs() < EPSILON);
+    assert!((c_at_1.mag - 1.0).abs() < EPSILON);
 
     // measure performance with a simulated multi-dimensional element
     // this would normally require O(n³) operations in a traditional FEM code
@@ -103,7 +103,7 @@ fn its_a_shape_function() {
     // r = sqrt(3/4) ≈ 0.866, cubic_r = r²(3-2r) ≈ 0.598
     let expected_r = (0.75_f64).sqrt();
     let expected_length = expected_r * expected_r * (3.0 - 2.0 * expected_r);
-    assert!((high_order_value.length - expected_length).abs() < EPSILON);
+    assert!((high_order_value.mag - expected_length).abs() < EPSILON);
 
     // test angle computation: theta = atan2(0.5, 0.5) = π/4
     // phi = acos(0.5/0.866) ≈ 0.955 radians
@@ -111,7 +111,7 @@ fn its_a_shape_function() {
     let expected_theta = 0.5_f64.atan2(0.5);
     let expected_phi = (0.5 / expected_r).acos();
     let expected_angle_value = expected_theta * expected_phi / TAU;
-    assert!((high_order_value.angle.value() - expected_angle_value).abs() < EPSILON);
+    assert!((high_order_value.angle.rem() - expected_angle_value).abs() < EPSILON);
     assert_eq!(high_order_value.angle.blade(), 0); // small angle, so blade is 0
 }
 
@@ -129,7 +129,7 @@ fn its_a_stiffness_matrix() {
     let stiffness = |disp: &Geonum| -> Geonum {
         // applying the stiffness relationship through angle transformation
         // for a spring with k=1, force = k * displacement
-        Geonum::new_with_angle(disp.length, disp.angle) // preserve angle for simple spring
+        Geonum::new_with_angle(disp.mag, disp.angle) // preserve angle for simple spring
     };
 
     // test the stiffness operation with a displacement
@@ -139,7 +139,7 @@ fn its_a_stiffness_matrix() {
     let force = stiffness(&displacement);
 
     // test force equals k*x for spring (k=1)
-    assert_eq!(force.length, 0.5);
+    assert_eq!(force.mag, 0.5);
     assert_eq!(force.angle.grade_angle(), 0.0);
 
     // demonstrate boundary condition application through angle constraints
@@ -154,7 +154,7 @@ fn its_a_stiffness_matrix() {
     let fixed_force = stiffness(&fixed_bc);
 
     // test the boundary condition has zero force
-    assert_eq!(fixed_force.length, 0.0);
+    assert_eq!(fixed_force.mag, 0.0);
 
     // represent 2D element stiffness relationships
     // for a 2D quad element, traditional assembly uses nested loops: O(n²)
@@ -176,7 +176,7 @@ fn its_a_stiffness_matrix() {
     let stress = compute_stress(&material, &displ_field);
 
     // test the stress computation
-    assert!((stress.length - 1.0).abs() < EPSILON);
+    assert!((stress.mag - 1.0).abs() < EPSILON);
     assert!((stress.angle.grade_angle() - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
 
     // demonstrate how a million-element assembly maintains O(1) complexity
@@ -189,7 +189,7 @@ fn its_a_stiffness_matrix() {
     let element_contribution = |local_coord: f64, disp: &Geonum| -> Geonum {
         // encodes position-dependent stiffness through angle
         let rotation = Angle::new(local_coord, 2.0); // local_coord * PI/2
-        Geonum::new_with_angle(disp.length, disp.angle + rotation)
+        Geonum::new_with_angle(disp.mag, disp.angle + rotation)
     };
 
     // compute global assembly effect (traditionally an O(n³) operation)
@@ -199,7 +199,7 @@ fn its_a_stiffness_matrix() {
     // test position-based rotation at local_coord = 0.5
     let expected_rotation = Angle::new(0.5, 2.0); // 0.5 * PI/2 = PI/4
     let expected_angle = displ_field.angle + expected_rotation;
-    assert_eq!(global_result.length, displ_field.length);
+    assert_eq!(global_result.mag, displ_field.mag);
     assert_eq!(global_result.angle, expected_angle);
 }
 
@@ -212,7 +212,7 @@ fn its_a_linear_solver() {
     let apply_system = |x: &Geonum| -> Geonum {
         // system matrix A applied to x giving Ax
         let phase_shift = Angle::new(1.0, 6.0); // PI/6
-        Geonum::new_with_angle(2.0 * x.length, x.angle + phase_shift)
+        Geonum::new_with_angle(2.0 * x.mag, x.angle + phase_shift)
     };
 
     // create a right-hand side b
@@ -222,13 +222,13 @@ fn its_a_linear_solver() {
     // x = A⁻¹b which in geonum is:
     // |x| = |b|/|A|, angle(x) = angle(b) - angle(A)
     let phase_shift = Angle::new(1.0, 6.0); // PI/6
-    let solution = Geonum::new_with_angle(b.length / 2.0, b.angle - phase_shift);
+    let solution = Geonum::new_with_angle(b.mag / 2.0, b.angle - phase_shift);
 
     // validate the solution by checking Ax = b
     let check = apply_system(&solution);
 
     // test the solution
-    assert!((check.length - b.length).abs() < EPSILON);
+    assert!((check.mag - b.mag).abs() < EPSILON);
     assert_eq!(check.angle, b.angle);
 
     // demonstrate solving a more complex system
@@ -238,7 +238,7 @@ fn its_a_linear_solver() {
     let apply_stiffness = |u: &Geonum| -> Geonum {
         // K*u giving force vector f
         let rotation = Angle::new(1.0, 4.0); // PI/4
-        Geonum::new_with_angle(5.0 * u.length, u.angle + rotation)
+        Geonum::new_with_angle(5.0 * u.mag, u.angle + rotation)
     };
 
     // define force vector
@@ -246,13 +246,13 @@ fn its_a_linear_solver() {
 
     // solve for displacement u where K*u = f
     let rotation = Angle::new(1.0, 4.0); // PI/4
-    let displacement = Geonum::new_with_angle(force.length / 5.0, force.angle - rotation);
+    let displacement = Geonum::new_with_angle(force.mag / 5.0, force.angle - rotation);
 
     // validate displacement solution by applying stiffness
     let check_force = apply_stiffness(&displacement);
 
     // test the solution matches the force
-    assert!((check_force.length - force.length).abs() < EPSILON);
+    assert!((check_force.mag - force.mag).abs() < EPSILON);
     assert_eq!(check_force.angle, force.angle);
 
     // demonstrate solving a system with boundary conditions
@@ -266,7 +266,7 @@ fn its_a_linear_solver() {
     let reaction = apply_stiffness(&fixed_node);
 
     // validate the reaction force at the fixed boundary
-    assert_eq!(reaction.length, 0.0);
+    assert_eq!(reaction.mag, 0.0);
 
     // demonstrate how a million-node system solution maintains O(1) complexity
     // with geonum's angle representation
@@ -279,7 +279,7 @@ fn its_a_linear_solver() {
         // the key insight is that even with a million nodes
         // the operation is still just an angle transformation
         let system_rotation = Angle::new(1.0, 3.0); // PI/3
-        Geonum::new_with_angle(1000.0 * x.length, x.angle + system_rotation)
+        Geonum::new_with_angle(1000.0 * x.mag, x.angle + system_rotation)
     };
 
     // create a complex load vector
@@ -288,7 +288,7 @@ fn its_a_linear_solver() {
     // solve the giant system directly
     let system_rotation = Angle::new(1.0, 3.0); // PI/3
     let million_node_solution = Geonum::new_with_angle(
-        complex_load.length / 1000.0,
+        complex_load.mag / 1000.0,
         complex_load.angle - system_rotation,
     );
 
@@ -296,7 +296,7 @@ fn its_a_linear_solver() {
     let solution_check = million_node_system(&million_node_solution);
 
     // test it matches the expected load
-    assert!((solution_check.length - complex_load.length).abs() < EPSILON);
+    assert!((solution_check.mag - complex_load.mag).abs() < EPSILON);
     assert_eq!(solution_check.angle, complex_load.angle);
 }
 
@@ -321,7 +321,7 @@ fn it_collapses_steps() {
 
         // all in one O(1) operation instead of O(n³) + O(n log n)
         let full_rotation = Angle::new(2.0, 1.0); // 2*PI = full rotation
-        Geonum::new_with_angle(input.length * 2.0, full_rotation - input.angle)
+        Geonum::new_with_angle(input.mag * 2.0, full_rotation - input.angle)
     };
 
     // create a problem specification
@@ -331,7 +331,7 @@ fn it_collapses_steps() {
     let solution = unified_fem(&problem_spec);
 
     // test the solution produces expected transformation
-    assert_eq!(solution.length, 2.0);
+    assert_eq!(solution.mag, 2.0);
     let expected_angle = Angle::new(2.0, 1.0) - Angle::new(1.0, 4.0); // 2*PI - PI/4
     assert_eq!(solution.angle, expected_angle);
 
@@ -346,7 +346,7 @@ fn it_collapses_steps() {
     // simulate a complex analysis with varied material properties
     let analysis = |material: &Geonum, load: &Geonum| -> Geonum {
         // direct transformation that encodes the entire solution process
-        Geonum::new_with_angle(load.length / material.length, load.angle - material.angle)
+        Geonum::new_with_angle(load.mag / material.mag, load.angle - material.angle)
     };
 
     // define material and load
@@ -358,7 +358,7 @@ fn it_collapses_steps() {
     let result = analysis(&material, &load);
 
     // test the result
-    assert!((result.length - 2.0).abs() < EPSILON);
+    assert!((result.mag - 2.0).abs() < EPSILON);
     let expected_result_angle = Angle::new(1.0, 2.0) - Angle::new(1.0, 6.0); // PI/2 - PI/6
     assert_eq!(result.angle, expected_result_angle);
 
@@ -379,7 +379,7 @@ fn it_collapses_steps() {
         // this would traditionally be hundreds of lines of code
         // and millions of operations in a traditional FEM code
         Geonum::new_with_angle(
-            geometry.length * material.length / (1.0 + boundary.length),
+            geometry.mag * material.mag / (1.0 + boundary.mag),
             geometry.angle + material.angle - boundary.angle,
         )
     };
@@ -395,8 +395,8 @@ fn it_collapses_steps() {
     let final_solution = complex_workflow(&inputs);
 
     // test the unified workflow computation
-    // geometry.length * material.length / (1.0 + boundary.length) = 2.0 * 5.0 / 2.0 = 5.0
-    assert_eq!(final_solution.length, 5.0);
+    // geometry.mag * material.mag / (1.0 + boundary.mag) = 2.0 * 5.0 / 2.0 = 5.0
+    assert_eq!(final_solution.mag, 5.0);
     // angle: 0 + PI/4 - PI/2 = -PI/4
     let expected_final_angle = Angle::new(0.0, 1.0) + Angle::new(1.0, 4.0) - Angle::new(1.0, 2.0);
     assert_eq!(final_solution.angle, expected_final_angle);

@@ -58,7 +58,7 @@ fn it_changes_kinematic_level_by_cycling_grade() {
     let velocity = position.differentiate();
     assert_eq!(velocity.angle.grade(), 2, "velocity at grade 2 (1+1 mod 4)");
     assert_eq!(
-        velocity.length, position.length,
+        velocity.mag, position.mag,
         "differentiation preserves magnitude"
     );
 
@@ -113,7 +113,7 @@ fn it_changes_kinematic_level_by_cycling_grade() {
 
     // magnitude preserved through entire cycle
     assert_eq!(
-        recovered_position.length, position.length,
+        recovered_position.mag, position.mag,
         "magnitude preserved through full differentiate/integrate cycle"
     );
 
@@ -202,7 +202,7 @@ fn it_encodes_position() {
         0,
         "position at blade 0 (fundamental spatial)"
     );
-    assert_eq!(position.length, 3.0, "distance from origin");
+    assert_eq!(position.mag, 3.0, "distance from origin");
     assert!(
         (position.angle.grade_angle() - PI / 4.0).abs() < EPSILON,
         "direction angle π/4"
@@ -213,13 +213,13 @@ fn it_encodes_position() {
     let new_position = position + displacement;
 
     // verify geometric addition produces expected result
-    let x1 = position.length * position.angle.grade_angle().cos();
-    let y1 = position.length * position.angle.grade_angle().sin();
-    let x2 = displacement.length * displacement.angle.grade_angle().cos();
-    let y2 = displacement.length * displacement.angle.grade_angle().sin();
+    let x1 = position.mag * position.angle.grade_angle().cos();
+    let y1 = position.mag * position.angle.grade_angle().sin();
+    let x2 = displacement.mag * displacement.angle.grade_angle().cos();
+    let y2 = displacement.mag * displacement.angle.grade_angle().sin();
     let expected_length = ((x1 + x2).powi(2) + (y1 + y2).powi(2)).sqrt();
     assert!(
-        (new_position.length - expected_length).abs() < EPSILON,
+        (new_position.mag - expected_length).abs() < EPSILON,
         "displacement addition matches vector mechanics"
     );
 
@@ -229,11 +229,11 @@ fn it_encodes_position() {
 
     // projections should be bounded by position magnitude
     assert!(
-        position_1000d.abs() <= position.length + EPSILON,
+        position_1000d.abs() <= position.mag + EPSILON,
         "1000D projection bounded by magnitude"
     );
     assert!(
-        position_million_d.abs() <= position.length + EPSILON,
+        position_million_d.abs() <= position.mag + EPSILON,
         "million-D projection bounded by magnitude"
     );
 
@@ -278,7 +278,7 @@ fn it_encodes_velocity() {
         "velocity at blade 1 (π/2 rotated)"
     );
     assert_eq!(
-        velocity.length, initial_position.length,
+        velocity.mag, initial_position.mag,
         "differentiation preserves magnitude"
     );
 
@@ -289,7 +289,7 @@ fn it_encodes_velocity() {
     // velocity magnitude from components
     let velocity_magnitude = (velocity_x.powi(2) + velocity_y.powi(2)).sqrt();
     assert!(
-        (velocity_magnitude - velocity.length).abs() < EPSILON,
+        (velocity_magnitude - velocity.mag).abs() < EPSILON,
         "velocity components reconstruct magnitude"
     );
 
@@ -303,7 +303,7 @@ fn it_encodes_velocity() {
         "integration returns to blade 0"
     );
     assert!(
-        (position_base.length - initial_position.length).abs() < EPSILON,
+        (position_base.mag - initial_position.mag).abs() < EPSILON,
         "integration preserves magnitude"
     );
 
@@ -330,7 +330,7 @@ fn it_encodes_acceleration() {
 
     assert_eq!(acceleration.angle.blade(), 2, "acceleration at blade 2");
     assert_eq!(
-        acceleration.length, initial_position.length,
+        acceleration.mag, initial_position.mag,
         "double differentiation preserves magnitude"
     );
 
@@ -344,7 +344,7 @@ fn it_encodes_acceleration() {
         "force at same blade as acceleration"
     );
     assert!(
-        (force.length - mass * acceleration.length).abs() < EPSILON,
+        (force.mag - mass * acceleration.mag).abs() < EPSILON,
         "F = ma via scaling"
     );
 
@@ -380,11 +380,11 @@ fn it_encodes_jerk() {
 
     // magnitudes preserved through entire chain
     assert!(
-        (jerk.length - initial_position.length).abs() < EPSILON,
+        (jerk.mag - initial_position.mag).abs() < EPSILON,
         "jerk preserves original magnitude"
     );
     assert!(
-        (fourth_derivative.length - initial_position.length).abs() < EPSILON,
+        (fourth_derivative.mag - initial_position.mag).abs() < EPSILON,
         "fourth derivative preserves original magnitude"
     );
 
@@ -400,7 +400,7 @@ fn it_encodes_jerk() {
         "triple integration returns to blade 0"
     );
     assert!(
-        (final_position.length - initial_position.length).abs() < EPSILON,
+        (final_position.mag - initial_position.mag).abs() < EPSILON,
         "triple integration preserves magnitude"
     );
 
@@ -417,7 +417,7 @@ fn it_displaces_from_derived_velocity() {
     let initial_position = Geonum::new(10.0, 1.0, 3.0); // 10m at π/3 (60°)
     println!(
         "initial position: length={}, angle={}, blade={}",
-        initial_position.length,
+        initial_position.mag,
         initial_position.angle.grade_angle(),
         initial_position.angle.blade()
     );
@@ -426,12 +426,12 @@ fn it_displaces_from_derived_velocity() {
     let velocity = initial_position.differentiate();
     assert_eq!(velocity.angle.blade(), 1, "velocity at blade 1");
     assert_eq!(
-        velocity.length, initial_position.length,
+        velocity.mag, initial_position.mag,
         "differentiation preserves magnitude"
     );
     println!(
         "derived velocity: length={}, angle={}, blade={}",
-        velocity.length,
+        velocity.mag,
         velocity.angle.grade_angle(),
         velocity.angle.blade()
     );
@@ -439,14 +439,14 @@ fn it_displaces_from_derived_velocity() {
     // compute displacement using derived velocity over time interval
     let time_interval = 2.0; // seconds
     let displacement = velocity.scale(time_interval); // d = v × t
-    assert_eq!(displacement.length, 20.0, "displacement = 10 × 2 = 20");
+    assert_eq!(displacement.mag, 20.0, "displacement = 10 × 2 = 20");
     assert_eq!(
         displacement.angle, velocity.angle,
         "displacement preserves velocity direction"
     );
     println!(
         "displacement: length={}, angle={}, blade={}",
-        displacement.length,
+        displacement.mag,
         displacement.angle.grade_angle(),
         displacement.angle.blade()
     );
@@ -455,7 +455,7 @@ fn it_displaces_from_derived_velocity() {
     let final_position = initial_position + displacement;
     println!(
         "final position: length={}, angle={}, blade={}",
-        final_position.length,
+        final_position.mag,
         final_position.angle.grade_angle(),
         final_position.angle.blade()
     );
@@ -465,12 +465,12 @@ fn it_displaces_from_derived_velocity() {
     // displacement: 20m at π/3 + π/2 = 5π/6 (150°)
 
     // convert to cartesian to verify physics
-    let x0 = initial_position.length * initial_position.angle.grade_angle().cos();
-    let y0 = initial_position.length * initial_position.angle.grade_angle().sin();
-    let dx = displacement.length * displacement.angle.grade_angle().cos();
-    let dy = displacement.length * displacement.angle.grade_angle().sin();
-    let xf = final_position.length * final_position.angle.grade_angle().cos();
-    let yf = final_position.length * final_position.angle.grade_angle().sin();
+    let x0 = initial_position.mag * initial_position.angle.grade_angle().cos();
+    let y0 = initial_position.mag * initial_position.angle.grade_angle().sin();
+    let dx = displacement.mag * displacement.angle.grade_angle().cos();
+    let dy = displacement.mag * displacement.angle.grade_angle().sin();
+    let xf = final_position.mag * final_position.angle.grade_angle().cos();
+    let yf = final_position.mag * final_position.angle.grade_angle().sin();
 
     println!("\ncartesian verification:");
     println!("  initial: ({:.3}, {:.3})", x0, y0);
@@ -494,9 +494,9 @@ fn it_displaces_from_derived_velocity() {
     // compute expected final position magnitude
     let expected_magnitude = ((x0 + dx).powi(2) + (y0 + dy).powi(2)).sqrt();
     assert!(
-        (final_position.length - expected_magnitude).abs() < EPSILON,
+        (final_position.mag - expected_magnitude).abs() < EPSILON,
         "final position magnitude matches vector addition: {:.6} ≈ {:.6}",
-        final_position.length,
+        final_position.mag,
         expected_magnitude
     );
 
@@ -547,7 +547,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     let initial_position = Geonum::new(5.0, 1.0, 4.0); // 5m at π/4 (45°)
     println!(
         "initial position: length={}, angle={}, blade={}",
-        initial_position.length,
+        initial_position.mag,
         initial_position.angle.grade_angle(),
         initial_position.angle.blade()
     );
@@ -557,7 +557,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     assert_eq!(initial_velocity.angle.blade(), 1, "velocity at blade 1");
     println!(
         "initial velocity: length={}, angle={}, blade={}",
-        initial_velocity.length,
+        initial_velocity.mag,
         initial_velocity.angle.grade_angle(),
         initial_velocity.angle.blade()
     );
@@ -566,12 +566,12 @@ fn it_squares_displacement_from_derived_acceleration() {
     let acceleration = initial_velocity.differentiate();
     assert_eq!(acceleration.angle.blade(), 2, "acceleration at blade 2");
     assert_eq!(
-        acceleration.length, initial_position.length,
+        acceleration.mag, initial_position.mag,
         "double differentiation preserves magnitude"
     );
     println!(
         "acceleration: length={}, angle={}, blade={}",
-        acceleration.length,
+        acceleration.mag,
         acceleration.angle.grade_angle(),
         acceleration.angle.blade()
     );
@@ -581,14 +581,14 @@ fn it_squares_displacement_from_derived_acceleration() {
 
     // first term: v₀t (linear displacement from initial velocity)
     let linear_displacement = initial_velocity.scale(time);
-    assert_eq!(linear_displacement.length, 15.0, "v₀t = 5 × 3 = 15");
+    assert_eq!(linear_displacement.mag, 15.0, "v₀t = 5 × 3 = 15");
     assert_eq!(
         linear_displacement.angle, initial_velocity.angle,
         "linear term preserves velocity direction"
     );
     println!(
         "\nlinear displacement (v₀t): length={}, angle={}",
-        linear_displacement.length,
+        linear_displacement.mag,
         linear_displacement.angle.grade_angle()
     );
 
@@ -596,7 +596,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     let time_squared = time * time; // t²
     let quadratic_displacement = acceleration.scale(0.5 * time_squared);
     assert_eq!(
-        quadratic_displacement.length, 22.5,
+        quadratic_displacement.mag, 22.5,
         "½at² = 0.5 × 5 × 9 = 22.5"
     );
     assert_eq!(
@@ -605,7 +605,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     );
     println!(
         "quadratic displacement (½at²): length={}, angle={}",
-        quadratic_displacement.length,
+        quadratic_displacement.mag,
         quadratic_displacement.angle.grade_angle()
     );
 
@@ -613,7 +613,7 @@ fn it_squares_displacement_from_derived_acceleration() {
     let total_displacement = linear_displacement + quadratic_displacement;
     println!(
         "total displacement: length={}, angle={}, blade={}",
-        total_displacement.length,
+        total_displacement.mag,
         total_displacement.angle.grade_angle(),
         total_displacement.angle.blade()
     );
@@ -622,20 +622,20 @@ fn it_squares_displacement_from_derived_acceleration() {
     let final_position = initial_position + total_displacement;
     println!(
         "final position: length={}, angle={}, blade={}",
-        final_position.length,
+        final_position.mag,
         final_position.angle.grade_angle(),
         final_position.angle.blade()
     );
 
     // verify physics in cartesian coordinates
-    let x0 = initial_position.length * initial_position.angle.grade_angle().cos();
-    let y0 = initial_position.length * initial_position.angle.grade_angle().sin();
-    let dx_linear = linear_displacement.length * linear_displacement.angle.grade_angle().cos();
-    let dy_linear = linear_displacement.length * linear_displacement.angle.grade_angle().sin();
-    let dx_quad = quadratic_displacement.length * quadratic_displacement.angle.grade_angle().cos();
-    let dy_quad = quadratic_displacement.length * quadratic_displacement.angle.grade_angle().sin();
-    let xf = final_position.length * final_position.angle.grade_angle().cos();
-    let yf = final_position.length * final_position.angle.grade_angle().sin();
+    let x0 = initial_position.mag * initial_position.angle.grade_angle().cos();
+    let y0 = initial_position.mag * initial_position.angle.grade_angle().sin();
+    let dx_linear = linear_displacement.mag * linear_displacement.angle.grade_angle().cos();
+    let dy_linear = linear_displacement.mag * linear_displacement.angle.grade_angle().sin();
+    let dx_quad = quadratic_displacement.mag * quadratic_displacement.angle.grade_angle().cos();
+    let dy_quad = quadratic_displacement.mag * quadratic_displacement.angle.grade_angle().sin();
+    let xf = final_position.mag * final_position.angle.grade_angle().cos();
+    let yf = final_position.mag * final_position.angle.grade_angle().sin();
 
     println!("\ncartesian verification:");
     println!("  initial: ({:.3}, {:.3})", x0, y0);
@@ -673,14 +673,14 @@ fn it_squares_displacement_from_derived_acceleration() {
     let large_quadratic = acceleration.scale(0.5 * large_time * large_time);
 
     assert!(
-        large_quadratic.length > large_linear.length,
+        large_quadratic.mag > large_linear.mag,
         "quadratic term dominates for large t: {:.1} > {:.1}",
-        large_quadratic.length,
-        large_linear.length
+        large_quadratic.mag,
+        large_linear.mag
     );
 
     // ratio should be t/2 for equal magnitude initial conditions
-    let ratio = large_quadratic.length / large_linear.length;
+    let ratio = large_quadratic.mag / large_linear.mag;
     assert!(
         (ratio - large_time / 2.0).abs() < EPSILON,
         "quadratic/linear ratio = t/2 = {:.1}",
@@ -694,7 +694,7 @@ fn it_squares_displacement_from_derived_acceleration() {
 
     // from rest: d = ½at² only
     let rest_displacement = rest_acceleration.scale(0.5 * time * time);
-    assert_eq!(rest_displacement.length, 22.5, "from rest: d = ½at²");
+    assert_eq!(rest_displacement.mag, 22.5, "from rest: d = ½at²");
 
     println!("\nphysics verified: acceleration creates quadratic displacement growth");
     println!("kinematic equation d = v₀t + ½at² emerges from double differentiation");
@@ -717,7 +717,7 @@ fn it_encodes_force() {
 
     assert_eq!(force.angle.blade(), 2, "force at blade 2");
     assert!(
-        (force.length - mass * acceleration.length).abs() < EPSILON,
+        (force.mag - mass * acceleration.mag).abs() < EPSILON,
         "F = ma"
     );
     assert_eq!(force.angle, acceleration.angle, "force || acceleration");
@@ -727,7 +727,7 @@ fn it_encodes_force() {
     let initial_velocity = Geonum::new(0.0, 0.0, 1.0); // at rest
     let initial_momentum = initial_velocity.scale(mass); // p = 0
 
-    assert_eq!(initial_momentum.length, 0.0, "initial momentum is zero");
+    assert_eq!(initial_momentum.mag, 0.0, "initial momentum is zero");
 
     // impulse = force × time
     let time_interval = 2.0; // seconds
@@ -735,7 +735,7 @@ fn it_encodes_force() {
 
     assert_eq!(impulse.angle.blade(), 2, "impulse at same blade as force");
     assert!(
-        (impulse.length - force.length * time_interval).abs() < EPSILON,
+        (impulse.mag - force.mag * time_interval).abs() < EPSILON,
         "impulse = force × time"
     );
 
@@ -745,17 +745,17 @@ fn it_encodes_force() {
 
     assert_eq!(final_momentum.angle.blade(), 2, "final momentum at blade 2");
     assert!(
-        (final_momentum.length - mass * final_velocity.length).abs() < EPSILON,
+        (final_momentum.mag - mass * final_velocity.mag).abs() < EPSILON,
         "final momentum = mass × final velocity"
     );
 
     // verify impulse equals momentum change
-    let momentum_change = final_momentum.length - initial_momentum.length;
+    let momentum_change = final_momentum.mag - initial_momentum.mag;
     assert!(
-        (momentum_change - impulse.length).abs() < EPSILON,
+        (momentum_change - impulse.mag).abs() < EPSILON,
         "Δp = J (impulse-momentum theorem): {} ≈ {}",
         momentum_change,
-        impulse.length
+        impulse.mag
     );
 
     // traditional mechanics: F = dp/dt requires time derivatives of momentum
@@ -774,14 +774,14 @@ fn it_encodes_momentum() {
 
     assert_eq!(momentum.angle.blade(), 1, "momentum at blade 1");
     assert!(
-        (momentum.length - mass * velocity.length).abs() < EPSILON,
+        (momentum.mag - mass * velocity.mag).abs() < EPSILON,
         "p = mv"
     );
     assert_eq!(momentum.angle, velocity.angle, "momentum || velocity");
 
     // conservation via nilpotency
     let self_wedge = momentum.wedge(&momentum);
-    assert!(self_wedge.length < EPSILON, "p∧p = 0 (conservation)");
+    assert!(self_wedge.mag < EPSILON, "p∧p = 0 (conservation)");
 
     // elastic collision: momentum conservation
     let mass2 = 2.0; // kg
@@ -803,7 +803,7 @@ fn it_encodes_momentum() {
 
     // verify conservation law holds
     assert_eq!(
-        total_momentum_after.length, total_momentum_before.length,
+        total_momentum_after.mag, total_momentum_before.mag,
         "momentum magnitude conserved"
     );
     assert_eq!(
@@ -816,13 +816,13 @@ fn it_encodes_momentum() {
     let rotated_total = total_momentum_before.rotate(rotation);
 
     assert!(
-        (rotated_total.length - total_momentum_before.length).abs() < EPSILON,
+        (rotated_total.mag - total_momentum_before.mag).abs() < EPSILON,
         "rotation preserves total momentum magnitude"
     );
 
     // nilpotency still holds for total momentum
     let total_wedge = total_momentum_before.wedge(&total_momentum_before);
-    assert!(total_wedge.length < EPSILON, "p_total∧p_total = 0");
+    assert!(total_wedge.mag < EPSILON, "p_total∧p_total = 0");
 
     // traditional: momentum conservation requires coordinate-free formulation
     // p = mv with vector operations, conservation via dp/dt = 0 analysis O(n)
@@ -846,18 +846,15 @@ fn it_encodes_angular_momentum() {
 
     // magnitude encodes |r||p|sin(θ)
     let angle_diff = (momentum.angle - position.angle).grade_angle();
-    let expected_magnitude = position.length * momentum.length * angle_diff.sin().abs();
+    let expected_magnitude = position.mag * momentum.mag * angle_diff.sin().abs();
     assert!(
-        (angular_momentum.length - expected_magnitude).abs() < EPSILON,
+        (angular_momentum.mag - expected_magnitude).abs() < EPSILON,
         "L magnitude matches |r||p|sin(θ)"
     );
 
     // conservation via nilpotency
     let angular_self_wedge = angular_momentum.wedge(&angular_momentum);
-    assert!(
-        angular_self_wedge.length < EPSILON,
-        "L∧L = 0 (conservation)"
-    );
+    assert!(angular_self_wedge.mag < EPSILON, "L∧L = 0 (conservation)");
 
     // test torque changes angular momentum: τ = dL/dt
     let force = Geonum::new_with_blade(5.0, 2, 1.0, 3.0); // blade 2, π/3
@@ -872,9 +869,9 @@ fn it_encodes_angular_momentum() {
 
     // torque magnitude |r||F||sin(θ)|
     let torque_angle_diff = (force.angle - position.angle).grade_angle();
-    let expected_torque = position.length * force.length * torque_angle_diff.sin().abs();
+    let expected_torque = position.mag * force.mag * torque_angle_diff.sin().abs();
     assert!(
-        (torque.length - expected_torque).abs() < EPSILON,
+        (torque.mag - expected_torque).abs() < EPSILON,
         "torque magnitude matches |r||F||sin(θ)|"
     );
 
@@ -892,9 +889,9 @@ fn it_encodes_work() {
 
     // W = F·d for aligned case
     let work_interaction = force.dot(&displacement);
-    let work_magnitude = work_interaction.length.abs(); // handle sign
+    let work_magnitude = work_interaction.mag.abs(); // handle sign
 
-    let expected_work = force.length * displacement.length; // cos(0) = 1
+    let expected_work = force.mag * displacement.mag; // cos(0) = 1
     assert!(
         (work_magnitude - expected_work).abs() < EPSILON,
         "aligned work W = F·d"
@@ -905,7 +902,7 @@ fn it_encodes_work() {
     let perpendicular_work = force.dot(&perpendicular_displacement);
 
     // compute the measured perpendicular work magnitude
-    let perpendicular_work_magnitude = perpendicular_work.length.abs();
+    let perpendicular_work_magnitude = perpendicular_work.mag.abs();
 
     // physics: perpendicular force does zero work (cos(π/2) = 0)
     // force blade 0 at π/6, displacement blade 0 at 2π/3
@@ -930,24 +927,24 @@ fn it_encodes_work() {
         "KE at grade 0 (scalar from v²)"
     );
     assert!(
-        (initial_ke.length - 0.5 * mass * 4.0).abs() < EPSILON,
+        (initial_ke.mag - 0.5 * mass * 4.0).abs() < EPSILON,
         "initial KE = ½mv² = 4 J"
     );
 
     // work done equals change in kinetic energy
     // for aligned force and displacement, work increases KE
     assert!(
-        work_interaction.length > 0.0,
+        work_interaction.mag > 0.0,
         "positive work for aligned F and d"
     );
 
     // final velocity from energy conservation
     // KE_final = KE_initial + W
-    let final_ke_magnitude = initial_ke.length + work_interaction.length;
+    let final_ke_magnitude = initial_ke.mag + work_interaction.mag;
     assert!(
-        final_ke_magnitude > initial_ke.length,
+        final_ke_magnitude > initial_ke.mag,
         "work increases kinetic energy: {:.2} J → {:.2} J",
-        initial_ke.length,
+        initial_ke.mag,
         final_ke_magnitude
     );
 
@@ -967,40 +964,37 @@ fn it_encodes_kinetic_energy() {
     let v_squared = velocity.dot(&velocity); // dot product gives scalar (blade 0)
     assert_eq!(v_squared.angle.blade(), 0, "v² at blade 0 (scalar)");
     assert_eq!(v_squared.angle.grade(), 0, "v² at grade 0");
-    assert!(
-        (v_squared.length - 64.0).abs() < EPSILON,
-        "v² = 8² = 64 m²/s²"
-    );
+    assert!((v_squared.mag - 64.0).abs() < EPSILON, "v² = 8² = 64 m²/s²");
 
     // kinetic energy: KE = ½mv²
     let kinetic_energy = v_squared.scale(0.5 * mass);
     assert_eq!(kinetic_energy.angle.blade(), 0, "KE at blade 0 (scalar)");
     assert!(
-        (kinetic_energy.length - 96.0).abs() < EPSILON,
+        (kinetic_energy.mag - 96.0).abs() < EPSILON,
         "KE = ½(3)(64) = 96 J"
     );
 
     // test energy scaling: doubling velocity quadruples energy
     let double_velocity = velocity.scale(2.0); // 16 m/s
     assert!(
-        (double_velocity.length - 16.0).abs() < EPSILON,
+        (double_velocity.mag - 16.0).abs() < EPSILON,
         "doubled velocity = 16 m/s"
     );
 
     let double_v_squared = double_velocity.dot(&double_velocity);
     assert!(
-        (double_v_squared.length - 256.0).abs() < EPSILON,
+        (double_v_squared.mag - 256.0).abs() < EPSILON,
         "(2v)² = 256 = 4×64 m²/s²"
     );
 
     let double_ke = double_v_squared.scale(0.5 * mass);
     assert!(
-        (double_ke.length - 384.0).abs() < EPSILON,
+        (double_ke.mag - 384.0).abs() < EPSILON,
         "KE(2v) = 384 = 4×96 J"
     );
 
     // verify quadratic relationship
-    let ratio = double_ke.length / kinetic_energy.length;
+    let ratio = double_ke.mag / kinetic_energy.mag;
     assert!(
         (ratio - 4.0).abs() < EPSILON,
         "doubling velocity quadruples energy: ratio = 4.0"
@@ -1016,13 +1010,13 @@ fn it_encodes_kinetic_energy() {
         "v² gives blade 0 even from blade 1000"
     );
     assert!(
-        (high_v_squared.length - 25.0).abs() < EPSILON,
+        (high_v_squared.mag - 25.0).abs() < EPSILON,
         "high-dim v² = 5² = 25 m²/s²"
     );
 
     let high_ke = high_v_squared.scale(0.5 * mass);
     assert!(
-        (high_ke.length - 37.5).abs() < EPSILON,
+        (high_ke.mag - 37.5).abs() < EPSILON,
         "high-dim KE = ½(3)(25) = 37.5 J"
     );
 
@@ -1036,7 +1030,7 @@ fn it_encodes_kinetic_energy() {
         "velocity at any grade gives scalar energy"
     );
     assert!(
-        (grade_2_v_squared.length - 100.0).abs() < EPSILON,
+        (grade_2_v_squared.mag - 100.0).abs() < EPSILON,
         "grade 2 v² = 10² = 100 m²/s²"
     );
 
@@ -1058,7 +1052,7 @@ fn it_encodes_potential_energy() {
     // potential energy from position-field interaction
     let field_position_interaction = height_position.dot(&gravity_field);
 
-    let signed_interaction = field_position_interaction.length
+    let signed_interaction = field_position_interaction.mag
         * field_position_interaction
             .angle
             .project(Angle::new(0.0, 1.0));
@@ -1084,13 +1078,13 @@ fn it_encodes_potential_energy() {
     // test potential energy scaling with height
     let double_height = height_position.scale(2.0); // 10m
     assert!(
-        (double_height.length - 10.0).abs() < EPSILON,
+        (double_height.mag - 10.0).abs() < EPSILON,
         "doubled height = 10m"
     );
 
     let double_interaction = double_height.dot(&gravity_field);
     let double_magnitude =
-        (double_interaction.length * double_interaction.angle.project(Angle::new(0.0, 1.0))).abs();
+        (double_interaction.mag * double_interaction.angle.project(Angle::new(0.0, 1.0))).abs();
     assert!(
         (double_magnitude - 98.0).abs() < EPSILON,
         "(2h)·g = 10×9.8 = 98 m²/s²"
@@ -1111,7 +1105,7 @@ fn it_encodes_potential_energy() {
     let perpendicular_interaction = horizontal_position.dot(&gravity_field);
 
     // π/2 angle to π angle: difference is π/2 (perpendicular)
-    let perpendicular_magnitude = perpendicular_interaction.length.abs();
+    let perpendicular_magnitude = perpendicular_interaction.mag.abs();
     assert!(
         perpendicular_magnitude < EPSILON,
         "perpendicular position-field gives zero PE: {:.6} ≈ 0",
@@ -1136,7 +1130,7 @@ fn it_encodes_potential_energy() {
     let cos_angle = angle_diff.cos();
 
     let expected_magnitude = 3.0 * 12.0 * cos_angle.abs();
-    let actual_magnitude = high_interaction.length.abs();
+    let actual_magnitude = high_interaction.mag.abs();
     assert!(
         (actual_magnitude - expected_magnitude).abs() < EPSILON,
         "high-dim PE = 3×12×cos(angle) = {:.3}",
@@ -1148,7 +1142,7 @@ fn it_encodes_potential_energy() {
     let upward_interaction = height_position.dot(&upward_field);
 
     let upward_scalar =
-        upward_interaction.length * upward_interaction.angle.project(Angle::new(0.0, 1.0));
+        upward_interaction.mag * upward_interaction.angle.project(Angle::new(0.0, 1.0));
     assert!(
         upward_scalar > 0.0,
         "aligned position-field gives positive dot product"
@@ -1175,7 +1169,7 @@ fn it_encodes_power() {
     // power from force-velocity dot product: P = F·v
     let power_interaction = force.dot(&velocity);
     let power_scalar =
-        power_interaction.length * power_interaction.angle.project(Angle::new(0.0, 1.0));
+        power_interaction.mag * power_interaction.angle.project(Angle::new(0.0, 1.0));
     assert_eq!(
         power_interaction.angle.grade(),
         0,
@@ -1196,7 +1190,7 @@ fn it_encodes_power() {
     let angle_diff = PI / 24.0;
     let expected_power = 15.0 * 4.0 * angle_diff.cos();
 
-    let angled_scalar = angled_power.length * angled_power.angle.project(Angle::new(0.0, 1.0));
+    let angled_scalar = angled_power.mag * angled_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         (angled_scalar - expected_power).abs() < EPSILON,
         "angled power = 15×4×cos(π/24) = {:.2} W",
@@ -1208,7 +1202,7 @@ fn it_encodes_power() {
     let perpendicular_power = force.dot(&perpendicular_velocity);
 
     let perpendicular_scalar =
-        perpendicular_power.length * perpendicular_power.angle.project(Angle::new(0.0, 1.0));
+        perpendicular_power.mag * perpendicular_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         perpendicular_scalar.abs() < EPSILON,
         "perpendicular F⊥v gives zero power: {:.6} ≈ 0",
@@ -1218,13 +1212,13 @@ fn it_encodes_power() {
     // test power scaling with force
     let double_force = force.scale(2.0); // 30 N
     assert!(
-        (double_force.length - 30.0).abs() < EPSILON,
+        (double_force.mag - 30.0).abs() < EPSILON,
         "doubled force = 30 N"
     );
 
     let double_force_power = double_force.dot(&velocity);
     let double_power_scalar =
-        double_force_power.length * double_force_power.angle.project(Angle::new(0.0, 1.0));
+        double_force_power.mag * double_force_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         (double_power_scalar - 120.0).abs() < EPSILON,
         "P(2F) = 120 = 2×60 W"
@@ -1233,13 +1227,13 @@ fn it_encodes_power() {
     // test power scaling with velocity
     let triple_velocity = velocity.scale(3.0); // 12 m/s
     assert!(
-        (triple_velocity.length - 12.0).abs() < EPSILON,
+        (triple_velocity.mag - 12.0).abs() < EPSILON,
         "tripled velocity = 12 m/s"
     );
 
     let triple_velocity_power = force.dot(&triple_velocity);
     let triple_power_scalar =
-        triple_velocity_power.length * triple_velocity_power.angle.project(Angle::new(0.0, 1.0));
+        triple_velocity_power.mag * triple_velocity_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         (triple_power_scalar - 180.0).abs() < EPSILON,
         "P(3v) = 180 = 3×60 W"
@@ -1263,7 +1257,7 @@ fn it_encodes_power() {
     let high_velocity = Geonum::new_with_blade(6.0, 1000, 2.0, 11.0); // blade 1000
 
     let high_power = high_force.dot(&high_velocity);
-    let high_power_scalar = high_power.length * high_power.angle.project(Angle::new(0.0, 1.0));
+    let high_power_scalar = high_power.mag * high_power.angle.project(Angle::new(0.0, 1.0));
     assert!(
         high_power.angle == Angle::new(0.0, 1.0) || high_power.angle == Angle::new(1.0, 1.0),
         "power encodes sign via scalar/bivector pair"
@@ -1279,8 +1273,7 @@ fn it_encodes_power() {
     // test negative power (force opposing velocity)
     let opposing_force = force.negate();
     let opposing_power = opposing_force.dot(&velocity);
-    let opposing_scalar =
-        opposing_power.length * opposing_power.angle.project(Angle::new(0.0, 1.0));
+    let opposing_scalar = opposing_power.mag * opposing_power.angle.project(Angle::new(0.0, 1.0));
 
     assert!(
         opposing_scalar < 0.0,
@@ -1322,22 +1315,22 @@ fn it_encodes_torque() {
     let angle_diff = force.angle - position.angle;
     let expected_torque = 2.0 * 10.0 * angle_diff.grade_angle().sin().abs();
     assert!(
-        (torque.length - expected_torque).abs() < EPSILON,
+        (torque.mag - expected_torque).abs() < EPSILON,
         "τ = r×F×sin(2π/3) ≈ 17.3 N·m"
     );
 
     // test torque conservation through nilpotency
     let torque_self_wedge = torque.wedge(&torque);
-    assert!(torque_self_wedge.length < EPSILON, "τ∧τ = 0 (conservation)");
+    assert!(torque_self_wedge.mag < EPSILON, "τ∧τ = 0 (conservation)");
 
     // test perpendicular force (maximum torque)
     let perpendicular_force = force.differentiate(); // rotate force by π/2
     let max_torque = position.wedge(&perpendicular_force);
 
     let max_angle_diff = perpendicular_force.angle - position.angle;
-    let expected_max = 2.0 * perpendicular_force.length * max_angle_diff.grade_angle().sin().abs();
+    let expected_max = 2.0 * perpendicular_force.mag * max_angle_diff.grade_angle().sin().abs();
     assert!(
-        (max_torque.length - expected_max).abs() < EPSILON,
+        (max_torque.mag - expected_max).abs() < EPSILON,
         "perpendicular τ = {:.1} N·m",
         expected_max
     );
@@ -1347,9 +1340,9 @@ fn it_encodes_torque() {
     let zero_torque = position.wedge(&parallel_force);
 
     assert!(
-        zero_torque.length < EPSILON,
+        zero_torque.mag < EPSILON,
         "parallel force gives zero torque: {:.6} ≈ 0",
-        zero_torque.length
+        zero_torque.mag
     );
 
     // test scaling lever arm
@@ -1357,7 +1350,7 @@ fn it_encodes_torque() {
     let double_torque = double_position.wedge(&force);
 
     assert!(
-        (double_torque.length - 2.0 * torque.length).abs() < EPSILON,
+        (double_torque.mag - 2.0 * torque.mag).abs() < EPSILON,
         "doubling lever arm doubles torque"
     );
 
@@ -1377,7 +1370,7 @@ fn it_encodes_torque() {
     let expected_high = 3.0 * 8.0 * high_angle_diff.grade_angle().sin().abs();
 
     assert!(
-        (high_torque.length - expected_high).abs() < EPSILON,
+        (high_torque.mag - expected_high).abs() < EPSILON,
         "high-dim τ = 3×8×sin(angle) = {:.3}",
         expected_high
     );
@@ -1409,7 +1402,7 @@ fn it_encodes_angular_velocity() {
 
     // for perpendicular ω and r: |v| = ωr
     assert!(
-        (linear_velocity.length - 6.0).abs() < EPSILON,
+        (linear_velocity.mag - 6.0).abs() < EPSILON,
         "v = ωr = 2×3 = 6 m/s"
     );
 
@@ -1418,12 +1411,12 @@ fn it_encodes_angular_velocity() {
     let double_linear = double_omega.wedge(&radius);
 
     assert!(
-        (double_linear.length - 12.0).abs() < EPSILON,
+        (double_linear.mag - 12.0).abs() < EPSILON,
         "v(2ω) = 2ωr = 4×3 = 12 m/s"
     );
 
     // verify linear scaling
-    let omega_ratio = double_linear.length / linear_velocity.length;
+    let omega_ratio = double_linear.mag / linear_velocity.mag;
     assert!(
         (omega_ratio - 2.0).abs() < EPSILON,
         "doubling ω doubles v: ratio = 2.0"
@@ -1434,12 +1427,12 @@ fn it_encodes_angular_velocity() {
     let radius_scaled = angular_velocity.wedge(&double_radius);
 
     assert!(
-        (radius_scaled.length - 12.0).abs() < EPSILON,
+        (radius_scaled.mag - 12.0).abs() < EPSILON,
         "v(2r) = ω(2r) = 2×6 = 12 m/s"
     );
 
     // verify radius scaling
-    let radius_ratio = radius_scaled.length / linear_velocity.length;
+    let radius_ratio = radius_scaled.mag / linear_velocity.mag;
     assert!(
         (radius_ratio - 2.0).abs() < EPSILON,
         "doubling r doubles v: ratio = 2.0"
@@ -1461,17 +1454,17 @@ fn it_encodes_angular_velocity() {
     let expected_speed = 1.5 * 4.0 * angle_diff.grade_angle().sin().abs();
 
     assert!(
-        (high_linear.length - expected_speed).abs() < EPSILON,
+        (high_linear.mag - expected_speed).abs() < EPSILON,
         "high-dim v = 1.5×4×sin(angle) = {:.3}",
         expected_speed
     );
 
     // test centripetal acceleration: a = ω²r
     let omega_squared = angular_velocity.dot(&angular_velocity); // ω² as scalar
-    let centripetal = radius.scale(omega_squared.length);
+    let centripetal = radius.scale(omega_squared.mag);
 
     assert!(
-        (centripetal.length - 12.0).abs() < EPSILON,
+        (centripetal.mag - 12.0).abs() < EPSILON,
         "a_c = ω²r = 4×3 = 12 m/s²"
     );
 
@@ -1506,7 +1499,7 @@ fn it_encodes_mass_through_scaling() {
     let acceleration = Geonum::new_with_blade(5.0, 2, 0.0, 1.0); // 5 m/s² at blade 2 (grade 2)
     let force = acceleration.scale(mass); // F = ma
 
-    assert_eq!(force.length, 20.0, "F = ma = 4×5 = 20 N");
+    assert_eq!(force.mag, 20.0, "F = ma = 4×5 = 20 N");
     assert_eq!(
         force.angle, acceleration.angle,
         "force preserves acceleration angle exactly"
@@ -1517,7 +1510,7 @@ fn it_encodes_mass_through_scaling() {
         "force at blade 2 (same as acceleration)"
     );
     assert_eq!(
-        force.angle.value(),
+        force.angle.rem(),
         0.0,
         "force angle value = 0 within π/2 segment"
     );
@@ -1526,7 +1519,7 @@ fn it_encodes_mass_through_scaling() {
     let velocity = Geonum::new_with_blade(3.0, 1, 0.0, 1.0); // 3 m/s at blade 1 (grade 1)
     let momentum = velocity.scale(mass); // p = mv
 
-    assert_eq!(momentum.length, 12.0, "p = mv = 4×3 = 12 kg·m/s");
+    assert_eq!(momentum.mag, 12.0, "p = mv = 4×3 = 12 kg·m/s");
     assert_eq!(
         momentum.angle, velocity.angle,
         "momentum preserves velocity angle exactly"
@@ -1546,7 +1539,7 @@ fn it_encodes_mass_through_scaling() {
         "dp/dt at blade 2 (force level)"
     );
     assert_eq!(
-        momentum_rate.length, momentum.length,
+        momentum_rate.mag, momentum.mag,
         "differentiation preserves magnitude"
     );
     // momentum_rate represents force when time-scaled appropriately
@@ -1555,7 +1548,7 @@ fn it_encodes_mass_through_scaling() {
     let delta_t = 0.5; // seconds
     let impulse = force.scale(delta_t); // J = FΔt
 
-    assert_eq!(impulse.length, 10.0, "J = FΔt = 20×0.5 = 10 N·s");
+    assert_eq!(impulse.mag, 10.0, "J = FΔt = 20×0.5 = 10 N·s");
     assert_eq!(
         impulse.angle.blade(),
         force.angle.blade(),
@@ -1565,28 +1558,28 @@ fn it_encodes_mass_through_scaling() {
     // impulse changes momentum
     let initial_momentum = momentum;
     let final_momentum = initial_momentum + impulse.copy_blade(&initial_momentum); // match blade levels
-    let delta_p = final_momentum.length - initial_momentum.length;
+    let delta_p = final_momentum.mag - initial_momentum.mag;
 
     assert!(
-        (delta_p - impulse.length).abs() < EPSILON,
+        (delta_p - impulse.mag).abs() < EPSILON,
         "Δp = J confirmed: {:.3} ≈ {:.3}",
         delta_p,
-        impulse.length
+        impulse.mag
     );
 
     // test mass extraction: m = F/a
-    let extracted_mass_fa = force.length / acceleration.length;
+    let extracted_mass_fa = force.mag / acceleration.mag;
     assert_eq!(extracted_mass_fa, mass, "m = F/a = 20/5 = 4 kg");
 
     // test mass extraction: m = p/v
-    let extracted_mass_pv = momentum.length / velocity.length;
+    let extracted_mass_pv = momentum.mag / velocity.mag;
     assert_eq!(extracted_mass_pv, mass, "m = p/v = 12/3 = 4 kg");
 
     // prove mass invariance under rotation
     let rotation = Angle::new(1.0, 3.0); // π/3 rotation
     let rotated_velocity = velocity.rotate(rotation);
     let rotated_momentum = rotated_velocity.scale(mass);
-    let rotated_extracted_mass = rotated_momentum.length / rotated_velocity.length;
+    let rotated_extracted_mass = rotated_momentum.mag / rotated_velocity.mag;
 
     assert_eq!(
         rotated_extracted_mass, mass,
@@ -1599,7 +1592,7 @@ fn it_encodes_mass_through_scaling() {
 
     // test kinetic energy: KE = ½mv²
     let v_squared = velocity.dot(&velocity); // v·v = |v|²
-    let kinetic_energy = 0.5 * mass * v_squared.length;
+    let kinetic_energy = 0.5 * mass * v_squared.mag;
 
     assert_eq!(kinetic_energy, 18.0, "KE = ½mv² = 0.5×4×9 = 18 J");
 
@@ -1608,7 +1601,7 @@ fn it_encodes_mass_through_scaling() {
     let high_dim_force = high_dim_accel.scale(mass);
 
     assert_eq!(
-        high_dim_force.length, 28.0,
+        high_dim_force.mag, 28.0,
         "F = ma = 4×7 = 28 N in high dimension"
     );
     assert_eq!(
@@ -1668,7 +1661,7 @@ fn it_encodes_rotational_inertia() {
 
     // compute I = mr² through dot product
     let r_squared = radius.dot(&radius); // r·r = |r|²
-    let inertia = mass * r_squared.length;
+    let inertia = mass * r_squared.mag;
 
     assert_eq!(inertia, 18.0, "I = mr² = 2×9 = 18 kg·m²");
     assert_eq!(r_squared.angle.grade(), 0, "r·r produces scalar at grade 0");
@@ -1677,10 +1670,7 @@ fn it_encodes_rotational_inertia() {
     let omega = Geonum::new_with_blade(1.5, 1, 0.0, 1.0); // 1.5 rad/s at blade 1
     let angular_momentum = omega.scale(inertia); // L = Iω
 
-    assert_eq!(
-        angular_momentum.length, 27.0,
-        "L = Iω = 18×1.5 = 27 kg·m²/s"
-    );
+    assert_eq!(angular_momentum.mag, 27.0, "L = Iω = 18×1.5 = 27 kg·m²/s");
     assert_eq!(
         angular_momentum.angle, omega.angle,
         "L preserves ω angle exactly"
@@ -1693,7 +1683,7 @@ fn it_encodes_rotational_inertia() {
 
     // test rotational kinetic energy KE = ½Iω²
     let omega_squared = omega.dot(&omega); // ω·ω = |ω|²
-    let rotational_ke = 0.5 * inertia * omega_squared.length;
+    let rotational_ke = 0.5 * inertia * omega_squared.mag;
 
     assert_eq!(
         rotational_ke, 20.25,
@@ -1704,7 +1694,7 @@ fn it_encodes_rotational_inertia() {
     let alpha = Geonum::new_with_blade(2.5, 2, 0.0, 1.0); // 2.5 rad/s² at blade 2
     let torque = alpha.scale(inertia); // τ = Iα
 
-    assert_eq!(torque.length, 45.0, "τ = Iα = 18×2.5 = 45 N·m");
+    assert_eq!(torque.mag, 45.0, "τ = Iα = 18×2.5 = 45 N·m");
     assert_eq!(torque.angle, alpha.angle, "τ preserves α angle exactly");
     assert_eq!(torque.angle.blade(), 2, "τ at blade 2 (same as α)");
 
@@ -1713,7 +1703,7 @@ fn it_encodes_rotational_inertia() {
 
     assert_eq!(l_rate.angle.blade(), 2, "dL/dt at blade 2 (torque level)");
     assert_eq!(
-        l_rate.length, angular_momentum.length,
+        l_rate.mag, angular_momentum.mag,
         "differentiation preserves magnitude"
     );
     // l_rate represents torque when properly scaled
@@ -1721,7 +1711,7 @@ fn it_encodes_rotational_inertia() {
     // test conservation of angular momentum through nilpotency
     let l_wedge_l = angular_momentum.wedge(&angular_momentum);
     assert!(
-        l_wedge_l.length < EPSILON,
+        l_wedge_l.mag < EPSILON,
         "L∧L = 0 (angular momentum conservation)"
     );
 
@@ -1729,8 +1719,8 @@ fn it_encodes_rotational_inertia() {
     let center_of_mass_radius = Geonum::new(1.0, 0.0, 1.0); // 1m from CM
     let distance_to_new_axis = Geonum::new(2.0, 0.0, 1.0); // 2m from CM to new axis
 
-    let i_cm = mass * center_of_mass_radius.dot(&center_of_mass_radius).length; // 2×1 = 2
-    let d_squared = distance_to_new_axis.dot(&distance_to_new_axis).length; // 4
+    let i_cm = mass * center_of_mass_radius.dot(&center_of_mass_radius).mag; // 2×1 = 2
+    let d_squared = distance_to_new_axis.dot(&distance_to_new_axis).mag; // 4
     let i_parallel = i_cm + mass * d_squared;
 
     assert_eq!(i_cm, 2.0, "I_cm = mr_cm² = 2×1 = 2 kg·m²");
@@ -1742,7 +1732,7 @@ fn it_encodes_rotational_inertia() {
     // test scaling: doubling radius quadruples inertia
     let double_radius = radius.scale(2.0); // 6m
     let double_r_squared = double_radius.dot(&double_radius);
-    let scaled_inertia = mass * double_r_squared.length;
+    let scaled_inertia = mass * double_r_squared.mag;
 
     assert_eq!(scaled_inertia, 72.0, "I(2r) = m(2r)² = 2×36 = 72 kg·m²");
     assert_eq!(scaled_inertia / inertia, 4.0, "doubling r quadruples I");
@@ -1750,7 +1740,7 @@ fn it_encodes_rotational_inertia() {
     // test high-dimensional rotational inertia
     let high_dim_radius = Geonum::new_with_blade(4.0, 1000, 1.0, 7.0); // blade 1000
     let high_dim_r_squared = high_dim_radius.dot(&high_dim_radius);
-    let high_dim_inertia = mass * high_dim_r_squared.length;
+    let high_dim_inertia = mass * high_dim_r_squared.mag;
 
     assert_eq!(
         high_dim_inertia, 32.0,
@@ -1767,7 +1757,7 @@ fn it_encodes_rotational_inertia() {
     let angular_impulse = torque.scale(delta_t); // τΔt
 
     assert_eq!(
-        angular_impulse.length, 13.5,
+        angular_impulse.mag, 13.5,
         "ΔL = τΔt = 45×0.3 = 13.5 kg·m²/s"
     );
     assert_eq!(
@@ -1858,19 +1848,19 @@ fn it_handles_energy_conservation() {
 
     // work = force · displacement (dot product)
     let work = force.dot(&displacement);
-    assert_eq!(work.length, 60.0, "W = F·d = 15×4 = 60 J");
+    assert_eq!(work.mag, 60.0, "W = F·d = 15×4 = 60 J");
     assert_eq!(work.angle.grade(), 0, "work is scalar at grade 0");
 
     // if this work accelerates object from rest
     // W = ΔKE = ½mv_f² - 0
     // v_f = √(2W/m)
-    let final_speed_from_work = (2.0 * work.length / mass).sqrt();
+    let final_speed_from_work = (2.0 * work.mag / mass).sqrt();
     let ke_from_work = 0.5 * mass * final_speed_from_work * final_speed_from_work;
 
     assert!(
-        (ke_from_work - work.length).abs() < 1e-10,
+        (ke_from_work - work.mag).abs() < 1e-10,
         "work-energy theorem: W = ΔKE = {} J",
-        work.length
+        work.mag
     );
 
     // test 3: pendulum energy exchange
@@ -1925,7 +1915,7 @@ fn it_handles_energy_conservation() {
     let total_energy_geonum = Geonum::new(total_energy, 0.0, 1.0);
     let energy_nilpotent = total_energy_geonum.wedge(&total_energy_geonum);
     assert!(
-        energy_nilpotent.length < EPSILON,
+        energy_nilpotent.mag < EPSILON,
         "E∧E = 0 expresses conservation"
     );
 
@@ -1933,7 +1923,7 @@ fn it_handles_energy_conservation() {
     let l = Geonum::new(27.0, 1.0, 2.0); // angular momentum at π/2
     let l_nilpotent = l.wedge(&l);
     assert!(
-        l_nilpotent.length < EPSILON,
+        l_nilpotent.mag < EPSILON,
         "L∧L = 0 expresses angular momentum conservation"
     );
 
@@ -1965,13 +1955,9 @@ fn it_handles_momentum_conservation() {
     // total momentum (vector addition)
     let p_total = p1_initial + p2_initial;
 
-    assert_eq!(p1_initial.length, 10.0, "p1 = m1×v1 = 2×5 = 10 kg·m/s");
-    assert_eq!(
-        p2_initial.length.abs(),
-        6.0,
-        "p2 = |m2×v2| = 3×2 = 6 kg·m/s"
-    );
-    assert_eq!(p_total.length, 4.0, "p_total = 10 - 6 = 4 kg·m/s");
+    assert_eq!(p1_initial.mag, 10.0, "p1 = m1×v1 = 2×5 = 10 kg·m/s");
+    assert_eq!(p2_initial.mag.abs(), 6.0, "p2 = |m2×v2| = 3×2 = 6 kg·m/s");
+    assert_eq!(p_total.mag, 4.0, "p_total = 10 - 6 = 4 kg·m/s");
 
     // after elastic collision (example final velocities)
     // conservation requires: m1v1f + m2v2f = m1v1i + m2v2i
@@ -1983,7 +1969,7 @@ fn it_handles_momentum_conservation() {
     let p_total_final = p1_final + p2_final;
 
     assert_eq!(
-        p_total_final.length, 4.0,
+        p_total_final.mag, 4.0,
         "momentum conserved: p_total unchanged"
     );
     assert_eq!(
@@ -1994,7 +1980,7 @@ fn it_handles_momentum_conservation() {
     // test 2: nilpotency expresses momentum conservation
     let p_nilpotent = p_total.wedge(&p_total);
     assert!(
-        p_nilpotent.length < EPSILON,
+        p_nilpotent.mag < EPSILON,
         "p∧p = 0 expresses momentum conservation"
     );
 
@@ -2007,7 +1993,7 @@ fn it_handles_momentum_conservation() {
     let rocket_momentum = rocket_velocity.scale(rocket_mass);
 
     assert_eq!(
-        rocket_momentum.length, 100000.0,
+        rocket_momentum.mag, 100000.0,
         "p_rocket = mv = 1000×100 = 100000 kg·m/s"
     );
 
@@ -2038,9 +2024,9 @@ fn it_handles_momentum_conservation() {
     }
 
     let v_cm = total_momentum.scale(1.0 / total_mass);
-    assert_eq!(total_momentum.length, 2.0, "p_total = 3 + 2 - 3 = 2 kg·m/s");
+    assert_eq!(total_momentum.mag, 2.0, "p_total = 3 + 2 - 3 = 2 kg·m/s");
     assert!(
-        (v_cm.length - 0.333).abs() < 0.001,
+        (v_cm.mag - 0.333).abs() < 0.001,
         "v_cm = p_total/M = 2/6 ≈ 0.33 m/s"
     );
 
@@ -2051,7 +2037,7 @@ fn it_handles_momentum_conservation() {
 
     let l_nilpotent = l.wedge(&l);
     assert!(
-        l_nilpotent.length < EPSILON,
+        l_nilpotent.mag < EPSILON,
         "L∧L = 0 expresses angular momentum conservation"
     );
 
@@ -2083,7 +2069,7 @@ fn it_handles_angular_momentum_conservation() {
 
     // conservation: L_initial = L_final
     // so ω_final = L_initial / I_final
-    let omega_final_magnitude = l_initial.length / final_inertia;
+    let omega_final_magnitude = l_initial.mag / final_inertia;
     let omega_final = Geonum::new_with_blade(omega_final_magnitude, 1, 0.0, 1.0);
 
     assert_eq!(
@@ -2091,16 +2077,13 @@ fn it_handles_angular_momentum_conservation() {
         "I_initial = mr² = 60×1.5² = 135 kg·m²"
     );
     assert_eq!(final_inertia, 15.0, "I_final = mr² = 60×0.5² = 15 kg·m²");
-    assert_eq!(l_initial.length, 270.0, "L = Iω = 135×2 = 270 kg·m²/s");
-    assert_eq!(
-        omega_final.length, 18.0,
-        "ω_final = L/I = 270/15 = 18 rad/s"
-    );
+    assert_eq!(l_initial.mag, 270.0, "L = Iω = 135×2 = 270 kg·m²/s");
+    assert_eq!(omega_final.mag, 18.0, "ω_final = L/I = 270/15 = 18 rad/s");
 
     // test 2: nilpotency expresses conservation
     let l_wedge_l = l_initial.wedge(&l_initial);
     assert!(
-        l_wedge_l.length < EPSILON,
+        l_wedge_l.mag < EPSILON,
         "L∧L = 0 expresses angular momentum conservation"
     );
 
@@ -2111,18 +2094,18 @@ fn it_handles_angular_momentum_conservation() {
 
     let r2 = Geonum::new(1.5e11, 0.0, 1.0); // 1.5 AU (farther)
                                             // conservation: r1×v1 = r2×v2, so v2 = v1×(r1/r2)
-    let v2_magnitude = v1.length * (r1.length / r2.length);
+    let v2_magnitude = v1.mag * (r1.mag / r2.mag);
     let v2 = Geonum::new_with_blade(v2_magnitude, 1, 1.0, 2.0);
 
     let l1 = r1.wedge(&v1);
     let l2 = r2.wedge(&v2);
 
     assert_eq!(
-        v2.length, 20000.0,
+        v2.mag, 20000.0,
         "v2 = v1×(r1/r2) = 30000×(1/1.5) = 20000 m/s"
     );
     assert!(
-        (l1.length - l2.length).abs() < 1e15,
+        (l1.mag - l2.mag).abs() < 1e15,
         "orbital angular momentum conserved"
     );
 
@@ -2132,7 +2115,7 @@ fn it_handles_angular_momentum_conservation() {
     let torque = Geonum::new_with_blade(0.5, 2, 1.0, 2.0); // small torque at blade 2
 
     // precession rate Ω = τ/L
-    let precession_rate = torque.length / spin_l.length;
+    let precession_rate = torque.mag / spin_l.mag;
     assert_eq!(precession_rate, 0.05, "Ω = τ/L = 0.5/10 = 0.05 rad/s");
 
     // L magnitude unchanged during precession
@@ -2142,7 +2125,7 @@ fn it_handles_angular_momentum_conservation() {
 
     // magnitude approximately preserved for small precession
     assert!(
-        (l_new.length - spin_l.length).abs() < 0.1,
+        (l_new.mag - spin_l.mag).abs() < 0.1,
         "gyroscope |L| approximately constant during precession"
     );
 
@@ -2157,12 +2140,12 @@ fn it_handles_angular_momentum_conservation() {
     let impact_position = Geonum::new(impact_distance, 0.0, 1.0);
     let angular_impulse = impact_position.wedge(&ball_momentum);
 
-    assert_eq!(ball_momentum.length, 5.0, "p_ball = mv = 0.5×10 = 5 kg·m/s");
-    assert_eq!(angular_impulse.length, 4.0, "L = r×p = 0.8×5 = 4 kg·m²/s");
+    assert_eq!(ball_momentum.mag, 5.0, "p_ball = mv = 0.5×10 = 5 kg·m/s");
+    assert_eq!(angular_impulse.mag, 4.0, "L = r×p = 0.8×5 = 4 kg·m²/s");
 
     // rod begins rotating to conserve angular momentum
     let rod_inertia = 2.0; // kg·m² about pivot
-    let rod_omega = angular_impulse.length / rod_inertia;
+    let rod_omega = angular_impulse.mag / rod_inertia;
     assert_eq!(rod_omega, 2.0, "ω_rod = L/I = 4/2 = 2 rad/s");
 
     // KEY INSIGHTS:
