@@ -65,7 +65,7 @@ fn bench_tensor_vs_geonum(c: &mut Criterion) {
                 // single multiplication - no loops, no components
                 let ijk = i * j * k;
 
-                black_box(ijk.length)
+                black_box(ijk.mag)
             });
         });
     }
@@ -147,7 +147,7 @@ fn bench_extreme_dimensions(c: &mut Criterion) {
             // differentiation in million dimensions - still O(1)
             let derivative = dim_1m.differentiate();
 
-            black_box((product.length, wedge.length, derivative.angle.blade()))
+            black_box((product.mag, wedge.mag, derivative.angle.blade()))
         });
     });
 
@@ -266,7 +266,7 @@ fn bench_rotation(c: &mut Criterion) {
             // single operation: angle addition
             let rotated = vector.rotate(rotation);
 
-            black_box(rotated.length)
+            black_box(rotated.mag)
         });
     });
 
@@ -525,7 +525,7 @@ fn bench_wedge_product(c: &mut Criterion) {
             // direct trigonometric computation
             let wedge = v1.wedge(&v2);
 
-            black_box(wedge.length)
+            black_box(wedge.mag)
         });
     });
 
@@ -594,7 +594,7 @@ fn bench_wedge_product(c: &mut Criterion) {
             // same trigonometric formula regardless of dimension
             let wedge = v1.wedge(&v2);
 
-            black_box(wedge.length)
+            black_box(wedge.mag)
         });
     });
 
@@ -860,7 +860,7 @@ fn bench_inversion(c: &mut Criterion) {
     let mut group = configure_group(c.benchmark_group("inversion"));
 
     // traditional: matrix inversion via Gaussian elimination or LU decomposition
-    // geonum: inversion is 1/length and angle transformation
+    // geonum: inversion is 1/mag and angle transformation
 
     // 2×2 matrix inversion
     group.bench_function("traditional_matrix_inv_2x2", |b| {
@@ -886,10 +886,10 @@ fn bench_inversion(c: &mut Criterion) {
         b.iter(|| {
             let geo = Geonum::new(black_box(5.0), black_box(1.0), black_box(6.0));
 
-            // direct inversion: 1/length, angle transformation
+            // direct inversion: 1/mag, angle transformation
             let inv = geo.inv();
 
-            black_box(inv.length)
+            black_box(inv.mag)
         });
     });
 
@@ -986,7 +986,7 @@ fn bench_inversion(c: &mut Criterion) {
             // verify multiplicative identity
             let identity = high * inv;
 
-            black_box(identity.length) // should be 1.0
+            black_box(identity.mag) // should be 1.0
         });
     });
 
@@ -1051,7 +1051,7 @@ fn bench_projection(c: &mut Criterion) {
             // projection via dot product (cos of angle difference)
             let projection = v.dot(&direction);
 
-            black_box(projection.length)
+            black_box(projection.mag)
         });
     });
 
