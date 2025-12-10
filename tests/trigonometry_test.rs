@@ -30,15 +30,15 @@ fn it_maps_trig_onto_the_pi_over_2_lattice() {
         let theta = a.grade_angle();
 
         let c = Geonum::cos(a);
-        assert!((c.length - theta.cos().abs()).abs() < EPSILON);
+        assert!((c.mag - theta.cos().abs()).abs() < EPSILON);
         assert!(matches!(c.angle.grade(), 0 | 2)); // even pair
 
         let s = Geonum::sin(a);
-        assert!((s.length - theta.sin().abs()).abs() < EPSILON);
+        assert!((s.mag - theta.sin().abs()).abs() < EPSILON);
         assert!(matches!(s.angle.grade(), 1 | 3)); // odd pair
 
         let t = Geonum::tan(a);
-        assert!((t.length - theta.tan().abs()).abs() < EPSILON);
+        assert!((t.mag - theta.tan().abs()).abs() < EPSILON);
         assert!(matches!(t.angle.grade(), 1 | 3)); // odd pair via sin/cos division
     }
 }
@@ -54,7 +54,7 @@ fn it_shifts_sin_by_a_quarter_turn_of_cos() {
 
     // same magnitude; sin is a quarter-turn (Q) of cos
     let q = Angle::new(1.0, 2.0);
-    assert!((s.length - c_shifted.length).abs() < EPSILON);
+    assert!((s.mag - c_shifted.mag).abs() < EPSILON);
     assert_eq!(s.angle.base_angle(), (c_shifted.angle + q).base_angle());
 }
 
@@ -84,7 +84,7 @@ fn it_relates_tan_to_sin_over_cos_geometrically() {
     let t = Geonum::tan(a);
     let s_over_c = Geonum::sin(a).div(&Geonum::cos(a));
 
-    assert!((t.length - s_over_c.length).abs() < EPSILON);
+    assert!((t.mag - s_over_c.mag).abs() < EPSILON);
     assert_eq!(t.angle.base_angle(), s_over_c.angle.base_angle());
 }
 
@@ -97,7 +97,7 @@ fn it_is_reference_agnostic() {
     let sin_as_even_pair = Geonum::cos(a + Angle::new(3.0, 2.0));
     let s = Geonum::sin(a);
 
-    assert!((s.length - sin_as_even_pair.length).abs() < EPSILON);
+    assert!((s.mag - sin_as_even_pair.mag).abs() < EPSILON);
     // different references, same information: sin = cos + Q
     let q = Angle::new(1.0, 2.0);
     assert_eq!(
@@ -134,7 +134,7 @@ fn it_relates_trig_through_grade_hierarchy() {
     let sin_obtuse = Geonum::sin(a_obtuse);
     let cos_shifted_obtuse = Geonum::cos(a_obtuse + Angle::new(3.0, 2.0));
     let q = Angle::new(1.0, 2.0);
-    assert!((sin_obtuse.length - cos_shifted_obtuse.length).abs() < EPSILON);
+    assert!((sin_obtuse.mag - cos_shifted_obtuse.mag).abs() < EPSILON);
     assert_eq!(
         sin_obtuse.angle.base_angle(),
         (cos_shifted_obtuse.angle + q).base_angle()
@@ -153,7 +153,7 @@ fn it_doesnt_need_cos_and_tan() {
         } else {
             Angle::new(1.0, 1.0)
         };
-        Geonum::new_with_angle(s.length, base)
+        Geonum::new_with_angle(s.mag, base)
     };
     let tan_via_sin = |a: Angle| {
         let s = Geonum::sin(a);
@@ -174,13 +174,13 @@ fn it_doesnt_need_cos_and_tan() {
 
         // cos via sin matches standard magnitude and parity
         let c = cos_via_sin(a);
-        assert!((c.length - theta.cos().abs()).abs() < EPSILON);
+        assert!((c.mag - theta.cos().abs()).abs() < EPSILON);
         assert!(matches!(c.angle.grade(), 0 | 2));
 
         // tan via sin ratio matches standard magnitude and parity (avoid singularities)
         if theta.cos().abs() > 1e-12 {
             let t = tan_via_sin(a);
-            assert!((t.length - theta.tan().abs()).abs() < EPSILON);
+            assert!((t.mag - theta.tan().abs()).abs() < EPSILON);
             assert!(matches!(t.angle.grade(), 1 | 3));
         }
     }
@@ -200,7 +200,7 @@ fn it_is_projection() {
     let v = Geonum::new_with_angle(r, Angle::new(1.0, 4.0)); // θ = π/4
     let onto_self = Geonum::new_with_angle(1.0, v.angle);
     let proj_self = v.project(&onto_self);
-    assert_eq!(proj_self.length, 1.0);
+    assert_eq!(proj_self.mag, 1.0);
     assert_eq!(proj_self.angle, v.angle);
 
     // adjacent (φ=0): [1, π/4] → [√2/2, 0]
@@ -208,7 +208,7 @@ fn it_is_projection() {
     // this is the r cos term in the linear combination r cos(θ−φ) e_φ + r sin(θ−φ) e_{φ+π/2}
     let onto_adjacent = Geonum::new_with_angle(1.0, zero);
     let proj_adjacent = v.project(&onto_adjacent);
-    assert!((proj_adjacent.length - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
+    assert!((proj_adjacent.mag - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
     assert_eq!(proj_adjacent.angle, zero);
 
     // opposite (φ=π/2): [1, π/4] → [√2/2, π/2]
@@ -216,12 +216,12 @@ fn it_is_projection() {
     // this is the r sin term in the same linear combination above
     let onto_opposite = Geonum::new_with_angle(1.0, quarter);
     let proj_opposite = v.project(&onto_opposite);
-    assert!((proj_opposite.length - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
+    assert!((proj_opposite.mag - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
     assert_eq!(proj_opposite.angle, quarter);
 
     // pythagorean identity from projections
-    let sum_sq = proj_adjacent.length.powi(2) + proj_opposite.length.powi(2);
-    assert!((sum_sq - v.length.powi(2)).abs() < EPSILON);
+    let sum_sq = proj_adjacent.mag.powi(2) + proj_opposite.mag.powi(2);
+    assert!((sum_sq - v.mag.powi(2)).abs() < EPSILON);
 }
 
 #[test]
@@ -234,19 +234,11 @@ fn it_adds_vectors_with_cosine_interference() {
     let interference_result = a + b;
 
     println!("Cosine interference addition:");
-    println!(
-        "  a: length={}, angle={:.3}",
-        a.length,
-        a.angle.grade_angle()
-    );
-    println!(
-        "  b: length={}, angle={:.3}",
-        b.length,
-        b.angle.grade_angle()
-    );
+    println!("  a: length={}, angle={:.3}", a.mag, a.angle.grade_angle());
+    println!("  b: length={}, angle={:.3}", b.mag, b.angle.grade_angle());
     println!(
         "  result: length={:.3}, angle={:.3}",
-        interference_result.length,
+        interference_result.mag,
         interference_result.angle.grade_angle()
     );
 
@@ -255,18 +247,18 @@ fn it_adds_vectors_with_cosine_interference() {
     let angle2 = b.angle.grade_angle();
 
     // step 1: sum projections (no squares)
-    let y_sum = a.length * angle1.sin() + b.length * angle2.sin();
-    let x_sum = a.length * angle1.cos() + b.length * angle2.cos();
+    let y_sum = a.mag * angle1.sin() + b.mag * angle2.sin();
+    let x_sum = a.mag * angle1.cos() + b.mag * angle2.cos();
 
     // step 2: derive angle using atan2 (no squares)
     let manual_angle = y_sum.atan2(x_sum);
 
     // step 3: derive length using projection constraint (no squares)
     let manual_length =
-        a.length * (angle1 - manual_angle).cos() + b.length * (angle2 - manual_angle).cos();
+        a.mag * (angle1 - manual_angle).cos() + b.mag * (angle2 - manual_angle).cos();
 
     // verify manual computation matches cosine interference
-    assert!((manual_length - interference_result.length).abs() < EPSILON);
+    assert!((manual_length - interference_result.mag).abs() < EPSILON);
     assert!((manual_angle - interference_result.angle.grade_angle()).abs() < EPSILON);
 
     println!("Manual cosine interference verification:");
@@ -371,12 +363,12 @@ fn it_expresses_pythagoras_theorem_through_composed_angles() {
     println!("3-4-5 triangle as angle composition:");
     println!(
         "  3: length={} at angle={:.3}",
-        three.length,
+        three.mag,
         three.angle.grade_angle()
     );
     println!(
         "  4: length={} at angle={:.3}",
-        four.length,
+        four.mag,
         four.angle.grade_angle()
     );
 
@@ -393,14 +385,14 @@ fn it_expresses_pythagoras_theorem_through_composed_angles() {
     let combined = three + four;
     println!(
         "  combined: length={:.3} at angle={:.3}",
-        combined.length,
+        combined.mag,
         combined.angle.grade_angle()
     );
 
     // verify pythagorean relationship in lengths
     let expected_length = (3.0_f64.powi(2) + 4.0_f64.powi(2)).sqrt();
-    assert!((combined.length - expected_length).abs() < EPSILON);
-    assert!((combined.length - 5.0).abs() < EPSILON);
+    assert!((combined.mag - expected_length).abs() < EPSILON);
+    assert!((combined.mag - 5.0).abs() < EPSILON);
 
     // but the real insight: this length relationship comes from cosine interference
     // cos(π/2) = 0 means orthogonal rotations combine with zero interference term

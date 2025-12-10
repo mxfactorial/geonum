@@ -14,7 +14,7 @@ impl Affine for Geonum {
 
     fn shear(&self, shear_angle: Angle) -> Geonum {
         Geonum {
-            length: self.length,
+            mag: self.mag,
             angle: self.angle + shear_angle, // uniform angular transformation
         }
     }
@@ -27,12 +27,12 @@ impl Affine for Geonum {
         // triangle 1: p1, p2, p3
         let edge1 = *p2 + p1.negate(); // vector from p1 to p2
         let edge2 = *p3 + p1.negate(); // vector from p1 to p3
-        let triangle1_area = edge1.wedge(&edge2).length / 2.0;
+        let triangle1_area = edge1.wedge(&edge2).mag / 2.0;
 
         // triangle 2: p1, p3, p4
         let edge3 = *p3 + p1.negate(); // vector from p1 to p3
         let edge4 = *p4 + p1.negate(); // vector from p1 to p4
-        let triangle2_area = edge3.wedge(&edge4).length / 2.0;
+        let triangle2_area = edge3.wedge(&edge4).mag / 2.0;
 
         triangle1_area + triangle2_area
     }
@@ -62,19 +62,19 @@ mod tests {
         let translated = point.translate(&displacement);
         let back = translated.translate(&inverse);
 
-        assert!(point.length_diff(&back) < EPSILON);
-        assert!((point.angle - back.angle).value() < EPSILON);
+        assert!(point.mag_diff(&back) < EPSILON);
+        assert!((point.angle - back.angle).rem() < EPSILON);
     }
 
     #[test]
-    fn it_preserves_length_and_transforms_angle_after_shear() {
+    fn it_preserves_mag_and_transforms_angle_after_shear() {
         let point = Geonum::new(5.0, 1.0, 3.0); // [5, π/3]
         let shear_angle = Angle::new(1.0, 6.0); // π/6
         let sheared = point.shear(shear_angle);
 
-        assert!(point.length_diff(&sheared) < EPSILON); // length preserved
+        assert!(point.mag_diff(&sheared) < EPSILON); // magnitude preserved
         let expected_angle = point.angle + shear_angle;
-        assert!((sheared.angle - expected_angle).value() < EPSILON); // angle shifted by shear amount
+        assert!((sheared.angle - expected_angle).rem() < EPSILON); // angle shifted by shear amount
 
         // grade changes when angle sum crosses π/2 boundary
         // π/3 + π/6 = π/2, so grade changes from 0 to 1
@@ -92,7 +92,7 @@ mod tests {
         let sheared2 = dir2.shear(shear_angle);
 
         // parallelism preserved - same angle relationship
-        assert!((sheared1.angle - sheared2.angle).value() < EPSILON);
+        assert!((sheared1.angle - sheared2.angle).rem() < EPSILON);
     }
 
     #[test]

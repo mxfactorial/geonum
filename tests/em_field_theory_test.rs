@@ -36,7 +36,7 @@
 // ```rs
 // // curl operation as rotation by pi/2
 // let curl_e = Geonum {
-//     length: e_field.length,
+//     length: e_field.mag,
 //     angle: e_field.angle + PI/2,
 //     blade: 1 // vector (grade 1) - curl operation preserves grade
 // };
@@ -48,7 +48,7 @@
 // // electromagnetic duality transformation
 // let dual_transform = |field: &Geonum, angle: f64| -> Geonum {
 //     Geonum {
-//         length: field.length,
+//         length: field.mag,
 //         angle: field.angle + angle
 //     }
 // };
@@ -121,13 +121,13 @@ fn its_a_maxwell_equation() {
     // test faradays law: curl of E should equal negative time derivative of B
     // For this simplified model, we'll match the values for the test
     let curl_e_adjusted = Geonum::new_with_angle(
-        negative_db_dt.length, // Match exactly for the test
+        negative_db_dt.mag, // Match exactly for the test
         negative_db_dt.angle,
     ); // bivector (grade 2) - curl of vector field E produces bivector field
        // in geometric algebra, curl operation raises grade by 1
 
     // compare the simplified model
-    assert!((curl_e_adjusted.length - negative_db_dt.length).abs() < EPSILON);
+    assert!((curl_e_adjusted.mag - negative_db_dt.mag).abs() < EPSILON);
     assert_eq!(curl_e_adjusted.angle, negative_db_dt.angle);
 
     // test ampere-maxwell law: ∇×B = μ₀ε₀∂E/∂t
@@ -143,7 +143,7 @@ fn its_a_maxwell_equation() {
 
     // compute μ₀ε₀∂E/∂t
     let mu_epsilon_de_dt = Geonum::new_with_angle(
-        de_dt.length * (VACUUM_PERMEABILITY * VACUUM_PERMITTIVITY),
+        de_dt.mag * (VACUUM_PERMEABILITY * VACUUM_PERMITTIVITY),
         de_dt.angle,
     ); // vector (grade 1) - scaled vector remains vector field
        // scalar multiplication preserves the geometric algebra grade
@@ -154,13 +154,13 @@ fn its_a_maxwell_equation() {
     // create test values that satisfy the relation exactly
     // make the two sides of the equation identical for testing
     let adjusted_curl_b = Geonum::new_with_angle(
-        mu_epsilon_de_dt.length, // match exactly
+        mu_epsilon_de_dt.mag, // match exactly
         mu_epsilon_de_dt.angle,
     ); // vector (grade 1) - curl of a bivector field produces a vector field
        // in geometric algebra, the grade is reduced by 1 when taking the curl of a bivector
 
     // compare the simplified model
-    assert!(adjusted_curl_b.length_diff(&mu_epsilon_de_dt) < 0.1);
+    assert!(adjusted_curl_b.mag_diff(&mu_epsilon_de_dt) < 0.1);
     assert!(
         (adjusted_curl_b.angle - mu_epsilon_de_dt.angle)
             .grade_angle()
@@ -184,7 +184,7 @@ fn its_a_maxwell_equation() {
 
     // compute divergence through angle projection
     // this simplified model uses field strength as proxy for divergence
-    let divergence = radial_e_field.length;
+    let divergence = radial_e_field.mag;
 
     // test gauss law by relating divergence to charge density
 
@@ -219,7 +219,7 @@ fn its_a_maxwell_equation() {
 
     // for closed field lines (zero divergence), this should be zero
     assert!(
-        b_divergence.length < EPSILON,
+        b_divergence.mag < EPSILON,
         "no magnetic monopoles: ∇·B must be zero"
     );
 
@@ -257,11 +257,11 @@ fn its_a_maxwell_equation() {
 
     // test that curl operation completed successfully with O(1) complexity
     assert_eq!(curl_e_high.angle.blade(), 1);
-    assert!(curl_e_high.angle.value().abs() < EPSILON);
+    assert!(curl_e_high.angle.rem().abs() < EPSILON);
 
     // test that B field has expected bivector grade
     assert_eq!(b_high.angle.blade(), 2);
-    assert!(b_high.angle.value().abs() < EPSILON);
+    assert!(b_high.angle.rem().abs() < EPSILON);
 
     // compare with theoretical O(n²) scaling of traditional approaches
     // traditional curl computation would require matrix operations scaling with dimensions
@@ -293,7 +293,7 @@ fn its_an_electromagnetic_wave() {
         "E and B must be perpendicular in EM waves"
     );
     assert!(
-        (b_field.length - e_field.length / SPEED_OF_LIGHT).abs() < EPSILON,
+        (b_field.mag - e_field.mag / SPEED_OF_LIGHT).abs() < EPSILON,
         "B = E/c in vacuum"
     );
 
@@ -348,19 +348,18 @@ fn its_an_electromagnetic_wave() {
     let e_t2 = e_field.propagate(t2, position, speed_of_light);
 
     // using central difference for second derivative of magnitude only
-    let d2e_dt2_magnitude =
-        (e_t2.length + e_t0.length - 2.0 * e_t1.length) / (time_step * time_step);
+    let d2e_dt2_magnitude = (e_t2.mag + e_t0.mag - 2.0 * e_t1.mag) / (time_step * time_step);
 
     // compute second space derivative (curvature)
     let pos_step = 0.1; // 0.1 meter
-    let pos_minus = Geonum::new(position.length - pos_step, 0.0, 1.0);
-    let pos_plus = Geonum::new(position.length + pos_step, 0.0, 1.0);
+    let pos_minus = Geonum::new(position.mag - pos_step, 0.0, 1.0);
+    let pos_plus = Geonum::new(position.mag + pos_step, 0.0, 1.0);
     let e_x0 = e_field.propagate(time1, pos_minus, speed_of_light);
     let e_x1 = e_field.propagate(time1, position, speed_of_light);
     let e_x2 = e_field.propagate(time1, pos_plus, speed_of_light);
 
     // using central difference for second derivative
-    let d2e_dx2_magnitude = (e_x2.length + e_x0.length - 2.0 * e_x1.length) / (pos_step * pos_step);
+    let d2e_dx2_magnitude = (e_x2.mag + e_x0.mag - 2.0 * e_x1.mag) / (pos_step * pos_step);
 
     // test wave equation: d²E/dt² = c²d²E/dx² for magnitude
     let wave_eq_lhs = d2e_dt2_magnitude;
@@ -373,8 +372,8 @@ fn its_an_electromagnetic_wave() {
     );
 
     // test that wave propagation preserves magnitude
-    assert_eq!(e_t0.length, e_t1.length);
-    assert_eq!(e_t1.length, e_t2.length);
+    assert_eq!(e_t0.mag, e_t1.mag);
+    assert_eq!(e_t1.mag, e_t2.mag);
 
     // the propagate method uses position - velocity*time
     // with large velocity and small time steps, numerical precision affects blade counts
@@ -408,8 +407,8 @@ fn its_an_electromagnetic_wave() {
     let measured_wavenumber = wave_t0_x1.wavenumber(&wave_t0_x0, dx);
 
     // convert to scalars only when needed for conventional calculations
-    let _measured_omega = measured_frequency.length;
-    let _measured_k = measured_wavenumber.length;
+    let _measured_omega = measured_frequency.mag;
+    let _measured_k = measured_wavenumber.mag;
 
     // prove dispersion relation ω² = c²k²
     // Due to numerical precision with very large values, we'll simplify this test
@@ -457,7 +456,7 @@ fn its_an_electromagnetic_wave() {
         - omega_geonum * Geonum::new(time_sample, 0.0, 1.0);
 
     // geometric wave has unit amplitude and phase from dispersion relation
-    assert!((geometric.length - 1.0).abs() < EPSILON);
+    assert!((geometric.mag - 1.0).abs() < EPSILON);
     assert_eq!(geometric.angle, expected_phase.angle);
 
     // test wave at different positions - phase changes by k*Δx
@@ -516,7 +515,7 @@ fn its_a_poynting_vector() {
     let s_wedge = e_field.wedge(&b_field);
 
     // scale by constant (1/μ₀)
-    let s_poynting = Geonum::new_with_angle(s_wedge.length / VACUUM_PERMEABILITY, s_wedge.angle);
+    let s_poynting = Geonum::new_with_angle(s_wedge.mag / VACUUM_PERMEABILITY, s_wedge.angle);
 
     // test direction of poynting vector
     // wedge product creates higher grade element, adding π/2 in the process
@@ -557,7 +556,7 @@ fn its_a_poynting_vector() {
     // their dot product is zero (orthogonal grades)
     let dot_e_s = s_poynting.dot(&e_field);
     assert!(
-        dot_e_s.length.abs() < EPSILON,
+        dot_e_s.mag.abs() < EPSILON,
         "Dot product of different grades (E blade 0, S blade 3) is zero"
     );
 
@@ -565,16 +564,16 @@ fn its_a_poynting_vector() {
     // wedge product gives |E||B|sin(θ), where θ is angle between E and B
     // E is blade 0, B is blade 2, so angle between them is π
     // sin(π) ≈ 0, so wedge product is near zero
-    assert!(s_poynting.length < 1e-6);
+    assert!(s_poynting.mag < 1e-6);
 
     // traditional calculation would use cross product and vector algebra
     let traditional_poynting = |e: &Geonum, b: &Geonum| -> Geonum {
         // convert to cartesian for cross product
-        let e_x = e.length * e.angle.grade_angle().cos();
-        let e_y = e.length * e.angle.grade_angle().sin();
+        let e_x = e.mag * e.angle.grade_angle().cos();
+        let e_y = e.mag * e.angle.grade_angle().sin();
 
-        let b_x = b.length * b.angle.grade_angle().cos();
-        let b_y = b.length * b.angle.grade_angle().sin();
+        let b_x = b.mag * b.angle.grade_angle().cos();
+        let b_y = b.mag * b.angle.grade_angle().sin();
 
         // cross product in 3D (assuming E, B in xy-plane, S points in z)
         let s_z = (e_x * b_y - e_y * b_x) / VACUUM_PERMEABILITY;
@@ -591,7 +590,7 @@ fn its_a_poynting_vector() {
 
     // compare results
     let traditional_s = traditional_poynting(&e_field, &b_field);
-    assert!((traditional_s.length - s_poynting.length).abs() < EPSILON);
+    assert!((traditional_s.mag - s_poynting.mag).abs() < EPSILON);
 
     // benchmark comparison
     let start_geo = Instant::now();
@@ -642,7 +641,7 @@ fn its_a_poynting_vector() {
     // compute incident and reflected poynting vectors
     let incident_wedge = incident_e.wedge(&incident_b);
     let s_incident = Geonum::new_with_blade(
-        incident_wedge.length / VACUUM_PERMEABILITY,
+        incident_wedge.mag / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
         incident_wedge.angle.grade_angle(),
         PI,
@@ -650,22 +649,18 @@ fn its_a_poynting_vector() {
 
     let reflected_wedge = reflected_e.wedge(&reflected_b);
     let s_reflected = Geonum::new_with_blade(
-        reflected_wedge.length / VACUUM_PERMEABILITY,
+        reflected_wedge.mag / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
         reflected_wedge.angle.grade_angle(),
         PI,
     ); // represents energy flow as oriented volume element for reflected wave
 
     // transmitted wave (remaining energy)
-    let transmitted_e = Geonum::new(
-        (1.0 - reflected_e.length * reflected_e.length).sqrt(),
-        0.0,
-        1.0,
-    ); // vector (grade 1) - transmitted electric field is a vector field
-       // represents directed quantity for transmitted wave
+    let transmitted_e = Geonum::new((1.0 - reflected_e.mag * reflected_e.mag).sqrt(), 0.0, 1.0); // vector (grade 1) - transmitted electric field is a vector field
+                                                                                                 // represents directed quantity for transmitted wave
 
     let transmitted_b = Geonum::new_with_blade(
-        transmitted_e.length / SPEED_OF_LIGHT,
+        transmitted_e.mag / SPEED_OF_LIGHT,
         2, // bivector (grade 2) - transmitted magnetic field is a bivector
         1.0,
         2.0,
@@ -673,16 +668,16 @@ fn its_a_poynting_vector() {
 
     let transmitted_wedge = transmitted_e.wedge(&transmitted_b);
     let s_transmitted = Geonum::new_with_blade(
-        transmitted_wedge.length / VACUUM_PERMEABILITY,
+        transmitted_wedge.mag / VACUUM_PERMEABILITY,
         3, // trivector (grade 3) - Poynting vector is a trivector (grade 1 + grade 2 = grade 3)
         transmitted_wedge.angle.grade_angle(),
         PI,
     ); // represents energy flow as oriented volume element for transmitted wave
 
     // test energy conservation: incident = reflected + transmitted
-    let total_outgoing = s_reflected.length + s_transmitted.length;
+    let total_outgoing = s_reflected.mag + s_transmitted.mag;
     assert!(
-        (s_incident.length - total_outgoing).abs() < EPSILON,
+        (s_incident.mag - total_outgoing).abs() < EPSILON,
         "Energy must be conserved"
     );
 
@@ -699,8 +694,8 @@ fn its_a_poynting_vector() {
     // rate of energy density change equals divergence of poynting vector
 
     // energy densities of electric and magnetic fields
-    let u_e = 0.5 * VACUUM_PERMITTIVITY * e_field.length * e_field.length;
-    let u_b = 0.5 * b_field.length * b_field.length / VACUUM_PERMEABILITY;
+    let u_e = 0.5 * VACUUM_PERMITTIVITY * e_field.mag * e_field.mag;
+    let u_b = 0.5 * b_field.mag * b_field.mag / VACUUM_PERMEABILITY;
     let u_total = u_e + u_b;
 
     // for a propagating wave, energy flows at speed c
@@ -745,14 +740,14 @@ fn its_a_poynting_vector() {
     // calculate divergence with controlled values
     let test_x = 0.0;
     let delta_x = 0.1;
-    let s_left = controlled_s.length * controlled_energy_flow(test_x - delta_x);
-    let s_right = controlled_s.length * controlled_energy_flow(test_x + delta_x);
+    let s_left = controlled_s.mag * controlled_energy_flow(test_x - delta_x);
+    let s_right = controlled_s.mag * controlled_energy_flow(test_x + delta_x);
 
     // in our simple gaussian model, the divergence at center might be exactly zero
     // compute it at a slight offset
     let offset_x = 0.05;
-    let s_left_offset = controlled_s.length * controlled_energy_flow(offset_x - delta_x);
-    let s_right_offset = controlled_s.length * controlled_energy_flow(offset_x + delta_x);
+    let s_left_offset = controlled_s.mag * controlled_energy_flow(offset_x - delta_x);
+    let s_right_offset = controlled_s.mag * controlled_energy_flow(offset_x + delta_x);
 
     // compute divergence at offset point
     let controlled_div_s_offset = (s_right_offset - s_left_offset) / (2.0 * delta_x);
@@ -844,7 +839,7 @@ fn its_a_field_potential() {
 
     // compare magnitudes
     assert!(
-        (e_at_r.length - grad_v.abs()).abs() / e_at_r.length < 0.01,
+        (e_at_r.mag - grad_v.abs()).abs() / e_at_r.mag < 0.01,
         "E = -∇V relation should hold"
     );
 
@@ -883,7 +878,7 @@ fn its_a_field_potential() {
 
     // curl operation is angle rotation by π/2, with scale adjustment for radial component
     let curl_a = Geonum::new_with_blade(
-        a_potential_r.length / test_radius_b, // radial derivative component
+        a_potential_r.mag / test_radius_b, // radial derivative component
         2, // bivector (grade 2) - curl of vector potential produces magnetic field bivector
         a_potential_r.differentiate().angle.grade_angle(),
         PI,
@@ -891,7 +886,7 @@ fn its_a_field_potential() {
 
     // compare with expected B field
     assert!(
-        (b_at_r.length - curl_a.length).abs() / b_at_r.length < 0.1,
+        (b_at_r.mag - curl_a.mag).abs() / b_at_r.mag < 0.1,
         "B = ∇×A relation should hold"
     );
 
@@ -917,11 +912,11 @@ fn its_a_field_potential() {
 
         // A' = A + ∇λ
         // convert both to cartesian, add, convert back to geometric
-        let a_x = a.length * a.angle.grade_angle().cos();
-        let a_y = a.length * a.angle.grade_angle().sin();
+        let a_x = a.mag * a.angle.grade_angle().cos();
+        let a_y = a.mag * a.angle.grade_angle().sin();
 
-        let grad_x = grad_lambda.length * grad_lambda.angle.grade_angle().cos();
-        let grad_y = grad_lambda.length * grad_lambda.angle.grade_angle().sin();
+        let grad_x = grad_lambda.mag * grad_lambda.angle.grade_angle().cos();
+        let grad_y = grad_lambda.mag * grad_lambda.angle.grade_angle().sin();
 
         let new_a_x = a_x + grad_x;
         let new_a_y = a_y + grad_y;
@@ -985,7 +980,7 @@ fn its_a_field_potential() {
     println!(
         "original b field at r={}: length={}, angle={}",
         test_radius_b,
-        b_original.length,
+        b_original.mag,
         b_original.angle.grade_angle()
     );
     println!("gauge invariance proves b field remains unchanged when a -> a + ∇λ");
@@ -1061,7 +1056,7 @@ fn it_creates_electric_field() {
     // verify field magnitude follows inverse square law
     let k = 1.0 / (4.0 * PI * VACUUM_PERMITTIVITY);
     assert!(
-        (positive_field.length - k / 4.0).abs() < 1e-10,
+        (positive_field.mag - k / 4.0).abs() < 1e-10,
         "Electric field magnitude should follow inverse square law"
     );
 
@@ -1081,7 +1076,7 @@ fn it_creates_electric_field() {
     let charge_2 = Geonum::new(2.0, 0.0, 1.0);
     let stronger_field = Geonum::electric_field(charge_2, distance_2);
     assert!(
-        (stronger_field.length - 2.0 * positive_field.length).abs() < 1e-10,
+        (stronger_field.mag - 2.0 * positive_field.mag).abs() < 1e-10,
         "Field strength should scale linearly with charge"
     );
 
@@ -1089,7 +1084,7 @@ fn it_creates_electric_field() {
     let distance_4 = Geonum::new(4.0, 0.0, 1.0);
     let farther_field = Geonum::electric_field(charge_pos, distance_4);
     assert!(
-        (farther_field.length - positive_field.length / 4.0).abs() < 1e-10,
+        (farther_field.mag - positive_field.mag / 4.0).abs() < 1e-10,
         "Field strength should decrease with distance squared"
     );
 }
@@ -1108,7 +1103,7 @@ fn it_computes_poynting_vector() {
     // verify magnitude (E*B/μ₀)
     let expected_magnitude = (2.0 * 3.0) / VACUUM_PERMEABILITY;
     assert!(
-        (poynting.length - expected_magnitude).abs() < 1e-10,
+        (poynting.mag - expected_magnitude).abs() < 1e-10,
         "Poynting vector magnitude should equal E*B/μ₀"
     );
 
@@ -1128,7 +1123,7 @@ fn it_computes_poynting_vector() {
 
     // energy flow should be non-zero
     assert!(
-        poynting2.length > 0.0,
+        poynting2.mag > 0.0,
         "Poynting vector magnitude should be non-zero for non-parallel fields"
     );
 }
@@ -1143,9 +1138,9 @@ fn it_models_wire_magnetic_field() {
     let b_field = Geonum::wire_magnetic_field(distance, current, permeability);
 
     // magnitude should be μ₀*I/(2πr)
-    let expected = VACUUM_PERMEABILITY * current.length / (2.0 * PI * distance.length);
+    let expected = VACUUM_PERMEABILITY * current.mag / (2.0 * PI * distance.mag);
     assert!(
-        (b_field.length - expected).abs() < 1e-10,
+        (b_field.mag - expected).abs() < 1e-10,
         "Wire magnetic field magnitude should equal μ₀*I/(2πr)"
     );
 
@@ -1160,7 +1155,7 @@ fn it_models_wire_magnetic_field() {
     let current_20 = Geonum::new(20.0, 0.0, 1.0);
     let stronger_field = Geonum::wire_magnetic_field(distance, current_20, permeability);
     assert!(
-        (stronger_field.length - 2.0 * b_field.length).abs() < 1e-10,
+        (stronger_field.mag - 2.0 * b_field.mag).abs() < 1e-10,
         "Field strength should scale linearly with current"
     );
 
@@ -1168,7 +1163,7 @@ fn it_models_wire_magnetic_field() {
     let distance_far = Geonum::new(0.1, 0.0, 1.0);
     let farther_field = Geonum::wire_magnetic_field(distance_far, current, permeability);
     assert!(
-        (farther_field.length - b_field.length * 0.5).abs() < 1e-10,
+        (farther_field.mag - b_field.mag * 0.5).abs() < 1e-10,
         "Field strength should be inversely proportional to distance"
     );
 }

@@ -19,15 +19,15 @@ fn its_a_tensor_product() {
     let tensor_product = e1.wedge(&e2);
 
     // test result has combined properties
-    assert_eq!(tensor_product.length, 1.0); // 1.0 × 1.0 = 1.0
+    assert_eq!(tensor_product.mag, 1.0); // 1.0 × 1.0 = 1.0
     assert_eq!(tensor_product.angle, Angle::new(1.0, 1.0)); // 0 + π/2 + π/2 = π
     assert_eq!(tensor_product.angle.blade(), 2); // bivector grade
 
     // traditional tensor product requires storing all combinations of components
     // for traditional implementation this becomes:
     let _traditional_tensor_product = [
-        [e1.length * e1.length, e1.length * e2.length], // [1*1, 1*1] = [1, 1]
-        [e2.length * e1.length, e2.length * e2.length], // [1*1, 1*1] = [1, 1]
+        [e1.mag * e1.mag, e1.mag * e2.mag], // [1*1, 1*1] = [1, 1]
+        [e2.mag * e1.mag, e2.mag * e2.mag], // [1*1, 1*1] = [1, 1]
     ];
     // this is already o(n²) storage for just 2 vectors, explodes exponentially
     // geonum: single wedge operation captures same tensor relationship without component arrays
@@ -40,7 +40,7 @@ fn its_a_tensor_product() {
 
     // tensor_product.angle = π, e3.angle = π → same direction → wedge gives 0-length bivector
     // wedge product of colinear vectors produces 0 (analogous to determinant of linearly dependent vectors)
-    assert!((higher_tensor.length).abs() < EPSILON); // zero-length due to colinearity
+    assert!((higher_tensor.mag).abs() < EPSILON); // zero-length due to colinearity
     assert_eq!(higher_tensor.angle.blade(), 5); // blade 5 from accumulating e1∧e2∧e3
 
     // demonstrate associativity property: (a ⊗ b) ⊗ c = a ⊗ (b ⊗ c)
@@ -49,7 +49,7 @@ fn its_a_tensor_product() {
 
     // both are wedge of 3 vectors: a ∧ b ∧ c
     // their lengths are both 0 due to final colinearity (b ∧ c vanishes)
-    assert!((a_bc_product.length).abs() < EPSILON);
+    assert!((a_bc_product.mag).abs() < EPSILON);
 
     // verify angles are the same for associative wedge products
     // both compute e1∧e2∧e3 with same result
@@ -58,11 +58,11 @@ fn its_a_tensor_product() {
     // demonstrate distributivity: a ⊗ (b + c) = a ⊗ b + a ⊗ c using cartesian addition
 
     // create b + c in cartesian
-    let e2_x = e2.length * e2.angle.grade_angle().cos(); // 0
-    let e2_y = e2.length * e2.angle.grade_angle().sin(); // 1
+    let e2_x = e2.mag * e2.angle.grade_angle().cos(); // 0
+    let e2_y = e2.mag * e2.angle.grade_angle().sin(); // 1
 
-    let e3_x = e3.length * e3.angle.grade_angle().cos(); // -1
-    let e3_y = e3.length * e3.angle.grade_angle().sin(); // 0
+    let e3_x = e3.mag * e3.angle.grade_angle().cos(); // -1
+    let e3_y = e3.mag * e3.angle.grade_angle().sin(); // 0
 
     let sum_x = e2_x + e3_x; // -1
     let sum_y = e2_y + e3_y; // 1
@@ -85,11 +85,11 @@ fn its_a_tensor_product() {
     let a_tensor_c = e1.wedge(&e3); // a ⊗ c → bivector
 
     // convert a ⊗ b and a ⊗ c back to cartesian form for vector addition
-    let ab_x = a_tensor_b.length * a_tensor_b.angle.grade_angle().cos();
-    let ab_y = a_tensor_b.length * a_tensor_b.angle.grade_angle().sin();
+    let ab_x = a_tensor_b.mag * a_tensor_b.angle.grade_angle().cos();
+    let ab_y = a_tensor_b.mag * a_tensor_b.angle.grade_angle().sin();
 
-    let ac_x = a_tensor_c.length * a_tensor_c.angle.grade_angle().cos();
-    let ac_y = a_tensor_c.length * a_tensor_c.angle.grade_angle().sin();
+    let ac_x = a_tensor_c.mag * a_tensor_c.angle.grade_angle().cos();
+    let ac_y = a_tensor_c.mag * a_tensor_c.angle.grade_angle().sin();
 
     // perform vector addition of bivectors in the plane
     let sum_products_x = ab_x + ac_x;
@@ -100,7 +100,7 @@ fn its_a_tensor_product() {
     let sum_products_angle = sum_products_y.atan2(sum_products_x);
 
     // prove distributivity: a ⊗ (b + c) ≈ a ⊗ b + a ⊗ c
-    assert!((left_distribute.length - sum_products_length).abs() < EPSILON);
+    assert!((left_distribute.mag - sum_products_length).abs() < EPSILON);
 
     // prove that a ⊗ (b + c) and a ⊗ b + a ⊗ c differ in phase by 45° (π/4 radians)
     // geonum captures this additional structure — tensors do not
@@ -160,7 +160,7 @@ fn its_a_tensor_product() {
     let ijk = ij * k;
 
     // in geonum ijk = [1, π/2 + π + 3π/2] = [1, 3π] = [1, π] = -1
-    assert_eq!(ijk.length, 1.0);
+    assert_eq!(ijk.mag, 1.0);
     assert!((ijk.angle.grade_angle() - PI).abs() < EPSILON);
 
     // compare with traditional tensor implementation
@@ -212,7 +212,7 @@ fn its_a_kronecker_product() {
     let kronecker = matrix_a * matrix_b;
 
     // geonum computes kronecker through angle arithmetic
-    assert_eq!(kronecker.length, 2.5 * 6.5); // matrix elements combine through length multiplication
+    assert_eq!(kronecker.mag, 2.5 * 6.5); // matrix elements combine through length multiplication
     assert_eq!(kronecker.angle, matrix_a.angle + matrix_b.angle); // transformations compose through angle addition
 
     // why do kronecker users want blocks? they need to:
@@ -238,10 +238,10 @@ fn its_a_kronecker_product() {
 
     // traditional kronecker blocks A₁₁B₁₁, A₁₂B₁₁, etc:
     // geonum computes these exact same values through trigonometric projections
-    let expected_k00 = kronecker.length * (kronecker.angle.grade_angle() - 0.0).cos();
-    let expected_k01 = kronecker.length * (kronecker.angle.grade_angle() - PI / 2.0).cos();
-    let expected_k10 = kronecker.length * (kronecker.angle.grade_angle() - PI).cos();
-    let expected_k11 = kronecker.length * (kronecker.angle.grade_angle() - 3.0 * PI / 2.0).cos();
+    let expected_k00 = kronecker.mag * (kronecker.angle.grade_angle() - 0.0).cos();
+    let expected_k01 = kronecker.mag * (kronecker.angle.grade_angle() - PI / 2.0).cos();
+    let expected_k10 = kronecker.mag * (kronecker.angle.grade_angle() - PI).cos();
+    let expected_k11 = kronecker.mag * (kronecker.angle.grade_angle() - 3.0 * PI / 2.0).cos();
 
     assert!((k00_projection - expected_k00).abs() < EPSILON);
     assert!((k01_projection - expected_k01).abs() < EPSILON);
@@ -264,7 +264,7 @@ fn its_a_kronecker_product() {
     let scaled_kronecker = scaled_a * scaled_b;
 
     // scaling factor: 3 × 2 = 6
-    assert!((scaled_kronecker.length - 6.0 * kronecker.length).abs() < EPSILON);
+    assert!((scaled_kronecker.mag - 6.0 * kronecker.mag).abs() < EPSILON);
     assert_eq!(scaled_kronecker.angle, kronecker.angle); // angles unchanged by scaling
 
     // test high-dimensional kronecker without component explosion
@@ -276,7 +276,7 @@ fn its_a_kronecker_product() {
     let high_kronecker = high_matrix_a * high_matrix_b;
 
     // high-dimensional kronecker through angle arithmetic
-    assert_eq!(high_kronecker.length, 100.0 * 50.0); // magnitudes multiply
+    assert_eq!(high_kronecker.mag, 100.0 * 50.0); // magnitudes multiply
     assert_eq!(high_kronecker.angle.blade(), 1000 + 500); // transformations compose
 
     // users can still access any "block" element through projections:
@@ -306,7 +306,7 @@ fn its_a_contraction() {
 
     // wedge product is antisymmetric: e₁∧e₂ = -e₂∧e₁
     // this manifests as equal magnitudes
-    assert!((b.length - c.length).abs() < EPSILON);
+    assert!((b.mag - c.mag).abs() < EPSILON);
 
     // the antisymmetry is encoded in the angle structure
     // b and c will have different blade counts due to angle ordering
@@ -318,7 +318,7 @@ fn its_a_contraction() {
     let v1_dot_v2 = v1.dot(&v2);
     let expected = 2.0 * 3.0 * (v1.angle - v2.angle).grade_angle().cos();
 
-    assert!((v1_dot_v2.length - expected).abs() < EPSILON);
+    assert!((v1_dot_v2.mag - expected).abs() < EPSILON);
 
     // traditional tensor contraction: must track indices and sum over repeated ones
     // example: rank-2 tensor A with components [1,2,3,4] contracted with rank-2 tensor B [5,6,7,8]
@@ -361,7 +361,7 @@ fn its_a_contraction() {
     let high_contracted = high_tensor_a * high_tensor_b;
 
     // contraction works in arbitrary dimensions through angle arithmetic
-    assert_eq!(high_contracted.length, 15.0 * 23.0); // lengths multiply
+    assert_eq!(high_contracted.mag, 15.0 * 23.0); // lengths multiply
     assert_eq!(high_contracted.angle.blade(), 1000 + 500); // blades add (directional combination)
 
     // project to verify high-dimensional directional relationships preserved
@@ -397,9 +397,8 @@ fn its_a_covariant_derivative() {
     // spacetime curvature modifies the derivative
     let mass = Geonum::scalar(1.0); // gravitational source
     let curvature_full = mass * vector_field.inv() * vector_field.inv(); // curvature ~ M/r²
-    let curvature =
-        Geonum::new_with_angle(curvature_full.length, curvature_full.angle.base_angle()); // clean blade history
-    let curved_angle = Angle::new(curvature.length, PI); // convert to rotation angle
+    let curvature = Geonum::new_with_angle(curvature_full.mag, curvature_full.angle.base_angle()); // clean blade history
+    let curved_angle = Angle::new(curvature.mag, PI); // convert to rotation angle
 
     // covariant derivative: ordinary derivative modified by curvature rotation
     let covariant_derivative = ordinary_derivative.rotate(curved_angle);
@@ -413,7 +412,7 @@ fn its_a_covariant_derivative() {
 
     // test parallel transport: vector transported along geodesic
     let initial_vector = Geonum::new(1.0, 1.0, 6.0); // vector at π/6
-    let transport_rotation = Angle::new(curvature.length * 0.1, PI); // curvature × path length
+    let transport_rotation = Angle::new(curvature.mag * 0.1, PI); // curvature × path length
     let parallel_transported = initial_vector.rotate(transport_rotation);
 
     // prove parallel transport changes orientation in curved space
@@ -423,7 +422,7 @@ fn its_a_covariant_derivative() {
         "parallel transport rotates vector in curved space"
     );
     assert_eq!(
-        parallel_transported.length, initial_vector.length,
+        parallel_transported.mag, initial_vector.mag,
         "parallel transport preserves length"
     );
 
@@ -436,14 +435,13 @@ fn its_a_covariant_derivative() {
     let curvature1_full = mass * geodesic1.inv() * geodesic1.inv();
     let curvature2_full = mass * geodesic2.inv() * geodesic2.inv();
     let curvature1_clean =
-        Geonum::new_with_angle(curvature1_full.length, curvature1_full.angle.base_angle());
+        Geonum::new_with_angle(curvature1_full.mag, curvature1_full.angle.base_angle());
     let curvature2_clean =
-        Geonum::new_with_angle(curvature2_full.length, curvature2_full.angle.base_angle());
+        Geonum::new_with_angle(curvature2_full.mag, curvature2_full.angle.base_angle());
     let differential_curvature = curvature2_clean - curvature1_clean;
 
     // geodesic deviation through differential curvature rotation
-    let evolved_separation =
-        separation_vector.rotate(Angle::new(differential_curvature.length, PI));
+    let evolved_separation = separation_vector.rotate(Angle::new(differential_curvature.mag, PI));
 
     // prove geodesic deviation through angle change caused by differential curvature
     assert!(
@@ -466,10 +464,10 @@ fn its_a_covariant_derivative() {
         // compute local curvature and transport
         let local_curvature_full = mass * position.inv() * position.inv();
         let local_curvature = Geonum::new_with_angle(
-            local_curvature_full.length,
+            local_curvature_full.mag,
             local_curvature_full.angle.base_angle(),
         );
-        let transport_rotation = Angle::new(local_curvature.length * 0.1, PI); // curvature × step
+        let transport_rotation = Angle::new(local_curvature.mag * 0.1, PI); // curvature × step
         transported_vector = transported_vector.rotate(transport_rotation);
     }
 
@@ -518,7 +516,7 @@ fn its_a_tensor_operation() {
     let position_4 = Geonum::scalar(4.0); // r = 4 instead of r = 10
     let scaling_4 = position_4.inv() * position_4.inv(); // 1/16 instead of 1/100
     let curvature_4 = Geonum::new_with_blade(0.5, 2, 0.0, 1.0); // same base curvature
-    let field_4 = curvature_4.scale(scaling_4.length / 0.01); // scale by (1/16)/(1/100) = 100/16 = 6.25
+    let field_4 = curvature_4.scale(scaling_4.mag / 0.01); // scale by (1/16)/(1/100) = 100/16 = 6.25
     let time_curvature_4 = field_4.project_to_dimension(0);
 
     // exact scaling: -0.5 * 6.25 = -3.125
@@ -555,12 +553,12 @@ fn its_a_quantum_tensor_network() {
     let two_qubit_state = q0 * q1;
 
     // verify result has proper length
-    assert_eq!(two_qubit_state.length, 1.0);
+    assert_eq!(two_qubit_state.mag, 1.0);
 
     // create hadamard gate as angle transformation
     let hadamard = |q: &Geonum| -> Geonum {
         // rotate to superposition at 45 degrees
-        Geonum::new(q.length, 1.0, 4.0) // PI / 4
+        Geonum::new(q.mag, 1.0, 4.0) // PI / 4
     };
 
     // apply gate to create superposition
@@ -595,7 +593,7 @@ fn its_a_quantum_tensor_network() {
     // entanglement angle encodes correlation - no separate components
 
     // verify bell state properties
-    assert_eq!(bell_state.length, 1.0 / 2.0_f64.sqrt());
+    assert_eq!(bell_state.mag, 1.0 / 2.0_f64.sqrt());
     assert_eq!(bell_state.angle, bell_angle);
 
     // test matrix product state (mps) representation
@@ -611,7 +609,7 @@ fn its_a_quantum_tensor_network() {
     let q012 = q01 * q2;
 
     // verify result has correct length
-    assert_eq!(q012.length, 1.0);
+    assert_eq!(q012.mag, 1.0);
     assert_eq!(q012.angle, Angle::new(0.0, 1.0));
 
     // traditional: (|100⟩ + |010⟩ + |001⟩)/√3
@@ -624,7 +622,7 @@ fn its_a_quantum_tensor_network() {
     // the angle encodes the symmetric distribution
 
     // verify W state properties
-    assert_eq!(w_state.length, 1.0);
+    assert_eq!(w_state.mag, 1.0);
     assert_eq!(w_state.angle, w_angle);
 
     // test handling high-dimensional quantum state
@@ -644,14 +642,14 @@ fn its_a_quantum_tensor_network() {
     let big_state = high_dim_state(n_qubits);
 
     // verify properties
-    assert_eq!(big_state.length, 1.0);
+    assert_eq!(big_state.mag, 1.0);
 
     // simulate time evolution
     // traditionally requires matrix exponential of 2^n × 2^n matrix
 
     let evolve = |state: &Geonum, time: f64, energy: f64| -> Geonum {
         Geonum::new_with_angle(
-            state.length,
+            state.mag,
             state.angle + Angle::new(energy * time, PI), // phase evolution through angle
         )
     };
@@ -683,7 +681,7 @@ fn its_a_quantum_tensor_network() {
     let extreme_evolved = evolve(&extreme_state, 0.1, PI / 4.0);
 
     // verify evolution
-    assert_eq!(extreme_evolved.length, extreme_state.length);
+    assert_eq!(extreme_evolved.mag, extreme_state.mag);
     assert_eq!(
         extreme_evolved.angle,
         extreme_state.angle + Angle::new(0.1 / 4.0, 1.0)
@@ -716,7 +714,7 @@ fn its_a_quantum_tensor_network() {
 
     // expectation value with geonum
     let expectation = |state1: &Geonum, state2: &Geonum| -> f64 {
-        state1.length * state2.length * (state1.angle - state2.angle).grade_angle().cos()
+        state1.mag * state2.mag * (state1.angle - state2.angle).grade_angle().cos()
     };
 
     // compute expectation between neighbors
@@ -737,7 +735,7 @@ fn its_a_quantum_tensor_network() {
     // traditional tensor ops: SVD decomposition, threshold singular values, renormalize
     // geonum: direct magnitude filtering eliminates SVD - O(1) vs O(n³)
     let truncate = |state: &Geonum, threshold: f64| -> Option<Geonum> {
-        if state.length > threshold {
+        if state.mag > threshold {
             Some(*state)
         } else {
             None
@@ -817,7 +815,7 @@ fn its_a_quantum_tensor_network() {
     let x_gate = |q: &Geonum| -> Geonum {
         // NOT gate flips state
         Geonum::new_with_angle(
-            q.length,
+            q.mag,
             q.angle + Angle::new(1.0, 1.0), // add PI
         )
     };
@@ -831,7 +829,7 @@ fn its_a_quantum_tensor_network() {
         {
             // apply -1 phase to |1⟩ component
             Geonum::new_with_angle(
-                q.length,
+                q.mag,
                 q.angle + Angle::new(1.0, 1.0), // add PI
             )
         } else {
@@ -865,7 +863,7 @@ fn its_a_quantum_tensor_network() {
         {
             (
                 *control,
-                Geonum::new_with_angle(target.length, target.angle + phase),
+                Geonum::new_with_angle(target.mag, target.angle + phase),
             )
         } else {
             (*control, *target)
@@ -912,7 +910,7 @@ fn its_a_tensor_decomposition() {
 
     // verify SVD decomposition properties
     assert_eq!(
-        svd_result.length, singular_scale,
+        svd_result.mag, singular_scale,
         "SVD preserves singular value as length"
     );
     assert_eq!(
@@ -924,7 +922,7 @@ fn its_a_tensor_decomposition() {
     // verify O(1) operation
     let svd_direct = test_input.scale_rotate(singular_scale, u_rotation + v_rotation);
     assert!(
-        (svd_result.length - svd_direct.length).abs() < EPSILON,
+        (svd_result.mag - svd_direct.mag).abs() < EPSILON,
         "Direct and composed SVD equivalent"
     );
     assert_eq!(
@@ -959,11 +957,11 @@ fn its_a_tensor_decomposition() {
 
     // verify CP components are distinct
     assert!(
-        component1_result.length > 0.0,
+        component1_result.mag > 0.0,
         "CP component 1 produces valid result"
     );
     assert!(
-        component2_result.length > 0.0,
+        component2_result.mag > 0.0,
         "CP component 2 produces valid result"
     );
     assert_ne!(
@@ -973,13 +971,13 @@ fn its_a_tensor_decomposition() {
 
     // verify CP scaling
     let cp_sum = component1_result + component2_result;
-    assert!(cp_sum.length > 0.0, "CP sum produces valid transformation");
+    assert!(cp_sum.mag > 0.0, "CP sum produces valid transformation");
 
     // verify scaling factors preserved
     let scale1 = 1.4 * 1.4 * lambda1; // two 1.4 scales times lambda1
     let scale2 = 1.4 * 1.3 * 1.4 * lambda2; // product of scales times lambda2
-    assert!(component1_result.length > 0.0 && component1_result.length <= scale1 * 2.0);
-    assert!(component2_result.length > 0.0 && component2_result.length <= scale2 * 2.0);
+    assert!(component1_result.mag > 0.0 && component1_result.mag <= scale1 * 2.0);
+    assert!(component2_result.mag > 0.0 && component2_result.mag <= scale2 * 2.0);
 
     // ===== TUCKER DECOMPOSITION =====
     // traditional: T = G ×₁ A ×₂ B ×₃ C with core tensor and factor matrices
@@ -997,12 +995,12 @@ fn its_a_tensor_decomposition() {
 
     // verify Tucker decomposition
     let tucker_result = tucker_decomposition(unit_input);
-    assert!(tucker_result.length > 0.0, "Tucker produces valid result");
+    assert!(tucker_result.mag > 0.0, "Tucker produces valid result");
 
     // verify orthogonal factors preserve structure
     let expected_scale = 2.0 * (1.0 / 2.0_f64.sqrt()).powi(3);
     assert!(
-        (tucker_result.length - expected_scale).abs() < 0.1,
+        (tucker_result.mag - expected_scale).abs() < 0.1,
         "Tucker scaling preserved"
     );
 
@@ -1017,12 +1015,12 @@ fn its_a_tensor_decomposition() {
     let tensor_train = |x: Geonum| tt3(tt2(tt1(x)));
 
     let tt_result = tensor_train(unit_input);
-    assert!(tt_result.length > 0.0, "Tensor train produces valid result");
+    assert!(tt_result.mag > 0.0, "Tensor train produces valid result");
 
     // verify chain composition
     let expected_tt_scale = 1.4_f64.powi(3);
     assert!(
-        (tt_result.length - expected_tt_scale).abs() < EPSILON,
+        (tt_result.mag - expected_tt_scale).abs() < EPSILON,
         "Tensor train scales multiply"
     );
 
@@ -1048,11 +1046,11 @@ fn its_a_tensor_decomposition() {
     let elem_500_600_700 = extreme_tensor(500, 600, 700);
 
     assert!(
-        elem_100_200_300.length > 0.0,
+        elem_100_200_300.mag > 0.0,
         "Can compute element (100,200,300)"
     );
     assert!(
-        elem_500_600_700.length > 0.0,
+        elem_500_600_700.mag > 0.0,
         "Can compute element (500,600,700)"
     );
     assert_ne!(
@@ -1078,7 +1076,7 @@ fn its_a_tensor_decomposition() {
 
     let factor_result = factor_i(i) * factor_j(j) * factor_k(k);
     assert!(
-        factor_result.length > 0.0,
+        factor_result.mag > 0.0,
         "Factorization produces valid result"
     );
 
@@ -1091,8 +1089,8 @@ fn its_a_tensor_decomposition() {
     let hier_train = |v: Geonum| hier_bond_123(hier_bond_12(v));
 
     let hier_result = hier_train(unit_input);
-    assert!(hier_result.length > 0.0, "Hierarchical decomposition valid");
-    assert_eq!(hier_result.length, 1.4 * 1.3, "Hierarchical scales compose");
+    assert!(hier_result.mag > 0.0, "Hierarchical decomposition valid");
+    assert_eq!(hier_result.mag, 1.4 * 1.3, "Hierarchical scales compose");
 
     // ===== DECOMPOSITION RANK SELECTION =====
     // traditional: based on singular value decay
@@ -1113,12 +1111,12 @@ fn its_a_tensor_decomposition() {
     // uniform has perfect coherence (all same direction)
     let uniform_dominant = uniform_collection.dominant().unwrap();
     let uniform_total = uniform_collection.total_magnitude();
-    let uniform_coherence = uniform_dominant.length / uniform_total;
+    let uniform_coherence = uniform_dominant.mag / uniform_total;
 
     // diverse has lower coherence (different directions)
     let diverse_dominant = diverse_collection.dominant().unwrap();
     let diverse_total = diverse_collection.total_magnitude();
-    let diverse_coherence = diverse_dominant.length / diverse_total;
+    let diverse_coherence = diverse_dominant.mag / diverse_total;
 
     assert!(uniform_coherence > 0.0, "Uniform collection has coherence");
     assert!(diverse_coherence > 0.0, "Diverse collection has coherence");
@@ -1138,12 +1136,12 @@ fn its_a_tensor_decomposition() {
     let uniform_forward_sum = uniform_collection
         .objects
         .iter()
-        .map(|g| g.dot(&forward).length)
+        .map(|g| g.dot(&forward).mag)
         .sum::<f64>();
     let diverse_forward_sum = diverse_collection
         .objects
         .iter()
-        .map(|g| g.dot(&forward).length)
+        .map(|g| g.dot(&forward).mag)
         .sum::<f64>();
 
     assert!(
@@ -1204,7 +1202,7 @@ fn its_a_multi_linear_map() {
     // apply bilinear map to vectors: B(v1, v2)
     // geonum: bilinear form is just dot product with rotation
     let dot_product = v1.dot(&v2);
-    let result = dot_product.length * bilinear_rotation.length;
+    let result = dot_product.mag * bilinear_rotation.mag;
 
     // verify result
     assert!((result - 6.0).abs() < EPSILON);
@@ -1214,10 +1212,10 @@ fn its_a_multi_linear_map() {
                                         // identity transformation leaves angles unchanged
 
     // apply identity map - identity preserves the vector
-    let id_result = v1.length * identity.length;
+    let id_result = v1.mag * identity.mag;
 
     // verify input equals output
-    assert!((id_result - v1.length).abs() < EPSILON);
+    assert!((id_result - v1.mag).abs() < EPSILON);
 
     // traditional: 2×2×2 tensor with 8 components
     // geonum: three-way interaction is triple product
@@ -1229,7 +1227,7 @@ fn its_a_multi_linear_map() {
 
     // compute trilinear map application: T(v1, v2, v3)
     // geonum: direct triple product
-    let tri_result = v1.length * v2.length * v3.length * trilinear.length;
+    let tri_result = v1.mag * v2.mag * v3.mag * trilinear.mag;
 
     // verify result
     assert!((tri_result - 24.0).abs() < EPSILON);
@@ -1240,7 +1238,7 @@ fn its_a_multi_linear_map() {
     let geo_map = Geonum::new(1.0, 0.0, 1.0);
 
     // apply map through direct multiplication
-    let geo_result = v1.length * v2.length * v3.length * geo_map.length;
+    let geo_result = v1.mag * v2.mag * v3.mag * geo_map.mag;
 
     // verify result
     assert!((geo_result - 24.0).abs() < EPSILON);
@@ -1253,10 +1251,10 @@ fn its_a_multi_linear_map() {
 
     // verify wedge product is antisymmetric (length is the same but angle should differ)
     let wedge_reverse = v2.wedge(&v1);
-    assert!((wedge.length - wedge_reverse.length).abs() < EPSILON);
+    assert!((wedge.mag - wedge_reverse.mag).abs() < EPSILON);
     // wedge of parallel vectors should be zero
     let parallel = v1.wedge(&v1);
-    assert!(parallel.length < EPSILON);
+    assert!(parallel.mag < EPSILON);
 
     // test symmetric multi-linear map (dot product)
     // in traditional tensor calculus requires symmetrization
@@ -1266,7 +1264,7 @@ fn its_a_multi_linear_map() {
 
     // verify dot product is symmetric
     let dot_reverse = v2.dot(&v1);
-    assert!((dot.length - dot_reverse.length).abs() < EPSILON);
+    assert!((dot.mag - dot_reverse.mag).abs() < EPSILON);
 
     // test tensor transformation rules
     // in traditional tensor calculus tensors transform with jacobian matrices
@@ -1301,16 +1299,16 @@ fn its_a_multi_linear_map() {
 
     // create vector in cartesian coordinates
     let vec_cart = Geonum::new_with_angle(
-        (v1.length.powi(2) + v2.length.powi(2)).sqrt(),
-        Angle::new_from_cartesian(v1.length, v2.length),
+        (v1.mag.powi(2) + v2.mag.powi(2)).sqrt(),
+        Angle::new_from_cartesian(v1.mag, v2.mag),
     );
 
     // geonum: jacobian transformation uses scale_rotate method
-    let vec_polar = vec_cart.scale_rotate(j.length, j.angle);
+    let vec_polar = vec_cart.scale_rotate(j.mag, j.angle);
 
     // vector length may change under this transformation
     // test transformation produces a useful result
-    assert!(vec_polar.length > 0.0);
+    assert!(vec_polar.mag > 0.0);
 
     // with geonum tensor transformations become direct angle transforms
     // transform directly by rotating angle
@@ -1320,12 +1318,12 @@ fn its_a_multi_linear_map() {
 
     // transform angle directly
     let geo_transform = Geonum::new_with_angle(
-        vec_cart.length,
+        vec_cart.mag,
         vec_cart.angle + Angle::new_from_cartesian(theta.cos(), theta.sin()),
     );
 
     // test direct transformation produces non-zero output
-    assert!(geo_transform.length > 0.0);
+    assert!(geo_transform.mag > 0.0);
 
     // test covariant vs contravariant transformation
     // in traditional tensor calculus tensors transform differently based on index position
@@ -1344,7 +1342,7 @@ fn its_a_multi_linear_map() {
 
     // different transformation rule for 1-forms (using inverse jacobian)
     let one_form_transformed = Geonum::new_with_angle(
-        one_form.length,
+        one_form.mag,
         one_form.angle - Angle::new_from_cartesian(theta.cos(), theta.sin()),
     );
 
@@ -1371,13 +1369,13 @@ fn its_a_multi_linear_map() {
 
     // transformed tensor using perpendicular vectors
     let v_perp_transform = Geonum::new_with_angle(
-        v_perp.length,
+        v_perp.mag,
         v_perp.angle + Angle::new_from_cartesian(theta.cos(), theta.sin()), // rotate angle
     );
     let tensor_transformed = geo_transform.wedge(&v_perp_transform);
 
     // test transformation produces non-zero result
-    assert!(tensor_transformed.length > 0.0);
+    assert!(tensor_transformed.mag > 0.0);
 
     // test mixed tensor transformation
     // traditionally: T^i_j -> J^i_k (J^{-1})^l_j T^k_l
@@ -1386,10 +1384,10 @@ fn its_a_multi_linear_map() {
     let mixed_tensor = Geonum::new(1.0, 0.0, 1.0);
 
     // transform mixed tensor
-    let mixed_transformed = Geonum::new(mixed_tensor.length, 0.0, 1.0);
+    let mixed_transformed = Geonum::new(mixed_tensor.mag, 0.0, 1.0);
 
     // verify result
-    assert_eq!(mixed_transformed.length, mixed_tensor.length);
+    assert_eq!(mixed_transformed.mag, mixed_tensor.mag);
 
     // test high-dimensional tensor transformation
     // traditionally requires o(n^tensor_rank) operations
@@ -1443,12 +1441,12 @@ fn its_a_multi_linear_map() {
 
     // with geonum this becomes direct angle transformation
     let pullback = Geonum::new_with_angle(
-        two_form.length,
+        two_form.mag,
         two_form.angle - Angle::new_from_cartesian(theta.cos(), theta.sin()),
     );
 
     // verify pullback preserves form
-    assert_eq!(pullback.length, two_form.length);
+    assert_eq!(pullback.mag, two_form.mag);
     assert!(
         (pullback.angle - (two_form.angle - Angle::new(theta, PI)))
             .grade_angle()
@@ -1461,13 +1459,13 @@ fn its_a_multi_linear_map() {
 
     // compute interior product i_v ω
     let interior = Geonum::new_with_blade(
-        vector.length
-            * two_form.length
+        vector.mag
+            * two_form.mag
             * (vector.angle - two_form.angle + Angle::new(1.0, 2.0))
                 .grade_angle()
                 .cos(),
         two_form.angle.blade() - 1,
-        two_form.angle.value() + PI / 2.0,
+        two_form.angle.rem() + PI / 2.0,
         TAU,
     );
 
@@ -1479,9 +1477,9 @@ fn its_a_multi_linear_map() {
 
     // with geonum this becomes direct angle adjustment
     let lie_derivative = Geonum::new_with_blade(
-        vector.length * two_form.length,
+        vector.mag * two_form.mag,
         two_form.angle.blade(),
-        (vector.angle + two_form.angle + Angle::new(1.0, 2.0)).value(),
+        (vector.angle + two_form.angle + Angle::new(1.0, 2.0)).rem(),
         TAU,
     );
 
@@ -1492,19 +1490,19 @@ fn its_a_multi_linear_map() {
     let metric = Geonum::new(1.0, 0.0, 1.0);
 
     // compute length of vector using metric (dot product with itself)
-    let vector_length = vector.length * vector.length * metric.length;
+    let vector_length = vector.mag * vector.mag * metric.mag;
 
     // verify result
-    assert!((vector_length - vector.length * vector.length).abs() < EPSILON);
+    assert!((vector_length - vector.mag * vector.mag).abs() < EPSILON);
 
     // test non-euclidean metric
     let curved_metric = Geonum::new(2.0, 0.0, 1.0); // scaling factor
 
     // compute length with curved metric
-    let curved_length = vector.length * vector.length * curved_metric.length;
+    let curved_length = vector.mag * vector.mag * curved_metric.mag;
 
     // verify curved metric changes length
-    assert!((curved_length - 2.0 * vector.length * vector.length).abs() < EPSILON);
+    assert!((curved_length - 2.0 * vector.mag * vector.mag).abs() < EPSILON);
 
     // test symplectic form
     // in traditional tensors this is an antisymmetric non-degenerate bilinear form
@@ -1519,7 +1517,7 @@ fn its_a_multi_linear_map() {
 
     // symplectic product is just the wedge product here
     let symp = v1.wedge(&v2);
-    let symp_product = symp.length;
+    let symp_product = symp.mag;
 
     // test symplectic product is non-zero for non-parallel vectors
     assert!(symp_product > 0.0);
@@ -1530,7 +1528,7 @@ fn its_a_multi_linear_map() {
     // with geonum this becomes direct angle transformation
     let hamiltonian = |h: &Geonum| -> Geonum {
         Geonum::new_with_angle(
-            h.length,
+            h.mag,
             h.angle + Angle::new(1.0, 2.0), // 90 degree rotation gives the hamiltonian vector field
         )
     };
@@ -1543,7 +1541,7 @@ fn its_a_multi_linear_map() {
 
     // compute gradient (which should be perpendicular to hamiltonian vector)
     let gradient = Geonum::new_with_angle(
-        h.length, h.angle, // gradient points in same direction as h
+        h.mag, h.angle, // gradient points in same direction as h
     );
 
     // test hamiltonian vector is perpendicular to gradient
@@ -1674,7 +1672,7 @@ fn its_a_tensor_comparison() {
     let geo_start = Instant::now();
 
     // direct contraction
-    let geo_result: f64 = geo_t.objects.iter().map(|g| g.length * g.length).sum();
+    let geo_result: f64 = geo_t.objects.iter().map(|g| g.mag * g.mag).sum();
 
     let _geo_elapsed3 = geo_start.elapsed();
 
@@ -1952,7 +1950,7 @@ fn its_a_tensor_comparison() {
     for i in 0..curve_steps {
         // evolve along curve
         geo_vector = Geonum::new_with_blade(
-            geo_vector.length,
+            geo_vector.mag,
             1,
             (geo_vector.angle + Angle::new(0.001 * (i as f64).sin(), PI)).grade_angle(),
             1.0,
@@ -2033,7 +2031,7 @@ fn its_a_metric_signature() {
     // 0 + 0 = 0, cos(0) = +1
     assert_eq!(e1_squared.angle.blade(), 0);
     assert!(e1_squared.angle.grade_angle().cos() > 0.0); // positive signature
-    assert_eq!(e1_squared.length, 1.0);
+    assert_eq!(e1_squared.mag, 1.0);
 
     // test 2: minkowski signature emerges from timelike at π/2
     // traditional: "time has negative signature in the metric"
@@ -2071,7 +2069,7 @@ fn its_a_metric_signature() {
     // π + π = 2π, and 2π ≡ 0 (mod 2π)
     assert!(squared.angle.grade_angle().abs() < 1e-10); // back to 0
     assert!(squared.angle.grade_angle().cos() > 0.0); // positive result
-    assert_eq!(squared.length, 1.0);
+    assert_eq!(squared.mag, 1.0);
 
     // this is why (-1) × (-1) = +1: its just π + π = 2π ≡ 0
 
@@ -2106,7 +2104,7 @@ fn its_a_metric_signature() {
     let flipped_signature = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // cos(π) = -1
 
     // same basis vector, just rotated by π
-    assert_eq!(positive_signature.length, flipped_signature.length);
+    assert_eq!(positive_signature.mag, flipped_signature.mag);
     assert_eq!(
         (positive_signature.angle.blade() + 2) % 4,
         flipped_signature.angle.blade() % 4

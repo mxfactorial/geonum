@@ -32,8 +32,8 @@ impl Waves for Geonum {
         let velocity_time = velocity * time;
         let phase = position - velocity_time;
 
-        // create new geometric number with same length but adjusted angle
-        Geonum::new_with_angle(self.length, self.angle + phase.angle)
+        // create new geometric number with same magnitude but adjusted angle
+        Geonum::new_with_angle(self.mag, self.angle + phase.angle)
     }
 
     fn disperse(position: Self, time: Self, wavenumber: Self, frequency: Self) -> Self {
@@ -42,7 +42,7 @@ impl Waves for Geonum {
         let omega_t = frequency * time;
         let phase = k_x - omega_t;
 
-        // create new geometric number with unit length and phase angle
+        // create new geometric number with unit magnitude and phase angle
         Geonum::new_with_angle(1.0, phase.angle)
     }
 
@@ -51,7 +51,7 @@ impl Waves for Geonum {
         let phase_diff = *self - *other;
 
         // frequency is phase difference per unit time
-        let magnitude = phase_diff.length / time_interval.length;
+        let magnitude = phase_diff.mag / time_interval.mag;
         Geonum::new_with_angle(magnitude, Angle::new(1.0, 2.0))
     }
 
@@ -60,7 +60,7 @@ impl Waves for Geonum {
         let phase_diff = *self - *other;
 
         // wavenumber is phase difference per unit distance
-        let magnitude = phase_diff.length / spatial_interval.length;
+        let magnitude = phase_diff.mag / spatial_interval.mag;
         Geonum::new_with_angle(magnitude, Angle::new(1.0, 2.0))
     }
 }
@@ -85,15 +85,9 @@ mod tests {
         let wave_t1 = wave.propagate(time_1, position, velocity);
         let wave_t2 = wave.propagate(time_2, position, velocity);
 
-        // prove length is preserved during propagation
-        assert_eq!(
-            wave_t1.length, wave.length,
-            "propagation preserves amplitude"
-        );
-        assert_eq!(
-            wave_t2.length, wave.length,
-            "propagation preserves amplitude"
-        );
+        // prove magnitude is preserved during propagation
+        assert_eq!(wave_t1.mag, wave.mag, "propagation preserves amplitude");
+        assert_eq!(wave_t2.mag, wave.mag, "propagation preserves amplitude");
 
         // compute actual phase changes from the propagate method
         // phase = position - velocity * time as Geonum operations
@@ -151,10 +145,7 @@ mod tests {
         let wave_x1_t2 = Geonum::disperse(position_1, time_2, wavenumber, frequency);
 
         // prove all waves have unit amplitude
-        assert_eq!(
-            wave_x1_t1.length, 1.0,
-            "dispersed waves have unit amplitude"
-        );
+        assert_eq!(wave_x1_t1.mag, 1.0, "dispersed waves have unit amplitude");
 
         // prove phase at origin and t=0 has blade 2 from 0-0 subtraction
         assert_eq!(
@@ -201,7 +192,7 @@ mod tests {
 
         // prove dispersion relation by comparing wave phase velocities
         // For k=2π, ω=2πc, wave speed should be c
-        let wave_speed = frequency.length / wavenumber.length;
+        let wave_speed = frequency.mag / wavenumber.mag;
         let expected_speed = 3.0e8; // speed of light
         assert!(
             (wave_speed - expected_speed).abs() / expected_speed < 1e-10,

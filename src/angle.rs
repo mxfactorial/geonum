@@ -4,12 +4,12 @@ use std::ops::{Add, Div, Mul, Sub};
 /// Angle struct that maintains the angle-blade invariant
 ///
 /// encapsulates the fundamental geometric number constraint:
-/// - angle value stays within [0, π/2)
+/// - angle remainder stays within [0, π/2)
 /// - blade counts π/2 rotations
 #[derive(Debug, Clone, Copy)]
 pub struct Angle {
     /// angle within current π/2 segment, always in range [0, π/2)
-    value: f64,
+    rem: f64,
     /// rotation count (determines geometric grade)
     /// our substrate doesnt enable lights path so
     /// we keep count of π/2 turns with this
@@ -27,7 +27,7 @@ impl Angle {
     /// * `divisor` - denominator of π (2 means π/2, 4 means π/4, etc)
     ///
     /// # returns
-    /// angle struct with blade count and remainder value
+    /// angle struct with blade count and remainder
     ///
     /// # examples
     /// ```
@@ -36,14 +36,14 @@ impl Angle {
     ///
     /// let angle = Angle::new(3.0, 4.0);  // 3 * π/4 = 135 degrees
     /// assert_eq!(angle.blade(), 1);      // one π/2 rotation
-    /// assert_eq!(angle.value(), PI / 4.0); // π/4 remainder
+    /// assert_eq!(angle.rem(), PI / 4.0); // π/4 remainder
     /// ```
     pub fn new(pi_radians: f64, divisor: f64) -> Self {
         let quarter_pi = PI / 2.0;
 
         // exact quarter-turns: use clean pi_radians count directly
         if divisor == 2.0 && pi_radians.fract() == 0.0 {
-            // handle negative values by normalizing first
+            // handle negative rems by normalizing first
             let normalized_quarters = if pi_radians < 0.0 {
                 // add enough full rotations to make positive
                 let full_rotations = ((-pi_radians + 3.0) / 4.0).ceil() * 4.0;
@@ -52,7 +52,7 @@ impl Angle {
                 pi_radians as usize
             };
             return Self {
-                value: 0.0,
+                rem: 0.0,
                 blade: normalized_quarters,
             };
         }
@@ -73,9 +73,9 @@ impl Angle {
         let blade = (normalized_total / quarter_pi) as usize;
 
         // remainder within current π/2 segment
-        let value = normalized_total % quarter_pi;
+        let rem = normalized_total % quarter_pi;
 
-        let angle = Self { value, blade };
+        let angle = Self { rem, blade };
         angle.normalize_boundaries()
     }
 
@@ -126,12 +126,12 @@ impl Angle {
         self + delta
     }
 
-    /// returns the angle value within current π/2 segment
+    /// returns the angle remainder within current π/2 segment
     ///
     /// # returns
-    /// angle value in range [0, π/2)
-    pub fn value(&self) -> f64 {
-        self.value
+    /// angle remainder in range [0, π/2)
+    pub fn rem(&self) -> f64 {
+        self.rem
     }
 
     /// returns the blade count (rotation count)
@@ -189,7 +189,7 @@ impl Angle {
     /// geometric consistency without unbounded blade growth
     ///
     /// this method preserves the angles grade (blade % 4) while resetting the
-    /// blade count to its minimum value for that grade:
+    /// blade count to its minimum for that grade:
     /// - grade 0 (scalar): blade = 0
     /// - grade 1 (vector): blade = 1  
     /// - grade 2 (bivector): blade = 2
@@ -204,37 +204,37 @@ impl Angle {
     pub fn base_angle(&self) -> Angle {
         Angle {
             blade: self.grade(), // reset to base blade for grade
-            value: self.value,   // preserve fractional angle
+            rem: self.rem,       // preserve fractional angle
         }
     }
 
-    /// normalizes this angle when value is at or exceeds π/2 boundaries
+    /// normalizes this angle when remainder is at or exceeds π/2 boundaries
     fn normalize_boundaries(&self) -> Self {
         let quarter_pi = PI / 2.0;
 
         // handle floating point precision near π/2
         const EPSILON: f64 = 1e-10;
-        if (self.value - quarter_pi).abs() < EPSILON {
+        if (self.rem - quarter_pi).abs() < EPSILON {
             return Self {
                 blade: self.blade + 1,
-                value: 0.0,
+                rem: 0.0,
             };
         }
 
-        // handle values >= π/2
-        if self.value >= quarter_pi {
-            let additional_blades = (self.value / quarter_pi) as usize;
-            let final_value = self.value % quarter_pi;
+        // handle remainders >= π/2
+        if self.rem >= quarter_pi {
+            let additional_blades = (self.rem / quarter_pi) as usize;
+            let final_rem = self.rem % quarter_pi;
             // check again for precision at boundary after modulo
-            if (final_value - quarter_pi).abs() < EPSILON {
+            if (final_rem - quarter_pi).abs() < EPSILON {
                 return Self {
                     blade: self.blade + additional_blades + 1,
-                    value: 0.0,
+                    rem: 0.0,
                 };
             }
             return Self {
                 blade: self.blade + additional_blades,
-                value: final_value,
+                rem: final_rem,
             };
         }
 
@@ -246,30 +246,30 @@ impl Angle {
         // step 1: add full blade counts (preserve semantic meaning)
         let total_blade = self.blade + other.blade;
 
-        // step 2: add angle values within current π/2 segments
-        let total_value = self.value + other.value;
+        // step 2: add angle remainders within current π/2 segments
+        let total_rem = self.rem + other.rem;
 
         // avoid floating point buggery
         let quarter_pi = PI / 2.0;
-        if total_value == 0.0 {
+        if total_rem == 0.0 {
             // exact case: no boundary crossing
             return Self {
                 blade: total_blade,
-                value: 0.0,
+                rem: 0.0,
             };
         }
-        if (total_value - quarter_pi).abs() < 1e-15 {
+        if (total_rem - quarter_pi).abs() < 1e-15 {
             // exact case: one boundary crossing
             return Self {
                 blade: total_blade + 1,
-                value: 0.0,
+                rem: 0.0,
             };
         }
 
-        // step 3: create angle with combined blade and value, then normalize
+        // step 3: create angle with combined blade and remainder, then normalize
         let combined = Self {
             blade: total_blade,
-            value: total_value,
+            rem: total_rem,
         };
 
         combined.normalize_boundaries()
@@ -277,13 +277,13 @@ impl Angle {
 
     /// internal geometric subtraction preserving blade progression and π/2 boundary invariants
     fn geometric_sub(&self, other: &Self) -> Self {
-        // subtract blade counts and angle values separately to avoid precision buggery
+        // subtract blade counts and angle remainders separately to avoid precision buggery
         let blade_diff = self.blade as i64 - other.blade as i64;
-        let value_diff = self.value - other.value;
+        let rem_diff = self.rem - other.rem;
 
         // avoid floating point buggery with exact cases
-        if value_diff.abs() < 1e-15 {
-            // exact case: values are equal, result is just blade difference
+        if rem_diff.abs() < 1e-15 {
+            // exact case: remainders are equal, result is just blade difference
             let normalized_blade = if blade_diff < 0 {
                 let four_rotations = ((-blade_diff + 3) / 4) * 4; // round up to multiple of 4
                 (blade_diff + four_rotations) as usize
@@ -292,18 +292,18 @@ impl Angle {
             };
             return Self {
                 blade: normalized_blade,
-                value: 0.0,
+                rem: 0.0,
             };
         }
 
-        // handle negative value: borrow from blade count
-        let (intermediate_blade, intermediate_value) = if value_diff < 0.0 {
+        // handle negative remainder: borrow from blade count
+        let (intermediate_blade, intermediate_rem) = if rem_diff < 0.0 {
             let quarter_pi = PI / 2.0;
-            let final_value = value_diff + quarter_pi;
+            let final_rem = rem_diff + quarter_pi;
             let final_blade = blade_diff - 1;
-            (final_blade, final_value)
+            (final_blade, final_rem)
         } else {
-            (blade_diff, value_diff)
+            (blade_diff, rem_diff)
         };
 
         // handle negative blade count: normalize to positive
@@ -317,7 +317,7 @@ impl Angle {
         // create angle and normalize boundaries
         let result = Self {
             blade: normalized_blade,
-            value: intermediate_value,
+            rem: intermediate_rem,
         };
 
         result.normalize_boundaries()
@@ -326,7 +326,7 @@ impl Angle {
     /// tests if this angle is opposite to another angle
     ///
     /// two angles are opposite if they differ by π (blade difference of 2)
-    /// and have the same value within their π/2 segment
+    /// and have the same remainder within their π/2 segment
     ///
     /// # arguments
     /// * `other` - the angle to compare with
@@ -335,8 +335,8 @@ impl Angle {
     /// true if the angles are opposites (π apart)
     pub fn is_opposite(&self, other: &Angle) -> bool {
         let blade_diff = (self.blade as i32 - other.blade as i32).abs();
-        let values_match = (self.value - other.value).abs() < 1e-15;
-        blade_diff == 2 && values_match
+        let rems_match = (self.rem - other.rem).abs() < 1e-15;
+        blade_diff == 2 && rems_match
     }
 
     /// dual operation that adds π rotation
@@ -377,7 +377,7 @@ impl Angle {
     /// - grade 2 (bivector): π radians
     /// - grade 3 (trivector): 3π/2 radians
     ///
-    /// then adds the fractional angle value within the current π/2 segment
+    /// then adds the fractional angle remainder within the current π/2 segment
     ///
     /// this exposes the fundamental geometric structure where each grade represents
     /// a π/2 rotation from the previous grade, creating the 4-fold symmetry that
@@ -389,7 +389,7 @@ impl Angle {
     /// # returns
     /// angle in radians as f64 within [0, 2π) representing the grade-angle mapping
     pub fn grade_angle(&self) -> f64 {
-        self.grade() as f64 * PI / 2.0 + self.value
+        self.grade() as f64 * PI / 2.0 + self.rem
     }
 
     /// negates this angle by adding π rotation (2 blades)
@@ -417,13 +417,13 @@ impl PartialEq for Angle {
         }
 
         // avoid floating point buggery with exact cases
-        let value_diff = (self.value - other.value).abs();
-        if value_diff < 1e-15 {
+        let rem_diff = (self.rem - other.rem).abs();
+        if rem_diff < 1e-15 {
             return true; // exact match
         }
 
         // for non-exact cases, use standard floating point comparison
-        self.value == other.value
+        self.rem == other.rem
     }
 }
 
@@ -530,7 +530,7 @@ impl Div<f64> for Angle {
 
     fn div(self, divisor: f64) -> Angle {
         // divide both the total angle and reconstruct
-        let total_angle = (self.blade as f64) * (PI / 2.0) + self.value;
+        let total_angle = (self.blade as f64) * (PI / 2.0) + self.rem;
         let divided_angle = total_angle / divisor;
         Angle::new(divided_angle, PI)
     }
@@ -540,7 +540,7 @@ impl Div<f64> for &Angle {
     type Output = Angle;
 
     fn div(self, divisor: f64) -> Angle {
-        let total_angle = (self.blade as f64) * (PI / 2.0) + self.value;
+        let total_angle = (self.blade as f64) * (PI / 2.0) + self.rem;
         let divided_angle = total_angle / divisor;
         Angle::new(divided_angle, PI)
     }
@@ -588,8 +588,8 @@ impl Ord for Angle {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.blade.cmp(&other.blade) {
             std::cmp::Ordering::Equal => {
-                // only finite values in Angles, so unwrap is safe
-                self.value.partial_cmp(&other.value).unwrap()
+                // only finite rems in Angles, so unwrap is safe
+                self.rem.partial_cmp(&other.rem).unwrap()
             }
             other => other,
         }
@@ -598,7 +598,7 @@ impl Ord for Angle {
 
 impl std::fmt::Display for Angle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Angle(blade: {}, value: {:.4})", self.blade, self.value)
+        write!(f, "Angle(blade: {}, rem: {:.4})", self.blade, self.rem)
     }
 }
 
@@ -616,7 +616,7 @@ mod tests {
         let sum = angle1 + angle2; // π/8 + π/6 = 7π/24 < π/2
 
         assert_eq!(sum.blade(), 0); // no boundary crossing
-        assert!((sum.value() - (7.0 * PI / 24.0)).abs() < EPSILON);
+        assert!((sum.rem() - (7.0 * PI / 24.0)).abs() < EPSILON);
     }
 
     #[test]
@@ -627,19 +627,19 @@ mod tests {
         let sum = angle1 + angle2; // π/3 + π/4 = 7π/12 > π/2
 
         assert_eq!(sum.blade(), 1); // crosses π/2 boundary, increments blade
-        assert!((sum.value() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON);
+        assert!((sum.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON);
     }
 
     #[test]
     fn it_sums_rotations_to_multiple_blades() {
-        let angle1 = Angle::new(3.0, 4.0); // 3π/4, blade 1, value π/4
-        let angle2 = Angle::new(5.0, 4.0); // 5π/4, blade 2, value π/4
+        let angle1 = Angle::new(3.0, 4.0); // 3π/4, blade 1, rem π/4
+        let angle2 = Angle::new(5.0, 4.0); // 5π/4, blade 2, rem π/4
 
-        let sum = angle1 + angle2; // blade sum: (1+2)%4=3, value sum: π/4+π/4=π/2
+        let sum = angle1 + angle2; // blade sum: (1+2)%4=3, rem sum: π/4+π/4=π/2
                                    // π/2 crosses boundary: final_blade=(3+1)%4=0
 
         assert_eq!(sum.blade(), 4); // preserves full blade count: 1+2+1=4
-        assert!((sum.value()).abs() < EPSILON); // π/2 boundary crossing leaves no remainder
+        assert!((sum.rem()).abs() < EPSILON); // π/2 boundary crossing leaves no remainder
     }
 
     #[test]
@@ -648,7 +648,7 @@ mod tests {
 
         assert_eq!(angle.blade(), 4); // preserves original blade count
         assert_eq!(angle.grade(), 0); // 4 % 4 = 0 (scalar grade)
-        assert!((angle.value()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
+        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
     }
 
     #[test]
@@ -657,7 +657,7 @@ mod tests {
 
         assert_eq!(angle.blade(), 5); // preserves original blade count
         assert_eq!(angle.grade(), 1); // 5 % 4 = 1 (vector grade)
-        assert!((angle.value()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
+        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
     }
 
     #[test]
@@ -666,7 +666,7 @@ mod tests {
 
         assert_eq!(angle.blade(), 6); // preserves original blade count
         assert_eq!(angle.grade(), 2); // 6 % 4 = 2 (bivector grade)
-        assert!((angle.value()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
+        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
     }
 
     #[test]
@@ -675,7 +675,7 @@ mod tests {
 
         assert_eq!(angle.blade(), 7); // preserves original blade count
         assert_eq!(angle.grade(), 3); // 7 % 4 = 3 (trivector grade)
-        assert!((angle.value()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
+        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
     }
 
     #[test]
@@ -708,7 +708,7 @@ mod tests {
         let diff = angle1 - angle2; // π/3 - π/6 = π/6
 
         assert_eq!(diff.blade(), 0); // π/6 is less than π/2, no blade increment
-        assert!((diff.value() - PI / 6.0).abs() < EPSILON); // remainder is π/6
+        assert!((diff.rem() - PI / 6.0).abs() < EPSILON); // remainder is π/6
     }
 
     #[test]
@@ -719,7 +719,7 @@ mod tests {
         let diff = angle1 - angle2; // 4π/3 - π/3 = π
 
         assert_eq!(diff.blade(), 2); // π = 2 * π/2, so blade = 2
-        assert!((diff.value()).abs() < EPSILON); // exact multiple of π/2 has no remainder
+        assert!((diff.rem()).abs() < EPSILON); // exact multiple of π/2 has no remainder
     }
 
     #[test]
@@ -732,7 +732,7 @@ mod tests {
         // negative result should normalize to positive angle
         // -5π/3 = -5π/3 + 2π = π/3
         assert_eq!(diff.blade(), 0); // π/3 is less than π/2, no blade increment
-        assert!((diff.value() - PI / 3.0).abs() < EPSILON); // remainder is π/3
+        assert!((diff.rem() - PI / 3.0).abs() < EPSILON); // remainder is π/3
     }
 
     #[test]
@@ -743,7 +743,7 @@ mod tests {
         let product = angle1 * angle2; // π/8 * π/6 = π/8 + π/6 = 7π/24
 
         assert_eq!(product.blade(), 0); // 7π/24 < π/2, no blade increment
-        assert!((product.value() - (7.0 * PI / 24.0)).abs() < EPSILON);
+        assert!((product.rem() - (7.0 * PI / 24.0)).abs() < EPSILON);
     }
 
     #[test]
@@ -795,22 +795,22 @@ mod tests {
         // test basic functionality
         let angle = Angle::new_with_blade(2, 1.0, 4.0); // 2 extra blades + π/4
         assert_eq!(angle.blade(), 2); // π/4 gives blade 0, + 2 = blade 2
-        assert!((angle.value() - PI / 4.0).abs() < EPSILON);
+        assert!((angle.rem() - PI / 4.0).abs() < EPSILON);
 
         // test with angle that causes boundary crossing
         let angle2 = Angle::new_with_blade(1, 3.0, 4.0); // 1 extra blade + 3π/4
         assert_eq!(angle2.blade(), 2); // 3π/4 gives blade 1, + 1 = blade 2
-        assert!((angle2.value() - PI / 4.0).abs() < EPSILON); // 3π/4 - π/2 = π/4
+        assert!((angle2.rem() - PI / 4.0).abs() < EPSILON); // 3π/4 - π/2 = π/4
 
         // test with zero additional blades
         let angle3 = Angle::new_with_blade(0, 1.0, 2.0); // 0 extra blades + π/2
         assert_eq!(angle3.blade(), 1); // π/2 gives blade 1, + 0 = blade 1
-        assert!(angle3.value().abs() < EPSILON); // exact π/2 leaves no remainder
+        assert!(angle3.rem().abs() < EPSILON); // exact π/2 leaves no remainder
 
         // test with large additional blade count
         let angle4 = Angle::new_with_blade(10, 0.0, 1.0); // 10 extra blades + 0
         assert_eq!(angle4.blade(), 10); // 0 gives blade 0, + 10 = blade 10
-        assert!(angle4.value().abs() < EPSILON);
+        assert!(angle4.rem().abs() < EPSILON);
     }
 
     #[test]
@@ -840,7 +840,7 @@ mod tests {
         let angle1 = Angle::new(1000.0, 2.0); // 1000*(π/2)
         let angle2 = Angle::new(1000.0, 2.0); // same
         let angle3 = Angle::new(1001.0, 2.0); // different blade
-        let angle4 = Angle::new(1.0, 4.0); // different value
+        let angle4 = Angle::new(1.0, 4.0); // different remainder
 
         // exact equality
         assert_eq!(angle1, angle2);
@@ -848,7 +848,7 @@ mod tests {
         // different blades
         assert_ne!(angle1, angle3);
 
-        // different values
+        // different rems
         assert_ne!(angle1, angle4);
     }
 
@@ -856,9 +856,9 @@ mod tests {
     fn it_detects_opposite_angles() {
         // test that angles differing by π (blade difference of 2) are opposites
 
-        // case 1: blade 0 and blade 2 with same value
-        let scalar = Angle::new(0.0, 1.0); // blade 0, value 0
-        let bivector = Angle::new(1.0, 1.0); // blade 2, value 0
+        // case 1: blade 0 and blade 2 with same remainder
+        let scalar = Angle::new(0.0, 1.0); // blade 0, rem 0
+        let bivector = Angle::new(1.0, 1.0); // blade 2, rem 0
         assert!(
             scalar.is_opposite(&bivector),
             "scalar and bivector are opposites"
@@ -868,20 +868,20 @@ mod tests {
             "opposite detection is symmetric"
         );
 
-        // case 2: blade 1 and blade 3 with same value
-        let vector = Angle::new(1.0, 2.0); // blade 1, value 0
-        let trivector = Angle::new(3.0, 2.0); // blade 3, value 0
+        // case 2: blade 1 and blade 3 with same remainder
+        let vector = Angle::new(1.0, 2.0); // blade 1, rem 0
+        let trivector = Angle::new(3.0, 2.0); // blade 3, rem 0
         assert!(
             vector.is_opposite(&trivector),
             "vector and trivector are opposites"
         );
 
-        // case 3: different values - not opposites
-        let angle1 = Angle::new(1.0, 4.0); // blade 0, value π/4
-        let angle2 = Angle::new(1.0, 1.0); // blade 2, value 0
+        // case 3: different rems - not opposites
+        let angle1 = Angle::new(1.0, 4.0); // blade 0, rem π/4
+        let angle2 = Angle::new(1.0, 1.0); // blade 2, rem 0
         assert!(
             !angle1.is_opposite(&angle2),
-            "different values are not opposites"
+            "different rems are not opposites"
         );
 
         // case 4: blade difference not 2 - not opposites
@@ -893,12 +893,12 @@ mod tests {
         );
 
         // case 5: same angle - not opposite
-        let angle5 = Angle::new(1.0, 3.0); // blade 0, value π/3
+        let angle5 = Angle::new(1.0, 3.0); // blade 0, rem π/3
         assert!(!angle5.is_opposite(&angle5), "same angle is not opposite");
 
         // case 6: high blade counts
-        let high1 = Angle::new(10.0, 2.0); // blade 10, value 0
-        let high2 = Angle::new(12.0, 2.0); // blade 12, value 0
+        let high1 = Angle::new(10.0, 2.0); // blade 10, rem 0
+        let high2 = Angle::new(12.0, 2.0); // blade 12, rem 0
         assert!(
             high1.is_opposite(&high2),
             "high blades with difference 2 are opposites"
@@ -910,31 +910,31 @@ mod tests {
         // test basic quadrants
         let angle_0 = Angle::new_from_cartesian(1.0, 0.0); // positive x-axis
         assert_eq!(angle_0.blade(), 0);
-        assert!(angle_0.value().abs() < EPSILON);
+        assert!(angle_0.rem().abs() < EPSILON);
 
         let angle_90 = Angle::new_from_cartesian(0.0, 1.0); // positive y-axis
         assert_eq!(angle_90.blade(), 1);
-        assert!(angle_90.value().abs() < EPSILON);
+        assert!(angle_90.rem().abs() < EPSILON);
 
         let angle_180 = Angle::new_from_cartesian(-1.0, 0.0); // negative x-axis
         assert_eq!(angle_180.blade(), 2);
-        assert!(angle_180.value().abs() < EPSILON);
+        assert!(angle_180.rem().abs() < EPSILON);
 
         let angle_270 = Angle::new_from_cartesian(0.0, -1.0); // negative y-axis
         assert_eq!(angle_270.blade(), 3);
-        assert!(angle_270.value().abs() < EPSILON);
+        assert!(angle_270.rem().abs() < EPSILON);
 
         // test 45 degree angle
         let angle_45 = Angle::new_from_cartesian(1.0, 1.0);
         assert_eq!(angle_45.blade(), 0);
-        assert!((angle_45.value() - PI / 4.0).abs() < EPSILON);
+        assert!((angle_45.rem() - PI / 4.0).abs() < EPSILON);
 
         // test 3-4-5 triangle (arctan(3/4))
         let angle_triangle = Angle::new_from_cartesian(4.0, 3.0);
         let expected_radians = (3.0_f64).atan2(4.0);
         let expected_angle = Angle::new(expected_radians, PI);
         assert_eq!(angle_triangle.blade(), expected_angle.blade());
-        assert!((angle_triangle.value() - expected_angle.value()).abs() < EPSILON);
+        assert!((angle_triangle.rem() - expected_angle.rem()).abs() < EPSILON);
     }
 
     #[test]
@@ -971,7 +971,7 @@ mod tests {
         // 0 - π/2 = -π/2 wraps around to 3π/2
         // 3π/2 = 3 * (π/2) + 0
         assert_eq!(result.blade(), 3);
-        assert_eq!(result.value(), 0.0);
+        assert_eq!(result.rem(), 0.0);
     }
 
     #[test]
@@ -984,7 +984,7 @@ mod tests {
         // π/2 - π = -π/2 normalizes to 3π/2
         // 3π/2 = 3 * (π/2) + 0
         assert_eq!(result.blade(), 3);
-        assert_eq!(result.value(), 0.0);
+        assert_eq!(result.rem(), 0.0);
     }
 
     #[test]
@@ -992,18 +992,18 @@ mod tests {
         // test what Angle::new(-1.0, 2.0) actually creates
         let neg_half_pi = Angle::new(-1.0, 2.0);
         println!(
-            "Angle::new(-1.0, 2.0) gives blade={}, value={}",
+            "Angle::new(-1.0, 2.0) gives blade={}, rem={}",
             neg_half_pi.blade(),
-            neg_half_pi.value()
+            neg_half_pi.rem()
         );
 
         // test adding it to zero
         let zero = Angle::new(0.0, 1.0);
         let result = zero + neg_half_pi;
         println!(
-            "0 + Angle::new(-1.0, 2.0) gives blade={}, value={}",
+            "0 + Angle::new(-1.0, 2.0) gives blade={}, rem={}",
             result.blade(),
-            result.value()
+            result.rem()
         );
     }
 
@@ -1039,19 +1039,19 @@ mod tests {
         // prove involution property: dual(dual(x)) returns to original grade
         let scalar_double = scalar.dual().dual();
         assert_eq!(scalar_double.grade(), scalar.grade());
-        assert_eq!(scalar_double.value(), scalar.value());
+        assert_eq!(scalar_double.rem(), scalar.rem());
 
         let vector_double = vector.dual().dual();
         assert_eq!(vector_double.grade(), vector.grade());
-        assert_eq!(vector_double.value(), vector.value());
+        assert_eq!(vector_double.rem(), vector.rem());
 
         let bivector_double = bivector.dual().dual();
         assert_eq!(bivector_double.grade(), bivector.grade());
-        assert_eq!(bivector_double.value(), bivector.value());
+        assert_eq!(bivector_double.rem(), bivector.rem());
 
         let trivector_double = trivector.dual().dual();
         assert_eq!(trivector_double.grade(), trivector.grade());
-        assert_eq!(trivector_double.value(), trivector.value());
+        assert_eq!(trivector_double.rem(), trivector.rem());
 
         // test high blade numbers still follow the pattern
         let high_blade = Angle::new_with_blade(1001, 0.0, 1.0); // blade 1001, grade 1
@@ -1080,17 +1080,17 @@ mod tests {
 
             // dual and undual are the same operation
             assert_eq!(dual.blade(), undual.blade());
-            assert_eq!(dual.value(), undual.value());
+            assert_eq!(dual.rem(), undual.rem());
 
             // applying dual twice returns to original grade
             let double_dual = angle.dual().dual();
             assert_eq!(double_dual.grade(), angle.grade());
-            assert_eq!(double_dual.value(), angle.value());
+            assert_eq!(double_dual.rem(), angle.rem());
         }
     }
 
     #[test]
-    fn it_orders_angles_by_blade_then_value() {
+    fn it_orders_angles_by_blade_then_rem() {
         // test ordering by blade first
         let blade0 = Angle::new(1.0, 3.0); // PI/3 (blade 0)
         let blade1 = Angle::new(3.0, 2.0); // 3PI/2 (blade 3)
@@ -1100,7 +1100,7 @@ mod tests {
         assert!(blade1 < blade2);
         assert!(blade0 < blade2);
 
-        // test ordering by value when blades are equal
+        // test ordering by remainder when blades are equal
         let angle1 = Angle::new(1.0, 6.0); // PI/6
         let angle2 = Angle::new(1.0, 4.0); // PI/4
         let angle3 = Angle::new(1.0, 3.0); // PI/3
@@ -1115,19 +1115,19 @@ mod tests {
         assert!(high1 < high2);
 
         // test equality in ordering
-        let eq1 = Angle::new(2.0, 3.0); // blade 0, value 2PI/3
+        let eq1 = Angle::new(2.0, 3.0); // blade 0, rem 2PI/3
         let eq2 = Angle::new(2.0, 3.0); // same
         assert!(eq1 <= eq2);
         assert!(eq1 >= eq2);
         assert!(eq1 >= eq2);
         assert!(eq1 <= eq2);
 
-        // test that blade takes precedence over value
-        let small_blade_big_value = Angle::new(0.8, 1.0); // 0.8PI (blade 1, value 0.3PI)
-        let big_blade_small_value = Angle::new(1.1, 1.0); // 1.1PI (blade 2, value 0.1PI)
-                                                          // even though 0.8PI > 1.1PI in terms of raw angle value within their blades,
-                                                          // blade 1 < blade 2, so the first angle is less than the second
-        assert!(small_blade_big_value < big_blade_small_value);
+        // test that blade takes precedence over remainder
+        let small_blade_big_rem = Angle::new(0.8, 1.0); // 0.8PI (blade 1, rem 0.3PI)
+        let big_blade_small_rem = Angle::new(1.1, 1.0); // 1.1PI (blade 2, rem 0.1PI)
+                                                        // even though 0.8PI > 1.1PI in terms of raw angle remainder within their blades,
+                                                        // blade 1 < blade 2, so the first angle is less than the second
+        assert!(small_blade_big_rem < big_blade_small_rem);
     }
 
     #[test]
@@ -1152,8 +1152,8 @@ mod tests {
         let angle6 = Angle::new(10.0, 2.0); // 10π/2 = 5π, blade 10 -> blade 2
         assert!((angle6.grade_angle() - PI).abs() < EPSILON);
 
-        // test with non-zero value component
-        let angle7 = Angle::new(9.5, 2.0); // 9.5π/2, blade 9, value π/4
+        // test with non-zero remainder component
+        let angle7 = Angle::new(9.5, 2.0); // 9.5π/2, blade 9, rem π/4
                                            // blade 9 % 4 = 1, so result is π/2 + π/4 = 3π/4
         assert!((angle7.grade_angle() - 3.0 * PI / 4.0).abs() < EPSILON);
 
@@ -1233,9 +1233,9 @@ mod tests {
         let normalized = angle_high_blade.base_angle();
         assert_eq!(normalized.blade(), 0, "grade 0 resets to blade 0");
         assert_eq!(
-            normalized.value(),
-            angle_high_blade.value(),
-            "angle value preserved"
+            normalized.rem(),
+            angle_high_blade.rem(),
+            "angle rem preserved"
         );
 
         // test each grade resets to minimum blade
@@ -1276,7 +1276,7 @@ mod tests {
             2,
             "negation adds 2 blades (π rotation)"
         );
-        assert_eq!(negated.value(), angle.value(), "fractional angle preserved");
+        assert_eq!(negated.rem(), angle.rem(), "fractional angle preserved");
 
         // test double negation adds 4 blades (2π rotation)
         let double_neg = negated.negate();
@@ -1357,75 +1357,68 @@ mod tests {
             3,
             "negation from blade 1 goes to blade 3"
         );
-        assert_eq!(
-            neg_boundary.value(),
-            0.0,
-            "value at exact boundary becomes 0"
-        );
+        assert_eq!(neg_boundary.rem(), 0.0, "rem at exact boundary becomes 0");
     }
 
     #[test]
     fn it_normalizes_angles_exceeding_pi_2_to_next_blade() {
-        // geometric_sub now normalizes values >= π/2 to next blade
+        // geometric_sub now normalizes rems >= π/2 to next blade
 
         let angle1 = Angle::new(0.0, 1.0); // 0 radians
         let angle2 = Angle::new(1.0, 2.0); // π/2 radians (already normalized to blade 1)
 
         let diff = angle2 - angle1;
 
-        // π/2 difference is blade 1, value 0
+        // π/2 difference is blade 1, rem 0
         assert_eq!(diff.blade(), 1, "π/2 difference is blade 1");
-        assert!(diff.value().abs() < 1e-10, "blade 1 has value ~0");
+        assert!(diff.rem().abs() < 1e-10, "blade 1 has rem ~0");
     }
 
     #[test]
     fn test_normalize_boundaries() {
         use std::f64::consts::PI;
 
-        // test value very close to π/2 normalizes to next blade
+        // test remainder very close to π/2 normalizes to next blade
         let angle_near_pi_2 = Angle {
             blade: 2,
-            value: PI / 2.0 - 1e-11,
+            rem: PI / 2.0 - 1e-11,
         };
         let normalized = angle_near_pi_2.normalize_boundaries();
         assert_eq!(normalized.blade(), 3);
-        assert_eq!(normalized.value(), 0.0);
+        assert_eq!(normalized.rem(), 0.0);
 
-        // test value exactly π/2 normalizes to next blade
+        // test remainder exactly π/2 normalizes to next blade
         let angle_at_pi_2 = Angle {
             blade: 1,
-            value: PI / 2.0,
+            rem: PI / 2.0,
         };
         let normalized = angle_at_pi_2.normalize_boundaries();
         assert_eq!(normalized.blade(), 2);
-        assert_eq!(normalized.value(), 0.0);
+        assert_eq!(normalized.rem(), 0.0);
 
-        // test value > π/2 normalizes blade and reduces value
+        // test remainder > π/2 normalizes blade and reduces remainder
         let angle_over_pi_2 = Angle {
             blade: 0,
-            value: PI * 0.75, // 3π/4
+            rem: PI * 0.75, // 3π/4
         };
         let normalized = angle_over_pi_2.normalize_boundaries();
         assert_eq!(normalized.blade(), 1);
-        assert!((normalized.value() - PI / 4.0).abs() < 1e-10);
+        assert!((normalized.rem() - PI / 4.0).abs() < 1e-10);
 
-        // test small positive value stays unchanged
-        let angle_small = Angle {
-            blade: 5,
-            value: 0.1,
-        };
+        // test small positive remainder stays unchanged
+        let angle_small = Angle { blade: 5, rem: 0.1 };
         let normalized = angle_small.normalize_boundaries();
         assert_eq!(normalized.blade(), 5);
-        assert_eq!(normalized.value(), 0.1);
+        assert_eq!(normalized.rem(), 0.1);
 
-        // test value that's 2π normalizes to blade 4 value 0
+        // test remainder that's 2π normalizes to blade 4 remainder 0
         let angle_2pi = Angle {
             blade: 0,
-            value: 2.0 * PI,
+            rem: 2.0 * PI,
         };
         let normalized = angle_2pi.normalize_boundaries();
         assert_eq!(normalized.blade(), 4);
-        assert_eq!(normalized.value(), 0.0);
+        assert_eq!(normalized.rem(), 0.0);
     }
 
     #[test]
@@ -1452,12 +1445,12 @@ mod tests {
         assert!((cycle_proj - 1.0).abs() < 1e-10); // equivalent angles project to 1
 
         // test angle wrapping via geometric_sub negative blade handling
-        let small_angle = Angle::new(1.0, 8.0); // π/8, blade 0, value π/8
+        let small_angle = Angle::new(1.0, 8.0); // π/8, blade 0, rem π/8
         let large_angle = Angle::new_with_blade(5, 1.0, 4.0); // blade 5, π/4
         let wrapped_diff = large_angle - small_angle;
-        // large_angle - small_angle = blade 5 - blade 0 = blade 5, value π/4 - π/8 = π/8
+        // large_angle - small_angle = blade 5 - blade 0 = blade 5, rem π/4 - π/8 = π/8
         assert_eq!(wrapped_diff.blade(), 5);
-        assert!((wrapped_diff.value() - PI / 8.0).abs() < 1e-10);
+        assert!((wrapped_diff.rem() - PI / 8.0).abs() < 1e-10);
         assert!((wrapped_diff.grade_angle() - 1.9634954084936207).abs() < 1e-10);
     }
 }

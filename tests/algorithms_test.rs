@@ -38,15 +38,15 @@ fn its_a_constant_time_operation() {
     let large_problem_cost = operation;
 
     // test invariance to problem size (cost is the same)
-    assert_eq!(small_problem_cost.length, large_problem_cost.length);
-    assert!((small_problem_cost.angle - large_problem_cost.angle).value() < EPSILON);
+    assert_eq!(small_problem_cost.mag, large_problem_cost.mag);
+    assert!((small_problem_cost.angle - large_problem_cost.angle).rem() < EPSILON);
 
     // test operation composition (multiple constant operations)
     let combined_operations = Geonum::new(3.0, 0.0, 1.0); // three operations, same direction
 
     // still constant time regardless of composition
-    assert!(combined_operations.length > operation.length);
-    assert!((combined_operations.angle - operation.angle).value() < EPSILON);
+    assert!(combined_operations.mag > operation.mag);
+    assert!((combined_operations.angle - operation.angle).rem() < EPSILON);
 
     // demonstrate array indexing as constant time operation
     let array_op = |arr: &[i32], idx: usize| -> i32 {
@@ -80,8 +80,8 @@ fn its_a_linear_algorithm() {
     // for a linear algorithm processing n items
     let compute_cost = |n: usize| -> Geonum {
         Geonum::new_with_angle(
-            n as f64 * base_op.length, // cost scales linearly with n
-            base_op.angle,             // same operation type
+            n as f64 * base_op.mag, // cost scales linearly with n
+            base_op.angle,          // same operation type
         )
     };
 
@@ -91,12 +91,12 @@ fn its_a_linear_algorithm() {
     let cost_100 = compute_cost(100);
 
     // verify linear scaling property
-    assert_eq!(cost_20.length / cost_10.length, 2.0); // twice the input, twice the cost
-    assert_eq!(cost_100.length / cost_10.length, 10.0); // 10x input, 10x cost
+    assert_eq!(cost_20.mag / cost_10.mag, 2.0); // twice the input, twice the cost
+    assert_eq!(cost_100.mag / cost_10.mag, 10.0); // 10x input, 10x cost
 
     // angle remains the same (same operation type)
-    assert!((cost_10.angle - cost_20.angle).value() < EPSILON);
-    assert!((cost_20.angle - cost_100.angle).value() < EPSILON);
+    assert!((cost_10.angle - cost_20.angle).rem() < EPSILON);
+    assert!((cost_20.angle - cost_100.angle).rem() < EPSILON);
 
     // demonstrate linear search algorithm
     let linear_search = |arr: &[i32], target: i32| -> Option<usize> {
@@ -147,7 +147,7 @@ fn its_a_sorting_algorithm() {
         a.angle
             .blade()
             .cmp(&b.angle.blade())
-            .then(a.angle.value().partial_cmp(&b.angle.value()).unwrap())
+            .then(a.angle.rem().partial_cmp(&b.angle.rem()).unwrap())
     });
 
     // prove sorting
@@ -158,7 +158,7 @@ fn its_a_sorting_algorithm() {
         assert!(
             prev.angle.blade() < curr.angle.blade()
                 || (prev.angle.blade() == curr.angle.blade()
-                    && prev.angle.value() <= curr.angle.value())
+                    && prev.angle.rem() <= curr.angle.rem())
         );
     }
 
@@ -171,7 +171,7 @@ fn its_a_sorting_algorithm() {
             a.angle
                 .blade()
                 .cmp(&b.angle.blade())
-                .then(a.angle.value().partial_cmp(&b.angle.value()).unwrap())
+                .then(a.angle.rem().partial_cmp(&b.angle.rem()).unwrap())
         });
         result
     };
@@ -185,7 +185,7 @@ fn its_a_sorting_algorithm() {
         assert!(
             prev.angle.blade() < curr.angle.blade()
                 || (prev.angle.blade() == curr.angle.blade()
-                    && prev.angle.value() <= curr.angle.value())
+                    && prev.angle.rem() <= curr.angle.rem())
         );
     }
 
@@ -197,8 +197,7 @@ fn its_a_sorting_algorithm() {
     let first = &angle_sorted[0].angle;
     let last = &angle_sorted[angle_sorted.len() - 1].angle;
     assert!(
-        first.blade() < last.blade()
-            || (first.blade() == last.blade() && first.value() < last.value())
+        first.blade() < last.blade() || (first.blade() == last.blade() && first.rem() < last.rem())
     );
 }
 
@@ -236,9 +235,9 @@ fn its_a_graph_algorithm() {
     let weight_bc = edge_weight(&node_b, &node_c);
 
     // angles should match expected separations
-    assert!((weight_ab.angle - expected_60_deg.angle).value() < EPSILON); // 60° apart
-    assert!((weight_ad.angle - expected_180_deg.angle).value() < EPSILON); // 180° apart
-    assert!((weight_bc.angle - expected_60_deg.angle).value() < EPSILON); // 60° apart
+    assert!((weight_ab.angle - expected_60_deg.angle).rem() < EPSILON); // 60° apart
+    assert!((weight_ad.angle - expected_180_deg.angle).rem() < EPSILON); // 180° apart
+    assert!((weight_bc.angle - expected_60_deg.angle).rem() < EPSILON); // 60° apart
 
     // graph traversal as angle progression
     // implement breadth-first search conceptually
@@ -248,8 +247,8 @@ fn its_a_graph_algorithm() {
         result.sort_by(|a, b| {
             // use angle distance to find nodes closest to starting angle
             let start_geonum = Geonum::new(1.0, start, PI);
-            let a_diff = (a.angle - start_geonum.angle).value().abs();
-            let b_diff = (b.angle - start_geonum.angle).value().abs();
+            let a_diff = (a.angle - start_geonum.angle).rem().abs();
+            let b_diff = (b.angle - start_geonum.angle).rem().abs();
             // handle circular distance
             let a_diff = a_diff.min(TAU - a_diff);
             let b_diff = b_diff.min(TAU - b_diff);
@@ -262,7 +261,7 @@ fn its_a_graph_algorithm() {
     let traversal = bfs_from_angle(0.0, &[node_a, node_b, node_c, node_d, node_e, node_f]);
 
     // first node should be closest to angle 0
-    assert!((traversal[0].angle - node_a.angle).value() < EPSILON);
+    assert!((traversal[0].angle - node_a.angle).rem() < EPSILON);
 
     // path finding as angle minimization
     // find path with minimal angle changes
@@ -274,7 +273,7 @@ fn its_a_graph_algorithm() {
         // find nodes creating a path of minimal angle changes
         let mut current = start;
 
-        while (current.angle - end.angle).value().abs() > EPSILON {
+        while (current.angle - end.angle).rem().abs() > EPSILON {
             // find next node that minimizes angle difference to target
             let mut best_next = current;
             let mut min_weight = Geonum::new(f64::MAX, 0.0, 1.0); // large scalar
@@ -293,7 +292,7 @@ fn its_a_graph_algorithm() {
             }
 
             // if no progress can be made, break
-            if (best_next.angle - current.angle).value().abs() < EPSILON {
+            if (best_next.angle - current.angle).rem().abs() < EPSILON {
                 break;
             }
 
@@ -302,7 +301,7 @@ fn its_a_graph_algorithm() {
         }
 
         // add end if not already reached
-        if (current.angle - end.angle).value().abs() > EPSILON {
+        if (current.angle - end.angle).rem().abs() > EPSILON {
             path.push(*end); // Geonum is Copy
         }
 
@@ -317,8 +316,8 @@ fn its_a_graph_algorithm() {
     );
 
     // test path properties
-    assert!((path[0].angle - node_a.angle).value() < EPSILON); // starts at node_a
-    assert!((path[path.len() - 1].angle - node_d.angle).value() < EPSILON); // ends at node_d
+    assert!((path[0].angle - node_a.angle).rem() < EPSILON); // starts at node_a
+    assert!((path[path.len() - 1].angle - node_d.angle).rem() < EPSILON); // ends at node_d
 }
 
 #[test]
@@ -346,7 +345,7 @@ fn its_a_dynamic_programming() {
         for i in 2..=n {
             let current = Geonum::new(
                 // F(n) = F(n-1) + F(n-2)
-                fib_minus_1.length + fib_minus_2.length,
+                fib_minus_1.mag + fib_minus_2.mag,
                 // angle represents position in sequence
                 i as f64,
                 8.0, // i * PI/8
@@ -364,26 +363,26 @@ fn its_a_dynamic_programming() {
     let fib_7 = fib_geo(7);
 
     // validate fibonacci values
-    assert_eq!(fib_5.length, 5.0); // F(5) = 5
-    assert_eq!(fib_6.length, 8.0); // F(6) = 8
-    assert_eq!(fib_7.length, 13.0); // F(7) = 13
+    assert_eq!(fib_5.mag, 5.0); // F(5) = 5
+    assert_eq!(fib_6.mag, 8.0); // F(6) = 8
+    assert_eq!(fib_7.mag, 13.0); // F(7) = 13
 
     // validate angle progression represents position in sequence
     let expected_5 = Angle::new(5.0, 8.0);
     let expected_6 = Angle::new(6.0, 8.0);
     let expected_7 = Angle::new(7.0, 8.0);
-    assert!((fib_5.angle - expected_5).value() < EPSILON);
-    assert!((fib_6.angle - expected_6).value() < EPSILON);
-    assert!((fib_7.angle - expected_7).value() < EPSILON);
+    assert!((fib_5.angle - expected_5).rem() < EPSILON);
+    assert!((fib_6.angle - expected_6).rem() < EPSILON);
+    assert!((fib_7.angle - expected_7).rem() < EPSILON);
 
     // demonstrate optimal substructure through angle composition
     // Solution to larger problem (fib_7) uses solutions to smaller problems
-    assert_eq!(fib_7.length, fib_6.length + fib_5.length);
+    assert_eq!(fib_7.mag, fib_6.mag + fib_5.mag);
 
     // angle difference represents step in DP table
     let step = Angle::new(1.0, 8.0); // PI/8
-    assert!(((fib_6.angle - fib_5.angle) - step).value() < EPSILON);
-    assert!(((fib_7.angle - fib_6.angle) - step).value() < EPSILON);
+    assert!(((fib_6.angle - fib_5.angle) - step).rem() < EPSILON);
+    assert!(((fib_7.angle - fib_6.angle) - step).rem() < EPSILON);
 }
 
 #[test]
@@ -399,7 +398,7 @@ fn its_a_parallel_algorithm() {
 
     // test orthogonality
     // dot product is zero for perpendicular operations
-    assert!(sequential.dot(&parallel).length.abs() < EPSILON);
+    assert!(sequential.dot(&parallel).mag.abs() < EPSILON);
 
     // concurrent execution represented by simultaneous operations
     // wedge product represents "computational area" covered by parallel execution
@@ -418,7 +417,7 @@ fn its_a_parallel_algorithm() {
     // The wedge operation automatically sets blade: 1+1=2 for the result.
 
     // wedge product is non-zero, showing parallel operations cover more "execution space"
-    assert!(parallel_gain.length > 0.0);
+    assert!(parallel_gain.mag > 0.0);
 
     // demonstrate parallel map operation
     let parallel_map = |items: &[i32]| -> Vec<i32> {
@@ -482,7 +481,7 @@ fn its_a_distributed_algorithm() {
             // compute angular distance properly
             let angle_diff = node.angle - value_geonum.angle;
             // convert to total radians for distance calculation
-            let total_diff = (angle_diff.blade() as f64) * (PI / 2.0) + angle_diff.value();
+            let total_diff = (angle_diff.blade() as f64) * (PI / 2.0) + angle_diff.rem();
             let distance = total_diff.abs();
 
             // handle circular distance (shorter path around circle)
@@ -499,7 +498,7 @@ fn its_a_distributed_algorithm() {
 
     // test work assignment
     let work_at_0 = assign_work(0.0, &system);
-    assert!((work_at_0.angle - node_1.angle).value() < EPSILON);
+    assert!((work_at_0.angle - node_1.angle).rem() < EPSILON);
 
     let work_at_pi = assign_work(PI, &system);
 
@@ -507,8 +506,8 @@ fn its_a_distributed_algorithm() {
     // π = 180°, so node_4 (216°) is closer: |216° - 180°| = 36° vs |144° - 180°| = 36°
     // actually they're equidistant! Let's check which one was returned
     assert!(
-        (work_at_pi.angle - node_3.angle).value() < EPSILON
-            || (work_at_pi.angle - node_4.angle).value() < EPSILON,
+        (work_at_pi.angle - node_3.angle).rem() < EPSILON
+            || (work_at_pi.angle - node_4.angle).rem() < EPSILON,
         "Expected node_3 or node_4 for work at PI"
     );
 
@@ -540,7 +539,7 @@ fn its_a_distributed_algorithm() {
 
         // compute angle distance using Angle arithmetic
         let angle_diff = node.angle - consensus_geonum.angle;
-        let distance = angle_diff.value().abs().min(TAU - angle_diff.value().abs());
+        let distance = angle_diff.rem().abs().min(TAU - angle_diff.rem().abs());
 
         assert!(distance <= PI);
     }
@@ -567,7 +566,7 @@ fn its_a_numerical_method() {
                 8.0, // n * PI/8
             );
 
-            result += term.length;
+            result += term.mag;
         }
 
         result
@@ -662,7 +661,7 @@ fn its_a_data_structure() {
 
             // convert angle to bucket index
             let total_angle =
-                angle_geonum.angle.blade() as f64 * PI / 2.0 + angle_geonum.angle.value();
+                angle_geonum.angle.blade() as f64 * PI / 2.0 + angle_geonum.angle.rem();
             (total_angle * self.bucket_count as f64 / TAU) as usize % self.bucket_count
         }
 
@@ -802,7 +801,7 @@ fn its_a_data_structure() {
         // demonstrate the power of angle encoding - find by exact angle
         fn find_by_angle(&self, target_angle: &Angle, _target_depth: usize) -> Option<i32> {
             // angles are unique addresses - we can navigate directly
-            if (self.angle - target_angle).value() < EPSILON
+            if (self.angle - target_angle).rem() < EPSILON
                 && self.angle.blade() == target_angle.blade()
             {
                 return Some(self.value);
@@ -891,18 +890,18 @@ fn its_a_compression_algorithm() {
 
         for item in data {
             // quantize angle to specified precision
-            let total_angle = item.angle.blade() as f64 * PI / 2.0 + item.angle.value();
+            let total_angle = item.angle.blade() as f64 * PI / 2.0 + item.angle.rem();
             let quantized_angle = (total_angle * scale).round() / scale;
 
             // add only unique quantized angles (deduplication)
             // check if angle already exists in quantized
             let angle_exists = quantized.iter().any(|g: &Geonum| {
-                let g_total_angle = g.angle.blade() as f64 * PI / 2.0 + g.angle.value();
+                let g_total_angle = g.angle.blade() as f64 * PI / 2.0 + g.angle.rem();
                 (g_total_angle - quantized_angle).abs() < EPSILON
             });
 
             if !angle_exists {
-                quantized.push(Geonum::new(item.length, quantized_angle, PI));
+                quantized.push(Geonum::new(item.mag, quantized_angle, PI));
             }
         }
 
@@ -929,8 +928,8 @@ fn its_a_compression_algorithm() {
             let mut min_error = f64::MAX;
 
             for comp in compressed {
-                let orig_total = orig.angle.blade() as f64 * PI / 2.0 + orig.angle.value();
-                let comp_total = comp.angle.blade() as f64 * PI / 2.0 + comp.angle.value();
+                let orig_total = orig.angle.blade() as f64 * PI / 2.0 + orig.angle.rem();
+                let comp_total = comp.angle.blade() as f64 * PI / 2.0 + comp.angle.rem();
                 let error = (orig_total - comp_total).abs();
                 if error < min_error {
                     min_error = error;
@@ -1001,7 +1000,7 @@ fn its_a_machine_learning_algorithm() {
                     // Use sine instead of cosine for better discrimination
                     // This helps prevent balanced weights leading to zero output
                     let weight_projection =
-                        self.weights[i].length * self.weights[i].angle.grade_angle().sin();
+                        self.weights[i].mag * self.weights[i].angle.grade_angle().sin();
                     sum += input * weight_projection;
                 }
             }
@@ -1032,7 +1031,7 @@ fn its_a_machine_learning_algorithm() {
                             // adjust angle based on error and input
                             let angle_adjustment = Angle::new(delta_angle, PI);
                             self.weights[i] = Geonum::new_with_angle(
-                                self.weights[i].length,                   // keep same length
+                                self.weights[i].mag,                      // keep same length
                                 self.weights[i].angle + angle_adjustment, // adjust angle
                             );
                         }
@@ -1074,7 +1073,7 @@ fn its_a_machine_learning_algorithm() {
     // verify angles changed during training
     let initial_angle = Angle::new(0.1, PI);
     for angle in &final_angles {
-        assert!((angle - initial_angle).value().abs() > EPSILON);
+        assert!((angle - initial_angle).rem().abs() > EPSILON);
     }
 }
 
@@ -1126,7 +1125,7 @@ fn its_a_cryptographic_algorithm() {
 
             for cipher in ciphertext.iter() {
                 // decrypt using length (angle is used only for obfuscation)
-                let byte_value = (cipher.length / self.key_length).round() as u8;
+                let byte_value = (cipher.mag / self.key_length).round() as u8;
                 plaintext.push(byte_value);
             }
 
@@ -1156,8 +1155,8 @@ fn its_a_cryptographic_algorithm() {
     let mut differences = 0;
     for i in 0..message.len() {
         if i < altered_encrypted.len()
-            && ((encrypted[i].angle - altered_encrypted[i].angle).value() > EPSILON
-                || (encrypted[i].length - altered_encrypted[i].length).abs() > EPSILON)
+            && ((encrypted[i].angle - altered_encrypted[i].angle).rem() > EPSILON
+                || (encrypted[i].mag - altered_encrypted[i].mag).abs() > EPSILON)
         {
             differences += 1;
         }
@@ -1211,20 +1210,20 @@ fn it_rejects_complexity_analysis() {
         let log_op = log_op(n);
 
         // verify different scaling behaviors
-        assert_eq!(c_op.length, 1.0); // constant stays at 1
-        assert_eq!(l_op.length, n as f64); // linear scales with n
-        assert_eq!(q_op.length, (n * n) as f64); // quadratic scales with n²
-        assert!((log_op.length - (n as f64).log2()).abs() < EPSILON); // logarithmic scales with log n
+        assert_eq!(c_op.mag, 1.0); // constant stays at 1
+        assert_eq!(l_op.mag, n as f64); // linear scales with n
+        assert_eq!(q_op.mag, (n * n) as f64); // quadratic scales with n²
+        assert!((log_op.mag - (n as f64).log2()).abs() < EPSILON); // logarithmic scales with log n
 
         // verify operation types (angles)
         let zero_angle = Angle::new(0.0, 1.0);
         let pi_4_angle = Angle::new(1.0, 4.0);
         let pi_2_angle = Angle::new(1.0, 2.0);
         let pi_8_angle = Angle::new(1.0, 8.0);
-        assert!((c_op.angle - zero_angle).value() < EPSILON);
-        assert!((l_op.angle - pi_4_angle).value() < EPSILON);
-        assert!((q_op.angle - pi_2_angle).value() < EPSILON);
-        assert!((log_op.angle - pi_8_angle).value() < EPSILON);
+        assert!((c_op.angle - zero_angle).rem() < EPSILON);
+        assert!((l_op.angle - pi_4_angle).rem() < EPSILON);
+        assert!((q_op.angle - pi_2_angle).rem() < EPSILON);
+        assert!((log_op.angle - pi_8_angle).rem() < EPSILON);
     }
 
     // measure algorithm scaling directly through ratios
@@ -1232,10 +1231,10 @@ fn it_rejects_complexity_analysis() {
     let n2 = 100; // 10x larger
 
     // compute ratios to measure actual scaling
-    let constant_ratio = constant_op(n2).length / constant_op(n1).length;
-    let linear_ratio = linear_op(n2).length / linear_op(n1).length;
-    let quadratic_ratio = quadratic_op(n2).length / quadratic_op(n1).length;
-    let log_ratio = log_op(n2).length / log_op(n1).length;
+    let constant_ratio = constant_op(n2).mag / constant_op(n1).mag;
+    let linear_ratio = linear_op(n2).mag / linear_op(n1).mag;
+    let quadratic_ratio = quadratic_op(n2).mag / quadratic_op(n1).mag;
+    let log_ratio = log_op(n2).mag / log_op(n1).mag;
 
     // verify actual scaling behavior matches expected
     assert_eq!(constant_ratio, 1.0); // constant: n2/n1 = 1
@@ -1248,7 +1247,7 @@ fn it_rejects_complexity_analysis() {
     // demonstrate direct geometric interpretation of algorithmic complexity
     let complexity_relation = |op1: &Geonum, op2: &Geonum| -> f64 {
         // angle between operations shows their "computational orthogonality"
-        (op1.angle - op2.angle).value().abs()
+        (op1.angle - op2.angle).rem().abs()
     };
 
     // compute relations between different complexities
@@ -1282,8 +1281,8 @@ fn it_unifies_algorithm_design() {
     // measure angular distance between approaches
     let paradigm_distance = |p1: &Geonum, p2: &Geonum| -> f64 {
         // compute angular distance between paradigms
-        let angle1_total = p1.angle.blade() as f64 * PI / 2.0 + p1.angle.value();
-        let angle2_total = p2.angle.blade() as f64 * PI / 2.0 + p2.angle.value();
+        let angle1_total = p1.angle.blade() as f64 * PI / 2.0 + p1.angle.rem();
+        let angle2_total = p2.angle.blade() as f64 * PI / 2.0 + p2.angle.rem();
         (angle2_total - angle1_total).abs()
     };
 
@@ -1326,20 +1325,20 @@ fn it_unifies_algorithm_design() {
     // demonstrate algorithm transformation as rotation
     let transform_algorithm = |algorithm: &Geonum, rotation: f64| -> Geonum {
         let rotation_angle = Angle::new(rotation, PI); // rotation / PI gives π radians
-        Geonum::new_with_angle(algorithm.length, algorithm.angle + rotation_angle)
+        Geonum::new_with_angle(algorithm.mag, algorithm.angle + rotation_angle)
     };
 
     // transform divide and conquer to dynamic programming
     let transformed = transform_algorithm(&divide_conquer, PI / 4.0);
 
     // verify transformation
-    assert!((transformed.angle - dynamic_prog.angle).value() < EPSILON);
+    assert!((transformed.angle - dynamic_prog.angle).rem() < EPSILON);
 
     // demonstrate algorithmic duality through geometric complementarity
     let dual_algorithm = |algorithm: &Geonum| -> Geonum {
         // dual is at opposite angle
         let pi_rotation = Angle::new(1.0, 1.0); // π
-        Geonum::new_with_angle(algorithm.length, algorithm.angle + pi_rotation)
+        Geonum::new_with_angle(algorithm.mag, algorithm.angle + pi_rotation)
     };
 
     // compute duals
@@ -1349,8 +1348,8 @@ fn it_unifies_algorithm_design() {
     // verify duality relationship
     let expected_dc_dual = Angle::new(5.0, 4.0); // 5π/4
     let expected_dp_dual = Angle::new(3.0, 2.0); // 3π/2
-    assert!((dc_dual.angle - expected_dc_dual).value() < EPSILON);
-    assert!((dp_dual.angle - expected_dp_dual).value() < EPSILON);
+    assert!((dc_dual.angle - expected_dc_dual).rem() < EPSILON);
+    assert!((dp_dual.angle - expected_dp_dual).rem() < EPSILON);
 }
 
 #[test]
@@ -1372,16 +1371,16 @@ fn it_scales_quantum_algorithms() {
     // hadamard gate - rotates by π/4
     let hadamard = |state: &Geonum| -> Geonum {
         let rotation = Angle::new(1.0, 4.0); // π/4
-        Geonum::new_with_angle(state.length, state.angle + rotation)
+        Geonum::new_with_angle(state.mag, state.angle + rotation)
     };
 
     // phase gate - adds phase π/2 to |1⟩ component
     let phase = |state: &Geonum| -> Geonum {
         let pi_angle = Angle::new(1.0, 1.0); // π
-        if (state.angle - pi_angle).value() < EPSILON {
+        if (state.angle - pi_angle).rem() < EPSILON {
             // |1⟩ state, add phase
             let phase_rotation = Angle::new(1.0, 2.0); // π/2
-            Geonum::new_with_angle(state.length, state.angle + phase_rotation)
+            Geonum::new_with_angle(state.mag, state.angle + phase_rotation)
         } else {
             // other state, leave unchanged
             *state
@@ -1391,17 +1390,17 @@ fn it_scales_quantum_algorithms() {
     // test quantum gates
     let h_zero = hadamard(&zero_state);
     let expected_h_zero = Angle::new(1.0, 4.0); // π/4
-    assert!((h_zero.angle - expected_h_zero).value() < EPSILON); // |0⟩ → (|0⟩ + |1⟩)/√2
+    assert!((h_zero.angle - expected_h_zero).rem() < EPSILON); // |0⟩ → (|0⟩ + |1⟩)/√2
 
     let p_one = phase(&one_state);
     let expected_p_one = Angle::new(3.0, 2.0); // 3π/2
-    assert!((p_one.angle - expected_p_one).value() < EPSILON); // |1⟩ → e^(iπ/2)|1⟩
+    assert!((p_one.angle - expected_p_one).rem() < EPSILON); // |1⟩ → e^(iπ/2)|1⟩
 
     // demonstrate quantum parallelism through angle superposition
     let parallelism_factor = |state: &Geonum| -> f64 {
         // measure of quantum parallelism based on angle
         // max at π/4 (equal superposition), min at 0 or π (basis states)
-        let total_angle = state.angle.blade() as f64 * PI / 2.0 + state.angle.value();
+        let total_angle = state.angle.blade() as f64 * PI / 2.0 + state.angle.rem();
         let normalized_angle = total_angle % PI;
         (if normalized_angle > PI / 2.0 {
             PI - normalized_angle
@@ -1426,7 +1425,7 @@ fn it_scales_quantum_algorithms() {
     let entanglement = |state: &Geonum| -> f64 {
         // simplified entanglement measure
         // max at π/4, π/2, 3π/4, π (superposition angles)
-        let total_angle = state.angle.blade() as f64 * PI / 2.0 + state.angle.value();
+        let total_angle = state.angle.blade() as f64 * PI / 2.0 + state.angle.rem();
         let norm_angle = total_angle % (PI / 2.0);
         (if norm_angle > PI / 4.0 {
             PI / 2.0 - norm_angle
@@ -1457,7 +1456,7 @@ fn it_scales_quantum_algorithms() {
 
     // compute speedup ratio
     let n = 1000000;
-    let speedup = classical_search(n).length / quantum_search(n).length;
+    let speedup = classical_search(n).mag / quantum_search(n).mag;
 
     // verify quantum speedup is approximately √n
     assert!((speedup - (n as f64).sqrt()).abs() / (n as f64).sqrt() < 0.01);
@@ -1474,5 +1473,5 @@ fn it_scales_quantum_algorithms() {
     let complex_circuit = circuit_complexity(16, 4);
 
     // verify circuit scaling
-    assert!(complex_circuit.length > simple_circuit.length);
+    assert!(complex_circuit.mag > simple_circuit.mag);
 }

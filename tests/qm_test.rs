@@ -20,14 +20,14 @@
 // let position = [1, 0];
 // let momentum = [1, pi/2];
 // // measure uncertainty relation
-// position.wedge(momentum).length >= 0.5 // uncertainty principle
+// position.wedge(momentum).mag >= 0.5 // uncertainty principle
 // ```
 //
 // ```rs
 // // time evolution becomes simple angle rotation instead of mysterious "state evolution"
 // let evolve = |state: &Geonum, time: f64, energy: f64| -> Geonum {
 //     Geonum {
-//         length: state.length,
+//         length: state.mag,
 //         angle: state.angle + energy * time // direct angle rotation
 //     }
 // };
@@ -49,7 +49,7 @@ fn its_a_state_vector() {
     let state = Geonum::new(1.0, 1.0, 4.0); // length 1, angle π/4
 
     // test direct geometric representation
-    assert_eq!(state.length, 1.0); // normalized amplitude
+    assert_eq!(state.mag, 1.0); // normalized amplitude
     assert!((state.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // phase π/4
 
     // superposition |ψ⟩ = α|0⟩ + β|1⟩ as single geonum from cartesian
@@ -59,7 +59,7 @@ fn its_a_state_vector() {
     let superposition = Geonum::new_from_cartesian(alpha, beta);
 
     // test superposition amplitude and phase
-    assert!((superposition.length - 1.0).abs() < EPSILON); // normalized
+    assert!((superposition.mag - 1.0).abs() < EPSILON); // normalized
     assert_eq!(superposition.angle, Angle::new(1.0, 4.0)); // 45° phase
 
     // measurement as angle projection
@@ -68,11 +68,11 @@ fn its_a_state_vector() {
 
     // probability through born rule: |⟨ψ|basis⟩|² = cos²(angle_diff)
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length.powi(2) * angle_diff0.grade_angle().cos().powi(2);
+    let prob0 = state.mag.powi(2) * angle_diff0.grade_angle().cos().powi(2);
     assert!((prob0 - 0.5).abs() < EPSILON); // cos²(π/4) = 0.5
 
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length.powi(2) * angle_diff1.grade_angle().cos().powi(2);
+    let prob1 = state.mag.powi(2) * angle_diff1.grade_angle().cos().powi(2);
     assert!((prob1 - 0.5).abs() < EPSILON); // cos²(π/4 - π/2) = cos²(-π/4) = 0.5
 
     // total probability
@@ -106,7 +106,7 @@ fn its_an_observable() {
 
     // test applying the observable to the state
     let result = observable(&state);
-    assert_eq!(result.length, state.length); // preserves probability
+    assert_eq!(result.mag, state.mag); // preserves probability
 
     // test angle rotation by π/2
     let expected_angle = state.angle + Angle::new(1.0, 2.0);
@@ -130,20 +130,20 @@ fn its_an_observable() {
             0.0 // not an eigenstate
         };
 
-        Geonum::new_with_angle(s.length * eigenvalue.abs(), s.angle)
+        Geonum::new_with_angle(s.mag * eigenvalue.abs(), s.angle)
     };
 
     // test the eigenstates
     let result1 = energy_observable(&eigenstate1);
     let result2 = energy_observable(&eigenstate2);
 
-    assert_eq!(result1.length, eigenstate1.length); // preserves amplitude
-    assert_eq!(result2.length, eigenstate2.length); // preserves amplitude
+    assert_eq!(result1.mag, eigenstate1.mag); // preserves amplitude
+    assert_eq!(result2.mag, eigenstate2.mag); // preserves amplitude
 
     // test expectation value through direct angle projection
     // instead of ⟨ψ|A|ψ⟩, we use geometric projection
     let projection = state.dot(&result);
-    assert!(projection.length.abs() <= state.length * result.length);
+    assert!(projection.mag.abs() <= state.mag * result.mag);
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn its_a_spin_system() {
     let spin_up_x = spin_x(&spin_up);
 
     // result becomes rotated state
-    assert_eq!(spin_up_x.length, spin_up.length);
+    assert_eq!(spin_up_x.mag, spin_up.mag);
 
     // test rotation by π/2
     let expected_angle = spin_up.angle + Angle::new(1.0, 2.0);
@@ -187,7 +187,7 @@ fn its_a_spin_system() {
     // for a state at angle 0, measuring along pi/2 gives probability cos²(0 - pi/2) = cos²(-pi/2) = 0
     let measurement_angle = Angle::new(1.0, 2.0); // π/2
     let angle_difference = spin_up.angle - measurement_angle;
-    let prob_up_x = spin_up.length * spin_up.length * angle_difference.grade_angle().cos().powi(2);
+    let prob_up_x = spin_up.mag * spin_up.mag * angle_difference.grade_angle().cos().powi(2);
     assert!(prob_up_x < EPSILON); // equals 0 probability
 }
 
@@ -203,7 +203,7 @@ fn its_an_uncertainty_principle() {
     // test complementarity through angle orthogonality
     // position and momentum are orthogonal dimensions
     let dot_product = position.dot(&momentum);
-    assert!(dot_product.length.abs() < EPSILON); // orthogonal
+    assert!(dot_product.mag.abs() < EPSILON); // orthogonal
 
     // test wedge product as uncertainty measure
     // the wedge product gives the geometric area representing uncertainty
@@ -211,14 +211,14 @@ fn its_an_uncertainty_principle() {
 
     // test heisenberg relation through geometric area
     // uncertainty principle: ΔxΔp ≥ ħ/2
-    assert!(uncertainty.length >= 0.5); // simplified ħ/2 = 0.5
+    assert!(uncertainty.mag >= 0.5); // simplified ħ/2 = 0.5
 
     // test physical interpretation: orthogonal observables have maximum uncertainty
     let p_dot_x = position.dot(&momentum);
     let p_wedge_x = position.wedge(&momentum);
 
-    assert!(p_dot_x.length.abs() < EPSILON); // orthogonal
-    assert!(p_wedge_x.length >= 0.5); // maximum uncertainty
+    assert!(p_dot_x.mag.abs() < EPSILON); // orthogonal
+    assert!(p_wedge_x.mag >= 0.5); // maximum uncertainty
 
     // test uncertainty with non-orthogonal observables
     let obs1 = Geonum::new(1.0, 1.0, 4.0); // angle π/4
@@ -226,7 +226,7 @@ fn its_an_uncertainty_principle() {
 
     // their uncertainty also reflects geometric area
     let uncertainty2 = obs1.wedge(&obs2);
-    assert!(uncertainty2.length > 0.0); // non-zero uncertainty
+    assert!(uncertainty2.mag > 0.0); // non-zero uncertainty
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn its_a_quantum_gate() {
     let hadamard = |q: &Geonum| -> Geonum {
         // simplified implementation: rotate to π/4 angle (superposition)
         // this represents the key action of the hadamard gate
-        Geonum::new_with_angle(q.length, Angle::new(1.0, 4.0))
+        Geonum::new_with_angle(q.mag, Angle::new(1.0, 4.0))
     };
 
     // create a "phase gate" (S gate) as angle transformation
@@ -263,7 +263,7 @@ fn its_a_quantum_gate() {
 
     // test gate application through angle transformation
     let h_applied = hadamard(&qubit);
-    assert_eq!(h_applied.length, qubit.length); // preserves norm
+    assert_eq!(h_applied.mag, qubit.mag); // preserves norm
     assert!((h_applied.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // creates superposition
 
     // test gate composition through angle addition
@@ -271,11 +271,11 @@ fn its_a_quantum_gate() {
     let h_then_s = phase_gate(&h_applied);
 
     // test angle-based transformation creates correct result
-    assert_eq!(h_then_s.length, qubit.length); // preserves norm
+    assert_eq!(h_then_s.mag, qubit.mag); // preserves norm
 
     // test unitarity preserved through angle conservation
     // unitary operators preserve the norm (probability)
-    assert!((h_then_s.length - qubit.length).abs() < EPSILON);
+    assert!((h_then_s.mag - qubit.mag).abs() < EPSILON);
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn its_a_quantum_measurement() {
     // test measurement as angle correlation
     // probability of measuring in basis0 = |⟨0|ψ⟩|²
     let angle_diff0 = state.angle - basis0.angle;
-    let prob_basis0 = state.length * state.length * angle_diff0.grade_angle().cos().powi(2);
+    let prob_basis0 = state.mag * state.mag * angle_diff0.grade_angle().cos().powi(2);
 
     // test born rule through angle projection instead of abstract inner product
     assert!((0.0..=1.0).contains(&prob_basis0));
@@ -302,7 +302,7 @@ fn its_a_quantum_measurement() {
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob_basis1 = state.length * state.length * angle_diff1.grade_angle().cos().powi(2);
+    let prob_basis1 = state.mag * state.mag * angle_diff1.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob_basis1));
     // for a state at pi/4, the probability relative to pi/2 is cos²(pi/4 - pi/2) = cos²(-pi/4) = 0.5
     assert!((prob_basis1 - 0.5).abs() < EPSILON);
@@ -345,8 +345,8 @@ fn its_an_entangled_state() {
     assert_eq!(angle_diff.grade_angle(), PI);
 
     // test bell state properties through angle configuration
-    assert!((bell_state.0.length - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
-    assert!((bell_state.1.length - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
+    assert!((bell_state.0.mag - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
+    assert!((bell_state.1.mag - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
 
     // test measurement correlation
     // when one particle is measured, the others state is determined
@@ -395,7 +395,7 @@ fn its_a_quantum_harmonic_oscillator() {
     // a† (creation) raises energy level, a (annihilation) lowers it
     let creation = |state: &Geonum, level: usize| -> Geonum {
         // create the next higher energy state
-        let new_length = state.length * ((level as f64) + 1.0).sqrt(); // √(n+1) factor
+        let new_length = state.mag * ((level as f64) + 1.0).sqrt(); // √(n+1) factor
         let new_angle = state.angle + Angle::new(1.0, 2.0); // add π/2 to angle for next level
         Geonum::new_with_angle(new_length, new_angle)
     };
@@ -406,7 +406,7 @@ fn its_a_quantum_harmonic_oscillator() {
             Geonum::new(0.0, 0.0, 1.0)
         } else {
             // lower energy level
-            let new_length = state.length * (level as f64).sqrt(); // √n factor
+            let new_length = state.mag * (level as f64).sqrt(); // √n factor
             let new_angle = state.angle - Angle::new(1.0, 2.0); // subtract π/2 from angle
             Geonum::new_with_angle(new_length, new_angle)
         }
@@ -414,11 +414,11 @@ fn its_a_quantum_harmonic_oscillator() {
 
     // test ladder operators
     let raised = creation(&ground_state, 0);
-    assert!((raised.length - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
+    assert!((raised.mag - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
     assert_eq!(raised.angle, first_excited.angle);
 
     let lowered = annihilation(&first_excited, 1);
-    assert!((lowered.length - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
+    assert!((lowered.mag - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
     assert_eq!(lowered.angle, ground_state.angle);
 }
 
@@ -452,7 +452,7 @@ fn its_a_quantum_field() {
 
     // test field evolved
     for i in 0..field.len() {
-        assert_eq!(propagated_field[i].length, field[i].length); // amplitude preserved
+        assert_eq!(propagated_field[i].mag, field[i].mag); // amplitude preserved
 
         // test phase advanced by π/4
         let expected_angle = field[i].angle + dt;
@@ -464,7 +464,7 @@ fn its_a_quantum_field() {
     let energy: f64 = field
         .iter()
         .enumerate()
-        .map(|(i, point)| point.length.powi(2) * ((i as f64) + 0.5))
+        .map(|(i, point)| point.mag.powi(2) * ((i as f64) + 0.5))
         .sum();
 
     assert!(energy > 0.0); // positive energy
@@ -490,8 +490,8 @@ fn its_a_path_integral() {
     let mut sum_x = 0.0;
     let mut sum_y = 0.0;
     for path in &paths {
-        sum_x += path.length * path.angle.grade_angle().cos();
-        sum_y += path.length * path.angle.grade_angle().sin();
+        sum_x += path.mag * path.angle.grade_angle().cos();
+        sum_y += path.mag * path.angle.grade_angle().sin();
     }
 
     // convert back to geometric number
@@ -501,7 +501,7 @@ fn its_a_path_integral() {
 
     // test interference through geometric combination
     // paths can interfere constructively or destructively based on angles
-    assert!(total_amplitude < paths.iter().map(|p| p.length).sum::<f64>()); // interference effect
+    assert!(total_amplitude < paths.iter().map(|p| p.mag).sum::<f64>()); // interference effect
 
     // in path integrals, the classical path has stationary phase
     // define a "classical path" as one with minimum angle variation
@@ -524,7 +524,7 @@ fn its_a_dirac_equation() {
     );
 
     // test normalization (total probability = 1)
-    let norm_squared = spinor.0.length.powi(2) + spinor.1.length.powi(2);
+    let norm_squared = spinor.0.mag.powi(2) + spinor.1.mag.powi(2);
     assert!((norm_squared - 1.0).abs() < EPSILON);
 
     // create dirac operator as geometric transformation
@@ -544,11 +544,11 @@ fn its_a_dirac_equation() {
         let c2_norm = c2 / norm;
 
         let new_up = Geonum::new_with_angle(
-            spinor.0.length * c1_norm + spinor.1.length * c2_norm,
+            spinor.0.mag * c1_norm + spinor.1.mag * c2_norm,
             spinor.0.angle,
         );
         let new_down = Geonum::new_with_angle(
-            spinor.1.length * c1_norm + spinor.0.length * c2_norm,
+            spinor.1.mag * c1_norm + spinor.0.mag * c2_norm,
             spinor.1.angle,
         );
         (new_up, new_down)
@@ -561,7 +561,7 @@ fn its_a_dirac_equation() {
 
     // test conservation laws from angle invariance
     // total probability conserved
-    let new_norm_squared = transformed.0.length.powi(2) + transformed.1.length.powi(2);
+    let new_norm_squared = transformed.0.mag.powi(2) + transformed.1.mag.powi(2);
 
     // add debug print to show the actual value
     println!("Debug: new_norm_squared = {new_norm_squared}");
@@ -576,7 +576,7 @@ fn its_a_dirac_equation() {
     let low_momentum = apply_dirac(&spinor, mass, 0.1);
 
     // high momentum rotates the spinor more
-    assert!(high_momentum.0.length != low_momentum.0.length);
+    assert!(high_momentum.0.mag != low_momentum.0.mag);
 }
 
 #[test]
@@ -619,7 +619,7 @@ fn its_a_quantum_information_system() {
         // depolarizing channel: potentially rotate the state
         if state.angle.grade_angle().abs() < EPSILON {
             // leave 70% probability unchanged, rotate 30%
-            Geonum::new_with_angle(state.length * 0.7_f64.sqrt(), state.angle)
+            Geonum::new_with_angle(state.mag * 0.7_f64.sqrt(), state.angle)
         } else {
             // for other states, rotate differently
             state.rotate(Angle::new(1.0, 4.0)) // rotate by π/4
@@ -633,7 +633,7 @@ fn its_a_quantum_information_system() {
     // test channel preserves total probability
     let new_total_prob: f64 = transformed_state
         .iter()
-        .map(|(p, g)| p * g.length.powi(2))
+        .map(|(p, g)| p * g.mag.powi(2))
         .sum();
 
     // use a more relaxed tolerance due to the simplified implementation
@@ -660,12 +660,12 @@ fn it_rejects_copenhagen_interpretation() {
     // test measurement as natural process, not mysterious collapse
     // probability of measuring in basis0
     let angle_diff0 = state.angle - basis0.angle;
-    let prob0 = state.length * state.length * angle_diff0.grade_angle().cos().powi(2);
+    let prob0 = state.mag * state.mag * angle_diff0.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob0));
 
     // probability of measuring in basis1
     let angle_diff1 = state.angle - basis1.angle;
-    let prob1 = state.length * state.length * angle_diff1.grade_angle().cos().powi(2);
+    let prob1 = state.mag * state.mag * angle_diff1.grade_angle().cos().powi(2);
     assert!((0.0..=1.0).contains(&prob1));
 
     // test total probability = 1
@@ -683,7 +683,7 @@ fn it_rejects_copenhagen_interpretation() {
     let momentum = Geonum::new(1.0, 1.0, 2.0); // momentum observable at π/2
 
     // their relationship is geometric, not mysterious
-    let uncertainty = position.wedge(&momentum).length;
+    let uncertainty = position.wedge(&momentum).mag;
     assert!(uncertainty >= 0.5); // uncertainty principle from geometry
 }
 
@@ -834,12 +834,12 @@ fn it_eliminates_statistical_collections() {
     let unified_state = Geonum::new(certainty, dominant_phase, PI);
 
     // test unified representation eliminates collection overhead
-    assert_eq!(unified_state.length, 0.8);
+    assert_eq!(unified_state.mag, 0.8);
     assert_eq!(unified_state.angle, Angle::new(1.0, 4.0)); // π/4
 
     // measurement statistics come from angle geometry, not component averaging
     let measurement_basis = Geonum::new(1.0, 1.0, 4.0); // π/4 measurement
-    let measurement_probability = unified_state.dot(&measurement_basis).length.powi(2);
+    let measurement_probability = unified_state.dot(&measurement_basis).mag.powi(2);
 
     // high probability for aligned measurement
     assert!(measurement_probability > 0.6);
@@ -851,7 +851,7 @@ fn it_eliminates_statistical_collections() {
 
     // RIGHT: expectation values through direct geometric projection
     let energy_observable = Geonum::new(1.0, 0.0, 1.0); // energy at angle 0
-    let energy_expectation = unified_state.dot(&energy_observable).length;
+    let energy_expectation = unified_state.dot(&energy_observable).mag;
 
     // expectation value is direct projection, not statistical average
     assert!(energy_expectation.is_finite());
@@ -865,7 +865,7 @@ fn it_eliminates_statistical_collections() {
     // RIGHT: uncertainty through geometric area (wedge product)
     let momentum_observable = Geonum::new(1.0, 1.0, 2.0); // momentum at π/2
     let position_observable = Geonum::new(1.0, 0.0, 1.0); // position at 0
-    let uncertainty = position_observable.wedge(&momentum_observable).length;
+    let uncertainty = position_observable.wedge(&momentum_observable).mag;
 
     // uncertainty from geometry, not statistical variance
     assert!(uncertainty >= 0.5); // uncertainty principle
@@ -875,14 +875,14 @@ fn it_eliminates_statistical_collections() {
     let pure_state = Geonum::new_from_cartesian(0.6, 0.8); // |ψ⟩ = 0.6|0⟩ + 0.8|1⟩
 
     // no variance to compute - pure state has definite geometric properties
-    assert_eq!(pure_state.length, 1.0); // normalized
-                                        // phase is definite, not statistical
+    assert_eq!(pure_state.mag, 1.0); // normalized
+                                     // phase is definite, not statistical
     let expected_phase = (0.8_f64).atan2(0.6);
     assert!((pure_state.angle.grade_angle() - expected_phase).abs() < EPSILON);
 
     // measurement outcomes from projection geometry, not probability sampling
     let measurement_axis = Geonum::new(1.0, 0.0, 1.0); // |0⟩ basis
-    let projection_strength = pure_state.dot(&measurement_axis).length;
+    let projection_strength = pure_state.dot(&measurement_axis).mag;
     let outcome_probability = projection_strength.powi(2);
 
     // born rule from geometry: |⟨0|ψ⟩|² = |0.6|² = 0.36
@@ -895,7 +895,7 @@ fn it_eliminates_statistical_collections() {
     let bell_state = Geonum::new(bell_amplitude, bell_correlation, 1.0);
 
     // no statistical ensemble - just correlated geometry
-    assert_eq!(bell_state.length, 1.0);
+    assert_eq!(bell_state.mag, 1.0);
     assert_eq!(bell_state.angle, Angle::new(0.0, 1.0)); // 0° correlation
 
     // quantum field states eliminate field component collections
@@ -906,7 +906,7 @@ fn it_eliminates_statistical_collections() {
     let quantum_field = Geonum::new(field_excitation_count.sqrt(), field_mode_phase, PI);
 
     // field properties from geometry, not statistical mechanics
-    assert_eq!(quantum_field.length, 3.0_f64.sqrt());
+    assert_eq!(quantum_field.mag, 3.0_f64.sqrt());
     assert_eq!(quantum_field.angle, Angle::new(1.0, 3.0)); // π/3
 
     // time evolution eliminates component-wise propagation
@@ -918,7 +918,7 @@ fn it_eliminates_statistical_collections() {
     let evolved_state = pure_state.rotate(Angle::new(evolution_angle, PI));
 
     // evolution preserves amplitude, rotates phase
-    assert_eq!(evolved_state.length, pure_state.length);
+    assert_eq!(evolved_state.mag, pure_state.mag);
     assert_eq!(
         evolved_state.angle,
         pure_state.angle + Angle::new(evolution_angle, PI)
@@ -940,7 +940,7 @@ fn it_explains_quantum_computing() {
     // create quantum gates as angle transformations
     // hadamard gate creates superposition
     let hadamard = |q: &Geonum| -> Geonum {
-        Geonum::new_with_angle(q.length, Angle::new(1.0, 4.0)) // rotate to π/4
+        Geonum::new_with_angle(q.mag, Angle::new(1.0, 4.0)) // rotate to π/4
     };
 
     // phase gate adds phase
@@ -1001,13 +1001,13 @@ fn it_evolves_through_time() {
 
     // evolve to time=0.5
     let evolved_05 = evolve(&state, 0.5, energy);
-    assert_eq!(evolved_05.length, state.length); // probability preserved
+    assert_eq!(evolved_05.mag, state.mag); // probability preserved
     let expected_angle = state.angle + Angle::new(0.5 * energy, PI);
     assert_eq!(evolved_05.angle, expected_angle);
 
     // evolve to time=1.0
     let evolved_10 = evolve(&state, 1.0, energy);
-    assert_eq!(evolved_10.length, state.length);
+    assert_eq!(evolved_10.mag, state.mag);
     let expected_angle = state.angle + Angle::new(1.0 * energy, PI);
     assert_eq!(evolved_10.angle, expected_angle);
 
@@ -1019,7 +1019,7 @@ fn it_evolves_through_time() {
     let evolved_superposition = evolve(&superposition, 1.0, energy);
 
     // amplitude preserved
-    assert_eq!(evolved_superposition.length, superposition.length);
+    assert_eq!(evolved_superposition.mag, superposition.mag);
 
     // phase evolved by energy*time
     let expected_superposition_angle = superposition.angle + Angle::new(energy, PI);
@@ -1038,19 +1038,19 @@ fn it_evolves_through_time() {
     let evolved_p3 = evolve(&particle3, 1.0, energies[2]);
 
     // test independent evolution
-    assert_eq!(evolved_p1.length, particle1.length);
+    assert_eq!(evolved_p1.mag, particle1.mag);
     assert_eq!(
         evolved_p1.angle,
         particle1.angle + Angle::new(energies[0], PI)
     );
 
-    assert_eq!(evolved_p2.length, particle2.length);
+    assert_eq!(evolved_p2.mag, particle2.mag);
     assert_eq!(
         evolved_p2.angle,
         particle2.angle + Angle::new(energies[1], PI)
     );
 
-    assert_eq!(evolved_p3.length, particle3.length);
+    assert_eq!(evolved_p3.mag, particle3.mag);
     assert_eq!(
         evolved_p3.angle,
         particle3.angle + Angle::new(energies[2], PI)
@@ -1066,7 +1066,7 @@ fn it_evolves_through_time() {
     let evolved_entangled = evolve(&entangled_system, 1.0, energy);
 
     // correlation preserved through evolution
-    assert_eq!(evolved_entangled.length, entangled_system.length);
+    assert_eq!(evolved_entangled.mag, entangled_system.mag);
     let expected_entangled_angle = entangled_system.angle + Angle::new(energy, PI);
     assert_eq!(evolved_entangled.angle, expected_entangled_angle);
 }
@@ -1079,13 +1079,13 @@ fn it_preserves_unitary_transformation() {
     let state = Geonum::new_from_cartesian(0.6, 0.8);
 
     // test normalized
-    assert!((state.length - 1.0).abs() < EPSILON);
+    assert!((state.mag - 1.0).abs() < EPSILON);
 
     // unitary transformation: rotate by π/4
     let transformed = state.rotate(Angle::new(1.0, 4.0));
 
     // amplitude preserved (unitarity)
-    assert!((transformed.length - state.length).abs() < EPSILON);
+    assert!((transformed.mag - state.mag).abs() < EPSILON);
 
     // phase changed by π/4
     let expected_angle = state.angle + Angle::new(1.0, 4.0);
@@ -1104,7 +1104,7 @@ fn it_preserves_unitary_transformation() {
     let rotated_inner_product = rotated_a.dot(&rotated_b);
 
     // inner product preserved under unitary transformation
-    assert!((inner_product.length - rotated_inner_product.length).abs() < EPSILON);
+    assert!((inner_product.mag - rotated_inner_product.mag).abs() < EPSILON);
 
     // spinor as single geonum instead of pair
     // traditional spinor (a, b) → geonum with length = ||(a,b)|| and angle encoding ratio
@@ -1116,5 +1116,5 @@ fn it_preserves_unitary_transformation() {
     let rotated_spinor = spinor.rotate(Angle::new(1.0, 3.0)); // π/3 rotation
 
     // magnitude preserved
-    assert!((rotated_spinor.length - spinor.length).abs() < EPSILON);
+    assert!((rotated_spinor.mag - spinor.mag).abs() < EPSILON);
 }

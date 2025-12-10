@@ -57,7 +57,7 @@ fn its_a_limit() {
 
     // this produces a geometric number [magnitude, angle]
     assert!(
-        geometric_difference.length < 0.01,
+        geometric_difference.mag < 0.01,
         "geometric difference small"
     );
 
@@ -68,13 +68,13 @@ fn its_a_limit() {
     // the quotient is still geometric: [magnitude, angle, grade]
     println!(
         "geometric quotient: [magnitude={:.6}, angle={:.6}, grade={}]",
-        geometric_quotient.length,
+        geometric_quotient.mag,
         geometric_quotient.angle.grade_angle(),
         geometric_quotient.angle.grade()
     );
 
     // but traditional limits PROJECT to scalar, discarding angle structure
-    let limit_result = geometric_quotient.length; // projection: lose angle
+    let limit_result = geometric_quotient.mag; // projection: lose angle
     assert!(
         limit_result > 5.0 && limit_result < 7.0,
         "limit projects to scalar ~6"
@@ -104,10 +104,7 @@ fn its_a_limit() {
         1,
         "derivative at grade 1 preserves structure"
     );
-    assert_eq!(
-        derivative.length, f_x.length,
-        "magnitude preserved in rotation"
-    );
+    assert_eq!(derivative.mag, f_x.mag, "magnitude preserved in rotation");
 
     // the key insight: limits ARE geometric operations (subtraction, division)
     // but they throw away the [magnitude, angle] result by projecting to scalar
@@ -137,7 +134,7 @@ fn its_a_derivative() {
     );
 
     // magnitude preserved (rate equals magnitude for unit parameter)
-    assert_eq!(velocity.length, position.length, "magnitude preserved");
+    assert_eq!(velocity.mag, position.mag, "magnitude preserved");
 
     // grade changes: 0 → 1
     assert_eq!(position.angle.grade(), 0, "position at grade 0");
@@ -146,7 +143,7 @@ fn its_a_derivative() {
     // project the derivative to extract the rate of change
     let rate_at_dim_1 = velocity.project_to_dimension(1);
     assert!(
-        (rate_at_dim_1 - velocity.length).abs() < EPSILON,
+        (rate_at_dim_1 - velocity.mag).abs() < EPSILON,
         "velocity at grade 1 projects fully to dimension 1"
     );
 
@@ -157,14 +154,11 @@ fn its_a_derivative() {
         0,
         "position change at grade 0"
     );
-    assert_eq!(
-        delta_position.length, velocity.length,
-        "magnitude preserved"
-    );
+    assert_eq!(delta_position.mag, velocity.mag, "magnitude preserved");
 
     // the change in position magnitude equals the velocity magnitude
     assert!(
-        (delta_position.length - 5.0).abs() < EPSILON,
+        (delta_position.mag - 5.0).abs() < EPSILON,
         "change in position extracted from derivative"
     );
 }
@@ -186,7 +180,7 @@ fn its_an_integral() {
     let difference = f_b - f_a;
     assert_eq!(difference.angle.grade(), 0, "difference at grade 0");
     assert!(
-        (difference.length - 21.0).abs() < EPSILON,
+        (difference.mag - 21.0).abs() < EPSILON,
         "magnitude at grade 0 equals integral directly"
     );
 
@@ -203,7 +197,7 @@ fn its_an_integral() {
 
     assert_eq!(integrated.angle.grade(), 3, "integrated at grade 3");
     assert_eq!(
-        integrated.length, difference.length,
+        integrated.mag, difference.mag,
         "magnitude preserved through rotation"
     );
 
@@ -216,7 +210,7 @@ fn its_an_integral() {
 
     // both methods give same result: scalars are projections
     assert!(
-        (difference.length - integral_scalar).abs() < EPSILON,
+        (difference.mag - integral_scalar).abs() < EPSILON,
         "magnitude at grade 0 = projection from grade 3"
     );
 }
@@ -238,21 +232,21 @@ fn it_computes_coefficients_from_geometric_division() {
     let f_squared_h = x_h * x_h;
     let coeff_2 = ((f_squared_h - f_squared) / h_geo) / x;
 
-    assert!((coeff_2.length - 2.0).abs() < 0.01, "x² coefficient = 2");
+    assert!((coeff_2.mag - 2.0).abs() < 0.01, "x² coefficient = 2");
 
     // f(x) = x³: coefficient should be 3
     let f_cubed = f_squared * x;
     let f_cubed_h = f_squared_h * x_h;
     let coeff_3 = ((f_cubed_h - f_cubed) / h_geo) / x / x; // divide by x²
 
-    assert!((coeff_3.length - 3.0).abs() < 0.01, "x³ coefficient = 3");
+    assert!((coeff_3.mag - 3.0).abs() < 0.01, "x³ coefficient = 3");
 
     // f(x) = x⁴: coefficient should be 4
     let f_fourth = f_cubed * x;
     let f_fourth_h = f_cubed_h * x_h;
     let coeff_4 = ((f_fourth_h - f_fourth) / h_geo) / x / x / x; // divide by x³
 
-    assert!((coeff_4.length - 4.0).abs() < 0.01, "x⁴ coefficient = 4");
+    assert!((coeff_4.mag - 4.0).abs() < 0.01, "x⁴ coefficient = 4");
 }
 
 #[test]
@@ -309,7 +303,7 @@ fn it_computes_integrals_from_riemann_sums() {
 
     let expected = 16.0; // x²|₀⁴ = 16 - 0
     assert!(
-        (geometric_sum.length - expected).abs() < 0.02,
+        (geometric_sum.mag - expected).abs() < 0.02,
         "riemann sum computes integral via geometric operations"
     );
 }
@@ -340,20 +334,20 @@ fn its_a_gradient() {
 
     // ∂f/∂x at angle 0 (x-direction)
     let df_dx = (f_xh - f_geo) / h_geo;
-    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+    let partial_x_geo = Geonum::new(df_dx.mag, 0.0, 1.0);
 
     // ∂f/∂y at angle π/2 (y-direction)
     let df_dy = (f_yh - f_geo) / h_geo;
-    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+    let partial_y_geo = Geonum::new(df_dy.mag, 1.0, 2.0);
 
     // gradient = sum of directionally-encoded partials
     let gradient = partial_x_geo + partial_y_geo;
 
     // prove they match
     assert!(
-        (gradient.length - trad_magnitude).abs() < 0.01,
+        (gradient.mag - trad_magnitude).abs() < 0.01,
         "gradient magnitude matches: {} ≈ {}",
-        gradient.length,
+        gradient.mag,
         trad_magnitude
     );
     assert!(
@@ -401,9 +395,9 @@ fn its_a_divergence() {
 
     // divergence magnitude matches traditional scalar divergence
     assert!(
-        (divergence.length - trad_divergence).abs() < 0.01,
+        (divergence.mag - trad_divergence).abs() < 0.01,
         "divergence magnitude matches: {} ≈ {}",
-        divergence.length,
+        divergence.mag,
         trad_divergence
     );
 
@@ -448,9 +442,9 @@ fn its_a_curl() {
 
     // prove curl magnitude matches
     assert!(
-        (curl.length - trad_curl).abs() < 0.01,
+        (curl.mag - trad_curl).abs() < 0.01,
         "curl magnitude matches: {} ≈ {}",
-        curl.length,
+        curl.mag,
         trad_curl
     );
 
@@ -486,10 +480,10 @@ fn its_a_directional_derivative() {
     let h_geo = Geonum::new(h, 0.0, 1.0);
 
     let df_dx = (f_xh - f_geo) / h_geo;
-    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+    let partial_x_geo = Geonum::new(df_dx.mag, 0.0, 1.0);
 
     let df_dy = (f_yh - f_geo) / h_geo;
-    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+    let partial_y_geo = Geonum::new(df_dy.mag, 1.0, 2.0);
 
     let gradient = partial_x_geo + partial_y_geo;
     let direction = Geonum::new(1.0, 1.0, 4.0); // π/4 = 45°
@@ -498,9 +492,9 @@ fn its_a_directional_derivative() {
     let dir_deriv = gradient.dot(&direction);
 
     assert!(
-        (dir_deriv.length - trad_dir_deriv).abs() < 0.1,
+        (dir_deriv.mag - trad_dir_deriv).abs() < 0.1,
         "directional derivative matches: {} ≈ {}",
-        dir_deriv.length,
+        dir_deriv.mag,
         trad_dir_deriv
     );
 }
@@ -549,9 +543,9 @@ fn its_a_laplacian() {
 
     // prove laplacian magnitude matches
     assert!(
-        (laplacian.length - trad_laplacian).abs() < 0.1,
+        (laplacian.mag - trad_laplacian).abs() < 0.1,
         "laplacian magnitude matches: {} ≈ {}",
-        laplacian.length,
+        laplacian.mag,
         trad_laplacian
     );
 
@@ -582,10 +576,10 @@ fn it_handles_partial_derivatives() {
     let h_geo = Geonum::new(h, 0.0, 1.0);
 
     let df_dx = (f_xh - f_geo) / h_geo;
-    let partial_x_geo = Geonum::new(df_dx.length, 0.0, 1.0);
+    let partial_x_geo = Geonum::new(df_dx.mag, 0.0, 1.0);
 
     let df_dy = (f_yh - f_geo) / h_geo;
-    let partial_y_geo = Geonum::new(df_dy.length, 1.0, 2.0);
+    let partial_y_geo = Geonum::new(df_dy.mag, 1.0, 2.0);
 
     let gradient = partial_x_geo + partial_y_geo;
 
@@ -598,15 +592,15 @@ fn it_handles_partial_derivatives() {
 
     // prove they match
     assert!(
-        (partial_x_projected.length - partial_x_trad).abs() < 0.2,
+        (partial_x_projected.mag - partial_x_trad).abs() < 0.2,
         "x-partial matches: {} ≈ {}",
-        partial_x_projected.length,
+        partial_x_projected.mag,
         partial_x_trad
     );
     assert!(
-        (partial_y_projected.length - partial_y_trad).abs() < 0.2,
+        (partial_y_projected.mag - partial_y_trad).abs() < 0.2,
         "y-partial matches: {} ≈ {}",
-        partial_y_projected.length,
+        partial_y_projected.mag,
         partial_y_trad
     );
 }
@@ -632,9 +626,9 @@ fn its_a_line_integral() {
 
     // prove they match
     assert!(
-        (geo_integral.length - trad_integral).abs() < 0.1,
+        (geo_integral.mag - trad_integral).abs() < 0.1,
         "line integral matches: {} ≈ {}",
-        geo_integral.length,
+        geo_integral.mag,
         trad_integral
     );
 }
@@ -656,9 +650,9 @@ fn its_a_surface_integral() {
 
     // wedge product magnitude IS the area
     assert!(
-        (surface.length - trad_area).abs() < EPSILON,
+        (surface.mag - trad_area).abs() < EPSILON,
         "surface area matches: {} ≈ {}",
-        surface.length,
+        surface.mag,
         trad_area
     );
 
@@ -685,9 +679,9 @@ fn its_a_volume_integral() {
 
     // volume magnitude matches
     assert!(
-        (volume.length - trad_volume).abs() < EPSILON,
+        (volume.mag - trad_volume).abs() < EPSILON,
         "volume matches: {} ≈ {}",
-        volume.length,
+        volume.mag,
         trad_volume
     );
 
@@ -718,16 +712,16 @@ fn it_encodes_definite_integrals_with_domain() {
     // the definite integral encodes:
     // - magnitude: F(b) - F(a) = integral value
     // - angle: x_b - x_a = integration domain
-    let magnitude = f_b.length - f_a.length;
+    let magnitude = f_b.mag - f_a.mag;
     let angle = f_b.angle - f_a.angle;
     let integral = Geonum::new_with_angle(magnitude, angle);
 
     // verify value matches traditional
     assert!(
-        (integral.length - traditional).abs() < EPSILON,
+        (integral.mag - traditional).abs() < EPSILON,
         "expected {}, got {}",
         traditional,
-        integral.length
+        integral.mag
     );
 
     // the angle encodes the domain (as multiples of π)
@@ -758,7 +752,7 @@ fn it_preserves_fundamental_theorem_via_magnitudes() {
     let f_a = Geonum::new_with_angle(x_a.powi(2), Angle::new(x_a, 1.0));
     let f_b = Geonum::new_with_angle(x_b.powi(2), Angle::new(x_b, 1.0));
 
-    let integral_value = f_b.length - f_a.length;
+    let integral_value = f_b.mag - f_a.mag;
 
     assert!(
         (integral_value - traditional).abs() < EPSILON,
@@ -789,10 +783,7 @@ fn it_proves_differentiation_cycles_grades() {
         1,
         "first derivative at grade 1 (vector-like)"
     );
-    assert_eq!(
-        f_prime.length, f.length,
-        "differentiation preserves magnitude"
-    );
+    assert_eq!(f_prime.mag, f.mag, "differentiation preserves magnitude");
     assert_eq!(
         f_prime.angle.blade(),
         f.angle.blade() + 1,
@@ -935,12 +926,12 @@ fn it_demonstrates_differentiate_on_polynomials() {
     let f = Geonum::new(f_scalar, 0.0, 1.0); // [9, 0] at grade 0
 
     assert_eq!(f.angle.grade(), 0, "f(x) at grade 0");
-    assert_eq!(f.length, 9.0, "f(3) magnitude is 9");
+    assert_eq!(f.mag, 9.0, "f(3) magnitude is 9");
 
     // differentiation: π/2 rotation moves to grade 1
     let f_prime = f.differentiate();
     assert_eq!(f_prime.angle.grade(), 1, "f'(x) at grade 1 (vector-like)");
-    assert_eq!(f_prime.length, 9.0, "differentiation preserves magnitude");
+    assert_eq!(f_prime.mag, 9.0, "differentiation preserves magnitude");
 
     // demonstrate the grade transformation
     assert_eq!(f.angle.blade(), 0, "original function at blade 0");
@@ -984,7 +975,7 @@ fn it_demonstrates_differentiate_on_polynomials() {
     let constant_prime = constant.differentiate();
 
     assert_eq!(
-        constant_prime.length, 5.0,
+        constant_prime.mag, 5.0,
         "differentiation preserves magnitude"
     );
     assert_eq!(
@@ -999,7 +990,7 @@ fn it_demonstrates_differentiate_on_polynomials() {
     let f_linear_prime = f_linear.differentiate();
 
     assert_eq!(
-        f_linear_prime.length, 6.0,
+        f_linear_prime.mag, 6.0,
         "linear function derivative preserves magnitude"
     );
     assert_eq!(
@@ -1039,22 +1030,22 @@ fn it_proves_fundamental_theorem_is_accumulation_equals_interference() {
     let interference_result = f_b + f_a_negated;
 
     // verify cosine rule: c² = 625 + 16 + 2(25)(4)cos(π) = 625 + 16 - 200 = 441
-    let expected_squared = f_b.length.powi(2) + a.powi(4) + 2.0 * f_b.length * a.powi(2) * PI.cos();
+    let expected_squared = f_b.mag.powi(2) + a.powi(4) + 2.0 * f_b.mag * a.powi(2) * PI.cos();
     assert!((expected_squared - 441.0).abs() < EPSILON);
     assert!((expected_squared.sqrt() - 21.0).abs() < EPSILON);
 
     // fundamental theorem: accumulation equals interference
     assert!(
-        (accumulated_sum.length - interference_result.length).abs() < 0.02,
+        (accumulated_sum.mag - interference_result.mag).abs() < 0.02,
         "left side (accumulation) {:.3} = right side (interference) {:.3}",
-        accumulated_sum.length,
-        interference_result.length
+        accumulated_sum.mag,
+        interference_result.mag
     );
 
     assert!(
-        (accumulated_sum.length - traditional_left).abs() < 0.02,
+        (accumulated_sum.mag - traditional_left).abs() < 0.02,
         "angle space {:.3} matches projection space {}",
-        accumulated_sum.length,
+        accumulated_sum.mag,
         traditional_left
     );
 }
@@ -1076,9 +1067,9 @@ fn it_shows_why_subtraction_appears_in_fundamental_theorem() {
     let expected = (81.0_f64 + 1.0 - 18.0).sqrt();
     assert!((expected - 8.0).abs() < EPSILON);
     assert!(
-        (interference.length - 8.0).abs() < EPSILON,
+        (interference.mag - 8.0).abs() < EPSILON,
         "interference magnitude via cos(π) = -1: {:.3}",
-        interference.length
+        interference.mag
     );
 }
 
@@ -1111,12 +1102,12 @@ fn it_reveals_integral_as_interference_accumulator() {
 
     // they equal
     assert!(
-        (accumulation.length - interference.length).abs() < 0.02,
+        (accumulation.mag - interference.mag).abs() < 0.02,
         "accumulation {:.3} = interference {:.3}",
-        accumulation.length,
-        interference.length
+        accumulation.mag,
+        interference.mag
     );
-    assert!((interference.length - 8.0).abs() < EPSILON);
+    assert!((interference.mag - 8.0).abs() < EPSILON);
 }
 
 #[test]
@@ -1130,12 +1121,12 @@ fn it_connects_differentiation_and_antiderivative_via_angles() {
     // differentiate: rotate π/2 to grade 1
     let f_prime = f.differentiate();
     assert_eq!(f_prime.angle.grade(), 1, "derivative at grade 1");
-    assert_eq!(f_prime.length, 16.0, "magnitude preserved");
+    assert_eq!(f_prime.mag, 16.0, "magnitude preserved");
 
     // integrate: rotate 3π/2 back to grade 0
     let back_to_f = f_prime.integrate();
     assert_eq!(back_to_f.angle.grade(), 0, "integrated back to grade 0");
-    assert_eq!(back_to_f.length, 16.0, "magnitude preserved");
+    assert_eq!(back_to_f.mag, 16.0, "magnitude preserved");
 
     // the angles connect differentiation to integration
     let angle_cycle = f_prime.angle - f.angle; // differentiation rotation
@@ -1168,7 +1159,7 @@ fn it_shows_definite_integral_encodes_both_value_and_domain() {
     let f_b = Geonum::new_with_angle(b.powi(3) / 3.0, angle_b); // [125/3, 5π]
 
     // the integral encodes BOTH value and domain
-    let value = f_b.length - f_a.length; // magnitude difference
+    let value = f_b.mag - f_a.mag; // magnitude difference
     let domain = f_b.angle - f_a.angle; // angle difference
 
     assert!(
@@ -1184,7 +1175,7 @@ fn it_shows_definite_integral_encodes_both_value_and_domain() {
     // create the complete encoding
     let integral = Geonum::new_with_angle(value, domain);
     assert!(
-        (integral.length - 39.0).abs() < EPSILON,
+        (integral.mag - 39.0).abs() < EPSILON,
         "magnitude: integral value"
     );
     assert_eq!(

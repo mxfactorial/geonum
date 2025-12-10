@@ -69,7 +69,7 @@ impl Electromagnetics for Geonum {
         angle: Angle,
         constant: Geonum,
     ) -> Self {
-        let magnitude = constant.length * charge.length / distance.length.powf(power.length);
+        let magnitude = constant.mag * charge.mag / distance.mag.powf(power.mag);
         // angle calculation for negative charges
         let direction = if charge.angle.grade_angle().cos() >= 0.0 {
             angle
@@ -96,26 +96,26 @@ impl Electromagnetics for Geonum {
     fn poynting_vector(&self, b_field: &Self) -> Self {
         // wedge product handles the cross product geometry in ga
         let poynting = self.wedge(b_field);
-        Geonum::new_with_angle(poynting.length / VACUUM_PERMEABILITY, poynting.angle)
+        Geonum::new_with_angle(poynting.mag / VACUUM_PERMEABILITY, poynting.angle)
     }
 
     fn wire_vector_potential(r: Geonum, current: Geonum, permeability: Geonum) -> Self {
         // A = (μ₀I/2π) * ln(r) in theta direction around wire
-        let magnitude = permeability.length * current.length * (r.length.ln()) / (2.0 * PI);
+        let magnitude = permeability.mag * current.mag * (r.mag.ln()) / (2.0 * PI);
         let angle = Angle::new(1.0, 2.0); // π/2
         Geonum::new_with_angle(magnitude, angle)
     }
 
     fn wire_magnetic_field(r: Geonum, current: Geonum, permeability: Geonum) -> Self {
         // B = μ₀I/(2πr) in phi direction circling the wire
-        let magnitude = permeability.length * current.length / (2.0 * PI * r.length);
+        let magnitude = permeability.mag * current.mag / (2.0 * PI * r.mag);
         let angle = Angle::new(0.0, 1.0); // 0
         Geonum::new_with_angle(magnitude, angle)
     }
 
     fn spherical_wave_potential(r: Geonum, t: Geonum, wavenumber: Geonum, speed: Geonum) -> Self {
-        let omega = wavenumber.length * speed.length; // angular frequency
-        let potential = (wavenumber.length * r.length - omega * t.length).cos() / r.length;
+        let omega = wavenumber.mag * speed.mag; // angular frequency
+        let potential = (wavenumber.mag * r.mag - omega * t.mag).cos() / r.mag;
 
         // represent as a geometric number with scalar (grade 0) convention
         let magnitude = potential.abs();
@@ -144,7 +144,7 @@ mod tests {
         let k = 1.0 / (4.0 * PI * VACUUM_PERMITTIVITY);
 
         // prove magnitude follows inverse square law
-        assert!((e_field.length - k * 2.0 / (3.0 * 3.0)).abs() < EPSILON);
+        assert!((e_field.mag - k * 2.0 / (3.0 * 3.0)).abs() < EPSILON);
 
         // prove direction is outward for positive charge
         assert_eq!(e_field.angle, Angle::new(1.0, 1.0)); // π
@@ -154,7 +154,7 @@ mod tests {
         let e_field_neg = Geonum::electric_field(neg_charge, distance);
 
         // prove magnitude is the same
-        assert!((e_field_neg.length - k * 2.0 / (3.0 * 3.0)).abs() < EPSILON);
+        assert!((e_field_neg.mag - k * 2.0 / (3.0 * 3.0)).abs() < EPSILON);
 
         // prove direction is inward for negative charge
         // initial angle π + π for negative = 2π = blade 4
@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(s.angle, expected_angle); // using Angle comparison
 
         // check magnitude is E×B/μ₀
-        assert_eq!(s.length, (5.0 * 2.0) / VACUUM_PERMEABILITY);
+        assert_eq!(s.mag, (5.0 * 2.0) / VACUUM_PERMEABILITY);
     }
 
     #[test]
@@ -188,7 +188,7 @@ mod tests {
         let constant = Geonum::new(1.0, 0.0, 1.0);
 
         let e_field = Geonum::inverse_field(charge, distance, power, angle, constant);
-        assert_eq!(e_field.length, 0.25); // 1.0 * 1.0 / 2.0²
+        assert_eq!(e_field.mag, 0.25); // 1.0 * 1.0 / 2.0²
         assert_eq!(e_field.angle, angle);
 
         // test gravity (also inverse square)
@@ -197,7 +197,7 @@ mod tests {
         let g_constant = Geonum::new(6.67e-11, 0.0, 1.0);
 
         let g_field = Geonum::inverse_field(mass, distance, power, angle_gravity, g_constant);
-        assert_eq!(g_field.length, 6.67e-11 * 5.0 / 4.0);
+        assert_eq!(g_field.mag, 6.67e-11 * 5.0 / 4.0);
         assert_eq!(g_field.angle, angle_gravity);
 
         // test inverse cube field
@@ -206,7 +206,7 @@ mod tests {
         let angle_cube = Angle::new(1.0, 2.0); // π/2
 
         let field = Geonum::inverse_field(charge_cube, distance, power_cube, angle_cube, constant);
-        assert_eq!(field.length, 0.25); // 1.0 * 2.0 / 2.0³
+        assert_eq!(field.mag, 0.25); // 1.0 * 2.0 / 2.0³
         assert_eq!(field.angle, angle_cube);
     }
 
@@ -221,7 +221,7 @@ mod tests {
 
         // prove magnitude using ampère's law: B = μ₀I/(2πr)
         let expected_magnitude = VACUUM_PERMEABILITY * 10.0 / (2.0 * PI * 0.02);
-        assert!((b_field.length - expected_magnitude).abs() < EPSILON);
+        assert!((b_field.mag - expected_magnitude).abs() < EPSILON);
 
         // prove direction (circular around wire)
         assert_eq!(b_field.angle, Angle::new(0.0, 1.0));
@@ -229,11 +229,11 @@ mod tests {
         // test field strength increases with current
         let stronger_current = Geonum::new(20.0, 0.0, 1.0);
         let stronger_field = Geonum::wire_magnetic_field(distance, stronger_current, permeability);
-        assert!(stronger_field.length > b_field.length);
+        assert!(stronger_field.mag > b_field.mag);
 
         // test field strength decreases with distance
         let farther_distance = Geonum::new(0.1, 0.0, 1.0);
         let farther_field = Geonum::wire_magnetic_field(farther_distance, current, permeability);
-        assert!(farther_field.length < b_field.length);
+        assert!(farther_field.mag < b_field.mag);
     }
 }

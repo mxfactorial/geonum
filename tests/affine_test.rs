@@ -30,10 +30,10 @@ fn its_a_translation() {
 
     // translation in geometric numbers is vector addition in polar form
     // the result is a combined displacement
-    let original_x = point.length * point.angle.grade_angle().cos();
-    let original_y = point.length * point.angle.grade_angle().sin();
-    let translate_x = translation_vector.length * translation_vector.angle.grade_angle().cos();
-    let translate_y = translation_vector.length * translation_vector.angle.grade_angle().sin();
+    let original_x = point.mag * point.angle.grade_angle().cos();
+    let original_y = point.mag * point.angle.grade_angle().sin();
+    let translate_x = translation_vector.mag * translation_vector.angle.grade_angle().cos();
+    let translate_y = translation_vector.mag * translation_vector.angle.grade_angle().sin();
 
     let expected_x = original_x + translate_x;
     let expected_y = original_y + translate_y;
@@ -41,15 +41,15 @@ fn its_a_translation() {
     let expected_angle = Angle::new_from_cartesian(expected_x, expected_y);
 
     // test geometric properties are preserved
-    assert!((translated_point.length - expected_length).abs() < EPSILON);
-    assert!((translated_point.angle - expected_angle).value() < EPSILON);
+    assert!((translated_point.mag - expected_length).abs() < EPSILON);
+    assert!((translated_point.angle - expected_angle).rem() < EPSILON);
 
     // test that translation is reversible through inverse displacement
     let inverse_translation = translation_vector.negate(); // opposite direction
 
     let back_to_original = translated_point.translate(&inverse_translation);
-    assert!((back_to_original.length - point.length).abs() < EPSILON);
-    assert!((back_to_original.angle - point.angle).value() < EPSILON);
+    assert!((back_to_original.mag - point.mag).abs() < EPSILON);
+    assert!((back_to_original.angle - point.angle).rem() < EPSILON);
 
     // geometric numbers avoid the matrix overhead:
     // no homogeneous coordinates needed
@@ -78,7 +78,7 @@ fn it_preserves_parallel_lines_after_shearing() {
     let original_direction2 = Geonum::new(2.0, 0.0, 1.0); // [2, 0] - horizontal
 
     // verify original lines are parallel (same direction angle)
-    assert!((original_direction1.angle - original_direction2.angle).value() < EPSILON);
+    assert!((original_direction1.angle - original_direction2.angle).rem() < EPSILON);
 
     // apply shear transformation
     let shear_angle = Angle::new(1.0, 6.0); // π/6 - 30 degree shear
@@ -94,20 +94,20 @@ fn it_preserves_parallel_lines_after_shearing() {
 
     // test that parallelism is preserved after shearing
     // in geometric numbers, parallel lines maintain the same angular relationship
-    assert!((sheared_direction1.angle - sheared_direction2.angle).value() < EPSILON);
+    assert!((sheared_direction1.angle - sheared_direction2.angle).rem() < EPSILON);
 
     // test that shear transformation is consistent
     // all points should have their angles shifted by the same amount
-    assert!((sheared_line1_p1.angle - (line1_p1.angle + shear_angle)).value() < EPSILON);
-    assert!((sheared_line1_p2.angle - (line1_p2.angle + shear_angle)).value() < EPSILON);
-    assert!((sheared_line2_p1.angle - (line2_p1.angle + shear_angle)).value() < EPSILON);
-    assert!((sheared_line2_p2.angle - (line2_p2.angle + shear_angle)).value() < EPSILON);
+    assert!((sheared_line1_p1.angle - (line1_p1.angle + shear_angle)).rem() < EPSILON);
+    assert!((sheared_line1_p2.angle - (line1_p2.angle + shear_angle)).rem() < EPSILON);
+    assert!((sheared_line2_p1.angle - (line2_p1.angle + shear_angle)).rem() < EPSILON);
+    assert!((sheared_line2_p2.angle - (line2_p2.angle + shear_angle)).rem() < EPSILON);
 
     // test that lengths are preserved during shear (fundamental property)
-    assert!((sheared_line1_p1.length - line1_p1.length).abs() < EPSILON);
-    assert!((sheared_line1_p2.length - line1_p2.length).abs() < EPSILON);
-    assert!((sheared_line2_p1.length - line2_p1.length).abs() < EPSILON);
-    assert!((sheared_line2_p2.length - line2_p2.length).abs() < EPSILON);
+    assert!((sheared_line1_p1.mag - line1_p1.mag).abs() < EPSILON);
+    assert!((sheared_line1_p2.mag - line1_p2.mag).abs() < EPSILON);
+    assert!((sheared_line2_p1.mag - line2_p1.mag).abs() < EPSILON);
+    assert!((sheared_line2_p2.mag - line2_p2.mag).abs() < EPSILON);
 
     // geometric numbers make affine properties explicit:
     // parallelism is preserved through consistent angle transformation
@@ -155,15 +155,15 @@ fn it_preserves_area_after_shearing() {
     assert!((sheared_area - 12.0).abs() < EPSILON);
 
     // test that individual lengths are preserved (fundamental property of our shear)
-    assert!((sheared_v1.length - v1.length).abs() < EPSILON);
-    assert!((sheared_v2.length - v2.length).abs() < EPSILON);
-    assert!((sheared_v3.length - v3.length).abs() < EPSILON);
-    assert!((sheared_v4.length - v4.length).abs() < EPSILON);
+    assert!((sheared_v1.mag - v1.mag).abs() < EPSILON);
+    assert!((sheared_v2.mag - v2.mag).abs() < EPSILON);
+    assert!((sheared_v3.mag - v3.mag).abs() < EPSILON);
+    assert!((sheared_v4.mag - v4.mag).abs() < EPSILON);
 
     // test that angles are consistently shifted
-    assert!((sheared_v2.angle - (v2.angle + shear_angle)).value() < EPSILON);
-    assert!((sheared_v3.angle - (v3.angle + shear_angle)).value() < EPSILON);
-    assert!((sheared_v4.angle - (v4.angle + shear_angle)).value() < EPSILON);
+    assert!((sheared_v2.angle - (v2.angle + shear_angle)).rem() < EPSILON);
+    assert!((sheared_v3.angle - (v3.angle + shear_angle)).rem() < EPSILON);
+    assert!((sheared_v4.angle - (v4.angle + shear_angle)).rem() < EPSILON);
 
     // geometric numbers make area preservation explicit:
     // shear preserves area because it's a uniform angular transformation
@@ -179,10 +179,10 @@ fn it_increases_angle_after_shearing() {
     let sheared_point = point.shear(shear_angle);
 
     // length remains unchanged
-    assert!((sheared_point.length - point.length).abs() < EPSILON);
+    assert!((sheared_point.mag - point.mag).abs() < EPSILON);
 
     // angle is increased by shear_angle
-    assert!((sheared_point.angle - (point.angle + shear_angle)).value() < EPSILON);
+    assert!((sheared_point.angle - (point.angle + shear_angle)).rem() < EPSILON);
 
     // grade changes when angle sum crosses π/2 boundary
     // π/3 + π/6 = π/2, so grade changes from 0 to 1

@@ -19,7 +19,7 @@ pub trait Optics: Sized {
     /// compute optical transfer function through frequency-space transformation
     /// conventional: FFT-based propagation O(n log n)
     /// geonum: direct frequency-domain angle mapping O(1)
-    fn otf(&self, focal_length: Geonum, wavelength: Geonum) -> Self;
+    fn otf(&self, focal_mag: Geonum, wavelength: Geonum) -> Self;
 
     /// apply ABCD matrix ray tracing as direct angle operations
     /// conventional: 4×4 matrix multiplications for ray propagation O(n)
@@ -36,11 +36,11 @@ impl Optics for Geonum {
     fn refract(&self, refractive_index: Geonum) -> Self {
         // apply snells law as angle transformation
         let incident_angle = self.angle;
-        let n_ratio = refractive_index.length;
-        let refracted_angle_value = (incident_angle.grade_angle().sin() / n_ratio).asin();
-        let refracted_angle = Angle::new(refracted_angle_value, PI);
+        let n_ratio = refractive_index.mag;
+        let refracted_angle_rem = (incident_angle.grade_angle().sin() / n_ratio).asin();
+        let refracted_angle = Angle::new(refracted_angle_rem, PI);
 
-        Geonum::new_with_angle(self.length, refracted_angle)
+        Geonum::new_with_angle(self.mag, refracted_angle)
     }
 
     fn aberrate(&self, zernike_coefficients: &[Self]) -> Self {
@@ -49,17 +49,17 @@ impl Optics for Geonum {
 
         // apply each zernike term
         for term in zernike_coefficients {
-            let mode_effect_value = term.length * (term.angle.grade_angle().sin() * 3.0).cos();
-            let mode_effect = Angle::new(mode_effect_value, PI);
+            let mode_effect_rem = term.mag * (term.angle.grade_angle().sin() * 3.0).cos();
+            let mode_effect = Angle::new(mode_effect_rem, PI);
             perturbed_phase = perturbed_phase + mode_effect;
         }
 
-        Geonum::new_with_angle(self.length, perturbed_phase)
+        Geonum::new_with_angle(self.mag, perturbed_phase)
     }
 
-    fn otf(&self, focal_length: Geonum, wavelength: Geonum) -> Self {
+    fn otf(&self, focal_mag: Geonum, wavelength: Geonum) -> Self {
         // convert from spatial domain to frequency domain
-        let frequency = self.length / (wavelength.length * focal_length.length);
+        let frequency = self.mag / (wavelength.mag * focal_mag.mag);
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
         let phase = self.angle + quarter_turn;
 
@@ -70,11 +70,11 @@ impl Optics for Geonum {
         // apply ABCD matrix as angle transformation
         // in ray optics: [h_out, theta_out] = [[A, B], [C, D]] * [h_in, theta_in]
         // for geonum representation:
-        // - ray height h = self.length (distance from optical axis)
+        // - ray height h = self.mag (distance from optical axis)
         // - ray angle theta = self.angle (angle with optical axis)
 
         // extract ray parameters
-        let h = self.length;
+        let h = self.mag;
         let theta = self.angle;
 
         // abcd transformations for ray tracing
@@ -82,8 +82,8 @@ impl Optics for Geonum {
         // new_theta = C*h + D*theta
         // theta needs to be in radians for matrix multiplication
         let theta_radians = theta.grade_angle();
-        let new_h = a.length * h + b.length * theta_radians;
-        let new_theta_radians = c.length * h + d.length * theta_radians;
+        let new_h = a.mag * h + b.mag * theta_radians;
+        let new_theta_radians = c.mag * h + d.mag * theta_radians;
         let new_theta_angle = Angle::new(new_theta_radians, PI);
 
         // return new geonum with transformed height and angle
@@ -92,14 +92,14 @@ impl Optics for Geonum {
 
     fn magnify(&self, magnification: Geonum) -> Self {
         // magnification affects intensity (inverse square law) and angle scaling
-        let mag = magnification.length;
-        let image_intensity = 1.0 / (mag * mag);
+        let m = magnification.mag;
+        let image_intensity = 1.0 / (m * m);
 
         // image point has inverted angle and scaled height
-        let image_angle_value = -self.angle.grade_angle().sin() / mag;
-        let image_angle = Angle::new(image_angle_value, PI);
+        let image_angle_rem = -self.angle.grade_angle().sin() / m;
+        let image_angle = Angle::new(image_angle_rem, PI);
 
-        Geonum::new_with_angle(self.length * image_intensity, image_angle)
+        Geonum::new_with_angle(self.mag * image_intensity, image_angle)
     }
 }
 
@@ -110,20 +110,20 @@ mod tests {
     #[test]
     fn it_applies_optical_magnification() {
         // create input ray/object point
-        let object = Geonum::new(4.0, 1.0, 6.0); // 4.0 length, π/6 angle
+        let object = Geonum::new(4.0, 1.0, 6.0); // 4.0 magnitude, π/6 angle
 
         // test 2x magnification
         let magnified_2x = object.magnify(Geonum::scalar(2.0));
 
         // prove intensity follows inverse square law (1/m²)
         let expected_intensity_2x = 4.0 / (2.0 * 2.0);
-        assert_eq!(magnified_2x.length, expected_intensity_2x);
+        assert_eq!(magnified_2x.mag, expected_intensity_2x);
 
         // prove angle is inverted and scaled based on sin transformation
-        // magnify computes: image_angle = -sin(object_angle) / mag
+        // magnify computes: image_angle = -sin(object_angle) / m
         let object_sin = object.angle.grade_angle().sin();
-        let expected_angle_value_2x = -object_sin / 2.0;
-        let expected_angle_2x = Angle::new(expected_angle_value_2x, PI);
+        let expected_angle_rem_2x = -object_sin / 2.0;
+        let expected_angle_2x = Angle::new(expected_angle_rem_2x, PI);
         assert_eq!(magnified_2x.angle, expected_angle_2x);
 
         // test 0.5x magnification (minification)
@@ -131,11 +131,11 @@ mod tests {
 
         // prove intensity increases with minification
         let expected_intensity_half = 4.0 / (0.5 * 0.5);
-        assert_eq!(magnified_half.length, expected_intensity_half);
+        assert_eq!(magnified_half.mag, expected_intensity_half);
 
         // prove angle is inverted and scaled
-        let expected_angle_value_half = -object_sin / 0.5;
-        let expected_angle_half = Angle::new(expected_angle_value_half, PI);
+        let expected_angle_rem_half = -object_sin / 0.5;
+        let expected_angle_half = Angle::new(expected_angle_rem_half, PI);
         assert_eq!(magnified_half.angle, expected_angle_half);
     }
 
@@ -148,7 +148,7 @@ mod tests {
         let ray1 = Geonum::new(1.0, 1.0, 6.0); // π/6 angle
         let ray2 = Geonum::new(1.0, 1.0, 3.0); // π/3 angle
 
-        // apply thin lens ABCD matrix (focal length = 100)
+        // apply thin lens ABCD matrix (focal magnitude = 100)
         // [A B]   [1   0]
         // [C D] = [-1/f 1]
         let a = Geonum::scalar(1.0);

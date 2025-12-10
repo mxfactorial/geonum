@@ -8,7 +8,7 @@ use std::f64::consts::PI;
 /// activation functions for neural networks
 ///
 /// represents different activation functions used in neural networks
-/// when applied to a geometric number, these functions transform the length
+/// when applied to a geometric number, these functions transform the magnitude
 /// component while preserving the angle component
 ///
 /// # examples
@@ -16,7 +16,7 @@ use std::f64::consts::PI;
 /// ```
 /// use geonum::{Geonum, Activation, MachineLearning};
 ///
-/// let num = Geonum::new(2.0, 1.0, 4.0); // length 2.0, angle π/4
+/// let num = Geonum::new(2.0, 1.0, 4.0); // magnitude 2.0, angle π/4
 ///
 /// // apply relu activation
 /// let relu_output = num.activate(Activation::ReLU);
@@ -61,7 +61,7 @@ pub trait MachineLearning: Sized {
 impl MachineLearning for Geonum {
     fn regression_from(cov_xy: f64, var_x: f64) -> Self {
         Geonum {
-            length: (cov_xy.powi(2) / var_x).sqrt(),
+            mag: (cov_xy.powi(2) / var_x).sqrt(),
             angle: Angle::new(cov_xy.atan2(var_x), PI), // convert radians to geometric angle
         }
     }
@@ -72,14 +72,14 @@ impl MachineLearning for Geonum {
         let angle_update = Angle::new(-learning_rate * error * sign_x / PI, 1.0);
 
         Geonum {
-            length: self.length + learning_rate * error * input.length,
+            mag: self.mag + learning_rate * error * input.mag,
             angle: self.angle + angle_update,
         }
     }
 
     fn forward_pass(&self, weight: &Geonum, bias: &Geonum) -> Self {
         Geonum {
-            length: self.length * weight.length + bias.length,
+            mag: self.mag * weight.mag + bias.mag,
             angle: self.angle + weight.angle,
         }
     }
@@ -87,19 +87,19 @@ impl MachineLearning for Geonum {
     fn activate(&self, activation: Activation) -> Self {
         match activation {
             Activation::ReLU => Geonum {
-                length: if self.angle.grade_angle().cos() > 0.0 {
-                    self.length
+                mag: if self.angle.grade_angle().cos() > 0.0 {
+                    self.mag
                 } else {
                     0.0
                 },
                 angle: self.angle,
             },
             Activation::Sigmoid => Geonum {
-                length: self.length / (1.0 + (-self.angle.grade_angle().cos()).exp()),
+                mag: self.mag / (1.0 + (-self.angle.grade_angle().cos()).exp()),
                 angle: self.angle,
             },
             Activation::Tanh => Geonum {
-                length: self.length * self.angle.grade_angle().cos().tanh(),
+                mag: self.mag * self.angle.grade_angle().cos().tanh(),
                 angle: self.angle,
             },
             Activation::Identity => *self,
@@ -120,9 +120,9 @@ mod tests {
 
         let regression = Geonum::regression_from(cov_xy, var_x);
 
-        // prove length encodes the correlation strength
-        let expected_length = (cov_xy.powi(2) / var_x).sqrt();
-        assert!((regression.length - expected_length).abs() < EPSILON);
+        // prove magnitude encodes the correlation strength
+        let expected_mag = (cov_xy.powi(2) / var_x).sqrt();
+        assert!((regression.mag - expected_mag).abs() < EPSILON);
 
         // prove angle encodes the slope direction
         let expected_angle = Angle::new(cov_xy.atan2(var_x), PI);
@@ -149,9 +149,9 @@ mod tests {
         let updated_weight = weight.perceptron_update(learning_rate, error, &input);
 
         // verify weight update follows perceptron rule
-        // length is updated by learning_rate * error * input.length
-        let expected_length = weight.length + learning_rate * error * input.length;
-        assert!((updated_weight.length - expected_length).abs() < EPSILON);
+        // magnitude is updated by learning_rate * error * input.mag
+        let expected_mag = weight.mag + learning_rate * error * input.mag;
+        assert!((updated_weight.mag - expected_mag).abs() < EPSILON);
 
         // angle is updated by learning rule
         let input_grade = input.angle.grade();
@@ -175,8 +175,8 @@ mod tests {
         let forward_result = input.forward_pass(&weight, &bias);
 
         // test forward pass computation
-        let expected_length = input.length * weight.length + bias.length;
-        assert!((forward_result.length - expected_length).abs() < EPSILON);
+        let expected_mag = input.mag * weight.mag + bias.mag;
+        assert!((forward_result.mag - expected_mag).abs() < EPSILON);
 
         let expected_angle = input.angle + weight.angle;
         assert_eq!(forward_result.angle, expected_angle);
@@ -186,19 +186,19 @@ mod tests {
 
         // test ReLU activation
         let relu_result = test_input.activate(Activation::ReLU);
-        assert!(relu_result.length > 0.0); // positive input should remain positive
+        assert!(relu_result.mag > 0.0); // positive input should remain positive
 
         // test sigmoid activation
         let sigmoid_result = test_input.activate(Activation::Sigmoid);
-        assert!(sigmoid_result.length > 0.0 && sigmoid_result.length < test_input.length);
+        assert!(sigmoid_result.mag > 0.0 && sigmoid_result.mag < test_input.mag);
 
         // test tanh activation
         let tanh_result = test_input.activate(Activation::Tanh);
-        assert!(tanh_result.length.abs() <= test_input.length);
+        assert!(tanh_result.mag.abs() <= test_input.mag);
 
         // test identity activation
         let identity_result = test_input.activate(Activation::Identity);
-        assert_eq!(identity_result.length, test_input.length);
+        assert_eq!(identity_result.mag, test_input.mag);
         assert_eq!(identity_result.angle, test_input.angle);
         assert_eq!(identity_result.angle.grade(), test_input.angle.grade());
     }

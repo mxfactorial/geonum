@@ -24,17 +24,17 @@ fn it_ships_conservation_with_the_wedge_product() {
     println!("=== CONSERVATION FROM GEOMETRIC NILPOTENCY ===");
     println!(
         "Vector: [{}, {:.3}]",
-        vector.length,
+        vector.mag,
         vector.angle.grade_angle()
     );
     println!(
         "v ∧ v = [{:.10}, {:.3}]",
-        self_wedge.length,
+        self_wedge.mag,
         self_wedge.angle.grade_angle()
     );
 
     // This IS conservation: you can't create something from nothing
-    assert!(self_wedge.length < EPSILON, "Conservation: v ∧ v = 0");
+    assert!(self_wedge.mag < EPSILON, "Conservation: v ∧ v = 0");
 
     // Compare to Newton's laws
     println!("\nNewton's Laws: External conservation principles");
@@ -69,20 +69,20 @@ fn it_ships_conservation_with_motion() {
     println!("Initial state:");
     println!(
         "Position: [{:.2e}, {:.3}]",
-        position.length,
+        position.mag,
         position.angle.grade_angle()
     );
     println!(
         "Momentum: [{:.2e}, {:.3}]",
-        momentum.length,
+        momentum.mag,
         momentum.angle.grade_angle()
     );
     println!(
         "Angular momentum: [{:.3e}, {:.3}]",
-        initial_angular_momentum.length,
+        initial_angular_momentum.mag,
         initial_angular_momentum.angle.grade_angle()
     );
-    println!("Energy: {:.3e}", initial_energy.length);
+    println!("Energy: {:.3e}", initial_energy.mag);
 
     // Evolve system using wedge-based motion
     // NOTE: This is SYMBOLIC motion, not accurate physics simulation
@@ -105,43 +105,42 @@ fn it_ships_conservation_with_motion() {
     println!("\nFinal state:");
     println!(
         "Position: [{:.2e}, {:.3}]",
-        position.length,
+        position.mag,
         position.angle.grade_angle()
     );
     println!(
         "Momentum: [{:.2e}, {:.3}]",
-        momentum.length,
+        momentum.mag,
         momentum.angle.grade_angle()
     );
     println!(
         "Angular momentum: [{:.3e}, {:.3}]",
-        final_angular_momentum.length,
+        final_angular_momentum.mag,
         final_angular_momentum.angle.grade_angle()
     );
-    println!("Energy: {:.3e}", final_energy.length);
+    println!("Energy: {:.3e}", final_energy.mag);
 
     // Conservation preserved automatically - no external enforcement
-    let angular_momentum_change =
-        (final_angular_momentum.length - initial_angular_momentum.length).abs();
-    let energy_change = (final_energy.length - initial_energy.length).abs();
+    let angular_momentum_change = (final_angular_momentum.mag - initial_angular_momentum.mag).abs();
+    let energy_change = (final_energy.mag - initial_energy.mag).abs();
 
     println!("\nConservation check:");
     println!(
         "Angular momentum change: {:.3e}",
-        angular_momentum_change / initial_angular_momentum.length.max(1e-50)
+        angular_momentum_change / initial_angular_momentum.mag.max(1e-50)
     );
     println!(
         "Energy change: {:.3e}",
-        energy_change / initial_energy.length.abs().max(1e-50)
+        energy_change / initial_energy.mag.abs().max(1e-50)
     );
 
     // Conservation emerges from geometric structure, not external laws
     assert!(
-        angular_momentum_change < initial_angular_momentum.length * 0.1,
+        angular_momentum_change < initial_angular_momentum.mag * 0.1,
         "Angular momentum conserved"
     );
     assert!(
-        energy_change < initial_energy.length.abs() * 0.1,
+        energy_change < initial_energy.mag.abs() * 0.1,
         "Energy conserved"
     );
 
@@ -170,18 +169,18 @@ fn it_sets_geometric_nilpotency_as_physical_law() {
         println!("\n{quantity_name} conservation:");
         println!(
             "Quantity: [{:.3e}, {:.3}]",
-            quantity.length,
+            quantity.mag,
             quantity.angle.grade_angle()
         );
         println!(
             "Self-interaction: [{:.3e}, {:.3}]",
-            self_interaction.length,
+            self_interaction.mag,
             self_interaction.angle.grade_angle()
         );
 
         // Physical law: identical quantities cannot interact with themselves
         assert!(
-            self_interaction.length < EPSILON,
+            self_interaction.mag < EPSILON,
             "{quantity_name} cannot interact with itself - conservation preserved"
         );
 
@@ -215,18 +214,18 @@ fn its_independent_of_external_enforcement() {
     println!("Attempting conservation violation:");
     println!(
         "Vector: [{}, {:.3}]",
-        vector.length,
+        vector.mag,
         vector.angle.grade_angle()
     );
     println!(
         "Self-wedge: [{:.10}, {:.3}]",
-        attempted_violation.length,
+        attempted_violation.mag,
         attempted_violation.angle.grade_angle()
     );
 
     // Violation impossible - algebra prevents it
     assert!(
-        attempted_violation.length < EPSILON,
+        attempted_violation.mag < EPSILON,
         "Conservation violation impossible"
     );
 
@@ -257,11 +256,11 @@ fn its_independent_of_external_enforcement() {
         println!(
             "Violation attempt {}: [{:.10}, {:.3}]",
             i + 1,
-            violation_attempt.length,
+            violation_attempt.mag,
             violation_attempt.angle.grade_angle()
         );
         assert!(
-            violation_attempt.length < EPSILON,
+            violation_attempt.mag < EPSILON,
             "All violation attempts fail"
         );
     }
@@ -294,7 +293,7 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     println!("\n1. 'First Law' is just: v ∧ v = 0");
     println!(
         "   Self-wedge = [{:.10}, {:.3}]",
-        inertia_test.length,
+        inertia_test.mag,
         inertia_test.angle.grade_angle()
     );
 
@@ -312,7 +311,7 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     // This unification IS what Newton split into "force" and "torque"
     let reconstructed = alignment + rotation;
     assert_eq!(
-        interaction.length, reconstructed.length,
+        interaction.mag, reconstructed.mag,
         "Geometric product = dot + wedge: unified where Newton saw separate forces"
     );
     assert_eq!(
@@ -326,12 +325,12 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     println!("\n3. 'Third Law' is just: antisymmetry of wedge");
     println!(
         "   v∧w = [{:.3}, {:.3}]",
-        action.length,
+        action.mag,
         action.angle.grade_angle()
     );
     println!(
         "   w∧v = [{:.3}, {:.3}]",
-        reaction.length,
+        reaction.mag,
         reaction.angle.grade_angle()
     );
 
@@ -341,7 +340,7 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     let is_opposite = (angle_diff_mod - PI).abs() < 0.1 || angle_diff_mod < 0.1;
     assert!(is_opposite, "Action and reaction are opposite");
     assert!(
-        (action.length - reaction.length).abs() < EPSILON,
+        (action.mag - reaction.mag).abs() < EPSILON,
         "Equal magnitudes"
     );
 
@@ -370,7 +369,7 @@ fn it_supplies_conservation_in_one_cpu_tick() {
 
     let vector = Geonum::new(5.0, 1.0, 3.0); // 1 allocation
     let conservation_check = vector.wedge(&vector); // 1 operation and 1 allocation
-    assert!(conservation_check.length < EPSILON);
+    assert!(conservation_check.mag < EPSILON);
 
     let duration = start.elapsed();
 
@@ -425,12 +424,12 @@ fn it_improves_physics_engines() {
     println!("let conservation = state.wedge(&state);");
     println!(
         "Result: [{:.10}, {:.3}] - conservation proven",
-        conservation_proof.length,
+        conservation_proof.mag,
         conservation_proof.angle.grade_angle()
     );
 
     assert!(
-        conservation_proof.length < EPSILON,
+        conservation_proof.mag < EPSILON,
         "Conservation impossible to violate"
     );
 

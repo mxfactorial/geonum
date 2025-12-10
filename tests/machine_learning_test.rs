@@ -26,7 +26,7 @@
 //
 // // geometric number equivalent
 // for each_neuron:
-//   output.length = input.length * weight.length
+//   output.mag = input.mag * weight.mag
 //   output.angle = input.angle + weight.angle // O(n) operations, O(1) per neuron
 // ```
 //
@@ -48,8 +48,8 @@ fn its_a_perceptron() {
     let x_neg = Geonum::new(1.0, 5.0, 4.0); // Vector (grade 1) - input vector (negative example)
 
     // demonstrate that dot product can be computed via lengths and angles
-    let dot_pos = w.length * x_pos.length * (w.angle - x_pos.angle).grade_angle().cos();
-    let dot_neg = w.length * x_neg.length * (w.angle - x_neg.angle).grade_angle().cos();
+    let dot_pos = w.mag * x_pos.mag * (w.angle - x_pos.angle).grade_angle().cos();
+    let dot_neg = w.mag * x_neg.mag * (w.angle - x_neg.angle).grade_angle().cos();
 
     assert!(dot_pos > 0.0, "positive example misclassified");
     assert!(dot_neg < 0.0, "negative example misclassified");
@@ -64,18 +64,17 @@ fn its_a_perceptron() {
     let prediction_error = -1.0; // y - ŷ = -1 - 1 = -2, using -1 to represent this
 
     // weight update using length-only adjustment
-    let length_update = learning_rate * prediction_error * x_neg.length;
-    w_traditional.length += length_update;
+    let length_update = learning_rate * prediction_error * x_neg.mag;
+    w_traditional.mag += length_update;
 
     // geometric number update using the perceptron_update method
     let w_geometric = w.perceptron_update(learning_rate, prediction_error, &x_neg);
 
     // after updates, both classify x_neg
-    let dot_traditional = w_traditional.length
-        * x_neg.length
-        * (w_traditional.angle - x_neg.angle).grade_angle().cos();
+    let dot_traditional =
+        w_traditional.mag * x_neg.mag * (w_traditional.angle - x_neg.angle).grade_angle().cos();
     let dot_geometric =
-        w_geometric.length * x_neg.length * (w_geometric.angle - x_neg.angle).grade_angle().cos();
+        w_geometric.mag * x_neg.mag * (w_geometric.angle - x_neg.angle).grade_angle().cos();
 
     // both methods improve classification (larger negative value is worse)
     assert!(
@@ -160,9 +159,9 @@ fn its_a_clustering_algorithm() {
     // which is O(n) in the dimension of the space
 
     // with geometric numbers, we use the magnitude of the geometric difference
-    let dist_01 = (points[0] - points[1]).length;
-    let dist_23 = (points[2] - points[3]).length;
-    let dist_02 = (points[0] - points[2]).length;
+    let dist_01 = (points[0] - points[1]).mag;
+    let dist_23 = (points[2] - points[3]).mag;
+    let dist_02 = (points[0] - points[2]).mag;
 
     // points 0,1 are in one cluster and 2,3 in another
     assert!(
@@ -178,12 +177,12 @@ fn its_a_clustering_algorithm() {
 
     // with geometric numbers, centroid computation is O(1) regardless of dimensions
     let centroid_01 = Geonum::new_with_angle(
-        (points[0].length + points[1].length) / 2.0,
+        (points[0].mag + points[1].mag) / 2.0,
         (points[0].angle + points[1].angle) / 2.0,
     ); // scalar (grade 0) - centroid is a pure location/magnitude
 
     let centroid_23 = Geonum::new_with_angle(
-        (points[2].length + points[3].length) / 2.0,
+        (points[2].mag + points[3].mag) / 2.0,
         (points[2].angle + points[3].angle) / 2.0,
     ); // scalar (grade 0) - centroid is a pure location/magnitude
 
@@ -191,22 +190,22 @@ fn its_a_clustering_algorithm() {
 
     // verify cluster assignments using geometric differences
     assert!(
-        (points[0] - centroid_01).length < (points[0] - centroid_23).length,
+        (points[0] - centroid_01).mag < (points[0] - centroid_23).mag,
         "point 0 is closer to centroid_01"
     );
 
     assert!(
-        (points[1] - centroid_01).length < (points[1] - centroid_23).length,
+        (points[1] - centroid_01).mag < (points[1] - centroid_23).mag,
         "point 1 is closer to centroid_01"
     );
 
     assert!(
-        (points[2] - centroid_23).length < (points[2] - centroid_01).length,
+        (points[2] - centroid_23).mag < (points[2] - centroid_01).mag,
         "point 2 is closer to centroid_23"
     );
 
     assert!(
-        (points[3] - centroid_23).length < (points[3] - centroid_01).length,
+        (points[3] - centroid_23).mag < (points[3] - centroid_01).mag,
         "point 3 is closer to centroid_23"
     );
 
@@ -294,7 +293,7 @@ fn its_a_support_vector_machine() {
     // compute geometric kernel value (similarity)
     let kernel = |a: &Geonum, b: &Geonum| -> f64 {
         // smaller geometric difference = higher similarity
-        1.0 / (1.0 + (a - b).length)
+        1.0 / (1.0 + (a - b).mag)
     };
 
     // compute within-class and between-class similarities
@@ -388,7 +387,7 @@ fn its_a_neural_network() {
     // 4. measure performance: neural network operations with geometric numbers
     // are O(n) vs O(n²) for traditional networks
     assert!(
-        sigmoid_output.length > 0.0,
+        sigmoid_output.mag > 0.0,
         "activation produces non-zero output"
     );
 
@@ -438,7 +437,7 @@ fn its_a_reinforcement_learning() {
     let transition_02 = state_values[2] - state_values[0];
 
     // determine best action from state 0 based on transition magnitude
-    let best_action = if transition_01.length < transition_02.length {
+    let best_action = if transition_01.mag < transition_02.mag {
         1
     } else {
         2
@@ -446,7 +445,7 @@ fn its_a_reinforcement_learning() {
 
     // verify the update increased the value of the current state
     assert!(
-        state_values[current_state].length > 0.5,
+        state_values[current_state].mag > 0.5,
         "value update increases state value"
     );
 
@@ -459,7 +458,7 @@ fn its_a_reinforcement_learning() {
     let action_1_value = evaluate_action(current_state, 1, &state_values);
     let action_2_value = evaluate_action(current_state, 2, &state_values);
 
-    let optimal_action = if action_1_value.length > action_2_value.length {
+    let optimal_action = if action_1_value.mag > action_2_value.mag {
         1
     } else {
         2
@@ -496,7 +495,7 @@ fn its_a_bayesian_method() {
 
     // the posterior combines the prior and likelihood geometrically
     assert!(
-        posterior.length == prior.length * likelihood.length,
+        posterior.mag == prior.mag * likelihood.mag,
         "posterior combines strengths"
     );
     assert!(
@@ -515,11 +514,11 @@ fn its_a_bayesian_method() {
 
     // verify samples are close to the posterior
     assert!(
-        (samples[0] - posterior).length < 0.5,
+        (samples[0] - posterior).mag < 0.5,
         "sample 1 close to posterior"
     );
     assert!(
-        (samples[1] - posterior).length < 0.5,
+        (samples[1] - posterior).mag < 0.5,
         "sample 2 close to posterior"
     );
 }
@@ -555,7 +554,7 @@ fn its_a_dimensionality_reduction() {
     // find principal direction by finding the point with maximum length
     let principal = *centered_points
         .iter()
-        .max_by(|a, b| a.length.partial_cmp(&b.length).unwrap())
+        .max_by(|a, b| a.mag.partial_cmp(&b.mag).unwrap())
         .unwrap();
 
     // 3. demonstrate reconstruction quality from minimal angle parameters
@@ -567,8 +566,8 @@ fn its_a_dimensionality_reduction() {
             // projection as geometric operation
             // for simplicity, use the component along principal direction
             let dot_product =
-                p.length * principal.length * (p.angle - principal.angle).grade_angle().cos();
-            let projection_scalar = Geonum::new(dot_product / principal.length.powi(2), 0.0, 1.0);
+                p.mag * principal.mag * (p.angle - principal.angle).grade_angle().cos();
+            let projection_scalar = Geonum::new(dot_product / principal.mag.powi(2), 0.0, 1.0);
             principal * projection_scalar
         })
         .collect();
@@ -580,7 +579,7 @@ fn its_a_dimensionality_reduction() {
     let reconstruction_error: f64 = data_points
         .iter()
         .zip(reconstructed_points.iter())
-        .map(|(orig, recon)| (*orig - *recon).length)
+        .map(|(orig, recon)| (*orig - *recon).mag)
         .sum::<f64>()
         / data_points.len() as f64;
 
@@ -610,7 +609,7 @@ fn its_a_generative_model() {
     // compute variance as average squared distance from mean
     let variance = distribution
         .iter()
-        .map(|p| (*p - mean).length.powi(2))
+        .map(|p| (*p - mean).mag.powi(2))
         .sum::<f64>()
         / distribution.len() as f64;
 
@@ -638,7 +637,7 @@ fn its_a_generative_model() {
     let sample_mean = sample_sum * sample_n_scalar;
 
     assert!(
-        (sample_mean - mean).length < 0.5,
+        (sample_mean - mean).mag < 0.5,
         "sample mean close to distribution mean"
     );
 
@@ -683,11 +682,11 @@ fn its_a_transfer_learning() {
     for i in 0..target_model.len() {
         // target model moves toward source model
         let initial_length_diff = if i == 0 {
-            0.5 - source_model[i].length
+            0.5 - source_model[i].mag
         } else {
-            0.6 - source_model[i].length
+            0.6 - source_model[i].mag
         };
-        let final_length_diff = target_model[i].length - source_model[i].length;
+        let final_length_diff = target_model[i].mag - source_model[i].mag;
 
         assert!(
             final_length_diff.abs() < initial_length_diff.abs(),
@@ -699,7 +698,7 @@ fn its_a_transfer_learning() {
         } else {
             Geonum::new(0.6, 0.1, PI)
         };
-        let change = (target_model[i] - initial_geonum).length;
+        let change = (target_model[i] - initial_geonum).mag;
 
         assert!(change > 0.0, "target model changes from initial state");
     }
@@ -734,11 +733,11 @@ fn its_an_ensemble_method() {
     // check for diversity among models using geometric differences
     let model_diversity = models
         .iter()
-        .map(|m| (*m - ensemble).length.powi(2))
+        .map(|m| (*m - ensemble).mag.powi(2))
         .sum::<f64>();
 
     // verify ensemble was computed
-    assert!(ensemble.length > 0.0, "ensemble has non-zero length");
+    assert!(ensemble.mag > 0.0, "ensemble has non-zero length");
     assert!(model_diversity > 0.0, "models have diversity");
 
     // 3. demonstrate diversity benefits directly through angle separation
@@ -764,7 +763,7 @@ fn its_an_ensemble_method() {
 
     let similar_diversity = similar_models
         .iter()
-        .map(|m| (*m - similar_mean).length.powi(2))
+        .map(|m| (*m - similar_mean).mag.powi(2))
         .sum::<f64>();
 
     let diverse_mean = diverse_models
@@ -774,7 +773,7 @@ fn its_an_ensemble_method() {
 
     let diverse_diversity = diverse_models
         .iter()
-        .map(|m| (*m - diverse_mean).length.powi(2))
+        .map(|m| (*m - diverse_mean).mag.powi(2))
         .sum::<f64>();
 
     // diverse ensemble should have higher angle diversity
@@ -809,8 +808,8 @@ fn it_rejects_learning_paradigms() {
 
     // use the classifier as a cluster center
     let point = Geonum::new(1.1, 0.6, PI);
-    let distance_to_classifier = (point - classifier).length;
-    let distance_to_cluster = (point - cluster).length;
+    let distance_to_classifier = (point - classifier).mag;
+    let distance_to_cluster = (point - cluster).mag;
 
     // classify based on closest center
     let classification = if distance_to_classifier < distance_to_cluster {
@@ -847,17 +846,17 @@ fn it_rejects_learning_paradigms() {
 
     // prove updates move toward the point
     assert!(
-        (supervised_update - point).length < (classifier - point).length,
+        (supervised_update - point).mag < (classifier - point).mag,
         "supervised update moves toward point"
     );
 
     assert!(
-        (unsupervised_update - point).length < (cluster - point).length,
+        (unsupervised_update - point).mag < (cluster - point).mag,
         "unsupervised update moves toward point"
     );
 
     assert!(
-        (reinforcement_update - point).length < (state_value - point).length,
+        (reinforcement_update - point).mag < (state_value - point).mag,
         "reinforcement update moves toward point"
     );
 
@@ -893,7 +892,7 @@ fn it_unifies_learning_theory() {
 
     let diversity = hypotheses
         .iter()
-        .map(|h| (*h - mean).length.powi(2))
+        .map(|h| (*h - mean).mag.powi(2))
         .sum::<f64>();
 
     // 2. prove regularization as angle concentration operations
@@ -916,7 +915,7 @@ fn it_unifies_learning_theory() {
 
     let reg_diversity = regularized
         .iter()
-        .map(|h| (*h - reg_mean).length.powi(2))
+        .map(|h| (*h - reg_mean).mag.powi(2))
         .sum::<f64>();
 
     // regularization should reduce diversity
@@ -942,7 +941,7 @@ fn it_unifies_learning_theory() {
             let error = data_points
                 .iter()
                 .map(|(point, label)| {
-                    let distance = (*h - *point).length;
+                    let distance = (*h - *point).mag;
                     // use distance threshold for classification
                     let prediction = if distance < 1.0 { 1 } else { -1 };
                     if prediction != *label {
@@ -973,7 +972,7 @@ fn it_unifies_learning_theory() {
     let predictions: Vec<i32> = test_points
         .iter()
         .map(|point| {
-            let distance = (*best_hypothesis - *point).length;
+            let distance = (*best_hypothesis - *point).mag;
             if distance < 1.0 {
                 1
             } else {
@@ -1009,14 +1008,14 @@ fn it_scales_quantum_learning() {
                     if g.angle.is_scalar() {
                         // |0⟩ → (|0⟩ + |1⟩)/√2
                         vec![
-                            Geonum::new(g.length / 2.0_f64.sqrt(), 0.0, 1.0),
-                            Geonum::new(g.length / 2.0_f64.sqrt(), 1.0, 2.0), // π/2
+                            Geonum::new(g.mag / 2.0_f64.sqrt(), 0.0, 1.0),
+                            Geonum::new(g.mag / 2.0_f64.sqrt(), 1.0, 2.0), // π/2
                         ]
                     } else {
                         // |1⟩ → (|0⟩ - |1⟩)/√2
                         vec![
-                            Geonum::new(g.length / 2.0_f64.sqrt(), 0.0, 1.0),
-                            Geonum::new(g.length / 2.0_f64.sqrt(), 3.0, 2.0), // 3π/2
+                            Geonum::new(g.mag / 2.0_f64.sqrt(), 0.0, 1.0),
+                            Geonum::new(g.mag / 2.0_f64.sqrt(), 3.0, 2.0), // 3π/2
                         ]
                     }
                 })
@@ -1034,8 +1033,7 @@ fn it_scales_quantum_learning() {
         let max_overlap = state
             .iter()
             .map(|g| {
-                let dot_product =
-                    g.length * point.length * (g.angle - point.angle).grade_angle().cos();
+                let dot_product = g.mag * point.mag * (g.angle - point.angle).grade_angle().cos();
                 (g, dot_product)
             })
             .max_by(|(_, d1), (_, d2)| d1.partial_cmp(d2).unwrap())

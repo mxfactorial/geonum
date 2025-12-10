@@ -94,7 +94,7 @@ fn its_a_forward_kinematics_chain() {
     // verify the robot arm extends within physical limits
     let max_reach = link1_length + link2_length + link3_length;
     assert!(
-        end_effector.length <= max_reach,
+        end_effector.mag <= max_reach,
         "end effector within max reach"
     );
 
@@ -163,7 +163,7 @@ fn its_an_inverse_kinematics_solver() {
 
     // test we reached the target
     let error = target.distance_to(&computed_position);
-    assert!(error.length < 1e-9, "IK solution reaches target");
+    assert!(error.mag < 1e-9, "IK solution reaches target");
 
     // traditional IK: jacobian iterations O(n³) per step, multiple steps to converge
     // geonum: direct geometric solution O(1), no iterations needed
@@ -216,10 +216,7 @@ fn its_a_redundant_manipulator() {
         4,
         "bent config accumulates 4 blades (2π)"
     );
-    assert!(
-        cumulative3.value() < 1e-10,
-        "bent config returns to 0 value"
-    );
+    assert!(cumulative3.rem() < 1e-10, "bent config returns to 0 value");
     assert!(cumulative3.grade_angle().cos() > 0.999, "cos(2π) = 1");
     assert!(cumulative3.grade_angle().sin().abs() < 1e-10, "sin(2π) = 0");
 
@@ -227,15 +224,12 @@ fn its_a_redundant_manipulator() {
     let error_straight = target.distance_to(&end_straight);
 
     // straight config reaches 5 units, target at 4, so error is 1
-    assert_eq!(end_straight.length, 5.0, "straight config reaches 5 units");
-    assert_eq!(
-        error_straight.length, 1.0,
-        "straight config overshoots by 1"
-    );
+    assert_eq!(end_straight.mag, 5.0, "straight config reaches 5 units");
+    assert_eq!(error_straight.mag, 1.0, "straight config overshoots by 1");
 
     // bent config reaches different position
-    let bent_x = end_bent.adj().length;
-    let bent_y = end_bent.opp().length;
+    let bent_x = end_bent.adj().mag;
+    let bent_y = end_bent.opp().mag;
     assert!((bent_x - 4.464).abs() < 0.001, "bent config x position");
     assert!(bent_y.abs() < 0.001, "bent config y position (horizontal)");
 
@@ -253,9 +247,9 @@ fn its_a_redundant_manipulator() {
 
     let error_exact = target.distance_to(&end_exact);
     assert!(
-        error_exact.length < 1e-9,
+        error_exact.mag < 1e-9,
         "exact bent config reaches target: {}",
-        error_exact.length
+        error_exact.mag
     );
 
     // nilpotency constraint: prefer solution with minimal joint motion
@@ -269,19 +263,16 @@ fn its_a_redundant_manipulator() {
         0,
         "straight has no blade accumulation"
     );
-    assert!(
-        motion_straight.value() < 1e-10,
-        "straight has zero rotation"
-    );
+    assert!(motion_straight.rem() < 1e-10, "straight has zero rotation");
 
     // bent config accumulates to full rotation
     assert_eq!(motion_bent.blade(), 4, "bent accumulates 2π rotation");
-    assert!(motion_bent.value() < 1e-10, "bent returns to 0 value");
+    assert!(motion_bent.rem() < 1e-10, "bent returns to 0 value");
 
     // verify nilpotency for joint velocities
     let velocity = Geonum::new_with_angle(1.0, motion_straight);
     let wedge = velocity.wedge(&velocity);
-    assert!(wedge.length < 1e-10, "v∧v = 0 confirms nilpotency");
+    assert!(wedge.mag < 1e-10, "v∧v = 0 confirms nilpotency");
 
     // traditional: compute null space via SVD, project secondary objectives
     // geonum: nilpotency naturally encodes motion minimization
@@ -316,7 +307,7 @@ fn it_computes_workspace_analytically() {
 
         // verify max > min
         assert!(
-            max_point.length > min_point.length,
+            max_point.mag > min_point.mag,
             "extended > retracted at angle {:?}",
             angle
         );
@@ -327,7 +318,7 @@ fn it_computes_workspace_analytically() {
 
         // verify ordering: min < perp < max
         assert!(
-            min_point.length < perp_point.length && perp_point.length < max_point.length,
+            min_point.mag < perp_point.mag && perp_point.mag < max_point.mag,
             "workspace ordering at angle {:?}",
             angle
         );
@@ -338,9 +329,9 @@ fn it_computes_workspace_analytically() {
         let wedge_perp = link1_rotated.wedge(&link2_perp);
 
         // aligned/opposed = singular (zero wedge), perpendicular = regular (non-zero wedge)
-        assert!(wedge_aligned.length < 1e-9, "aligned singular");
-        assert!(wedge_opposed.length < 1e-9, "opposed singular");
-        assert!(wedge_perp.length > 1.0, "perpendicular non-singular");
+        assert!(wedge_aligned.mag < 1e-9, "aligned singular");
+        assert!(wedge_opposed.mag < 1e-9, "opposed singular");
+        assert!(wedge_perp.mag > 1.0, "perpendicular non-singular");
     }
 
     // verify pythagorean theorem for perpendicular configuration
@@ -348,7 +339,7 @@ fn it_computes_workspace_analytically() {
     let link2_y = link2.rotate(Angle::new(1.0, 2.0)); // 90°
     let diagonal = link1_x + link2_y;
     let expected_length_sq = 9.0 + 4.0; // 3² + 2²
-    let actual_length_sq = diagonal.length * diagonal.length;
+    let actual_length_sq = diagonal.mag * diagonal.mag;
     assert!(
         (actual_length_sq - expected_length_sq).abs() < 1e-9,
         "perpendicular reach follows pythagorean theorem"
@@ -390,17 +381,14 @@ fn it_detects_singularities_geometrically() {
 
     // wedge product detects alignment singularity
     let wedge_extended = link1_rotated.wedge(&link2_aligned);
-    assert!(
-        wedge_extended.length < 1e-10,
-        "extended singularity: v∧v ≈ 0"
-    );
+    assert!(wedge_extended.mag < 1e-10, "extended singularity: v∧v ≈ 0");
 
     // test 2: fully folded singularity (link2 folds back on link1)
     let joint2_folded = Angle::new(1.0, 1.0); // π (folds back)
     let link2_folded = link2.rotate(joint1_extended + joint2_folded);
 
     let wedge_folded = link1_rotated.wedge(&link2_folded);
-    assert!(wedge_folded.length < 1e-10, "folded singularity: v∧v ≈ 0");
+    assert!(wedge_folded.mag < 1e-10, "folded singularity: v∧v ≈ 0");
 
     // test 3: elbow singularity in 3-link arm
 
@@ -417,12 +405,12 @@ fn it_detects_singularities_geometrically() {
 
     // test that cumulative angles result in straight line
     assert_eq!(cumulative2.blade(), 4, "π/3 + (-π/3) produces blade 4");
-    assert!(cumulative2.value() < 1e-10, "angles cancel to zero value");
+    assert!(cumulative2.rem() < 1e-10, "angles cancel to zero value");
     assert_eq!(cumulative2.grade(), 0, "grade 0 (straight line)");
 
     // test that link3 maintains straight line
     assert_eq!(cumulative3.blade(), 4, "maintains blade 4");
-    assert!(cumulative3.value() < 1e-10, "maintains zero value");
+    assert!(cumulative3.rem() < 1e-10, "maintains zero value");
 
     // test nilpotency at elbow singularity
     let velocity1 = pos1.differentiate(); // blade 0 → blade 1
@@ -432,21 +420,21 @@ fn it_detects_singularities_geometrically() {
     // at singularity, velocities become linearly dependent
     let wedge_velocities = velocity1.wedge(&velocity2);
     assert!(
-        wedge_velocities.length < 10.0,
+        wedge_velocities.mag < 10.0,
         "elbow singularity detected via wedge"
     );
 
     // check velocity 2 and 3 alignment
     let wedge_v2_v3 = velocity2.wedge(&velocity3);
     assert!(
-        wedge_v2_v3.length < 1e-10,
+        wedge_v2_v3.mag < 1e-10,
         "velocities 2 and 3 aligned at singularity"
     );
 
     // check link2 and link3 alignment
     let wedge_2_3 = link2_elbow.wedge(&link3_final);
     assert!(
-        wedge_2_3.length < 1e-10,
+        wedge_2_3.mag < 1e-10,
         "links 2 and 3 aligned at elbow singularity"
     );
 
@@ -470,14 +458,14 @@ fn it_detects_singularities_geometrically() {
     let joint3 = Geonum::new_with_angle(1.3, joint_angles[3]);
     let joint4 = Geonum::new_with_angle(1.4, joint_angles[4]);
     let wedge_3_4 = joint3.wedge(&joint4);
-    assert!(wedge_3_4.length > 0.1, "joints 3-4 not aligned");
+    assert!(wedge_3_4.mag > 0.1, "joints 3-4 not aligned");
 
     // workspace boundary check for 2-link subset (O(1))
     let l1 = 1.0;
     let l2 = 1.1;
     let subset_reach = l1 + l2;
     let subset_pos = Geonum::new(1.5, 0.0, 1.0);
-    let at_boundary = (subset_pos.length - subset_reach).abs() < 1e-10;
+    let at_boundary = (subset_pos.mag - subset_reach).abs() < 1e-10;
     assert!(!at_boundary, "subset not at boundary");
 
     // test 5: wrist singularity (gimbal lock)
@@ -488,7 +476,7 @@ fn it_detects_singularities_geometrically() {
     // test that perpendicular axes don't cause gimbal lock
     let perpendicular_wedge = axis1.wedge(&axis2);
     assert!(
-        perpendicular_wedge.length > 0.5,
+        perpendicular_wedge.mag > 0.5,
         "perpendicular axes not singular"
     );
 
@@ -497,14 +485,14 @@ fn it_detects_singularities_geometrically() {
     // when axis1 and axis3 align, we lose a degree of freedom
     let gimbal_wedge = axis1.wedge(&axis3);
     assert!(
-        gimbal_wedge.length < 1e-10,
+        gimbal_wedge.mag < 1e-10,
         "gimbal lock detected: axes aligned"
     );
 
     // non-singular wrist configuration
     let axis3_offset = Geonum::new(1.0, 1.0, 3.0); // offset from x-axis
     let no_gimbal = axis1.wedge(&axis3_offset);
-    assert!(no_gimbal.length > 0.5, "no gimbal lock: axes not aligned");
+    assert!(no_gimbal.mag > 0.5, "no gimbal lock: axes not aligned");
 
     // performance comparison:
     // traditional: build J matrix O(n²), compute det(J) O(n³)
@@ -538,7 +526,7 @@ fn it_optimizes_trajectories_with_nilpotency() {
     // for constant velocity, acceleration is zero
     let zero_accel = Geonum::scalar(0.0);
     assert_eq!(
-        zero_accel.length, 0.0,
+        zero_accel.mag, 0.0,
         "zero acceleration for constant velocity"
     );
 
@@ -552,13 +540,13 @@ fn it_optimizes_trajectories_with_nilpotency() {
     }
 
     // test we reached goal
-    let final_error = (trajectory[n_steps] - goal).length;
+    let final_error = (trajectory[n_steps] - goal).mag;
     assert!(final_error < 1e-10, "reached goal");
 
     // test nilpotency for straight-line motion
     // v∧v = 0 because velocity is constant (parallel to itself)
     let wedge = velocity.wedge(&velocity);
-    assert!(wedge.length < 1e-10, "v∧v = 0 for straight line");
+    assert!(wedge.mag < 1e-10, "v∧v = 0 for straight line");
 
     // now test non-constant velocity (parabolic trajectory)
     let mut parabolic = vec![start];
@@ -626,9 +614,9 @@ fn it_controls_high_dof_systems() {
     }
 
     // test that we computed a valid position
-    assert!(end_effector.length > 0.0, "end effector has non-zero reach");
+    assert!(end_effector.mag > 0.0, "end effector has non-zero reach");
     assert!(
-        end_effector.length <= n_joints as f64 * link_length,
+        end_effector.mag <= n_joints as f64 * link_length,
         "within max reach"
     );
 
@@ -663,8 +651,8 @@ fn it_controls_high_dof_systems() {
     }
 
     // test that control moved toward target
-    let new_error = (target - new_end_effector).length;
-    let old_error = error.length;
+    let new_error = (target - new_end_effector).mag;
+    let old_error = error.mag;
     assert!(
         (new_error - old_error).abs() > 1e-10,
         "control changes error magnitude"
@@ -751,11 +739,11 @@ fn it_coordinates_robot_swarms() {
         for j in 0..n_robots {
             if i != j {
                 let separation = swarm[i].distance_to(&swarm[j]);
-                if separation.length < safety_radius * 3.0 {
+                if separation.mag < safety_radius * 3.0 {
                     // compute repulsion force
                     let away = swarm[i] - swarm[j];
-                    if separation.length > 1e-10 {
-                        repulsion = repulsion + away.scale(1.0 / separation.length);
+                    if separation.mag > 1e-10 {
+                        repulsion = repulsion + away.scale(1.0 / separation.mag);
                     }
                 }
             }
@@ -774,7 +762,7 @@ fn it_coordinates_robot_swarms() {
     // test that robots moved toward goals
     let mut total_error = 0.0;
     for i in 0..n_robots {
-        let error = (goals[i] - swarm[i]).length;
+        let error = (goals[i] - swarm[i]).mag;
         total_error += error;
     }
     let avg_error = total_error / n_robots as f64;
@@ -852,7 +840,7 @@ fn it_computes_dynamics_without_recursion() {
     // test that we computed valid accelerations
     assert_eq!(accelerations.len(), n_links, "acceleration for each link");
     for accel in &accelerations {
-        assert!(accel.length.is_finite(), "finite acceleration");
+        assert!(accel.mag.is_finite(), "finite acceleration");
     }
 
     // no recursive force propagation needed
@@ -882,7 +870,7 @@ fn it_plans_in_million_dimensions() {
     let path_vector = goal - current;
 
     // path properties in million-D configuration space
-    assert!(path_vector.length > 150.0, "significant path distance");
+    assert!(path_vector.mag > 150.0, "significant path distance");
     assert_eq!(path_vector.angle.grade(), 1, "path vector at grade 1");
 
     // sample specific dimensions on demand
@@ -900,10 +888,7 @@ fn it_plans_in_million_dimensions() {
 
     // distance in configuration space
     let clearance = current.distance_to(&obstacle);
-    assert!(
-        clearance.length > 0.0,
-        "distance computed in million-D space"
-    );
+    assert!(clearance.mag > 0.0, "distance computed in million-D space");
 
     // traditional planning: impossible (would need 10^300000 bytes)
     // geonum: O(1) operations regardless of dimensionality
@@ -920,10 +905,10 @@ fn it_plans_in_million_dimensions() {
 
         // find nearest in tree (no kd-tree needed)
         let mut nearest = tree[0];
-        let mut min_dist = sample.distance_to(&tree[0]).length;
+        let mut min_dist = sample.distance_to(&tree[0]).mag;
 
         for node in &tree {
-            let dist = sample.distance_to(node).length;
+            let dist = sample.distance_to(node).mag;
             if dist < min_dist {
                 min_dist = dist;
                 nearest = *node;
@@ -997,7 +982,7 @@ fn its_a_manipulator_jacobian() {
     // verify velocity computation produces expected result
     // with these specific joint velocities and angles, we expect:
     assert!(
-        total_velocity.length > 1.0 && total_velocity.length < 2.0,
+        total_velocity.mag > 1.0 && total_velocity.mag < 2.0,
         "velocity magnitude in expected range"
     );
     assert_eq!(
@@ -1064,7 +1049,7 @@ fn it_detects_robot_collisions() {
     // simplified check: distance between midpoints
     let link1_mid = link1_start + link1_vec.scale(0.5);
     let link3_mid = link3_start + link3_vec.scale(0.5);
-    let mid_distance = link1_mid.distance_to(&link3_mid).length;
+    let mid_distance = link1_mid.distance_to(&link3_mid).mag;
 
     let collision_threshold = link_radii[0] + link_radii[2];
     let self_collision = mid_distance < collision_threshold;
@@ -1091,7 +1076,7 @@ fn it_detects_robot_collisions() {
         for (obstacle_pos, obstacle_radius) in &obstacles {
             collision_checks += 1;
 
-            let distance = link_mid.distance_to(obstacle_pos).length;
+            let distance = link_mid.distance_to(obstacle_pos).mag;
             let clearance_needed = link_radii[i] + obstacle_radius;
 
             if distance < clearance_needed {
@@ -1113,12 +1098,12 @@ fn it_detects_robot_collisions() {
     for (obstacle_pos, obstacle_radius) in &obstacles {
         // project obstacle onto motion path
         let to_obstacle = *obstacle_pos - start_pos;
-        let t = to_obstacle.dot(&motion_vec).length / (motion_vec.length * motion_vec.length);
+        let t = to_obstacle.dot(&motion_vec).mag / (motion_vec.mag * motion_vec.mag);
 
         if (0.0..=1.0).contains(&t) {
             // obstacle projects onto path segment
             let closest = start_pos + motion_vec.scale(t);
-            let clearance = closest.distance_to(obstacle_pos).length;
+            let clearance = closest.distance_to(obstacle_pos).mag;
 
             if clearance < obstacle_radius + 0.1 {
                 // 0.1 = end-effector radius
@@ -1193,7 +1178,7 @@ fn it_handles_redundant_manipulators() {
 
         // remainder from link1 end to target
         let remainder = target - link1;
-        let r = remainder.length();
+        let r = remainder.mag();
 
         // check if links 2&3 can form triangle with remainder
         if r <= l2 + l3 && r >= (l2 - l3).abs() {
@@ -1216,8 +1201,7 @@ fn it_handles_redundant_manipulators() {
                     let link2_vec = link2_end - link1;
                     let link3_vec = target - link2_end;
 
-                    if (link2_vec.length() - l2).abs() < 0.001
-                        && (link3_vec.length() - l3).abs() < 0.001
+                    if (link2_vec.mag() - l2).abs() < 0.001 && (link3_vec.mag() - l3).abs() < 0.001
                     {
                         // create edge collection representing the kinematic chain
                         let edges = GeoCollection::from(vec![
@@ -1232,9 +1216,9 @@ fn it_handles_redundant_manipulators() {
 
                         // verify end position
                         let end_pos = link1 + link2_vec + link3_vec;
-                        let error = end_pos.distance_to(&target).length();
+                        let error = end_pos.distance_to(&target).mag();
 
-                        if error < 0.001 && sum.length() < 0.001 {
+                        if error < 0.001 && sum.mag() < 0.001 {
                             solutions.push((
                                 theta1,
                                 link2_vec.angle(),
@@ -1257,14 +1241,14 @@ fn it_handles_redundant_manipulators() {
     // show variety in joint angles reaching same target
     let mut angle_variety = 0.0;
     for i in 1..solutions.len() {
-        let theta1_diff = (solutions[i].0.value() - solutions[0].0.value()).abs();
+        let theta1_diff = (solutions[i].0.rem() - solutions[0].0.rem()).abs();
         angle_variety += theta1_diff;
     }
     assert!(angle_variety > 0.5, "significant variation in joint angles");
 
     // demonstrate null space concept
     // different first joint angles (parameterization) reach same target
-    let first_angles: Vec<f64> = solutions.iter().map(|s| s.0.value()).collect();
+    let first_angles: Vec<f64> = solutions.iter().map(|s| s.0.rem()).collect();
     let min_angle = first_angles.iter().fold(f64::INFINITY, |a, &b| a.min(b));
     let max_angle = first_angles
         .iter()
@@ -1345,7 +1329,7 @@ fn it_handles_contact_dynamics() {
     println!("\nno-slip via nilpotency:");
     println!(
         "  v ∧ v = {:.12} (zero for single direction)",
-        slip_test.length
+        slip_test.mag
     );
 
     // torque via wedge (adds blade)
@@ -1364,7 +1348,7 @@ fn it_handles_contact_dynamics() {
         tau2.angle.blade(),
         tau2.angle.grade()
     );
-    println!("  net torque: {:.9} Nm", net_torque.length);
+    println!("  net torque: {:.9} Nm", net_torque.mag);
 
     // work = F·d (perpendicular gives zero)
     let displacement = Geonum::new_with_blade(0.01, 0, 3.0, 2.0); // 1cm down
@@ -1374,9 +1358,9 @@ fn it_handles_contact_dynamics() {
     println!("\nwork:");
     println!(
         "  grip force · displacement: {:.9} J (perpendicular)",
-        work1.length
+        work1.mag
     );
-    println!("  weight · displacement: {:.3} J (parallel)", work2.length);
+    println!("  weight · displacement: {:.3} J (parallel)", work2.mag);
 
     // energy at blade 0
     let kinetic = velocity.dot(&velocity).scale(0.5 * mass);
@@ -1386,12 +1370,12 @@ fn it_handles_contact_dynamics() {
     println!(
         "  KE grade: {}, value: {:.6} J",
         kinetic.angle.grade(),
-        kinetic.length
+        kinetic.mag
     );
     println!(
         "  PE grade: {}, value: {:.3} J",
         potential.angle.grade(),
-        potential.length
+        potential.mag
     );
 
     // friction without LCP solver
@@ -1401,18 +1385,18 @@ fn it_handles_contact_dynamics() {
     let max_static_friction = grip_force * mu_static * 2.0; // both fingers
 
     // check if object slips
-    let will_slip = weight.length > max_static_friction;
+    let will_slip = weight.mag > max_static_friction;
     println!(
         "  weight: {:.2} N vs max friction: {:.2} N",
-        weight.length, max_static_friction
+        weight.mag, max_static_friction
     );
     println!("  object slips: {}", will_slip);
 
     if !will_slip {
         // static friction exactly balances weight
-        let friction = Geonum::new_with_blade(weight.length, 2, 1.0, 2.0); // upward at blade 2
+        let friction = Geonum::new_with_blade(weight.mag, 2, 1.0, 2.0); // upward at blade 2
         let balance = friction - weight;
-        println!("  static friction balances: {:.9} N", balance.length);
+        println!("  static friction balances: {:.9} N", balance.mag);
 
         // verify friction parallel to velocity (both vertical)
         let friction_dir = Geonum::new_with_blade(1.0, 1, 1.0, 2.0); // upward direction
@@ -1420,7 +1404,7 @@ fn it_handles_contact_dynamics() {
         let parallel_test = friction_dir.wedge(&velocity_dir);
         println!(
             "  friction ∧ velocity directions: {:.9} (parallel)",
-            parallel_test.length
+            parallel_test.mag
         );
     }
 
@@ -1449,14 +1433,14 @@ fn it_handles_contact_dynamics() {
         // torque
         let torque = pos.wedge(&force);
 
-        println!("  finger {}: torque = {:.9} Nm", i + 1, torque.length);
+        println!("  finger {}: torque = {:.9} Nm", i + 1, torque.mag);
 
         net_force = net_force + force;
         net_torque_3 = net_torque_3 + torque;
     }
 
-    println!("  net force: {:.9} N (balanced)", net_force.length);
-    println!("  net torque: {:.9} Nm (balanced)", net_torque_3.length);
+    println!("  net force: {:.9} N (balanced)", net_force.mag);
+    println!("  net torque: {:.9} Nm (balanced)", net_torque_3.mag);
 
     // constraints without lagrange multipliers
     println!("\n=== nilpotency replaces lagrange multipliers ===");
@@ -1473,12 +1457,9 @@ fn it_handles_contact_dynamics() {
 
     println!(
         "  momentum conservation (p ∧ p): {:.12}",
-        momentum_conserved.length
+        momentum_conserved.mag
     );
-    println!(
-        "  angular momentum (L ∧ L): {:.12}",
-        angular_conserved.length
-    );
+    println!("  angular momentum (L ∧ L): {:.12}", angular_conserved.mag);
 
     // contact manifold without jacobian
     println!("\n=== contact manifold navigation ===");
@@ -1491,7 +1472,7 @@ fn it_handles_contact_dynamics() {
 
     // verify perpendicular
     let check = tangent.dot(&normal);
-    println!("  tangent · normal: {:.12} (perpendicular)", check.length);
+    println!("  tangent · normal: {:.12} (perpendicular)", check.mag);
 
     // rolling constraint
     println!("\n=== rolling without slipping ===");
@@ -1514,20 +1495,20 @@ fn it_handles_contact_dynamics() {
     );
     println!(
         "  angular L: {:.3} kg·m²/s at blade {}",
-        ang_mom.length,
+        ang_mom.mag,
         ang_mom.angle.blade()
     );
 
     // verify no-slip: contact point velocity = wheel_center - ωr
     let v_contact = wheel_v - wheel_v; // v - v = 0
-    assert!(v_contact.length < 1e-10, "contact point has zero velocity");
+    assert!(v_contact.mag < 1e-10, "contact point has zero velocity");
 
     let v_top = wheel_v.scale(2.0); // top of wheel moves at 2v
     let v_center = wheel_v; // center moves at v
 
     println!(
         "  velocities: bottom={:.2}, center={:.2}, top={:.2}",
-        v_contact.length, v_center.length, v_top.length
+        v_contact.mag, v_center.mag, v_top.mag
     );
 
     // power and energy relationships
@@ -1538,13 +1519,13 @@ fn it_handles_contact_dynamics() {
     let object_v = Geonum::new_with_blade(0.5, 1, 0.0, 1.0); // 0.5 m/s forward
 
     let power = applied_force.dot(&object_v);
-    println!("  P = F·v = {:.2} W", power.length);
+    println!("  P = F·v = {:.2} W", power.mag);
 
     // rotational kinetic energy
     let ke_rot = Geonum::scalar(0.5 * inertia * omega * omega);
     println!(
         "  rotational KE: {:.4} J at grade {}",
-        ke_rot.length,
+        ke_rot.mag,
         ke_rot.angle.grade()
     );
 

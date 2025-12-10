@@ -17,13 +17,13 @@ fn its_a_ray() {
     let ray = Geonum::new(1.0, 1.0, 4.0); // π/4 propagation direction
 
     // intensity encoded in length, direction in angle
-    assert_eq!(ray.length, 1.0); // unit intensity
-    assert_eq!(ray.angle.value(), PI / 4.0); // 45° propagation
+    assert_eq!(ray.mag, 1.0); // unit intensity
+    assert_eq!(ray.angle.rem(), PI / 4.0); // 45° propagation
 
     // ray propagation: just scale by distance
     let distance = 100.0;
     let propagated = ray.scale(distance); // intensity × distance
-    assert_eq!(propagated.length, distance);
+    assert_eq!(propagated.mag, distance);
     assert_eq!(propagated.angle, ray.angle); // direction unchanged
 
     // traditional: parametric equation R(100) = P₀ + 100*d
@@ -48,7 +48,7 @@ fn its_a_lens() {
     let focused_ray = incident_ray.rotate(lens_transform);
 
     // verify lens operation
-    assert_eq!(focused_ray.length, incident_ray.length); // intensity preserved
+    assert_eq!(focused_ray.mag, incident_ray.mag); // intensity preserved
     assert_ne!(focused_ray.angle, incident_ray.angle); // angle changed by lens
 
     // traditional: matrix multiplication [A B; C D][y; θ] = [y'; θ']
@@ -75,17 +75,17 @@ fn its_a_wavefront() {
 
     // constructive interference: waves add geometrically
     let interference = wave1 + wave2;
-    let expected_constructive = (wave1.length.powi(2)
-        + wave2.length.powi(2)
-        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).grade_angle().cos())
+    let expected_constructive = (wave1.mag.powi(2)
+        + wave2.mag.powi(2)
+        + 2.0 * wave1.mag * wave2.mag * (wave2.angle - wave1.angle).grade_angle().cos())
     .sqrt();
-    let constructive_diff = (interference.length - expected_constructive).abs();
+    let constructive_diff = (interference.mag - expected_constructive).abs();
     assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
 
     // destructive interference: opposite phases
     let wave1_opposite = wave1.negate(); // flip phase by π
     let destructive = wave1 + wave1_opposite;
-    assert!(destructive.length < EPSILON); // complete cancellation
+    assert!(destructive.mag < EPSILON); // complete cancellation
 
     // wave superposition principle: three wave combination
     let wave3 = Geonum::new(0.8, 1.0, 6.0); // amplitude=0.8, phase=π/6
@@ -97,8 +97,8 @@ fn its_a_wavefront() {
     assert_eq!(phase_diff_12, expected_phase_diff);
 
     // superposition amplitude from phasor addition
-    let total_amplitude = superposition.length;
-    assert!(total_amplitude > wave1.length); // coherent addition increases amplitude
+    let total_amplitude = superposition.mag;
+    assert!(total_amplitude > wave1.mag); // coherent addition increases amplitude
 
     // traditional: trigonometric phase calculations + interference integrals
     // geonum: wave addition through geometric arithmetic - cosine terms emerge automatically
@@ -117,7 +117,7 @@ fn its_a_polarizer() {
     // Malus law through angle difference: I = I₀cos²(θ₁-θ₂)
     let angle_diff = incident.angle - polarizer.angle; // π/6 - π/4 = -π/12
     let cos_squared = angle_diff.grade_angle().cos().powi(2);
-    let expected_intensity = incident.length * cos_squared;
+    let expected_intensity = incident.mag * cos_squared;
 
     // cross-polarizer test: 90° difference gives zero transmission
     let cross_polarizer = incident.rotate(Angle::new(1.0, 2.0)); // +π/2 rotation
@@ -131,7 +131,7 @@ fn its_a_polarizer() {
     assert_eq!(parallel_transmission, 1.0); // cos²(0) = 1
 
     // verify expected intensity calculation
-    assert!((expected_intensity - incident.length * cos_squared).abs() < EPSILON);
+    assert!((expected_intensity - incident.mag * cos_squared).abs() < EPSILON);
 
     // traditional: matrix multiplication for every polarization state
     // geonum: cos²(angle_difference) gives Malus law directly
@@ -149,17 +149,17 @@ fn it_demonstrates_wave_interference_without_trigonometry() {
 
     // constructive interference: waves add geometrically
     let interference = wave1 + wave2;
-    let expected_constructive = (wave1.length.powi(2)
-        + wave2.length.powi(2)
-        + 2.0 * wave1.length * wave2.length * (wave2.angle - wave1.angle).grade_angle().cos())
+    let expected_constructive = (wave1.mag.powi(2)
+        + wave2.mag.powi(2)
+        + 2.0 * wave1.mag * wave2.mag * (wave2.angle - wave1.angle).grade_angle().cos())
     .sqrt();
-    let constructive_diff = (interference.length - expected_constructive).abs();
+    let constructive_diff = (interference.mag - expected_constructive).abs();
     assert!(constructive_diff < EPSILON); // interference follows I = √(A₁² + A₂² + 2A₁A₂cos(φ₁-φ₂))
 
     // destructive interference: opposite phases
     let wave1_opposite = wave1.negate(); // flip phase by π
     let destructive = wave1 + wave1_opposite;
-    assert!(destructive.length < EPSILON); // complete cancellation
+    assert!(destructive.mag < EPSILON); // complete cancellation
 
     // wave superposition principle: three wave combination
     let wave3 = Geonum::new(0.8, 1.0, 6.0); // amplitude=0.8, phase=π/6
@@ -171,8 +171,8 @@ fn it_demonstrates_wave_interference_without_trigonometry() {
     assert_eq!(phase_diff_12, expected_phase_diff);
 
     // superposition amplitude from phasor addition
-    let total_amplitude = superposition.length;
-    assert!(total_amplitude > wave1.length); // coherent addition increases amplitude
+    let total_amplitude = superposition.mag;
+    assert!(total_amplitude > wave1.mag); // coherent addition increases amplitude
 
     // traditional: trigonometric phase calculations + interference integrals
     // geonum: wave addition through geometric arithmetic - cosine terms emerge automatically
@@ -195,7 +195,7 @@ fn its_a_diffraction_grating() {
 
     // diffraction through grating-light interaction
     let diffraction_order = grating * incident_angle;
-    assert!((diffraction_order.length - 6283185.307180).abs() < 1e-6);
+    assert!((diffraction_order.mag - 6283185.307180).abs() < 1e-6);
     assert_eq!(diffraction_order.angle.grade(), 0);
 
     // diffraction orders: traditional requires solving mλ/d for each m
@@ -214,7 +214,7 @@ fn its_a_diffraction_grating() {
     // verify orders have different angles (except zeroth order)
     for m in 1..5 {
         assert_ne!(orders[m].angle, orders[0].angle); // each order at different angle
-        assert_eq!(orders[m].length, orders[0].length); // equal intensity (simplified)
+        assert_eq!(orders[m].mag, orders[0].mag); // equal intensity (simplified)
     }
 
     // grating efficiency: blazed grating maximizes specific order
@@ -222,7 +222,7 @@ fn its_a_diffraction_grating() {
     let blazed_first_order = orders[1].rotate(blaze_angle.angle);
 
     // blazing concentrates power into designed order
-    let blaze_efficiency = blazed_first_order.length / incident_angle.length;
+    let blaze_efficiency = blazed_first_order.mag / incident_angle.mag;
     assert!(blaze_efficiency > 0.5); // blazed grating improves efficiency
 
     // angular dispersion: different wavelengths diffract at different angles
@@ -234,7 +234,7 @@ fn its_a_diffraction_grating() {
     let green_factor = 1.0 * wavelength * grating_strength / (2.0 * PI);
     let green_first_order = incident_angle.rotate(Angle::new(green_factor, 1.0));
 
-    assert!(red_first_order.angle.value() > green_first_order.angle.value()); // red > green angle
+    assert!(red_first_order.angle.rem() > green_first_order.angle.rem()); // red > green angle
 
     // traditional: trigonometric solutions for each wavelength and order
     // geonum: wavelength scaling in angle multiplication gives dispersion automatically
@@ -252,11 +252,11 @@ fn its_an_interferometer() {
     let interference = beam1 + beam2; // direct addition gives interference
 
     // verify interference formula emerges from geometric addition
-    let traditional_intensity = (beam1.length.powi(2)
-        + beam2.length.powi(2)
-        + 2.0 * beam1.length * beam2.length * (beam1.angle - beam2.angle).grade_angle().cos())
+    let traditional_intensity = (beam1.mag.powi(2)
+        + beam2.mag.powi(2)
+        + 2.0 * beam1.mag * beam2.mag * (beam1.angle - beam2.angle).grade_angle().cos())
     .sqrt();
-    let intensity_diff = (interference.length - traditional_intensity).abs();
+    let intensity_diff = (interference.mag - traditional_intensity).abs();
     assert!(intensity_diff < EPSILON); // cosine terms emerge from angle arithmetic
 
     // Michelson interferometer: path difference creates phase shift
@@ -268,8 +268,8 @@ fn its_an_interferometer() {
     let michelson_pattern = beam1 + beam_delayed;
 
     // 2π phase shift produces destructive interference in geonum addition operation
-    assert!(michelson_pattern.length < EPSILON); // complete destructive interference
-                                                 // rotation by 2π followed by addition gives zero: beam + rotated_beam = 0
+    assert!(michelson_pattern.mag < EPSILON); // complete destructive interference
+                                              // rotation by 2π followed by addition gives zero: beam + rotated_beam = 0
 
     // Mach-Zehnder: two paths with different phase shifts
     let path1_shift = PI / 6.0; // π/6 phase shift in arm 1
@@ -280,24 +280,23 @@ fn its_an_interferometer() {
     let mach_zehnder = arm1 + arm2;
 
     // verify Mach-Zehnder produces partial interference between arms
-    assert!(mach_zehnder.length > 0.0); // non-zero interference
-    assert!(mach_zehnder.length < 2.0 * beam1.length); // partial, not full constructive
+    assert!(mach_zehnder.mag > 0.0); // non-zero interference
+    assert!(mach_zehnder.mag < 2.0 * beam1.mag); // partial, not full constructive
 
     // demonstrate opposite case: π phase difference gives destructive interference
     let pi_shift_arm = beam1.rotate(Angle::new(1.0, 1.0)); // π phase shift
     let destructive_mz = beam1 + pi_shift_arm;
-    assert!(destructive_mz.length < EPSILON); // π phase difference → complete cancellation
+    assert!(destructive_mz.mag < EPSILON); // π phase difference → complete cancellation
 
     // demonstrate constructive case: 0 phase difference gives additive interference
     let zero_shift_arm = beam1; // no phase shift
     let constructive_mz = beam1 + zero_shift_arm;
-    let expected_constructive = 2.0 * beam1.length; // amplitudes add directly
-    let constructive_diff = (constructive_mz.length - expected_constructive).abs();
+    let expected_constructive = 2.0 * beam1.mag; // amplitudes add directly
+    let constructive_diff = (constructive_mz.mag - expected_constructive).abs();
     assert!(constructive_diff < EPSILON); // 0 phase difference → full constructive
 
     // fringe visibility from amplitude ratio
-    let visibility =
-        2.0 * beam1.length * beam2.length / (beam1.length.powi(2) + beam2.length.powi(2));
+    let visibility = 2.0 * beam1.mag * beam2.mag / (beam1.mag.powi(2) + beam2.mag.powi(2));
     assert!(visibility <= 1.0); // maximum visibility = 1 for equal amplitudes
     assert!(visibility > 0.0); // non-zero visibility for coherent beams
 
@@ -322,14 +321,14 @@ fn its_a_prism() {
         let incident_sin = ray.angle.grade_angle().sin();
         let refracted_sin = incident_sin * n1 / n2;
         let refracted_angle = refracted_sin.asin();
-        Geonum::new(ray.length, refracted_angle, PI)
+        Geonum::new(ray.mag, refracted_angle, PI)
     };
 
     let refracted = snells_law(&incident, n1, n2);
 
     // verify refraction bends toward normal (smaller angle for dense medium)
-    assert!(refracted.angle.value() < incident.angle.value()); // ray bends toward normal
-    assert_eq!(refracted.length, incident.length); // intensity preserved
+    assert!(refracted.angle.rem() < incident.angle.rem()); // ray bends toward normal
+    assert_eq!(refracted.mag, incident.mag); // intensity preserved
 
     // critical angle demonstration: dense to rare medium
     let glass_incident = Geonum::new(1.0, 1.0, 3.0); // π/3 = 60° in glass
@@ -342,7 +341,7 @@ fn its_a_prism() {
 
     // total internal reflection: no transmitted ray, all energy reflected
     let tir_reflected = glass_incident.negate(); // phase flip on total reflection
-    assert_eq!(tir_reflected.length, glass_incident.length); // energy conserved in reflection
+    assert_eq!(tir_reflected.mag, glass_incident.mag); // energy conserved in reflection
     assert_ne!(tir_reflected.angle, glass_incident.angle); // phase changed by π
 
     // prism dispersion: different wavelengths refract differently
@@ -353,7 +352,7 @@ fn its_a_prism() {
     let blue_refracted = snells_law(&incident, n1, blue_index);
 
     // blue bends more than red (normal dispersion) - higher index gives smaller angle
-    assert!(blue_refracted.angle.value() < red_refracted.angle.value()); // blue < red angle
+    assert!(blue_refracted.angle.rem() < red_refracted.angle.rem()); // blue < red angle
 
     // minimum deviation for symmetric prism passage
     let min_dev_incident = Geonum::new(1.0, 1.0, 6.0); // π/6 incidence
@@ -363,7 +362,7 @@ fn its_a_prism() {
     let second_refraction = snells_law(&first_refraction, n2, n1); // glass → air
 
     // verify symmetric emergence
-    let emergence_diff = (second_refraction.angle.value() - min_dev_incident.angle.value()).abs();
+    let emergence_diff = (second_refraction.angle.rem() - min_dev_incident.angle.rem()).abs();
     assert!(emergence_diff < EPSILON); // symmetric emergence through double refraction
 
     // traditional: complex trigonometric solving for each ray through prism
@@ -386,7 +385,7 @@ fn its_a_laser_cavity() {
 
     // cavity stability: round-trip gain must be < 1
     let round_trip = mirror1 * mirror2; // R₁ × R₂ through angle addition
-    let cavity_gain = round_trip.length; // 0.95 × 0.99 = 0.9405
+    let cavity_gain = round_trip.mag; // 0.95 × 0.99 = 0.9405
     assert!(cavity_gain < 1.0); // stable cavity condition
 
     // cavity finesse from mirror reflectivities
@@ -403,7 +402,7 @@ fn its_a_laser_cavity() {
 
     // verify mode spacing determines longitudinal mode frequencies
     let next_mode = tem00.rotate(mode_spacing.angle); // next longitudinal mode
-    let frequency_separation = (next_mode.angle.value() - tem00.angle.value()).abs();
+    let frequency_separation = (next_mode.angle.rem() - tem00.angle.rem()).abs();
     assert!(frequency_separation > 0.0); // modes separated by FSR
     let tem01 = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // first-order mode at blade 1
     let tem10 = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // orthogonal first-order at blade 2
@@ -415,13 +414,13 @@ fn its_a_laser_cavity() {
     assert_eq!(mode_diff_10, 2); // orthogonal mode separation
 
     // cavity Q factor from round-trip phase
-    let round_trip_phase = round_trip.angle.value();
+    let round_trip_phase = round_trip.angle.rem();
     let q_factor = PI / round_trip_phase; // quality factor from phase accumulation
     assert!(q_factor > 1.0); // cavity stores energy over multiple round trips
 
     // mode selection: cavity favors modes matching round-trip phase
     let resonant_mode = tem00.rotate(round_trip.angle); // mode after round trip
-    let phase_matching = (resonant_mode.angle.value() - tem00.angle.value()).abs();
+    let phase_matching = (resonant_mode.angle.rem() - tem00.angle.rem()).abs();
     assert!(phase_matching < EPSILON); // resonant mode maintains phase consistency
 
     // gain threshold: minimum gain needed to overcome losses
@@ -457,15 +456,15 @@ fn its_fiber_optic() {
     let guided_ray = Geonum::new(1.0, 1.0, 24.0); // π/24 = 7.5° (< 9.8° acceptance)
     let escaped_ray = Geonum::new(1.0, 1.0, 6.0); // π/6 = 30° (> 9.8° acceptance)
 
-    assert!(guided_ray.angle.value() < fiber_mode.angle.value()); // 7.5° < 9.8°
-    assert!(escaped_ray.angle.value() > fiber_mode.angle.value()); // 30° > 9.8°
+    assert!(guided_ray.angle.rem() < fiber_mode.angle.rem()); // 7.5° < 9.8°
+    assert!(escaped_ray.angle.rem() > fiber_mode.angle.rem()); // 30° > 9.8°
 
     // propagation in fiber: multiply indices to show guidance
     let guided_mode = core_index * fiber_mode; // core supports mode
     let cladding_limit = cladding_index * fiber_mode; // cladding cutoff
 
     // guided condition: core supports larger angle than cladding
-    assert!(guided_mode.length > cladding_limit.length); // guided when core > cladding
+    assert!(guided_mode.mag > cladding_limit.mag); // guided when core > cladding
 
     // mode coupling: power transfer between modes
     let lp01_mode = Geonum::new_with_blade(1.0, 1, 1.0, 4.0); // LP₀₁ at blade 1, π/4
@@ -473,7 +472,7 @@ fn its_fiber_optic() {
 
     // coupling strength through wedge product
     let mode_coupling = lp01_mode.wedge(&lp11_mode);
-    let coupling_strength = mode_coupling.length; // coupling coefficient
+    let coupling_strength = mode_coupling.mag; // coupling coefficient
     assert!(coupling_strength > EPSILON); // modes can exchange power
 
     // traditional: solve Maxwell equations in cylindrical coordinates with boundary conditions
@@ -499,7 +498,7 @@ fn its_a_hologram() {
     let hologram = reference.wedge(&object); // bivector encodes fringe pattern
 
     // verify hologram encodes interference information
-    assert!(hologram.length > 0.0); // non-zero fringe visibility
+    assert!(hologram.mag > 0.0); // non-zero fringe visibility
     assert_eq!(hologram.angle.grade(), 1); // vector grade encodes interference pattern
 
     // fringe pattern encoded in hologram angle (wedge adds blade count)
@@ -511,27 +510,25 @@ fn its_a_hologram() {
     let reconstructed = hologram.geo(&readout_beam); // geometric product gives reconstruction
 
     // verify reconstruction recovers object information
-    assert!(reconstructed.length > 0.0); // finite reconstructed amplitude
+    assert!(reconstructed.mag > 0.0); // finite reconstructed amplitude
 
     // object wave reconstruction: phase relationship preserved
-    let phase_error = (reconstructed.angle.value() - object.angle.value()).abs();
+    let phase_error = (reconstructed.angle.rem() - object.angle.rem()).abs();
     let phase_tolerance = PI / 8.0; // allow some reconstruction error
     assert!(phase_error < phase_tolerance); // object phase approximately recovered
 
     // intensity ratio: reconstructed vs original object
-    let reconstruction_efficiency = reconstructed.length / object.length;
+    let reconstruction_efficiency = reconstructed.mag / object.mag;
     assert!(reconstruction_efficiency > 0.1); // meaningful reconstruction intensity
     assert!(reconstruction_efficiency < 1.0); // some loss in reconstruction process
 
     // twin image suppression: phase conjugate reconstruction
     let conjugate_readout = readout_beam.angle.conjugate();
-    let phase_conjugate = hologram.geo(&Geonum::new_with_angle(
-        readout_beam.length,
-        conjugate_readout,
-    ));
+    let phase_conjugate =
+        hologram.geo(&Geonum::new_with_angle(readout_beam.mag, conjugate_readout));
 
     // phase conjugate beam has opposite phase progression
-    let conjugate_phase_diff = (phase_conjugate.angle.value() + object.angle.value()).abs();
+    let conjugate_phase_diff = (phase_conjugate.angle.rem() + object.angle.rem()).abs();
     assert!(conjugate_phase_diff < PI); // phase conjugate relationship
 
     // holographic storage density: multiple holograms at different angles
@@ -547,7 +544,7 @@ fn its_a_hologram() {
 
     // cross-talk between stored holograms
     let crosstalk = (first_reconstruction.angle - second_reconstruction.angle)
-        .value()
+        .rem()
         .abs();
     assert!(crosstalk > PI / 6.0); // sufficient angular separation prevents crosstalk
 
@@ -574,9 +571,9 @@ fn its_a_beam_splitter() {
     let transmitted = incident.scale(transmissivity.sqrt()); // Et = √T * Ein
 
     // verify energy conservation: |Er|² + |Et|² = |Ein|²
-    let incident_power = incident.length.powi(2);
-    let reflected_power = reflected.length.powi(2);
-    let transmitted_power = transmitted.length.powi(2);
+    let incident_power = incident.mag.powi(2);
+    let reflected_power = reflected.mag.powi(2);
+    let transmitted_power = transmitted.mag.powi(2);
     let total_power = reflected_power + transmitted_power;
 
     assert!((total_power - incident_power).abs() < 1e-10); // power conserved
@@ -593,8 +590,8 @@ fn its_a_beam_splitter() {
     let hr_transmitted = incident.scale((1.0 - high_reflector).sqrt());
 
     // verify 90/10 split
-    let hr_r_power = hr_reflected.length.powi(2);
-    let hr_t_power = hr_transmitted.length.powi(2);
+    let hr_r_power = hr_reflected.mag.powi(2);
+    let hr_t_power = hr_transmitted.mag.powi(2);
     assert!((hr_r_power / incident_power - high_reflector).abs() < 1e-10);
     assert!((hr_t_power / incident_power - (1.0 - high_reflector)).abs() < 1e-10);
 
@@ -603,8 +600,8 @@ fn its_a_beam_splitter() {
     let ar_reflected = incident.scale(ar_coating.sqrt());
     let ar_transmitted = incident.scale((1.0 - ar_coating).sqrt());
 
-    assert!(ar_reflected.length < 0.15); // minimal reflection
-    assert!(ar_transmitted.length > 0.98); // maximal transmission
+    assert!(ar_reflected.mag < 0.15); // minimal reflection
+    assert!(ar_transmitted.mag > 0.98); // maximal transmission
 
     // wavelength dependence: angle shift represents dispersion
     let blue_incident = Geonum::new(1.0, 1.0, 6.0); // π/6, blue wavelength
@@ -618,7 +615,7 @@ fn its_a_beam_splitter() {
     let red_reflected = red_incident.scale(red_r.sqrt());
 
     // verify wavelength-dependent behavior
-    assert!(blue_reflected.length < red_reflected.length); // dispersion effect
+    assert!(blue_reflected.mag < red_reflected.mag); // dispersion effect
     assert_ne!(blue_reflected.angle, red_reflected.angle); // different angles
 
     // polarization dependence: s and p polarization at non-normal incidence
@@ -634,7 +631,7 @@ fn its_a_beam_splitter() {
     let p_reflected = p_polarized.scale(rp.sqrt());
 
     // verify polarization dependence
-    assert!(s_reflected.length > p_reflected.length); // s reflects more than p
+    assert!(s_reflected.mag > p_reflected.mag); // s reflects more than p
     assert_ne!(s_reflected.angle, p_reflected.angle); // different polarization angles
 
     // Brewster angle: p-polarization transmission maximum
@@ -643,8 +640,8 @@ fn its_a_beam_splitter() {
     let brewster_reflected = brewster_p.scale(0.0); // Rp = 0
     let brewster_transmitted = brewster_p.scale(1.0); // Tp = 1
 
-    assert_eq!(brewster_reflected.length, 0.0); // no p-polarized reflection
-    assert_eq!(brewster_transmitted.length, 1.0); // complete p-polarized transmission
+    assert_eq!(brewster_reflected.mag, 0.0); // no p-polarized reflection
+    assert_eq!(brewster_transmitted.mag, 1.0); // complete p-polarized transmission
 
     // interference between reflected beams: coherent addition
     let coherent_beam1 = Geonum::new(0.7, 0.0, 1.0); // beam 1
@@ -654,7 +651,7 @@ fn its_a_beam_splitter() {
     let interfered = coherent_beam1 + coherent_beam2;
 
     // destructive interference when beams are π out of phase
-    assert!(interfered.length < coherent_beam1.length); // reduced amplitude
+    assert!(interfered.mag < coherent_beam1.mag); // reduced amplitude
 
     // multiple beam splitter cascade: each split preserves energy
     let second_splitter_r: f64 = 0.3;
@@ -662,9 +659,8 @@ fn its_a_beam_splitter() {
     let cascade_transmitted = transmitted.scale((1.0 - second_splitter_r).sqrt());
 
     // verify cascade energy conservation
-    let cascade_total = reflected.length.powi(2)
-        + cascade_reflected.length.powi(2)
-        + cascade_transmitted.length.powi(2);
+    let cascade_total =
+        reflected.mag.powi(2) + cascade_reflected.mag.powi(2) + cascade_transmitted.mag.powi(2);
     assert!((cascade_total - incident_power).abs() < 1e-10);
 
     // beam splitter as interferometer element
@@ -674,8 +670,8 @@ fn its_a_beam_splitter() {
     let recombined = reflected + delayed_transmitted; // coherent recombination
 
     // interference pattern depends on path difference
-    assert!(recombined.length != incident.length); // interference modifies amplitude
-    assert!(recombined.angle.value() > 0.0); // phase relationship encoded
+    assert!(recombined.mag != incident.mag); // interference modifies amplitude
+    assert!(recombined.angle.rem() > 0.0); // phase relationship encoded
 
     // traditional: Jones matrices for polarization, Fresnel equations for reflection
     // Mueller matrices for incoherent light, ABCD matrix propagation through systems
@@ -706,7 +702,7 @@ fn its_lens_design_optimization() {
     let lens_system = Geonum::new(system_error, optical_path_angle, 1.0);
     println!(
         "initial system: error={:.3}, optical_angle={:.6} rad",
-        lens_system.length,
+        lens_system.mag,
         lens_system.angle.grade_angle()
     );
 
@@ -716,7 +712,7 @@ fn its_lens_design_optimization() {
 
     println!(
         "gradient direction: magnitude={:.6}, angle={:.6} rad",
-        gradient.length,
+        gradient.mag,
         gradient.angle.grade_angle()
     );
 
@@ -730,13 +726,13 @@ fn its_lens_design_optimization() {
     let optimized_system = lens_system + optimization_direction.scale(learning_rate);
     println!(
         "optimized system: error={:.6}, optical_angle={:.6} rad",
-        optimized_system.length,
+        optimized_system.mag,
         optimized_system.angle.grade_angle()
     );
 
     // verify optimization reduces error (length represents error magnitude)
     assert!(
-        optimized_system.length < lens_system.length,
+        optimized_system.mag < lens_system.mag,
         "optimization reduces error"
     );
 
@@ -752,7 +748,7 @@ fn its_lens_design_optimization() {
 
     println!(
         "compound system: error={:.6}, combined_power={:.6}",
-        compound_system.length,
+        compound_system.mag,
         compound_system.angle.grade_angle()
     );
 
@@ -765,7 +761,7 @@ fn its_lens_design_optimization() {
     let optimized_compound = compound_system + system_direction.scale(0.05);
 
     assert!(
-        optimized_compound.length < compound_system.length,
+        optimized_compound.mag < compound_system.mag,
         "system optimization improves performance"
     );
 
@@ -777,30 +773,27 @@ fn its_lens_design_optimization() {
     let target_error = 0.01; // design specification
     let mut iteration = 0;
 
-    while current_system.length > target_error && iteration < 15 {
+    while current_system.mag > target_error && iteration < 15 {
         let current_gradient = current_system.differentiate();
         let gradient_base = current_gradient.base_angle();
         let optimization_direction = gradient_base - current_system;
 
         // adaptive step size: larger corrections when far from target
-        let step_size = (current_system.length / target_error * 0.1).min(0.2);
+        let step_size = (current_system.mag / target_error * 0.1).min(0.2);
 
         current_system = current_system + optimization_direction.scale(step_size);
         iteration += 1;
 
-        println!(
-            "iteration {}: error={:.6}",
-            iteration, current_system.length
-        );
+        println!("iteration {}: error={:.6}", iteration, current_system.mag);
     }
 
     assert!(
-        current_system.length <= target_error,
+        current_system.mag <= target_error,
         "optimization converged to specification"
     );
     println!(
         "converged in {} iterations to error={:.6}",
-        iteration, current_system.length
+        iteration, current_system.mag
     );
 
     // tolerance analysis: manufacturing sensitivity
@@ -808,7 +801,7 @@ fn its_lens_design_optimization() {
     // geonum: exact sensitivity from differentiate()
 
     let manufacturing_tolerance = 0.01; // ±0.01mm focal length variation
-    let sensitivity = gradient.length; // how much error changes per unit parameter change
+    let sensitivity = gradient.mag; // how much error changes per unit parameter change
     let performance_variation = sensitivity * manufacturing_tolerance;
 
     println!("manufacturing sensitivity: {:.6} error/mm", sensitivity);
@@ -863,10 +856,10 @@ fn its_lens_design_optimization() {
 
     println!(
         "achromatic optimization: error={:.6}",
-        achromatic_system.length
+        achromatic_system.mag
     );
     assert!(
-        achromatic_system.length < lens_system.length,
+        achromatic_system.mag < lens_system.mag,
         "chromatic correction improves system"
     );
 

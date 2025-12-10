@@ -34,11 +34,11 @@ fn it_models_business_cycles() {
         // similar to principal component analysis but with geometric meaning
         let weighted_x = indicators
             .iter()
-            .map(|i| i.length * i.angle.grade_angle().cos()) // x-component (horizontal axis)
+            .map(|i| i.mag * i.angle.grade_angle().cos()) // x-component (horizontal axis)
             .sum::<f64>();
         let weighted_y = indicators
             .iter()
-            .map(|i| i.length * i.angle.grade_angle().sin()) // y-component (vertical axis)
+            .map(|i| i.mag * i.angle.grade_angle().sin()) // y-component (vertical axis)
             .sum::<f64>();
 
         // compute aggregate cycle phase (direction in economic state space)
@@ -49,7 +49,7 @@ fn it_models_business_cycles() {
         // in a complete implementation, this returns as additional information
         let _cycle_momentum = indicators
             .iter()
-            .map(|i| i.length * i.angle.grade_angle().sin())
+            .map(|i| i.mag * i.angle.grade_angle().sin())
             .sum::<f64>();
 
         // return the economic state as a geometric number:
@@ -91,12 +91,12 @@ fn it_models_business_cycles() {
     // shows how quickly the economy moves through the cycle
     let cycle_velocity = indicators
         .iter()
-        .map(|i| i.length * i.angle.grade_angle().sin())
+        .map(|i| i.mag * i.angle.grade_angle().sin())
         .sum::<f64>();
 
     // test the cycle detection produces meaningful results
     assert!(
-        cycle_state.length > 0.0,
+        cycle_state.mag > 0.0,
         "cycle analysis produces non-zero amplitude"
     );
 
@@ -124,7 +124,7 @@ fn it_models_business_cycles() {
     println!("current economic phase: {cycle_phase}");
     println!(
         "cycle strength: {:.2} (overall economic activity)",
-        cycle_state.length
+        cycle_state.mag
     );
     println!(
         "cycle velocity: {cycle_velocity:.2} (positive = accelerating, negative = decelerating)"
@@ -216,7 +216,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
 
             // compute spending change based on tax policy
             let policy_impact =
-                (policy.length - current_policy.length) * sensitivity * category_elasticity;
+                (policy.mag - current_policy.mag) * sensitivity * category_elasticity;
 
             // compute geometric spending response combining all dimensions
             // length = magnitude of spending change
@@ -260,8 +260,8 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     let tax_cut_impact = results
         .iter()
         .map(|(_, _, _, cut_resp, _)| {
-            if cut_resp.length > 1.0 {
-                cut_resp.length - 1.0
+            if cut_resp.mag > 1.0 {
+                cut_resp.mag - 1.0
             } else {
                 0.0
             }
@@ -271,8 +271,8 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     let tax_increase_impact = results
         .iter()
         .map(|(_, _, _, _, incr_resp)| {
-            if incr_resp.length < 1.0 {
-                1.0 - incr_resp.length
+            if incr_resp.mag < 1.0 {
+                1.0 - incr_resp.mag
             } else {
                 0.0
             }
@@ -282,7 +282,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     // identify most vulnerable segments (largest negative impact from tax increase)
     let vulnerable_segments = results
         .iter()
-        .filter(|(_, _, _, _, incr_resp)| incr_resp.length < 0.9) // >10% decrease in spending
+        .filter(|(_, _, _, _, incr_resp)| incr_resp.mag < 0.9) // >10% decrease in spending
         .collect::<Vec<_>>();
 
     let duration = start.elapsed();
@@ -407,12 +407,12 @@ fn it_detects_early_recession_indicators() {
     let detect_recession_signals =
         |transactions: &Vec<(Geonum, Geonum, Geonum, Geonum)>| -> Geonum {
             // compute volume-weighted average of payment delays
-            let total_volume: f64 = transactions.iter().map(|(vol, _, _, _)| vol.length).sum();
+            let total_volume: f64 = transactions.iter().map(|(vol, _, _, _)| vol.mag).sum();
 
             // payment timing signal - weighted by transaction volume
             let payment_timing_signal = transactions
                 .iter()
-                .map(|(vol, timing, _, _)| vol.length * timing.angle.grade_angle().sin())
+                .map(|(vol, timing, _, _)| vol.mag * timing.angle.grade_angle().sin())
                 .sum::<f64>()
                 / total_volume;
 
@@ -420,7 +420,7 @@ fn it_detects_early_recession_indicators() {
             let size_signal = transactions
                 .iter()
                 .map(|(vol, _, size, _)| {
-                    vol.length * (size.angle.grade_angle() - PI / 2.0).sin().abs()
+                    vol.mag * (size.angle.grade_angle() - PI / 2.0).sin().abs()
                 })
                 .sum::<f64>()
                 / total_volume;
@@ -428,9 +428,7 @@ fn it_detects_early_recession_indicators() {
             // geographic flow concentration signal (local vs distant)
             let geographic_signal = transactions
                 .iter()
-                .map(|(vol, _, _, geo)| {
-                    vol.length * (geo.angle.grade_angle() - PI / 2.0).sin().abs()
-                })
+                .map(|(vol, _, _, geo)| vol.mag * (geo.angle.grade_angle() - PI / 2.0).sin().abs())
                 .sum::<f64>()
                 / total_volume;
 
@@ -469,10 +467,10 @@ fn it_detects_early_recession_indicators() {
     let duration = start.elapsed();
 
     // derive recession probability based on signal strength
-    let recession_probability = warning_signal.length * 100.0;
+    let recession_probability = warning_signal.mag * 100.0;
 
     // compute lead time (how many months warning)
-    let lead_time = 6.0 * warning_signal.length / 0.5; // 6 months at 0.5 signal strength
+    let lead_time = 6.0 * warning_signal.mag / 0.5; // 6 months at 0.5 signal strength
 
     // test O(1) complexity
     assert!(
@@ -483,17 +481,17 @@ fn it_detects_early_recession_indicators() {
     // test signal discrimination between normal and warning conditions
     println!(
         "Warning signal strength: {:.3} vs normal signal: {:.3}",
-        warning_signal.length, normal_signal.length
+        warning_signal.mag, normal_signal.mag
     );
     assert!(
-        warning_signal.length > normal_signal.length,
+        warning_signal.mag > normal_signal.mag,
         "detection function differentiates between normal and warning conditions"
     );
 
     // output early warning system dashboard
     println!("───── early recession detection ─────");
-    println!("baseline economy signal: {:.3}", normal_signal.length);
-    println!("warning signal strength: {:.3}", warning_signal.length);
+    println!("baseline economy signal: {:.3}", normal_signal.mag);
+    println!("warning signal strength: {:.3}", warning_signal.mag);
     println!("recession probability: {recession_probability:.1}%");
     println!("estimated lead time: {lead_time:.1} months");
     println!(
@@ -655,14 +653,14 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     // identify vulnerable businesses
     let vulnerable_businesses = impacts
         .iter()
-        .filter(|(_, _, _, _, _, impact)| impact.length < 0.9) // >10% cashflow reduction
+        .filter(|(_, _, _, _, _, impact)| impact.mag < 0.9) // >10% cashflow reduction
         .collect::<Vec<_>>();
 
     // compute weighted average impact
     let total_cashflow: f64 = business_data.iter().map(|(_, _, _, _, cf)| cf).sum();
     let weighted_impact = impacts
         .iter()
-        .map(|(_, _, _, _, cf, impact)| cf * (impact.length - 1.0))
+        .map(|(_, _, _, _, cf, impact)| cf * (impact.mag - 1.0))
         .sum::<f64>()
         / total_cashflow;
 
@@ -709,7 +707,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
         );
         println!(
             "expected cashflow reduction: {:.1}%",
-            (1.0 - impact.length) * 100.0
+            (1.0 - impact.mag) * 100.0
         );
     }
 
@@ -878,8 +876,8 @@ fn it_analyzes_housing_payment_patterns() {
     let duration = start.elapsed();
 
     // compute stability metrics
-    let stable_risk = stable_result.length;
-    let unstable_risk = unstable_result.length;
+    let stable_risk = stable_result.mag;
+    let unstable_risk = unstable_result.mag;
 
     // housing market risk thresholds
     let low_risk_threshold = 0.3;
@@ -970,16 +968,16 @@ fn it_models_global_trade_flows() {
         // compute weighted flow direction
         let weighted_x = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.grade_angle().cos())
+            .map(|f| f.mag * f.angle.grade_angle().cos())
             .sum::<f64>();
 
         let weighted_y = trade_flows
             .iter()
-            .map(|f| f.length * f.angle.grade_angle().sin())
+            .map(|f| f.mag * f.angle.grade_angle().sin())
             .sum::<f64>();
 
         // compute total trade volume
-        let total_volume = trade_flows.iter().map(|f| f.length).sum::<f64>();
+        let total_volume = trade_flows.iter().map(|f| f.mag).sum::<f64>();
 
         // encode global trade state as geometric number
         // - length represents total trade volume
@@ -997,12 +995,12 @@ fn it_models_global_trade_flows() {
 
     // detect trade imbalances through angle analysis
     // in perfect measurement, this should be zero due to conservation laws
-    let imbalance_magnitude = global_trade.angle.grade_angle().sin() * global_trade.length;
-    let balanced_trade_threshold = 0.05 * global_trade.length; // 5% measurement error threshold
+    let imbalance_magnitude = global_trade.angle.grade_angle().sin() * global_trade.mag;
+    let balanced_trade_threshold = 0.05 * global_trade.mag; // 5% measurement error threshold
 
     // prove model produces meaningful results
     assert!(
-        global_trade.length > 0.0,
+        global_trade.mag > 0.0,
         "trade model produces positive volume"
     );
 
@@ -1022,7 +1020,7 @@ fn it_models_global_trade_flows() {
     // determine if global trade model is balanced (should be in reality)
     let is_balanced = imbalance_magnitude.abs() < balanced_trade_threshold;
 
-    println!("global trade volume: ${:.2}B", global_trade.length);
+    println!("global trade volume: ${:.2}B", global_trade.mag);
     println!("trade measurement imbalance: ${imbalance_magnitude:.2}B");
     println!("trade model is balanced: {is_balanced}");
 }
@@ -1053,9 +1051,9 @@ fn it_measures_economic_sectoral_balance() {
 
         // single iteration over sectors
         for sector in sectors {
-            flow_x += sector.length * sector.angle.grade_angle().cos();
-            flow_y += sector.length * sector.angle.grade_angle().sin();
-            total_magnitude += sector.length;
+            flow_x += sector.mag * sector.angle.grade_angle().cos();
+            flow_y += sector.mag * sector.angle.grade_angle().sin();
+            total_magnitude += sector.mag;
         }
 
         // result as geometric number
@@ -1078,11 +1076,11 @@ fn it_measures_economic_sectoral_balance() {
     let duration = start.elapsed();
 
     // compute domestic sector balance (households + businesses)
-    let weighted_angle = (household_sector.angle.grade_angle() * household_sector.length
-        + business_sector.angle.grade_angle() * business_sector.length)
-        / (household_sector.length + business_sector.length);
+    let weighted_angle = (household_sector.angle.grade_angle() * household_sector.mag
+        + business_sector.angle.grade_angle() * business_sector.mag)
+        / (household_sector.mag + business_sector.mag);
     let domestic_private_balance = Geonum::new(
-        household_sector.length + business_sector.length,
+        household_sector.mag + business_sector.mag,
         weighted_angle,
         PI,
     ); // bivector (grade 2) representing the sectoral balance relationship
@@ -1099,9 +1097,9 @@ fn it_measures_economic_sectoral_balance() {
     // sectoral balance identity: domestic private + public + foreign = 0
     // in angles, this means they should sum to approximate zero when weighted by magnitude
     let _total_weighted_angle = domestic_private_balance.angle.grade_angle()
-        * domestic_private_balance.length
-        + public_balance.angle.grade_angle() * public_balance.length
-        + foreign_balance.angle.grade_angle() * foreign_balance.length;
+        * domestic_private_balance.mag
+        + public_balance.angle.grade_angle() * public_balance.mag
+        + foreign_balance.angle.grade_angle() * foreign_balance.mag;
 
     // detect economic imbalances through angle analysis
     let imbalance_detected = economic_balance.angle.grade_angle().abs() > 0.1;

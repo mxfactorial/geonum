@@ -41,13 +41,11 @@ fn it_prices_options() {
             // the magnitude depends on probability of exercise
 
             // compute d1 and d2 as angles
-            let moneyness_angle = (s.length / k.length).ln() / v.length + v.length * t.length / 2.0;
+            let moneyness_angle = (s.mag / k.mag).ln() / v.mag + v.mag * t.mag / 2.0;
 
             // in geonum, these complex calculations reduce to simple angle transformations
-            let option_magnitude = s.length * moneyness_angle.exp()
-                - k.length
-                    * (r.length * t.length).exp()
-                    * (moneyness_angle - v.length * t.length.sqrt()).exp();
+            let option_magnitude = s.mag * moneyness_angle.exp()
+                - k.mag * (r.mag * t.mag).exp() * (moneyness_angle - v.mag * t.mag.sqrt()).exp();
 
             // return option price as geometric number
             // option price direction combines stock movement and volatility
@@ -65,7 +63,7 @@ fn it_prices_options() {
     );
 
     // verify option price is reasonable (between 0 and stock price)
-    assert!(option_value.length > 0.0 && option_value.length < stock_price.length);
+    assert!(option_value.mag > 0.0 && option_value.mag < stock_price.mag);
 
     // demonstrate performance advantage
     let start = Instant::now();
@@ -127,17 +125,17 @@ fn it_computes_portfolio_optimization() {
                     .iter()
                     .map(|g| {
                         let risk_rotation = Angle::new(risk_angle, PI);
-                        Geonum::new_with_angle(g.length, g.angle - risk_rotation)
+                        Geonum::new_with_angle(g.mag, g.angle - risk_rotation)
                     })
                     .collect::<Vec<_>>(),
             );
 
             // normalize weights to sum to 1.0
-            let total_weight = optimal_allocation.iter().map(|g| g.length).sum::<f64>();
+            let total_weight = optimal_allocation.iter().map(|g| g.mag).sum::<f64>();
             let normalized_weights = GeoCollection::from(
                 optimal_allocation
                     .iter()
-                    .map(|g| Geonum::new_with_angle(g.length / total_weight, g.angle))
+                    .map(|g| Geonum::new_with_angle(g.mag / total_weight, g.angle))
                     .collect::<Vec<_>>(),
             );
 
@@ -159,7 +157,7 @@ fn it_computes_portfolio_optimization() {
     );
 
     // verify weights sum approximately to 1.0
-    let weight_sum: f64 = weights.iter().map(|g| g.length).sum();
+    let weight_sum: f64 = weights.iter().map(|g| g.mag).sum();
     assert!(
         (weight_sum - 1.0).abs() < 1e-10,
         "portfolio weights sum to 1.0"
@@ -186,12 +184,10 @@ fn it_computes_risk_measures() {
 
         // adjust volatility by confidence angle
         let confidence_rotation = Angle::new(confidence_angle, PI);
-        let adjusted_volatility =
-            Geonum::new_with_angle(vol.length, vol.angle + confidence_rotation);
+        let adjusted_volatility = Geonum::new_with_angle(vol.mag, vol.angle + confidence_rotation);
 
         // compute VaR through geometric transformation
-        let var_magnitude =
-            ret.length * horizon - adjusted_volatility.length * horizon.sqrt() * 1.645; // 1.645 is z-score for 95%
+        let var_magnitude = ret.mag * horizon - adjusted_volatility.mag * horizon.sqrt() * 1.645; // 1.645 is z-score for 95%
 
         // return VaR as directional quantity
         // angle pointing downward for losses, upward for gains (depends on net effect)
@@ -212,7 +208,7 @@ fn it_computes_risk_measures() {
         // in geometric terms, this is a further rotation beyond VAR
 
         // adjust magnitude based on expected tail loss
-        let cvar_magnitude = var.length * (1.0 + 0.4 * (1.0 - confidence)); // simplified CVaR approximation
+        let cvar_magnitude = var.mag * (1.0 + 0.4 * (1.0 - confidence)); // simplified CVaR approximation
 
         // maintain same direction as VaR but with greater magnitude
         Geonum::new_with_angle(cvar_magnitude, var.angle)
@@ -221,8 +217,8 @@ fn it_computes_risk_measures() {
     let cvar_95 = calculate_cvar(&var_95, &volatility, 0.95);
 
     // convert risk measures to dollar amounts
-    let var_dollars = var_95.length * portfolio_value;
-    let cvar_dollars = cvar_95.length * portfolio_value;
+    let var_dollars = var_95.mag * portfolio_value;
+    let cvar_dollars = cvar_95.mag * portfolio_value;
 
     // test reasonable values (typically CVaR > VaR, both positive)
     assert!(var_dollars > 0.0, "VaR is positive for normal portfolio");
@@ -275,26 +271,24 @@ fn it_simulates_asset_price_movements() {
                 // random fluctuation is perpendicular to drift direction
                 let perpendicular = Angle::new(1.0, 2.0); // PI/2
                 let random_movement =
-                    Geonum::new_with_angle(sigma.length * time_scaling, mu.angle + perpendicular);
+                    Geonum::new_with_angle(sigma.mag * time_scaling, mu.angle + perpendicular);
 
                 // combine deterministic drift and random movement
                 // deterministic component
                 let drift_component =
-                    Geonum::new_with_angle(mu.length * current_price.length * dt, mu.angle);
+                    Geonum::new_with_angle(mu.mag * current_price.mag * dt, mu.angle);
 
                 // stochastic component (simplified)
                 let stochastic_component = Geonum::new_with_angle(
-                    random_movement.length * current_price.length,
+                    random_movement.mag * current_price.mag,
                     random_movement.angle,
                 );
 
                 // update price through geometric addition
                 // blended direction
                 let blended_angle = (current_price.angle + stochastic_component.angle) / 2.0;
-                current_price = Geonum::new_with_angle(
-                    current_price.length + drift_component.length,
-                    blended_angle,
-                );
+                current_price =
+                    Geonum::new_with_angle(current_price.mag + drift_component.mag, blended_angle);
 
                 path.push(current_price); // Geonum is Copy
             }
@@ -319,7 +313,7 @@ fn it_simulates_asset_price_movements() {
 
     // prove final price differs from initial price
     let final_price = price_path.last().unwrap();
-    assert!(final_price.length != initial_price.length);
+    assert!(final_price.mag != initial_price.mag);
 
     // simulate many paths to demonstrate performance advantage
     let path_count = 1000; // normally would require 1000 separate simulations
@@ -334,7 +328,7 @@ fn it_simulates_asset_price_movements() {
             // adjust volatility angle for this path
             let angle_rotation = Angle::new(angle_offset, PI);
             let path_vol =
-                Geonum::new_with_angle(volatility.length, volatility.angle + angle_rotation);
+                Geonum::new_with_angle(volatility.mag, volatility.angle + angle_rotation);
 
             simulate_price_path(&initial_price, &drift, &path_vol, steps, dt)
         })
@@ -375,13 +369,13 @@ fn it_performs_interest_rate_modeling() {
     // in geometric form, we can use rotation to encode the stochastic component
     let evolve_rate = |r: &Geonum, a: &Geonum, b: &Geonum, t: f64| -> Geonum {
         // deterministic component: exponential mean reversion
-        let reversion_factor = (-a.length * t).exp();
+        let reversion_factor = (-a.mag * t).exp();
 
         // long-term component with angle uncertainty
-        let asymptotic_rate = b.length * (1.0 - reversion_factor);
+        let asymptotic_rate = b.mag * (1.0 - reversion_factor);
 
         // current rate component with decay over time
-        let current_component = r.length * reversion_factor;
+        let current_component = r.mag * reversion_factor;
 
         // mean rate prediction with uncertainty encoded in angle
         // angle blends short rate and long-term rate directions proportional to time
@@ -402,13 +396,13 @@ fn it_performs_interest_rate_modeling() {
 
     // prove evolution approaches long-term rate over time
     assert!(
-        (rate_5y.length - long_term_rate.length).abs() < short_rate.length,
+        (rate_5y.mag - long_term_rate.mag).abs() < short_rate.mag,
         "interest rate converges to long-term rate"
     );
 
     // prove rate evolution is monotonic toward equilibrium
     assert!(
-        (rate_1y.length - short_rate.length).abs() < (rate_5y.length - short_rate.length).abs(),
+        (rate_1y.mag - short_rate.mag).abs() < (rate_5y.mag - short_rate.mag).abs(),
         "rate evolution is monotonic"
     );
 
@@ -425,10 +419,10 @@ fn it_performs_interest_rate_modeling() {
         "interest rate evolution is O(1) complexity"
     );
 
-    println!("Current short rate: {:.2}%", short_rate.length * 100.0);
-    println!("Expected 1y rate: {:.2}%", rate_1y.length * 100.0);
-    println!("Expected 2y rate: {:.2}%", rate_2y.length * 100.0);
-    println!("Expected 5y rate: {:.2}%", rate_5y.length * 100.0);
+    println!("Current short rate: {:.2}%", short_rate.mag * 100.0);
+    println!("Expected 1y rate: {:.2}%", rate_1y.mag * 100.0);
+    println!("Expected 2y rate: {:.2}%", rate_2y.mag * 100.0);
+    println!("Expected 5y rate: {:.2}%", rate_5y.mag * 100.0);
 }
 
 #[test]
@@ -448,7 +442,7 @@ fn it_calculates_credit_risk() {
         // Loss given default: portion of exposure not recovered
         // Inverse of recovery rate direction
         let inverse_angle = Angle::new(0.0, 1.0) - rr.angle;
-        let lgd = Geonum::new_with_angle(1.0 - rr.length, inverse_angle);
+        let lgd = Geonum::new_with_angle(1.0 - rr.mag, inverse_angle);
 
         // Expected loss calculation with propagated uncertainty
         // Combine uncertainty angles, weighted by relative impact
@@ -459,7 +453,7 @@ fn it_calculates_credit_risk() {
             (exp_contribution + pd_contribution + lgd_contribution) / 6.0,
             PI,
         );
-        Geonum::new_with_angle(exp.length * pd.length * lgd.length, weighted_angle)
+        Geonum::new_with_angle(exp.mag * pd.mag * lgd.mag, weighted_angle)
     };
 
     // Calculate expected loss
@@ -474,12 +468,12 @@ fn it_calculates_credit_risk() {
         let _confidence_angle = confidence * PI / 2.0; // Used conceptually but not directly
 
         // Risk multiplier increases with confidence level
-        let risk_multiplier = 1.0 + (1.0 - pd.length).ln() * (1.0 - confidence);
+        let risk_multiplier = 1.0 + (1.0 - pd.mag).ln() * (1.0 - confidence);
 
         // Conditional tail loss with uncertainty encoded in angle
         // Rotate toward maximum loss as confidence increases
         let rotation = Angle::new(1.0 - confidence, 4.0); // (1-confidence) * PI/4
-        Geonum::new_with_angle(el.length * risk_multiplier, el.angle + rotation)
+        Geonum::new_with_angle(el.mag * risk_multiplier, el.angle + rotation)
     };
 
     // Calculate CVaR at different confidence levels
@@ -489,28 +483,26 @@ fn it_calculates_credit_risk() {
     // Demonstrate stress testing by increasing default probability
     // Triple default probability in stress scenario
     let stress_rotation = Angle::new(1.0, 8.0); // PI/8
-    let stressed_pd = Geonum::new_with_angle(
-        default_prob.length * 3.0,
-        default_prob.angle + stress_rotation,
-    );
+    let stressed_pd =
+        Geonum::new_with_angle(default_prob.mag * 3.0, default_prob.angle + stress_rotation);
 
     let stressed_loss = calculate_expected_loss(&exposure, &stressed_pd, &recovery_rate);
 
     // Verify expected loss is reasonable
     assert!(
-        expected_loss.length > 0.0 && expected_loss.length < exposure.length,
+        expected_loss.mag > 0.0 && expected_loss.mag < exposure.mag,
         "Expected loss is positive but less than total exposure"
     );
 
     // Verify risk measures increase with confidence
     assert!(
-        cvar_99.length > cvar_95.length,
+        cvar_99.mag > cvar_95.mag,
         "Higher confidence CVaR exceeds lower confidence CVaR"
     );
 
     // Verify stress testing increases expected loss
     assert!(
-        stressed_loss.length > expected_loss.length,
+        stressed_loss.mag > expected_loss.mag,
         "Stressed scenario increases expected loss"
     );
 
@@ -529,15 +521,15 @@ fn it_calculates_credit_risk() {
     );
 
     // Output risk metrics
-    println!("Loan amount: ${:.2}", exposure.length);
+    println!("Loan amount: ${:.2}", exposure.mag);
     println!(
         "Expected loss: ${:.2} ({:.2}% of exposure)",
-        expected_loss.length,
-        expected_loss.length / exposure.length * 100.0
+        expected_loss.mag,
+        expected_loss.mag / exposure.mag * 100.0
     );
-    println!("CVaR 95%: ${:.2}", cvar_95.length);
-    println!("CVaR 99%: ${:.2}", cvar_99.length);
-    println!("Stressed loss: ${:.2}", stressed_loss.length);
+    println!("CVaR 95%: ${:.2}", cvar_95.mag);
+    println!("CVaR 99%: ${:.2}", cvar_99.mag);
+    println!("Stressed loss: ${:.2}", stressed_loss.mag);
 }
 
 #[test]
@@ -556,16 +548,16 @@ fn it_computes_arbitrage_opportunities() {
     // Calculate arbitrage opportunity and profit
     let compute_arbitrage = |p_a: &Geonum, p_b: &Geonum, cost: &Geonum| -> Geonum {
         // Calculate price difference between markets
-        let price_diff = p_b.length - p_a.length;
+        let price_diff = p_b.mag - p_a.mag;
 
         // Apply transaction costs
-        let net_profit = price_diff - cost.length;
+        let net_profit = price_diff - cost.mag;
 
         // Certainty angle decreases with larger transaction costs
         // and higher cost uncertainty (represented by cost.angle)
         let certainty_angle = if net_profit > 0.0 {
             // Positive arbitrage with certainty decreasing as cost/profit ratio increases
-            PI / 2.0 * (1.0 - (cost.length / price_diff).min(1.0)) - cost.angle.grade_angle().abs()
+            PI / 2.0 * (1.0 - (cost.mag / price_diff).min(1.0)) - cost.angle.grade_angle().abs()
         } else {
             // No arbitrage (or negative after costs)
             0.0
@@ -602,9 +594,9 @@ fn it_computes_arbitrage_opportunities() {
                 let opp = compute_arbitrage(&markets[i].0, &markets[j].0, &transaction_cost);
 
                 // Update best opportunity based on profit and certainty
-                if opp.length > 0.0
-                    && (opp.length > best_opportunity.length
-                        || (opp.length == best_opportunity.length
+                if opp.mag > 0.0
+                    && (opp.mag > best_opportunity.mag
+                        || (opp.mag == best_opportunity.mag
                             && opp.angle.grade_angle() > best_opportunity.angle.grade_angle()))
                 {
                     best_opportunity = opp;
@@ -616,7 +608,7 @@ fn it_computes_arbitrage_opportunities() {
 
     // Verify the calculation works
     assert!(
-        arbitrage.length < price_b.length - price_a.length,
+        arbitrage.mag < price_b.mag - price_a.mag,
         "Arbitrage profit accounts for transaction costs"
     );
 
@@ -636,22 +628,22 @@ fn it_computes_arbitrage_opportunities() {
     );
 
     // Display arbitrage results
-    if arbitrage.length > 0.0 {
+    if arbitrage.mag > 0.0 {
         println!("Arbitrage opportunity detected:");
-        println!("  Buy in Market A at ${:.2}", price_a.length);
-        println!("  Sell in Market B at ${:.2}", price_b.length);
-        println!("  Transaction cost: ${:.2}", transaction_cost.length);
-        println!("  Net profit: ${:.2}", arbitrage.length);
+        println!("  Buy in Market A at ${:.2}", price_a.mag);
+        println!("  Sell in Market B at ${:.2}", price_b.mag);
+        println!("  Transaction cost: ${:.2}", transaction_cost.mag);
+        println!("  Net profit: ${:.2}", arbitrage.mag);
         println!("  Certainty factor: {:.2}", arbitrage.angle.grade_angle());
     } else {
         println!("No arbitrage opportunity after transaction costs");
     }
 
     // Display best opportunity across all markets
-    if best_opportunity.length > 0.0 {
+    if best_opportunity.mag > 0.0 {
         println!("Best arbitrage opportunity:");
         println!("  Buy in {} and sell in {}", best_pair.0, best_pair.1);
-        println!("  Expected profit: ${:.2}", best_opportunity.length);
+        println!("  Expected profit: ${:.2}", best_opportunity.mag);
         println!("  Certainty: {:.2}", best_opportunity.angle.grade_angle());
     }
 }
@@ -685,15 +677,13 @@ fn it_performs_high_frequency_trading_calcs() {
             let vol_contribution = vol.angle.grade_angle();
             let blended_sum = p_contribution + m_contribution + v_contribution + vol_contribution;
             let blended_angle = Angle::new(blended_sum / 7.0, PI);
-            let combined_state = Geonum::new_with_angle(
-                p.length * m.length * (v.length / 100000.0) * vol.length,
-                blended_angle,
-            );
+            let combined_state =
+                Geonum::new_with_angle(p.mag * m.mag * (v.mag / 100000.0) * vol.mag, blended_angle);
 
             // compare current state to pattern through angle difference
             let angle_diff = combined_state.angle - pat.angle;
             let angle_match = angle_diff.grade_angle().abs();
-            let magnitude_match = (combined_state.length - pat.length).abs() / pat.length;
+            let magnitude_match = (combined_state.mag - pat.mag).abs() / pat.mag;
 
             // compute signal strength based on pattern match
             let signal_strength = 1.0 - (angle_match / PI) - (magnitude_match / 2.0);
@@ -716,14 +706,11 @@ fn it_performs_high_frequency_trading_calcs() {
     // perform many signal calculations (simulating tick-by-tick analysis)
     for i in 0..iterations {
         // slightly vary inputs to simulate market fluctuations
-        let tick_price = Geonum::new_with_angle(
-            price.length * (1.0 + 0.0001 * (i as f64).sin()),
-            price.angle,
-        );
+        let tick_price =
+            Geonum::new_with_angle(price.mag * (1.0 + 0.0001 * (i as f64).sin()), price.angle);
 
         let angle_adjustment = Angle::new(0.001 * (i as f64).cos(), PI);
-        let tick_momentum =
-            Geonum::new_with_angle(momentum.length, momentum.angle + angle_adjustment);
+        let tick_momentum = Geonum::new_with_angle(momentum.mag, momentum.angle + angle_adjustment);
 
         // calculate trading signal
         let _ = detect_trading_signal(&tick_price, &tick_momentum, &volume, &volatility, &pattern);
@@ -737,7 +724,7 @@ fn it_performs_high_frequency_trading_calcs() {
 
     // verify signal has valid strength and direction
     assert!(
-        signal.length >= 0.0 && signal.length <= 1.0,
+        signal.mag >= 0.0 && signal.mag <= 1.0,
         "signal strength is between 0 and 1"
     );
     assert!(
@@ -799,20 +786,20 @@ fn it_analyzes_cga_transaction_streams() {
                 // rotate transaction by industry angle to create industry-weighted flow
                 let industry_rotation = Angle::new(*industry, PI);
                 let industry_weighted =
-                    Geonum::new_with_angle(trans.length, trans.angle + industry_rotation);
+                    Geonum::new_with_angle(trans.mag, trans.angle + industry_rotation);
 
                 // accumulate transactions through geometric addition
                 // accumulate transactions through geometric addition
-                let weighted_angle = if acc.length + industry_weighted.length > 0.0 {
-                    let acc_contribution = acc.angle.grade_angle() * acc.length;
+                let weighted_angle = if acc.mag + industry_weighted.mag > 0.0 {
+                    let acc_contribution = acc.angle.grade_angle() * acc.mag;
                     let ind_contribution =
-                        industry_weighted.angle.grade_angle() * industry_weighted.length;
+                        industry_weighted.angle.grade_angle() * industry_weighted.mag;
                     let weighted_sum = acc_contribution + ind_contribution;
-                    Angle::new(weighted_sum / (acc.length + industry_weighted.length), PI)
+                    Angle::new(weighted_sum / (acc.mag + industry_weighted.mag), PI)
                 } else {
                     acc.angle
                 };
-                Geonum::new_with_angle(acc.length + industry_weighted.length, weighted_angle)
+                Geonum::new_with_angle(acc.mag + industry_weighted.mag, weighted_angle)
             },
         );
 
@@ -830,7 +817,7 @@ fn it_analyzes_cga_transaction_streams() {
 
     // verify economic flow analysis preserves magnitude information
     assert!(
-        economic_flow.length > 0.0,
+        economic_flow.mag > 0.0,
         "economic flow analysis preserves transaction magnitudes"
     );
 
@@ -847,7 +834,7 @@ fn it_analyzes_cga_transaction_streams() {
                     if *cred == user {
                         // invert angle for incoming money
                         let inverted_angle = Angle::new(0.0, 1.0) - trans.angle;
-                        Geonum::new_with_angle(trans.length, inverted_angle)
+                        Geonum::new_with_angle(trans.mag, inverted_angle)
                     } else {
                         *trans // Geonum is Copy, no need for .clone()
                     }
@@ -859,15 +846,15 @@ fn it_analyzes_cga_transaction_streams() {
                 .iter()
                 .fold(Geonum::new_with_blade(0.0, 2, 0.0, 1.0), |acc, trans| {
                     // bivector (grade 2) - accumulates transaction patterns
-                    let weighted_angle = if acc.length > 0.0 {
-                        let acc_contribution = acc.angle.grade_angle() * acc.length;
-                        let trans_contribution = trans.angle.grade_angle() * trans.length;
+                    let weighted_angle = if acc.mag > 0.0 {
+                        let acc_contribution = acc.angle.grade_angle() * acc.mag;
+                        let trans_contribution = trans.angle.grade_angle() * trans.mag;
                         let weighted_sum = acc_contribution + trans_contribution;
-                        Angle::new(weighted_sum / (acc.length + trans.length), PI)
+                        Angle::new(weighted_sum / (acc.mag + trans.mag), PI)
                     } else {
                         trans.angle
                     };
-                    Geonum::new_with_angle(acc.length + trans.length, weighted_angle)
+                    Geonum::new_with_angle(acc.mag + trans.mag, weighted_angle)
                 })
         };
 
@@ -879,7 +866,7 @@ fn it_analyzes_cga_transaction_streams() {
 
     // verify pattern detection produces meaningful results
     assert!(
-        consumer_pattern.length > 0.0,
+        consumer_pattern.mag > 0.0,
         "consumer pattern detection quantifies spending habits"
     );
 
@@ -967,7 +954,7 @@ fn it_calculates_multi_asset_derivatives() {
             // First-pass aggregation of volatility vectors
             for i in 0..vols.len() {
                 // Weight by basket weight
-                let weighted_vol = vols[i].length * weights[i];
+                let weighted_vol = vols[i].mag * weights[i];
                 effective_vol += weighted_vol;
 
                 // Weight angles by contribution to total volatility
@@ -984,7 +971,7 @@ fn it_calculates_multi_asset_derivatives() {
             // Calculate angular variance as correlation proxy
             let mut angle_variance = 0.0;
             for vol in vols {
-                angle_variance += (vol.angle.grade_angle() - effective_angle).powi(2) * vol.length;
+                angle_variance += (vol.angle.grade_angle() - effective_angle).powi(2) * vol.mag;
             }
             angle_variance /= angle_weight_sum;
 
@@ -1021,7 +1008,7 @@ fn it_calculates_multi_asset_derivatives() {
     let duration = start.elapsed();
 
     // Verify the option price is reasonable
-    assert!(basket_option.length > 0.0, "Option price is positive");
+    assert!(basket_option.mag > 0.0, "Option price is positive");
 
     // Benchmark performance: traditional methods are O(n³), this is O(1)
     let timing_start = Instant::now();
@@ -1045,7 +1032,7 @@ fn it_calculates_multi_asset_derivatives() {
 
     // Output results
     println!("Basket with {num_assets} assets:");
-    println!("Option price: ${:.2}", basket_option.length);
+    println!("Option price: ${:.2}", basket_option.mag);
     println!(
         "Effective correlation structure encoded at angle: {:.4}",
         basket_option.angle.grade_angle()
@@ -1116,10 +1103,10 @@ fn it_analyzes_trading_strategies() {
 
         // Expected return depends on strategy-market alignment
         // Higher when strategy aligns with market conditions
-        let expected_return = strat.length * market.length * alignment;
+        let expected_return = strat.mag * market.mag * alignment;
 
         // Risk depends on strategy magnitude and orthogonal component
-        let risk = strat.length * (1.0 + orthogonal.abs());
+        let risk = strat.mag * (1.0 + orthogonal.abs());
 
         // Create result as geometric number
         // Length = Sharpe ratio (return/risk)
@@ -1141,8 +1128,8 @@ fn it_analyzes_trading_strategies() {
         // Calculate individual performances
         for strat in strategies {
             let perf = analyze_strategy(strat, market);
-            performances.push(perf.length);
-            total_performance += perf.length.max(0.0); // Only allocate to positive performers
+            performances.push(perf.mag);
+            total_performance += perf.mag.max(0.0); // Only allocate to positive performers
         }
 
         // Calculate weights (normalized by performance)
@@ -1185,13 +1172,13 @@ fn it_analyzes_trading_strategies() {
             let angle_update = Angle::new((i as f64 / 50.0).cos(), 20.0); // PI/20 * cos(...)
             let new_angle = current_market.angle + angle_update;
             current_market = Geonum::new_with_angle(
-                current_market.length * (0.98 + 0.04 * (i as f64 / 100.0).sin()),
+                current_market.mag * (0.98 + 0.04 * (i as f64 / 100.0).sin()),
                 new_angle,
             );
 
             // Calculate strategy performance in this market
             let period_performance = analyze_strategy(strat, &current_market);
-            returns.push(period_performance.length * strat.length);
+            returns.push(period_performance.mag * strat.mag);
         }
 
         returns
@@ -1238,7 +1225,7 @@ fn it_analyzes_trading_strategies() {
 
     // Verify the calculation works
     assert!(
-        performance.length >= -1.0 && performance.length <= 1.0,
+        performance.mag >= -1.0 && performance.mag <= 1.0,
         "Sharpe ratio is in a reasonable range"
     );
 
@@ -1258,7 +1245,7 @@ fn it_analyzes_trading_strategies() {
             .map(|(_, name)| *name)
             .unwrap_or("Custom")
     );
-    println!("  Expected Sharpe ratio: {:.2}", performance.length);
+    println!("  Expected Sharpe ratio: {:.2}", performance.mag);
     println!(
         "  Market alignment: {:.2}",
         performance.angle.grade_angle() / (PI / 2.0)
