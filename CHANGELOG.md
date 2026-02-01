@@ -1,5 +1,10 @@
 # changelog
 
+## 0.10.1 (2025-01-31)
+
+### added
+- extend qm test suite
+
 ## 0.10.0 (2025-12-10)
 
 ### changed

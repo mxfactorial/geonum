@@ -1118,3 +1118,560 @@ fn it_preserves_unitary_transformation() {
     // magnitude preserved
     assert!((rotated_spinor.mag - spinor.mag).abs() < EPSILON);
 }
+
+#[test]
+fn it_proves_superposition_is_a_cakeism() {
+    // superposition cakeism: claiming a state "exists in multiple states simultaneously"
+    // by exploiting unordered basis freedom to count the same event through different projections
+    //
+    // the storytelling enabled by loose geometry:
+    // 1. take one geometric angle θ
+    // 2. project it onto basis A: "its in superposition of A₀ and A₁!"
+    // 3. project it onto basis B: "its in superposition of B₀ and B₁!"
+    // 4. project it onto basis C: "its in superposition of C₀ and C₁!"
+    // 5. claim the state "exists in all these superpositions simultaneously"
+    //
+    // the reality: its just one angle. the "superpositions" are projections.
+    // youre double (triple, quadruple...) counting the same geometric event.
+    //
+    // geonum exposes this: by storing the angle directly, theres no ambiguity.
+    // the state is at angle θ. not "in superposition" - just facing a direction.
+
+    let theta = Angle::new(1.0, 3.0); // 60° - our single physical state
+    let state = Geonum::new_with_angle(1.0, theta);
+
+    println!("\n=== THE SINGLE PHYSICAL STATE ===");
+    println!(
+        "Geonum: magnitude={}, angle={} rad",
+        state.mag,
+        state.angle.grade_angle()
+    );
+    println!("This is ONE state at ONE angle. Not in 'superposition'.");
+
+    // basis A: standard computational basis (z-axis)
+    let basis_a0 = Angle::new(0.0, 1.0); // |0⟩ at 0°
+    let basis_a1 = Angle::new(1.0, 2.0); // |1⟩ at 90°
+
+    let proj_a0 = state.mag * state.angle.project(basis_a0);
+    let proj_a1 = state.mag * state.angle.project(basis_a1);
+
+    println!("\n=== BASIS A (computational) ===");
+    println!("Projection onto |0⟩: {:.6}", proj_a0);
+    println!("Projection onto |1⟩: {:.6}", proj_a1);
+    println!("QM claims: |ψ⟩ = {:.3}|0⟩ + {:.3}|1⟩", proj_a0, proj_a1);
+    println!("'The state is in SUPERPOSITION of 0 and 1!'");
+
+    // basis B: hadamard basis (x-axis), rotated by π/4
+    let basis_b0 = Angle::new(1.0, 4.0); // |+⟩ at 45°
+    let basis_b1 = Angle::new(5.0, 4.0); // |−⟩ at 225°
+
+    let proj_b0 = state.mag * state.angle.project(basis_b0);
+    let proj_b1 = state.mag * state.angle.project(basis_b1);
+
+    println!("\n=== BASIS B (Hadamard) ===");
+    println!("Projection onto |+⟩: {:.6}", proj_b0);
+    println!("Projection onto |−⟩: {:.6}", proj_b1);
+    println!("QM claims: |ψ⟩ = {:.3}|+⟩ + {:.3}|−⟩", proj_b0, proj_b1);
+    println!("'The state is ALSO in superposition of + and −!'");
+
+    // basis C: custom basis, rotated by different angle
+    let basis_c0 = Angle::new(1.0, 8.0); // |R⟩ at 22.5°
+    let basis_c1 = Angle::new(9.0, 8.0); // |L⟩ at 202.5°
+
+    let proj_c0 = state.mag * state.angle.project(basis_c0);
+    let proj_c1 = state.mag * state.angle.project(basis_c1);
+
+    println!("\n=== BASIS C (custom) ===");
+    println!("Projection onto |R⟩: {:.6}", proj_c0);
+    println!("Projection onto |L⟩: {:.6}", proj_c1);
+    println!("QM claims: |ψ⟩ = {:.3}|R⟩ + {:.3}|L⟩", proj_c0, proj_c1);
+    println!("'The state is ALSO in superposition of R and L!'");
+
+    println!("\n=== THE CAKEISM ===");
+    println!("QM wants you to believe the state:");
+    println!("  - IS in superposition of |0⟩ and |1⟩ AND");
+    println!("  - IS in superposition of |+⟩ and |−⟩ AND");
+    println!("  - IS in superposition of |R⟩ and |L⟩");
+    println!("all at the same time!");
+    println!(
+        "\nBut these are just PROJECTIONS of the same angle θ={:.6} onto different axes!",
+        theta.grade_angle()
+    );
+    println!("Youre counting the same event 3 times through 3 different bases.");
+
+    println!("\n=== GEONUM REALITY CHECK ===");
+    println!("State magnitude: {}", state.mag);
+    println!("State angle: {:.6} radians", state.angle.grade_angle());
+    println!("State blade: {}", state.angle.blade());
+    println!("\nThere is NO superposition. There is ONE angle.");
+    println!("The 'superposition' is you decomposing that angle into basis coefficients.");
+    println!("Then claiming each decomposition is a separate physical reality.");
+
+    // all these "different superpositions" reconstruct to the same angle
+    let reconstructed_from_a = Angle::new(proj_a1.atan2(proj_a0), PI);
+
+    println!("\n=== RECONSTRUCTION TEST ===");
+    println!("Original angle: {:.6}", theta.grade_angle());
+    println!(
+        "Reconstructed from basis A: {:.6}",
+        reconstructed_from_a.grade_angle()
+    );
+    assert_eq!(reconstructed_from_a, theta);
+
+    println!("\nAll bases are just different projections of the same geometric angle.");
+    println!("Superposition is CAKEISM: claiming multiple perspectives on one angle");
+    println!("are somehow all 'real' simultaneously.");
+
+    // unordered bases let you count the same event infinitely many times
+    println!("\n=== THE INFINITE CAKEISM ===");
+    println!("With unordered bases, I can project onto INFINITE bases:");
+
+    for i in 0..5 {
+        let arbitrary_basis_angle = i as f64 * PI / 13.0; // arbitrary rotation
+        let basis_x = Angle::new(arbitrary_basis_angle, PI);
+        let proj = state.mag * state.angle.project(basis_x);
+        println!(
+            "  Basis {}: projection = {:.6} → 'in superposition!'",
+            i, proj
+        );
+    }
+
+    println!("\nEach basis 'sees' superposition. But theres only ONE angle.");
+    println!("Superposition exploits basis freedom to multiply-count ONE geometric event.");
+    println!("\nThats CAKEISM.");
+
+    // the state is deterministic, not probabilistic
+    assert_eq!(state.angle, theta);
+    assert!((state.mag - 1.0).abs() < EPSILON);
+
+    println!("\n=== DETERMINISTIC, NOT PROBABILISTIC ===");
+    println!(
+        "The state has a definite angle: {:.6} radians",
+        theta.grade_angle()
+    );
+    println!("The state has a definite magnitude: {}", state.mag);
+    println!("Theres no 'collapse'. Theres no 'uncertainty'.");
+    println!("There is ONE geometric number. The rest is accounting tricks.");
+
+    println!("\n=== MEASUREMENT 'COLLAPSE' EXPOSED ===");
+    println!("Traditional QM: 'measurement collapses the wavefunction!'");
+    println!("Geonum reality: You just picked which basis projection to look at.");
+    println!("\nMeasuring in basis A? You get projection onto basis A.");
+    println!(
+        "  Result: {:.6} (|0⟩ component) or {:.6} (|1⟩ component)",
+        proj_a0, proj_a1
+    );
+    println!("Measuring in basis B? You get projection onto basis B.");
+    println!(
+        "  Result: {:.6} (|+⟩ component) or {:.6} (|−⟩ component)",
+        proj_b0, proj_b1
+    );
+    println!(
+        "\nThe angle θ={:.6} didnt change. You just chose which shadow to cast.",
+        theta.grade_angle()
+    );
+    println!("Thats not 'collapse' - thats choosing a viewpoint.");
+
+    println!("\n=== CAKEISM EXPOSED ===");
+    println!("Superposition is basis-projection cakeism.");
+    println!("One angle. Many projections. Claimed as multiple simultaneous realities.");
+    println!("Geonum stores the angle directly. No cakeism possible.");
+}
+
+#[test]
+fn it_proves_bell_violations_measure_scalar_amputation() {
+    // CHSH inequality assumes measurement outcomes are ±1 scalars
+    // |S| ≤ 2 holds because for B(b), B(b') ∈ {-1,+1},
+    // one of B(b)-B(b') or B(b)+B(b') always vanishes
+    //
+    // geonum: correlation between measurements is angle.project()
+    // E(a,b) = -cos(a-b) for a singlet pair
+    // this is a geometric fact, not a statistical average of ±1 products
+    //
+    // the "violation" is the same decomposition loss proven in
+    // tests/linear_algebra_test.rs: decomposing angles into scalar
+    // coefficients loses angle addition
+    //
+    // scalar correlation: E(Δ) = -1 + 2|Δ|/π (piecewise linear from sign)
+    // geometric correlation: E(Δ) = -cos(Δ) (smooth from angle.project)
+    // they agree at 0, π/2, π but diverge between
+    // CHSH exploits the divergence at π/4 and 3π/4
+    //
+    // bells theorem proves ±1 scalars cant carry angle information
+    // it doesnt prove physics is nonlocal
+
+    // optimal CHSH measurement angles
+    let a = Angle::new(0.0, 1.0); // alice setting 1: 0
+    let a_prime = Angle::new(1.0, 2.0); // alice setting 2: π/2
+    let b = Angle::new(1.0, 4.0); // bob setting 1: π/4
+    let b_prime = Angle::new(3.0, 4.0); // bob setting 2: 3π/4
+
+    // geometric correlation via angle.project()
+    // singlet pair: particles separated by π
+    // E(a,b) = -a.project(b) = -cos(b - a)
+    let e_ab = -a.project(b);
+    let e_ab_prime = -a.project(b_prime);
+    let e_a_prime_b = -a_prime.project(b);
+    let e_a_prime_b_prime = -a_prime.project(b_prime);
+
+    let s_geometric = e_ab - e_ab_prime + e_a_prime_b + e_a_prime_b_prime;
+
+    // test geometric correlations match cos(angle_diff)
+    let sqrt2_half = 2.0_f64.sqrt() / 2.0;
+    assert!((e_ab - (-sqrt2_half)).abs() < EPSILON);
+    assert!((e_ab_prime - sqrt2_half).abs() < EPSILON);
+    assert!((e_a_prime_b - (-sqrt2_half)).abs() < EPSILON);
+    assert!((e_a_prime_b_prime - (-sqrt2_half)).abs() < EPSILON);
+    assert!((s_geometric.abs() - 2.0 * 2.0_f64.sqrt()).abs() < EPSILON);
+
+    println!("\n=== GEOMETRIC CORRELATION ===");
+    println!("E(a,b)   = -cos(0 - π/4)    = {:.6}", e_ab);
+    println!("E(a,b')  = -cos(0 - 3π/4)   = {:.6}", e_ab_prime);
+    println!("E(a',b)  = -cos(π/2 - π/4)  = {:.6}", e_a_prime_b);
+    println!("E(a',b') = -cos(π/2 - 3π/4) = {:.6}", e_a_prime_b_prime);
+    println!("S = {:.6}", s_geometric);
+    println!("|S| = 2√2. four angle projections composed.");
+
+    // scalar correlation: amputate angles into ±1 via sign(cos(θ - setting))
+    // analytical result: E(Δ) = -1 + 2|Δ|/π for angle diff Δ
+    let scalar_correlation = |delta: f64| -> f64 { -1.0 + 2.0 * delta.abs() / PI };
+
+    let e_ab_scalar = scalar_correlation(PI / 4.0);
+    let e_ab_prime_scalar = scalar_correlation(3.0 * PI / 4.0);
+    let e_a_prime_b_scalar = scalar_correlation(PI / 4.0);
+    let e_a_prime_b_prime_scalar = scalar_correlation(PI / 4.0);
+
+    let s_scalar = e_ab_scalar - e_ab_prime_scalar + e_a_prime_b_scalar + e_a_prime_b_prime_scalar;
+
+    assert!((e_ab_scalar - (-0.5)).abs() < EPSILON);
+    assert!((e_ab_prime_scalar - 0.5).abs() < EPSILON);
+    assert!((s_scalar.abs() - 2.0).abs() < EPSILON);
+
+    println!("\n=== SCALAR AMPUTATION ===");
+    println!("outcomes forced to ±1 via sign(cos(θ - setting))");
+    println!("E(Δ) = -1 + 2|Δ|/π (piecewise linear from sign)");
+    println!("E(a,b)   = {:.6}", e_ab_scalar);
+    println!("E(a,b')  = {:.6}", e_ab_prime_scalar);
+    println!("E(a',b)  = {:.6}", e_a_prime_b_scalar);
+    println!("E(a',b') = {:.6}", e_a_prime_b_prime_scalar);
+    println!("S = {:.6}", s_scalar);
+    println!("|S| = 2. amputated angles cap here.");
+
+    // numerical cross-reference: simulate the hidden angle model
+    let n = 100_000;
+    let simulate_scalar = |setting_a: &Angle, setting_b: &Angle| -> f64 {
+        let mut sum = 0.0;
+        for i in 0..n {
+            let theta = 2.0 * PI * (i as f64 + 0.5) / (n as f64);
+            let outcome_a = (theta - setting_a.grade_angle()).cos().signum();
+            let outcome_b = -(theta - setting_b.grade_angle()).cos().signum();
+            sum += outcome_a * outcome_b;
+        }
+        sum / n as f64
+    };
+
+    let s_simulated = simulate_scalar(&a, &b) - simulate_scalar(&a, &b_prime)
+        + simulate_scalar(&a_prime, &b)
+        + simulate_scalar(&a_prime, &b_prime);
+
+    assert!((s_simulated.abs() - 2.0).abs() < 0.01);
+    println!("\nsimulated (n={}): S = {:.6}", n, s_simulated);
+
+    // the divergence: cos vs linear
+    println!("\n=== cos vs sign ===");
+    println!("angle diff | geometric (-cos) | scalar (-1+2Δ/π) | gap");
+    for i in 0..=8 {
+        let delta = PI * i as f64 / 8.0;
+        let geo = -(delta.cos());
+        let sca = scalar_correlation(delta);
+        println!(
+            "  {:>5.3}π   | {:>+.6}        | {:>+.6}         | {:.6}",
+            i as f64 / 8.0,
+            geo,
+            sca,
+            (geo - sca).abs()
+        );
+    }
+    println!("agree at 0, π/2, π. diverge between.");
+    println!("CHSH exploits the divergence at π/4 and 3π/4.");
+
+    // the gap
+    let gap = s_geometric.abs() - s_scalar.abs();
+    assert!((gap - 2.0 * (2.0_f64.sqrt() - 1.0)).abs() < EPSILON);
+
+    println!("\n=== THE GAP ===");
+    println!("geometric |S| = {:.6}", s_geometric.abs());
+    println!("scalar |S|    = {:.6}", s_scalar.abs());
+    println!("gap           = {:.6}", gap);
+    println!("2(√2 - 1)     = {:.6}", 2.0 * (2.0_f64.sqrt() - 1.0));
+
+    println!("\n=== DECOMPOSITION LOSS ===");
+    println!("bells theorem is the CHSH instance of decomposition loss:");
+    println!("  cos(angle_diff) → sign(cos(angle_diff))");
+    println!("  smooth projection → piecewise linear");
+    println!("  geometric number → ±1 scalar");
+    println!("same pattern as tests/linear_algebra_test.rs:");
+    println!("  decomposing angles into scalar coefficients loses angle addition");
+    println!("the 'violation' measures how much angle sign() amputates");
+    println!("not how nonlocal physics is");
+}
+
+#[test]
+fn it_proves_projection_loss() {
+    // projection takes [magnitude, angle] and returns one scalar: cos(angle_diff)
+    // the lost component is the sin projection onto the orthogonal axis
+    // this loss is not a physical mystery — its a geometric fact about reading
+    // a 2-component object through a 1-component instrument
+    //
+    // proof structure:
+    // 1. one projection is degenerate — distinct angles produce the same scalar
+    // 2. two orthogonal projections recover the angle completely
+    // 3. born rule probability is the squared scalar remnant of projection loss
+    // 4. statistical trials reconstruct what two simultaneous projections give directly
+
+    // === STEP 1: single projection degeneracy ===
+    // cos is even: cos(θ) = cos(-θ) = cos(2π - θ)
+    // so one projection onto a basis cant distinguish angles symmetric about that basis
+
+    let basis = Angle::new(0.0, 1.0); // measurement axis at 0
+
+    // three distinct angles that produce the same projection onto basis 0
+    let angle_a = Angle::new(1.0, 3.0); // π/3
+    let angle_b = Angle::new(5.0, 3.0); // 5π/3 = -π/3 (mod 2π)
+
+    let proj_a = angle_a.project(basis); // cos(π/3) = 0.5
+    let proj_b = angle_b.project(basis); // cos(-π/3) = 0.5
+
+    // same scalar from different angles — the projection is degenerate
+    assert!(
+        (proj_a - proj_b).abs() < EPSILON,
+        "distinct angles π/3 and 5π/3 produce identical projection {:.6} = {:.6}",
+        proj_a,
+        proj_b
+    );
+
+    // the angles are not equal
+    assert_ne!(
+        angle_a, angle_b,
+        "the source angles are distinct geometric objects"
+    );
+
+    // this is the loss: one scalar cant distinguish them
+    // the lost information is the sin component (sign of the orthogonal projection)
+    let orthogonal_basis = Angle::new(1.0, 2.0); // π/2
+    let orth_proj_a = angle_a.project(orthogonal_basis); // sin(π/3) = √3/2
+    let orth_proj_b = angle_b.project(orthogonal_basis); // sin(-π/3) = -√3/2
+
+    // the orthogonal projection distinguishes them
+    assert!(
+        (orth_proj_a - orth_proj_b).abs() > 0.1,
+        "orthogonal projection distinguishes: {:.6} vs {:.6}",
+        orth_proj_a,
+        orth_proj_b
+    );
+
+    // === STEP 2: two orthogonal projections recover the angle completely ===
+    // atan2(sin, cos) reconstructs the original angle from two projections
+    // this is the minimum cost of recovery — two scalars to undo what one lost
+
+    let test_angles = [
+        Angle::new(1.0, 3.0), // π/3
+        Angle::new(5.0, 3.0), // 5π/3
+        Angle::new(1.0, 4.0), // π/4
+        Angle::new(7.0, 4.0), // 7π/4
+        Angle::new(2.0, 3.0), // 2π/3
+        Angle::new(4.0, 3.0), // 4π/3
+    ];
+
+    for angle in &test_angles {
+        let cos_proj = angle.project(basis);
+        let sin_proj = angle.project(orthogonal_basis);
+        let reconstructed = Angle::new(sin_proj.atan2(cos_proj), PI);
+
+        assert!(
+            (reconstructed.grade_angle() - angle.grade_angle()).abs() < EPSILON,
+            "two projections reconstruct angle {:.6}: got {:.6}",
+            angle.grade_angle(),
+            reconstructed.grade_angle()
+        );
+    }
+
+    // one projection: degenerate (multiple angles map to same scalar)
+    // two projections: complete (unique reconstruction via atan2)
+    // the deficit is exactly one degree of freedom
+
+    // === STEP 3: born rule is the squared scalar remnant ===
+    // |⟨basis|ψ⟩|² = cos²(angle_diff)
+    // QM squares the projection because one projection lost sign information
+    // about the orthogonal component
+    //
+    // cos²(θ) + sin²(θ) = 1 means squaring the cos projection accounts for
+    // the missing sin projection statistically
+    // born rule is not a postulate — its compensation for projection loss
+
+    let state = Geonum::new(1.0, 1.0, 3.0); // unit state at π/3
+
+    let cos_projection = state.angle.project(basis); // cos(π/3) = 0.5
+    let sin_projection = state.angle.project(orthogonal_basis); // sin(π/3) = √3/2
+
+    let born_probability = cos_projection.powi(2); // 0.25
+    let lost_component_squared = sin_projection.powi(2); // 0.75
+
+    // born rule + lost component = 1 (total probability)
+    // this identity is cos²+sin² — the quadrature relationship
+    assert!(
+        (born_probability + lost_component_squared - 1.0).abs() < EPSILON,
+        "born probability {:.6} + lost component {:.6} = {:.6} (not 1.0)",
+        born_probability,
+        lost_component_squared,
+        born_probability + lost_component_squared
+    );
+
+    // born rule computes cos² because it needs to account for sin² without measuring it
+    // P(outcome) = cos²(θ) implicitly assumes sin²(θ) = 1 - cos²(θ)
+    // this is projection loss repackaged as a probability postulate
+
+    // === STEP 4: statistical trials reconstruct what two projections give directly ===
+    // if you only project onto one basis per trial, you need many trials
+    // to reconstruct the angle from the distribution of outcomes
+    // but two simultaneous projections onto orthogonal bases give the angle in one shot
+
+    // simulate N single-basis measurements that only record cos²(θ - trial_basis)
+    // each trial randomly picks one of two orthogonal bases
+    let n = 100_000;
+    let mut cos_basis_hits = 0.0;
+    let mut sin_basis_hits = 0.0;
+    let mut cos_basis_count = 0;
+    let mut sin_basis_count = 0;
+
+    for i in 0..n {
+        // alternate between bases (simulating random basis choice)
+        if i % 2 == 0 {
+            // project onto basis 0
+            let proj = state.angle.project(basis);
+            cos_basis_hits += proj.powi(2);
+            cos_basis_count += 1;
+        } else {
+            // project onto basis π/2
+            let proj = state.angle.project(orthogonal_basis);
+            sin_basis_hits += proj.powi(2);
+            sin_basis_count += 1;
+        }
+    }
+
+    // statistical averages converge to cos² and sin²
+    let avg_cos_sq = cos_basis_hits / cos_basis_count as f64;
+    let avg_sin_sq = sin_basis_hits / sin_basis_count as f64;
+
+    assert!(
+        (avg_cos_sq - cos_projection.powi(2)).abs() < EPSILON,
+        "statistical cos² matches direct: {:.6} vs {:.6}",
+        avg_cos_sq,
+        cos_projection.powi(2)
+    );
+    assert!(
+        (avg_sin_sq - sin_projection.powi(2)).abs() < EPSILON,
+        "statistical sin² matches direct: {:.6} vs {:.6}",
+        avg_sin_sq,
+        sin_projection.powi(2)
+    );
+
+    // reconstruct the angle from statistical averages
+    let statistical_angle = avg_sin_sq.sqrt().atan2(avg_cos_sq.sqrt());
+
+    // direct reconstruction from two simultaneous projections
+    let direct_angle = sin_projection.atan2(cos_projection);
+
+    assert!(
+        (statistical_angle - direct_angle).abs() < EPSILON,
+        "statistical reconstruction {:.6} matches direct {:.6}",
+        statistical_angle,
+        direct_angle
+    );
+
+    // 100,000 trials to get what two projections give immediately
+    // the entire statistical apparatus of QM compensates for
+    // reading a 2-component geometric object through a 1-component scalar instrument
+    // projection loss is the origin of quantum probability
+}
+
+#[test]
+fn it_proves_theres_an_angle_you_cant_measure_because_everything_you_measure_with_projects_from_it()
+{
+    // the claim:
+    // - theres a definite angle
+    // - you cant measure it directly
+    // - you can only see projections onto measurement bases
+    // - the angle persists unchanged through all measurements
+    // - 'uncertainty' is projection loss, not fundamental indeterminacy
+
+    // the unmeasurable angle
+    let state = Geonum::new(1.0, 1.0, 3.0); // π/3
+    let original_mag = state.mag;
+    let original_angle = state.angle;
+
+    // measurement basis A (computational: 0, π/2)
+    let basis_a0 = Angle::new(0.0, 1.0);
+    let basis_a1 = Angle::new(1.0, 2.0);
+
+    // measurement basis B (hadamard: π/4, 3π/4)
+    let basis_b0 = Angle::new(1.0, 4.0);
+    let basis_b1 = Angle::new(3.0, 4.0);
+
+    // measurement basis C (arbitrary: π/6, 2π/3)
+    let basis_c0 = Angle::new(1.0, 6.0);
+    let basis_c1 = Angle::new(2.0, 3.0);
+
+    // project onto basis A
+    let proj_a0 = state.mag * state.angle.project(basis_a0);
+    let proj_a1 = state.mag * state.angle.project(basis_a1);
+
+    // project onto basis B
+    let proj_b0 = state.mag * state.angle.project(basis_b0);
+    let proj_b1 = state.mag * state.angle.project(basis_b1);
+
+    // project onto basis C
+    let proj_c0 = state.mag * state.angle.project(basis_c0);
+    let proj_c1 = state.mag * state.angle.project(basis_c1);
+
+    // the angle is unchanged
+    assert_eq!(state.mag, original_mag);
+    assert_eq!(state.angle, original_angle);
+
+    // each basis sees different projections of the same angle
+    // reconstruct from any orthogonal basis pair: atan2 gives angle relative to basis
+    let reconstructed_a = proj_a1.atan2(proj_a0) + basis_a0.grade_angle();
+    let reconstructed_c = proj_c1.atan2(proj_c0) + basis_c0.grade_angle();
+    assert!((reconstructed_a - original_angle.grade_angle()).abs() < EPSILON);
+    assert!((reconstructed_c - original_angle.grade_angle()).abs() < EPSILON);
+
+    // the 'uncertainty' between bases is projection geometry
+    // not fundamental indeterminacy
+    // disagreement = how far apart the two viewpoints are
+    let basis_angle_diff = basis_a0.grade_angle() - basis_b0.grade_angle();
+    let uncertainty_ab = (proj_a0 - proj_b0).powi(2) + (proj_a1 - proj_b1).powi(2);
+    let expected_uncertainty = 2.0 * original_mag.powi(2) * (1.0 - basis_angle_diff.cos());
+    assert!((uncertainty_ab - expected_uncertainty).abs() < EPSILON);
+
+    // but disagreement is about viewpoint, not reality
+    // the angle didnt change
+    assert_eq!(state.mag, original_mag);
+    assert_eq!(state.angle, original_angle);
+
+    // chain measurements: A then B then C
+    // each is a fresh projection from the unchanged source
+    let _ = state.angle.project(basis_a0);
+    assert_eq!(state.angle, original_angle); // unchanged
+
+    let _ = state.angle.project(basis_b0);
+    assert_eq!(state.angle, original_angle); // unchanged
+
+    let _ = state.angle.project(basis_c0);
+    assert_eq!(state.angle, original_angle); // unchanged
+
+    // theres no 'collapse'
+    // theres no 'disturbance'
+    // theres one angle
+    // measurement is projection
+    // the angle persists because everything else projects from it
+}

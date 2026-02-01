@@ -545,7 +545,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     let rate_increase = 0.02; // 2% rate increase
 
     // create sample business data for analysis
-    let business_data = vec![
+    let business_data = [
         // (size, industry, cash_reserves, debt_ratio, monthly_cashflow)
         ("micro", "retail", "limited", "high", 15000.0),
         ("micro", "services", "critical", "high", 8000.0),
