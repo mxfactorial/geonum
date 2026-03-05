@@ -1,5 +1,10 @@
 # changelog
 
+## 0.10.2 (2026-03-05)
+
+### added
+- chemistry test suite
+
 ## 0.10.1 (2025-01-31)
 
 ### added
