@@ -1,5 +1,10 @@
 # changelog
 
+## 0.10.3 (2026-03-09)
+
+### changed
+- reboot chemistry from geometry with wave sum
+
 ## 0.10.2 (2026-03-05)
 
 ### added
