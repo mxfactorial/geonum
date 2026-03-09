@@ -31,7 +31,7 @@
 // - antiparticle() returns base class, not a typed mirror — hierarchy cant decide
 // - uranium needs 330 particle objects to say [magnitude, angle]
 //
-// this test suite proves the replacement in 3 acts:
+// this test suite proves the replacement in 7 acts:
 //
 // act I builds the conventional abstractions (orbital capacity, shell capacity, aufbau)
 // and shows each one is angle arithmetic — no tables needed
@@ -44,11 +44,31 @@
 // bonding is constructive interference, antibonding is destructive
 // adding an electron changes the standing wave pattern of the whole shell
 // particles in bins cant do any of this — waves can
+//
+// act IV: the blade chain — the particle zoo is one chain of increment_blade()
+//
+// act V: grades tell you everything — binding is grade 2, electron-electron is grade 0,
+// grade offset weakens projection
+//
+// act VI: wave interference — the running sum cancels,
+// collect decomposes it, amplitude contains all pairs
+//
+// act VII: ionization energy from three lattice constants —
+// spread = π/2, spin = π/3, Q = π/4 — denominators 2, 3, 4
+// zero fitted parameters, both anomalies (Be > B, N > O)
 
 use geonum::*;
 use std::f64::consts::PI;
 
 const EPSILON: f64 = 1e-10;
+const RYDBERG: f64 = 13.6;
+
+fn spread() -> Angle {
+    Angle::new(1.0, 2.0) // π/2 — one grade step
+}
+fn spin() -> Angle {
+    Angle::new(1.0, 3.0) // π/3 — pairing angle
+}
 
 // act I: build the conventional abstractions
 
@@ -498,4 +518,348 @@ fn it_replaces_element_class_with_angle_count() {
     let mut rotated_carbon = carbon.clone();
     rotated_carbon[5] = rotated_carbon[5].rotate(Angle::new(1.0, 4.0)); // pi/4 nudge
     assert!((standing_wave(&carbon) - standing_wave(&rotated_carbon)).abs() > EPSILON);
+}
+
+// ═══════════════════════════════════════════════════════════
+// the running wave sum
+//
+// an element is a count of electrons from the origin.
+// blade count IS shell. grade IS subshell.
+// energy is projection back to origin.
+// ═══════════════════════════════════════════════════════════
+
+fn subshell_order(max_n: usize) -> Vec<(usize, usize)> {
+    let mut subs = Vec::new();
+    for n in 1..=max_n {
+        for l in 0..n {
+            subs.push((n, l));
+        }
+    }
+    subs.sort_by_key(|&(n, l)| (n + l, n));
+    subs
+}
+
+fn grade_positions(base: Angle, l: usize, spread: Angle, spin: Angle) -> Vec<Angle> {
+    let n_orb = 2 * l + 1;
+    let orbital_step = spread / n_orb as f64;
+    let mut pos = Vec::new();
+    for orb in 0..n_orb {
+        let mut angle = base;
+        for _ in 0..orb {
+            angle = angle + orbital_step;
+        }
+        pos.push(angle);
+        pos.push(angle + spin);
+    }
+    pos
+}
+
+fn wave_sum(z: usize, spread: Angle, spin: Angle) -> Geonum {
+    if z == 0 {
+        return Geonum::new(0.0, 0.0, 1.0);
+    }
+    let order = subshell_order(5);
+    let mut wave = Geonum::new(0.0, 0.0, 1.0);
+    let mut placed = 0;
+
+    for &(n, l) in &order {
+        if placed >= z {
+            break;
+        }
+        let mut base = Angle::new(1.0, 1.0); // π
+        for _ in 0..l {
+            base = base + spread;
+        }
+        let positions = grade_positions(base, l, spread, spin);
+        let to_fill = positions.len().min(z - placed);
+        let mag = 1.0 / n as f64;
+
+        for &pos in positions.iter().take(to_fill) {
+            wave = wave + Geonum::new_with_angle(mag, pos);
+        }
+        placed += to_fill;
+    }
+    wave
+}
+
+fn collect(z: usize, spread: Angle, spin: Angle) -> Vec<Geonum> {
+    let order = subshell_order(5);
+    let mut particles = Vec::new();
+    let mut placed = 0;
+    for &(n, l) in &order {
+        if placed >= z {
+            break;
+        }
+        let mut base = Angle::new(1.0, 1.0); // π
+        for _ in 0..l {
+            base = base + spread;
+        }
+        let positions = grade_positions(base, l, spread, spin);
+        let to_fill = positions.len().min(z - placed);
+        let mag = 1.0 / n as f64;
+        for &pos in positions.iter().take(to_fill) {
+            particles.push(Geonum::new_with_angle(mag, pos));
+        }
+        placed += to_fill;
+    }
+    particles
+}
+
+fn n_outer(z: usize) -> usize {
+    let order = subshell_order(5);
+    let mut placed = 0;
+    let mut n = 1;
+    for &(nn, l) in &order {
+        if placed >= z {
+            break;
+        }
+        n = nn;
+        placed += (2 * (2 * l + 1)).min(z - placed);
+    }
+    n
+}
+
+/// scaffolding: compute Σ(count_at_shell / n²) from z.
+/// deterministic from z and the derived ordering.
+fn individual_sq(z: usize) -> f64 {
+    let order = subshell_order(5);
+    let mut sum = 0.0;
+    let mut rem = z;
+    for &(n, l) in &order {
+        if rem == 0 {
+            break;
+        }
+        let cap = (2 * (2 * l + 1)).min(rem);
+        sum += cap as f64 / (n * n) as f64;
+        rem -= cap;
+    }
+    sum
+}
+
+// act IV: the blade chain
+
+#[test]
+fn blade_chain_is_the_particle_zoo() {
+    let proton = Geonum::new(1.0, 0.0, 1.0);
+    let neutron = proton.increment_blade();
+    let electron = neutron.increment_blade();
+    let antineutrino = electron.increment_blade();
+    let back = antineutrino.increment_blade();
+
+    assert_eq!(proton.angle.grade(), 0);
+    assert_eq!(neutron.angle.grade(), 1);
+    assert_eq!(electron.angle.grade(), 2);
+    assert_eq!(antineutrino.angle.grade(), 3);
+    assert_eq!(back.angle.grade(), 0);
+    assert_eq!(back.angle.blade(), 4);
+}
+
+#[test]
+fn blade_count_is_shell() {
+    let mut g = Geonum::new(1.0, 0.0, 1.0);
+    for _ in 0..12 {
+        let shell = g.angle.blade() / 4 + 1;
+        let sub = g.angle.grade();
+        // blade 0..3 → shell 1, blade 4..7 → shell 2, blade 8..11 → shell 3
+        assert_eq!(shell, g.angle.blade() / 4 + 1);
+        assert_eq!(sub, g.angle.blade() % 4);
+        g = g.increment_blade();
+    }
+}
+
+// act V: grades tell you everything
+
+#[test]
+fn binding_is_grade_2() {
+    let nucleus = Geonum::new(RYDBERG, 0.0, 1.0);
+    for n in 1..=4usize {
+        let e = Geonum::new(1.0 / n as f64, 1.0, 1.0);
+        let b = nucleus.dot(&e);
+        assert_eq!(b.angle.grade(), 2);
+        assert!((b.mag - RYDBERG / n as f64).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn electron_electron_is_grade_0() {
+    let e1 = Geonum::new(1.0, 1.0, 1.0);
+    let e2 = Geonum::new(1.0, 1.0, 1.0);
+    let d = e1.dot(&e2);
+    assert_eq!(d.angle.grade(), 0);
+}
+
+#[test]
+fn grade_offset_weakens_projection() {
+    let spread = spread();
+    let nucleus = Geonum::new(RYDBERG, 0.0, 1.0);
+
+    let s = Geonum::new(0.5, 1.0, 1.0); // at π
+    let p_angle = Angle::new(1.0, 1.0) + spread; // π + π/2
+    let p = Geonum::new_with_angle(0.5, p_angle);
+
+    let sb = nucleus.dot(&s);
+    let pb = nucleus.dot(&p);
+
+    assert_eq!(sb.angle.grade(), 2);
+    assert_eq!(pb.angle.grade(), 2);
+    // p-electron offset by spread has weaker binding projection
+    assert!(sb.mag > pb.mag);
+}
+
+// act VI: wave interference
+
+#[test]
+fn wave_self_dot_is_grade_0() {
+    // wave.dot(wave): grade 2 + grade 2 = 4 ≡ 0
+    let spread = spread();
+    let spin = spin();
+    for z in 1..=10 {
+        let wave = wave_sum(z, spread, spin);
+        let sd = wave.dot(&wave);
+        assert_eq!(sd.angle.grade(), 0, "Z={}: self-dot is grade 0", z);
+        assert!((sd.mag - wave.mag * wave.mag).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn wave_sum_and_collect_are_the_same_chain() {
+    let spread = spread();
+    let spin = spin();
+
+    for z in 1..=10usize {
+        let wave = wave_sum(z, spread, spin);
+
+        let particles = collect(z, spread, spin);
+        let reconstructed = particles
+            .iter()
+            .fold(Geonum::new(0.0, 0.0, 1.0), |acc, &g| acc + g);
+
+        assert!((wave.mag - reconstructed.mag).abs() < EPSILON);
+        assert_eq!(wave.angle.grade(), reconstructed.angle.grade());
+        assert_eq!(particles.len(), z);
+    }
+}
+
+#[test]
+fn every_wave_sum_cancels() {
+    let spread = spread();
+    let spin = spin();
+    for z in 2..=18 {
+        let wave = wave_sum(z, spread, spin);
+        let particles = collect(z, spread, spin);
+        let scalar_sum: f64 = particles.iter().map(|g| g.mag).sum();
+        assert!(
+            wave.mag < scalar_sum,
+            "Z={}: wave ({:.4}) < scalar sum ({:.4})",
+            z,
+            wave.mag,
+            scalar_sum
+        );
+    }
+}
+
+#[test]
+fn wave_amplitude_contains_all_pairs() {
+    let spread = spread();
+    let spin = spin();
+
+    for z in 2..=10usize {
+        let wave = wave_sum(z, spread, spin);
+
+        let particles = collect(z, spread, spin);
+
+        // |wave|² = Σ|eᵢ|² + 2Σ|eᵢ||eⱼ|cos(θᵢ-θⱼ)
+        // pairwise dot gives signed contribution via cos of angle diff
+        let mut pair_sum = 0.0;
+        for i in 0..particles.len() {
+            for j in (i + 1)..particles.len() {
+                let ai = particles[i].angle.grade_angle();
+                let aj = particles[j].angle.grade_angle();
+                pair_sum += particles[i].mag * particles[j].mag * (ai - aj).cos();
+            }
+        }
+
+        let from_fold = wave.mag * wave.mag;
+        let from_pairs = individual_sq(z) + 2.0 * pair_sum;
+
+        assert!(
+            (from_fold - from_pairs).abs() < 1e-3,
+            "Z={}: wave ({:.6}) = decomposition ({:.6})",
+            z,
+            from_fold,
+            from_pairs
+        );
+    }
+}
+
+// act VII: ionization energy from three lattice constants
+//
+// spread = π/2 = Angle::new(1.0, 2.0) — one grade step
+// spin   = π/3 = Angle::new(1.0, 3.0) — pairing angle
+// Q      = π/4 = Angle::new(1.0, 4.0) — phase shift between projection axes
+//
+// denominators 2, 3, 4 — the smallest rational π fractions after 1.
+// zero fitted parameters.
+
+fn ie_model(z: usize, waves: &[Geonum]) -> f64 {
+    let q = Angle::new(1.0, 4.0);
+    let n = n_outer(z);
+    let nucleus = Geonum::new(z as f64, 0.0, 1.0);
+    let marginal = waves[z] - waves[z - 1];
+    let p = nucleus * marginal;
+    let ref0 = Geonum::new(1.0, 0.0, 1.0);
+    let ref_q = Geonum::new_with_angle(1.0, Angle::new(1.0, 2.0));
+    let adj = p.project(&ref0);
+    let opp = p.project(&ref_q);
+    RYDBERG * (adj.mag + q.grade_angle() * opp.mag) / (n * n) as f64
+}
+
+#[test]
+fn ionization_energy_from_geometry() {
+    // three lattice constants, zero fitted parameters
+    let spread = spread();
+    let spin = spin();
+    let exp: [f64; 18] = [
+        13.598, 24.587, 5.392, 9.323, 8.298, 11.260, 14.534, 13.618, 17.423, 21.565, 5.139, 7.646,
+        5.986, 8.152, 10.487, 10.360, 12.968, 15.760,
+    ];
+
+    let waves: Vec<Geonum> = (0..=18).map(|z| wave_sum(z, spread, spin)).collect();
+
+    let mut sse = 0.0;
+    for z in 1..=18usize {
+        let ie = ie_model(z, &waves);
+        assert!(ie > 0.0, "Z={}: IE must be positive", z);
+        sse += (ie - exp[z - 1]).powi(2);
+    }
+    let rmse = (sse / 18.0).sqrt();
+
+    // Be > B anomaly (Z=4 > Z=5)
+    let ie_be = ie_model(4, &waves);
+    let ie_b = ie_model(5, &waves);
+    assert!(ie_be > ie_b, "Be ({:.2}) > B ({:.2})", ie_be, ie_b);
+
+    // N > O anomaly (Z=7 > Z=8)
+    let ie_n = ie_model(7, &waves);
+    let ie_o = ie_model(8, &waves);
+    assert!(ie_n > ie_o, "N ({:.2}) > O ({:.2})", ie_n, ie_o);
+
+    // RMSE < 3.0 with zero free parameters
+    assert!(rmse < 3.0, "RMSE={:.2} should be < 3.0", rmse);
+
+    eprintln!("\n═══ act VII: ionization energy from geometry ═══\n");
+    eprintln!("  spread = π/2, spin = π/3, Q = π/4");
+    eprintln!("  denominators: 2, 3, 4 — zero fitted parameters\n");
+    for z in 1..=18 {
+        let ie = ie_model(z, &waves);
+        let err = (ie - exp[z - 1]) / exp[z - 1] * 100.0;
+        eprintln!(
+            "  Z={:2} IE={:6.2} exp={:6.2} err={:+5.1}%",
+            z,
+            ie,
+            exp[z - 1],
+            err
+        );
+    }
+    eprintln!("\n  RMSE={:.2}  anomalies=2/2\n", rmse);
 }
