@@ -135,6 +135,7 @@ astrophysics_test.rs
 calculus_test.rs
 category_theory_test.rs
 cga_test.rs
+chemistry_test.rs
 computer_vision_test.rs
 dimension_test.rs
 economics_test.rs
