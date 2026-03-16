@@ -91,36 +91,48 @@ cargo add geonum
 
 ### example
 
-compute components and magnitude with angle.project — dimension free
+draw points and lines from one angle — dimension free
 
 ```rust
 use geonum::*;
 
-// origin is an angle
-let origin = Angle::new(0.0, 1.0);
+let origin = Geonum::new(5.0, 0.0, 1.0);
 
-// endpoint 7 at pi/6 from origin phase
-let end_angle = origin + Angle::new(1.0, 6.0);
-let end = Geonum::new_with_angle(7.0, end_angle);
+// target angles
+let a0 = Angle::new(1.0, 6.0);  // π/6
+let a1 = Angle::new(1.0, 3.0);  // π/3
+let a2 = Angle::new(1.0, 2.0);  // π/2
+let a3 = Angle::new(2.0, 3.0);  // 2π/3
 
-// init axes to assert traditional math:
-let ex = Angle::new(0.0, 1.0);
-let ey = Angle::new(1.0, 2.0); // +pi/2
+// project onto angles — the projection IS the line between points
+let line_to_p0 = origin.angle.project(a0);
+let p0 = Geonum::new_with_angle(origin.mag * line_to_p0, a0);
 
-// compute projections via angle.project
-let px = end.mag * end_angle.project(ex); // 7·cos
-let py = end.mag * end_angle.project(ey); // 7·sin
+let line_to_p1 = p0.angle.project(a1);
+let p1 = Geonum::new_with_angle(p0.mag * line_to_p1, a1);
 
-// quadratic identity: px² + py² = L²
-assert!(((px * px + py * py) - end.mag * end.mag).abs() < 1e-12);
+let line_to_p2 = p1.angle.project(a2);
+let p2 = Geonum::new_with_angle(p1.mag * line_to_p2, a2);
 
-// dimension free: blade 1 vs 1_000_001 identical
-let p_small = end.mag * end_angle.project(Angle::new(1.0, 2.0));
-let p_huge = end.mag * end_angle.project(Angle::new(1_000_001.0, 2.0));
-assert!((p_small - p_huge).abs() < 1e-12);
+let line_to_p3 = p2.angle.project(a3);
+let p3 = Geonum::new_with_angle(p2.mag * line_to_p3, a3);
+
+// every projection is cos(angle_diff)
+let step = std::f64::consts::PI / 6.0;
+assert!((line_to_p0 - step.cos()).abs() < 1e-10);
+assert!((line_to_p1 - step.cos()).abs() < 1e-10);
+
+// lineage: p3 traces back to origin through all projection coefficients
+let lineage = origin.mag * line_to_p0 * line_to_p1 * line_to_p2 * line_to_p3;
+assert!((p3.mag - lineage).abs() < 1e-10);
+
+// dimension free: project to blade 1_000_000 with same O(1) operation
+let a_million = Angle::new_with_blade(1000000, 2.0, 3.0);
+let p_million = Geonum::new_with_angle(p3.mag * p3.angle.project(a_million), a_million);
+assert!((p_million.mag - p3.mag).abs() < 1e-10);
 ```
 
-rotation creates dimensional relationships on demand - no coordinate system scaffolding required
+projection creates dimensional relationships on demand — no basis vectors, no coordinate scaffolding
 
 see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures:
 
@@ -153,6 +165,7 @@ optics_test.rs
 optimization_test.rs
 pga_test.rs
 qm_test.rs
+rendering_test.rs
 robotics_test.rs
 set_theory_test.rs
 tensor_test.rs
