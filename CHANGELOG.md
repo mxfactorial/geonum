@@ -1,5 +1,17 @@
 # changelog
 
+## 0.10.4 (2026-03-16)
+
+### added
+- rendering test suite proving polar sweep screen coverage, scanner rotation, perspective projection, ray casting, intersection, reflection, depth ordering, and conformal split through a single triangle pipeline
+- rendering benchmark in criterion bench suite comparing per-pixel rotation cost across 2D, 10D, and 100D
+- dimension independence test in ML suite proving forward pass, activation, perceptron update, and dot product produce identical results at blade 1 and blade 1_000_000 with blade accumulation traced through even and odd offsets
+
+### changed
+- replaced PI divisor pattern with π-fraction constructors in ML test suite
+- moved agent instructions from .github/copilot-instructions.md to .agents/onboard.md
+- readme example rewritten to show projection chain drawing points and lines from one angle
+
 ## 0.10.3 (2026-03-09)
 
 ### changed
