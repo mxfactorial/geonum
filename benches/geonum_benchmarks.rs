@@ -1131,6 +1131,135 @@ fn bench_projection(c: &mut Criterion) {
     group.finish();
 }
 
+// RENDERING: n×n matrix pipeline vs polar sweep
+fn bench_rendering(c: &mut Criterion) {
+    let mut group = configure_group(c.benchmark_group("rendering"));
+
+    // traditional rendering rotates n-vectors through n×n matrices
+    // geonum rendering adds an angle and projects — cost independent of dimension
+    //
+    // traditional GA cant work in 100D at all — 2^100 multivector components
+    // exceed available memory at any budget. the "optimize to a 2D subspace"
+    // workaround concedes the full space is unreachable. geonum doesnt need
+    // the workaround because dimension never entered the cost function
+
+    // traditional 2D: 2×2 matrix × 2-vector per pixel
+    group.bench_function("traditional_2D_pixel", |b| {
+        let cos_r = (PI / 6.0).cos();
+        let sin_r = (PI / 6.0).sin();
+        b.iter(|| {
+            let x = black_box(3.0_f64);
+            let y = black_box(4.0_f64);
+            let rx = x * cos_r - y * sin_r;
+            let ry = x * sin_r + y * cos_r;
+            black_box((rx, ry))
+        });
+    });
+
+    // traditional 10D: 10×10 matrix × 10-vector per pixel
+    group.bench_function("traditional_10D_pixel", |b| {
+        let cos_r = (PI / 6.0).cos();
+        let sin_r = (PI / 6.0).sin();
+        let mut mat = [[0.0_f64; 10]; 10];
+        for i in 0..10 {
+            mat[i][i] = 1.0;
+        }
+        mat[0][0] = cos_r;
+        mat[0][1] = -sin_r;
+        mat[1][0] = sin_r;
+        mat[1][1] = cos_r;
+
+        b.iter(|| {
+            let mut v = [0.0_f64; 10];
+            v[0] = black_box(3.0);
+            v[1] = black_box(4.0);
+            let mut result = [0.0_f64; 10];
+            for r in 0..10 {
+                let mut sum = 0.0;
+                for c in 0..10 {
+                    sum += mat[r][c] * v[c];
+                }
+                result[r] = sum;
+            }
+            black_box(result)
+        });
+    });
+
+    // traditional 100D: 100×100 matrix × 100-vector per pixel
+    group.bench_function("traditional_100D_pixel", |b| {
+        let cos_r = (PI / 6.0).cos();
+        let sin_r = (PI / 6.0).sin();
+        let mut mat = [[0.0_f64; 100]; 100];
+        for i in 0..100 {
+            mat[i][i] = 1.0;
+        }
+        mat[0][0] = cos_r;
+        mat[0][1] = -sin_r;
+        mat[1][0] = sin_r;
+        mat[1][1] = cos_r;
+
+        b.iter(|| {
+            let mut v = [0.0_f64; 100];
+            v[0] = black_box(3.0);
+            v[1] = black_box(4.0);
+            let mut result = [0.0_f64; 100];
+            for r in 0..100 {
+                let mut sum = 0.0;
+                for c in 0..100 {
+                    sum += mat[r][c] * v[c];
+                }
+                result[r] = sum;
+            }
+            black_box(result)
+        });
+    });
+
+    // geonum: same cost at any blade context
+    let rotation = Angle::new(1.0, 6.0);
+    let ex = Angle::new(0.0, 1.0);
+    let ey = Angle::new(1.0, 2.0);
+
+    group.bench_function("geonum_blade_1_pixel", |b| {
+        b.iter(|| {
+            let scanner = Geonum::new_with_angle(
+                black_box(5.0),
+                Angle::new(black_box(1.0), black_box(4.0)) + rotation,
+            );
+            let rx = scanner.mag * scanner.angle.project(ex);
+            let ry = scanner.mag * scanner.angle.project(ey);
+            black_box((rx, ry))
+        });
+    });
+
+    group.bench_function("geonum_blade_1K_pixel", |b| {
+        let high_blade = Angle::new_with_blade(1_000, 0.0, 1.0);
+        b.iter(|| {
+            let scanner = Geonum::new_with_angle(
+                black_box(5.0),
+                Angle::new(black_box(1.0), black_box(4.0)) + high_blade + rotation,
+            );
+            let rx = scanner.mag * scanner.angle.project(ex);
+            let ry = scanner.mag * scanner.angle.project(ey);
+            black_box((rx, ry))
+        });
+    });
+
+    group.bench_function("geonum_blade_1M_pixel", |b| {
+        let extreme_blade = Angle::new_with_blade(1_000_000, 0.0, 1.0);
+        b.iter(|| {
+            let scanner = Geonum::new_with_angle(
+                black_box(5.0),
+                Angle::new(black_box(1.0), black_box(4.0)) + extreme_blade + rotation,
+            );
+            let rx = scanner.mag * scanner.angle.project(ex);
+            let ry = scanner.mag * scanner.angle.project(ey);
+            black_box((rx, ry))
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_tensor_vs_geonum,
@@ -1142,7 +1271,8 @@ criterion_group!(
     bench_dual,
     bench_differentiation,
     bench_inversion,
-    bench_projection
+    bench_projection,
+    bench_rendering
 );
 
 criterion_main!(benches);
