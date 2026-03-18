@@ -1,5 +1,11 @@
 # changelog
 
+## 0.10.5 (2026-03-17)
+
+### added
+- ml_attention_test.rs: 22 tests proving attention as interference — dot is forward, wedge is backward, multi-head as angle offsets, positional encoding as rotation, wedge-driven learning, full forward pass with routing and gating
+- ml_training_test.rs: 6 tests proving next-token prediction without training — observed step between tokens IS the rotation, board clusters steps by wedge independence, generalizes to unseen sequences, sequence product as context, zero epochs zero gradients
+
 ## 0.10.4 (2026-03-16)
 
 ### added
