@@ -157,6 +157,8 @@ finance_test.rs
 linear_algebra_test.rs
 machine_learning_test.rs
 mechanics_test.rs
+ml_attention_test.rs
+ml_training_test.rs
 monetary_policy_test.rs
 motion_laws_test.rs
 multivector_test.rs
