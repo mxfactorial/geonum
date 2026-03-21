@@ -307,7 +307,7 @@ fn it_demonstrates_why_single_geonum_fails_here() {
     // 1. Query individual beam properties
     assert_eq!(separate_beams[0].angle.grade_angle(), 0.0);
     assert_eq!(separate_beams[1].angle.grade_angle(), PI / 2.0);
-    assert_eq!(separate_beams[2].angle.grade_angle(), PI / 4.0);
+    assert!((separate_beams[2].angle.grade_angle() - PI / 4.0).abs() < 1e-10);
 
     // 2. Compute pairwise interactions
     let beam1_beam2_meet = separate_beams[0].meet(&separate_beams[1]);

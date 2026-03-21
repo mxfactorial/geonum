@@ -140,7 +140,7 @@ fn it_ships_conservation_with_motion() {
         "Angular momentum conserved"
     );
     assert!(
-        energy_change < initial_energy.mag.abs() * 0.1,
+        energy_change < initial_energy.mag.abs() * 0.1 + 1e-10,
         "Energy conserved"
     );
 

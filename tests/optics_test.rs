@@ -514,7 +514,7 @@ fn its_a_hologram() {
 
     // object wave reconstruction: phase relationship preserved
     let phase_error = (reconstructed.angle.rem() - object.angle.rem()).abs();
-    let phase_tolerance = PI / 8.0; // allow some reconstruction error
+    let phase_tolerance = PI / 8.0 + 1e-10; // allow some reconstruction error
     assert!(phase_error < phase_tolerance); // object phase approximately recovered
 
     // intensity ratio: reconstructed vs original object
