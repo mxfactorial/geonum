@@ -30,15 +30,15 @@ fn it_maps_trig_onto_the_pi_over_2_lattice() {
         let theta = a.grade_angle();
 
         let c = Geonum::cos(a);
-        assert!((c.mag - theta.cos().abs()).abs() < EPSILON);
+        assert!(c.near_mag(theta.cos().abs()));
         assert!(matches!(c.angle.grade(), 0 | 2)); // even pair
 
         let s = Geonum::sin(a);
-        assert!((s.mag - theta.sin().abs()).abs() < EPSILON);
+        assert!(s.near_mag(theta.sin().abs()));
         assert!(matches!(s.angle.grade(), 1 | 3)); // odd pair
 
         let t = Geonum::tan(a);
-        assert!((t.mag - theta.tan().abs()).abs() < EPSILON);
+        assert!(t.near_mag(theta.tan().abs()));
         assert!(matches!(t.angle.grade(), 1 | 3)); // odd pair via sin/cos division
     }
 }
@@ -54,7 +54,7 @@ fn it_shifts_sin_by_a_quarter_turn_of_cos() {
 
     // same magnitude; sin is a quarter-turn (Q) of cos
     let q = Angle::new(1.0, 2.0);
-    assert!((s.mag - c_shifted.mag).abs() < EPSILON);
+    assert!(s.near_mag(c_shifted.mag));
     assert_eq!(s.angle.base_angle(), (c_shifted.angle + q).base_angle());
 }
 
@@ -84,7 +84,7 @@ fn it_relates_tan_to_sin_over_cos_geometrically() {
     let t = Geonum::tan(a);
     let s_over_c = Geonum::sin(a).div(&Geonum::cos(a));
 
-    assert!((t.mag - s_over_c.mag).abs() < EPSILON);
+    assert!(t.near_mag(s_over_c.mag));
     assert_eq!(t.angle.base_angle(), s_over_c.angle.base_angle());
 }
 
@@ -97,7 +97,7 @@ fn it_is_reference_agnostic() {
     let sin_as_even_pair = Geonum::cos(a + Angle::new(3.0, 2.0));
     let s = Geonum::sin(a);
 
-    assert!((s.mag - sin_as_even_pair.mag).abs() < EPSILON);
+    assert!(s.near_mag(sin_as_even_pair.mag));
     // different references, same information: sin = cos + Q
     let q = Angle::new(1.0, 2.0);
     assert_eq!(
@@ -134,7 +134,7 @@ fn it_relates_trig_through_grade_hierarchy() {
     let sin_obtuse = Geonum::sin(a_obtuse);
     let cos_shifted_obtuse = Geonum::cos(a_obtuse + Angle::new(3.0, 2.0));
     let q = Angle::new(1.0, 2.0);
-    assert!((sin_obtuse.mag - cos_shifted_obtuse.mag).abs() < EPSILON);
+    assert!(sin_obtuse.near_mag(cos_shifted_obtuse.mag));
     assert_eq!(
         sin_obtuse.angle.base_angle(),
         (cos_shifted_obtuse.angle + q).base_angle()
@@ -174,13 +174,13 @@ fn it_doesnt_need_cos_and_tan() {
 
         // cos via sin matches standard magnitude and parity
         let c = cos_via_sin(a);
-        assert!((c.mag - theta.cos().abs()).abs() < EPSILON);
+        assert!(c.near_mag(theta.cos().abs()));
         assert!(matches!(c.angle.grade(), 0 | 2));
 
         // tan via sin ratio matches standard magnitude and parity (avoid singularities)
         if theta.cos().abs() > 1e-12 {
             let t = tan_via_sin(a);
-            assert!((t.mag - theta.tan().abs()).abs() < EPSILON);
+            assert!(t.near_mag(theta.tan().abs()));
             assert!(matches!(t.angle.grade(), 1 | 3));
         }
     }
@@ -208,7 +208,7 @@ fn it_is_projection() {
     // this is the r cos term in the linear combination r cos(θ−φ) e_φ + r sin(θ−φ) e_{φ+π/2}
     let onto_adjacent = Geonum::new_with_angle(1.0, zero);
     let proj_adjacent = v.project(&onto_adjacent);
-    assert!((proj_adjacent.mag - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
+    assert!(proj_adjacent.near_mag((2.0_f64).sqrt() / 2.0));
     assert_eq!(proj_adjacent.angle, zero);
 
     // opposite (φ=π/2): [1, π/4] → [√2/2, π/2]
@@ -216,7 +216,7 @@ fn it_is_projection() {
     // this is the r sin term in the same linear combination above
     let onto_opposite = Geonum::new_with_angle(1.0, quarter);
     let proj_opposite = v.project(&onto_opposite);
-    assert!((proj_opposite.mag - (2.0_f64).sqrt() / 2.0).abs() < EPSILON);
+    assert!(proj_opposite.near_mag((2.0_f64).sqrt() / 2.0));
     assert_eq!(proj_opposite.angle, quarter);
 
     // pythagorean identity from projections
@@ -391,9 +391,110 @@ fn it_expresses_pythagoras_theorem_through_composed_angles() {
 
     // verify pythagorean relationship in lengths
     let expected_length = (3.0_f64.powi(2) + 4.0_f64.powi(2)).sqrt();
-    assert!((combined.mag - expected_length).abs() < EPSILON);
-    assert!((combined.mag - 5.0).abs() < EPSILON);
+    assert!(combined.near_mag(expected_length));
+    assert!(combined.near_mag(5.0));
 
     // but the real insight: this length relationship comes from cosine interference
     // cos(π/2) = 0 means orthogonal rotations combine with zero interference term
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// arcsin is not a primitive — its projection recovery
+//
+// sin(θ) = opp/hyp collapses [hyp, θ] to a scalar ratio by discarding the angle.
+// arcsin reverses this collapse. in geonum the angle is never discarded,
+// so arcsin is unnecessary — its just reading the angle that projection would erase.
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn it_shows_sin_is_a_projection_that_discards_the_angle() {
+    // a unit hypotenuse at angle θ is a complete geometric object: [1, θ]
+    // sin(θ) projects it onto the π/2 axis, producing a scalar ratio
+    // this projection discards θ — thats what creates the "inverse" problem
+
+    let angles = [
+        Angle::new(1.0, 6.0), // π/6
+        Angle::new(1.0, 4.0), // π/4
+        Angle::new(1.0, 3.0), // π/3
+        Angle::new(2.0, 5.0), // 2π/5
+    ];
+
+    for theta in angles {
+        let hypotenuse = Geonum::new_with_angle(1.0, theta);
+
+        // project onto opposite axis (π/2) — this is sin(θ)
+        let opposite = hypotenuse.opp();
+        assert!(opposite.near_mag(theta.grade_angle().sin().abs()));
+
+        // the projection result anchors to odd pair, not θ
+        assert!(matches!(opposite.angle.grade(), 1 | 3));
+
+        // but the hypotenuse still carries θ
+        assert_eq!(hypotenuse.angle, theta);
+    }
+}
+
+#[test]
+fn it_proves_arcsin_loses_quadrant_information() {
+    // sin projects [1, θ] → ratio, losing θ AND quadrant
+    // scalar arcsin can only return θ ∈ [−π/2, π/2]
+    // geonum preserves quadrant via grade (blade mod 4)
+
+    let theta1 = Angle::new(1.0, 6.0); // π/6 (quadrant I)
+    let theta2 = Angle::new(5.0, 6.0); // 5π/6 (quadrant II)
+
+    let sin1 = Geonum::sin(theta1);
+    let sin2 = Geonum::sin(theta2);
+
+    // same magnitude — scalar arcsin cannot distinguish these
+    assert!(sin1.near_mag(sin2.mag));
+
+    // but the geometric numbers at those angles are distinct
+    let hyp1 = Geonum::new_with_angle(1.0, theta1);
+    let hyp2 = Geonum::new_with_angle(1.0, theta2);
+    assert_eq!(hyp1.angle, theta1);
+    assert_eq!(hyp2.angle, theta2);
+
+    // cos projections distinguish them: cos(π/6) > 0, cos(5π/6) < 0
+    let cos1 = Geonum::cos(theta1);
+    let cos2 = Geonum::cos(theta2);
+    assert_eq!(cos1.angle.grade(), 0); // positive cos → grade 0
+    assert_eq!(cos2.angle.grade(), 2); // negative cos → grade 2 (D event)
+}
+
+#[test]
+fn it_shows_sqrt_1_minus_sin_squared_is_quadrature() {
+    // √(1−sin²θ) inside arcsin's integral definition
+    // is just the quadrature identity: cos(θ) = sin(θ + π/2)
+    //
+    // sin²+cos² = 1 says orthogonal projections partition the unit circle
+    // √(1−sin²) solves for cos — scalar recovery of the Q relationship
+
+    let angles = [
+        Angle::new(1.0, 6.0), // π/6
+        Angle::new(1.0, 4.0), // π/4
+        Angle::new(1.0, 3.0), // π/3
+        Angle::new(2.0, 7.0), // 2π/7
+    ];
+
+    let q = Angle::new(1.0, 2.0); // quarter turn
+
+    for theta in angles {
+        let sin_val = theta.grade_angle().sin();
+        let cos_val = theta.grade_angle().cos();
+
+        // method 1: scalar recovery via √(1 - sin²)
+        let cos_from_sqrt = (1.0 - sin_val * sin_val).sqrt();
+
+        // method 2: quadrature via Q shift: sin(θ + π/2) = cos(θ)
+        let theta_plus_q = theta + q;
+        let cos_from_quadrature = theta_plus_q.grade_angle().sin();
+
+        // method 3: geonum cos directly
+        let cos_geo = Geonum::cos(theta);
+
+        assert!((cos_from_sqrt - cos_val.abs()).abs() < EPSILON);
+        assert!((cos_from_quadrature - cos_val).abs() < EPSILON);
+        assert!(cos_geo.near_mag(cos_val.abs()));
+    }
 }

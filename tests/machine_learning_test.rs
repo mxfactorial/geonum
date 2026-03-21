@@ -1092,7 +1092,7 @@ fn it_proves_ml_cost_is_independent_of_dimension() {
     let output_base = input.forward_pass(&weight, &bias);
     // blade: 0 + 0 = 0, rem: π/4 + π/6 = 5π/12 (no crossing, < π/2)
     assert_eq!(output_base.angle.blade(), 0);
-    assert!((output_base.angle.rem() - 5.0 * PI / 12.0).abs() < 1e-10);
+    assert!(output_base.angle.near_rem(5.0 * PI / 12.0));
 
     // shift both by 1_000_000 blades (even, grade 0)
     let even_offset = Angle::new_with_blade(1_000_000, 0.0, 1.0);
@@ -1103,9 +1103,9 @@ fn it_proves_ml_cost_is_independent_of_dimension() {
     // blade accumulation: (0 + 1M) + (0 + 1M) = 2M
     assert_eq!(output_even.angle.blade(), 2_000_000);
     // remainder unchanged — blade offset doesnt touch the fractional angle
-    assert!((output_even.angle.rem() - output_base.angle.rem()).abs() < 1e-10);
+    assert!(output_even.angle.near_rem(output_base.angle.rem()));
     // magnitude unchanged — forward_pass mag = input.mag * weight.mag + bias.mag
-    assert!((output_even.mag - output_base.mag).abs() < 1e-10);
+    assert!(output_even.near_mag(output_base.mag));
     // grade preserved: 2_000_000 % 4 = 0 = baseline grade
     assert_eq!(output_even.angle.grade(), output_base.angle.grade());
 
@@ -1118,9 +1118,9 @@ fn it_proves_ml_cost_is_independent_of_dimension() {
     // blade accumulation: (0 + 1M+1) + (0 + 1M+1) = 2M+2
     assert_eq!(output_odd.angle.blade(), 2_000_002);
     // remainder still unchanged
-    assert!((output_odd.angle.rem() - output_base.angle.rem()).abs() < 1e-10);
+    assert!(output_odd.angle.near_rem(output_base.angle.rem()));
     // magnitude still unchanged
-    assert!((output_odd.mag - output_base.mag).abs() < 1e-10);
+    assert!(output_odd.near_mag(output_base.mag));
     // grade shifts by 2: (2M+2) % 4 = 2, baseline was 0
     assert_eq!(output_odd.angle.grade(), 2);
 

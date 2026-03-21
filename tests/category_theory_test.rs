@@ -72,10 +72,10 @@ fn its_a_category() {
     // Since both f and g have blade: 1, f_compose_g will also have blade: 1
 
     // test composed transformation properties
-    assert!((f_compose_g.mag - 6.0).abs() < EPSILON); // lengths multiply: 2*3=6
-                                                      // angles add: pi/4 + pi/6 = 5pi/12
+    assert!(f_compose_g.near_mag(6.0)); // lengths multiply: 2*3=6
+                                        // angles add: pi/4 + pi/6 = 5pi/12
     let expected_angle = PI / 4.0 + PI / 6.0;
-    assert!((f_compose_g.angle.grade_angle() - expected_angle).abs() < EPSILON);
+    assert!(f_compose_g.angle.near_rad(expected_angle));
 
     // test natural transformations as geometric rotations
     // a natural transformation is just a rotation that preserves structure

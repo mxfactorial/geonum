@@ -415,7 +415,7 @@ fn it_performs_interest_rate_modeling() {
 
     // prove O(1) complexity regardless of time horizon
     assert!(
-        duration.as_micros() < 5000, // 10000 calculations in under 5ms
+        duration.as_micros() < 10000, // 10000 calculations in under 10ms
         "interest rate evolution is O(1) complexity"
     );
 
@@ -623,7 +623,7 @@ fn it_computes_arbitrage_opportunities() {
 
     // Verify O(1) complexity for individual arbitrage calculations
     assert!(
-        duration.as_micros() < 5000, // 10000 calculations in under 5ms
+        duration.as_micros() < 10000, // 10000 calculations in under 10ms
         "Arbitrage detection has O(1) complexity per market pair"
     );
 

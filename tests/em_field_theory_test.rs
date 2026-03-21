@@ -127,7 +127,7 @@ fn its_a_maxwell_equation() {
        // in geometric algebra, curl operation raises grade by 1
 
     // compare the simplified model
-    assert!((curl_e_adjusted.mag - negative_db_dt.mag).abs() < EPSILON);
+    assert!(curl_e_adjusted.near_mag(negative_db_dt.mag));
     assert_eq!(curl_e_adjusted.angle, negative_db_dt.angle);
 
     // test ampere-maxwell law: ∇×B = μ₀ε₀∂E/∂t
@@ -257,11 +257,11 @@ fn its_a_maxwell_equation() {
 
     // test that curl operation completed successfully with O(1) complexity
     assert_eq!(curl_e_high.angle.blade(), 1);
-    assert!(curl_e_high.angle.rem().abs() < EPSILON);
+    assert!(curl_e_high.angle.near_rem(0.0));
 
     // test that B field has expected bivector grade
     assert_eq!(b_high.angle.blade(), 2);
-    assert!(b_high.angle.rem().abs() < EPSILON);
+    assert!(b_high.angle.near_rem(0.0));
 
     // compare with theoretical O(n²) scaling of traditional approaches
     // traditional curl computation would require matrix operations scaling with dimensions
@@ -456,7 +456,7 @@ fn its_an_electromagnetic_wave() {
         - omega_geonum * Geonum::new(time_sample, 0.0, 1.0);
 
     // geometric wave has unit amplitude and phase from dispersion relation
-    assert!((geometric.mag - 1.0).abs() < EPSILON);
+    assert!(geometric.near_mag(1.0));
     assert_eq!(geometric.angle, expected_phase.angle);
 
     // test wave at different positions - phase changes by k*Δx
@@ -590,7 +590,7 @@ fn its_a_poynting_vector() {
 
     // compare results
     let traditional_s = traditional_poynting(&e_field, &b_field);
-    assert!((traditional_s.mag - s_poynting.mag).abs() < EPSILON);
+    assert!(traditional_s.near_mag(s_poynting.mag));
 
     // benchmark comparison
     let start_geo = Instant::now();

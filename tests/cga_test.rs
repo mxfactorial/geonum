@@ -1312,21 +1312,13 @@ fn it_finds_line_sphere_intersection() {
     let line_inside = Geonum::new_with_blade(2.0, 1, 0.0, 1.0); // length 2 < sphere's 5
     let inside_meet = line_inside.meet(&sphere);
 
-    // LENGTH COMPARISON TRAP: you might think length 2 < 5 means "inside"
-    // but geonum isnt modeling 3D euclidean space! length and angle are
-    // abstract geometric parameters, not spatial coordinates
-    //
-    // WHAT MATTERS: the angle relationship (both at 0) makes them parallel
-    // in geonum space. the different lengths (2 vs 5) create a scaling
-    // relationship. meet still produces grade 3 because they span 3D together
-    //
-    // LESSON: dont impose euclidean interpretations on geonum operations
-    assert_eq!(
-        inside_meet.angle.grade(),
-        3,
-        "different scales still span 3D"
+    // both at angle 0 — parallel in geonum space
+    // parallel objects have zero wedge product, so meet magnitude is zero
+    // different magnitudes dont create angular separation
+    assert!(
+        inside_meet.mag.abs() < 1e-10,
+        "parallel geonums → zero meet"
     );
-    assert!(inside_meet.mag > 0.0, "scaling difference → non-zero meet");
 
     // demonstrate general angle configuration
     let line_angled = Geonum::new_with_blade(3.0, 1, 1.0, 3.0); // π/3 angle
@@ -3336,7 +3328,7 @@ fn it_computes_power_of_point_to_circle() {
 
     // distance = 4, so power = 16 - 4 = 12
     assert!((distance - 4.0).abs() < EPSILON);
-    assert!((power_outside.mag - 12.0).abs() < EPSILON);
+    assert!(power_outside.near_mag(12.0));
     assert!(power_outside.mag > 0.0, "point outside has positive power");
 
     // test 2: point on circle (zero power)
@@ -3363,7 +3355,7 @@ fn it_computes_power_of_point_to_circle() {
 
     assert!((distance_inside - 1.0).abs() < EPSILON);
     // power is negative, represented as angle π
-    assert!((power_inside.mag - 3.0).abs() < EPSILON);
+    assert!(power_inside.near_mag(3.0));
     assert_eq!(
         power_inside.angle.blade(),
         2,
@@ -3380,11 +3372,11 @@ fn it_computes_power_of_point_to_circle() {
     let power_tangent = Geonum::scalar(distance_tangent * distance_tangent) - radius_squared;
 
     assert!((distance_tangent - 4.0).abs() < EPSILON);
-    assert!((power_tangent.mag - 12.0).abs() < EPSILON);
+    assert!(power_tangent.near_mag(12.0));
 
     // tangent length = sqrt(power) - demonstrating with geonum
     let tangent_length = power_tangent.pow(0.5);
-    assert!((tangent_length.mag - (12.0_f64.sqrt())).abs() < EPSILON);
+    assert!(tangent_length.near_mag(12.0_f64.sqrt()));
 
     // test 5: radical axis (locus of equal power to two circles)
     let circle2_center = Geonum::new_from_cartesian(7.0, 4.0);
@@ -3446,8 +3438,8 @@ fn it_computes_power_of_point_to_sphere() {
     let power_outside = dist_squared - radius * radius;
 
     // distance = 3, so power = 9 - 6.25 = 2.75
-    assert!((distance.mag - 3.0).abs() < EPSILON);
-    assert!((power_outside.mag - 2.75).abs() < EPSILON);
+    assert!(distance.near_mag(3.0));
+    assert!(power_outside.near_mag(2.75));
     assert!(
         power_outside.mag > 0.0,
         "point outside sphere has positive power"
@@ -3468,7 +3460,7 @@ fn it_computes_power_of_point_to_sphere() {
     let distance_on = dist_on_squared.pow(0.5);
     let power_on = dist_on_squared - radius * radius;
 
-    assert!((distance_on.mag - radius.mag).abs() < EPSILON);
+    assert!(distance_on.near_mag(radius.mag));
     assert!(
         power_on.mag.abs() < EPSILON,
         "point on sphere has zero power"
@@ -3488,9 +3480,9 @@ fn it_computes_power_of_point_to_sphere() {
     let distance_inside = dist_inside_squared.pow(0.5);
     let power_inside = dist_inside_squared - radius * radius;
 
-    assert!((distance_inside.mag - 1.0).abs() < EPSILON);
+    assert!(distance_inside.near_mag(1.0));
     // negative power represented as angle π
-    assert!((power_inside.mag - 5.25).abs() < EPSILON);
+    assert!(power_inside.near_mag(5.25));
     assert_eq!(
         power_inside.angle.blade(),
         2,
@@ -3530,7 +3522,7 @@ fn it_computes_power_of_point_to_sphere() {
     let power_million = Geonum::scalar(million_dim_ray.mag * million_dim_ray.mag)
         - Geonum::scalar(1.0) * Geonum::scalar(1.0); // radius = 1
 
-    assert!((power_million.mag - 3.0).abs() < EPSILON);
+    assert!(power_million.near_mag(3.0));
 
     // geonum ghosts the conformal inner product P·S
     // power formula works identically in any dimension with O(1) complexity
@@ -4201,8 +4193,8 @@ fn it_computes_steiner_chain() {
     // chain centers lie on circle of radius = (inner_radius + outer_radius) / 2
     let chain_orbit_radius = (inner_radius + outer_radius) * Geonum::scalar(0.5);
 
-    assert!((chain_radius.mag - 1.5).abs() < EPSILON);
-    assert!((chain_orbit_radius.mag - 3.5).abs() < EPSILON);
+    assert!(chain_radius.near_mag(1.5));
+    assert!(chain_orbit_radius.near_mag(3.5));
 
     // number of circles in chain determined by geometry
     // for our radii, we can fit 7 circles
@@ -5486,7 +5478,7 @@ fn it_eliminates_versor_complexity() {
     // rotation without rotor exponential R = e^(-θ/2 B)
     let angle = Angle::new(1.0, 3.0); // π/3
     let rotated = point.rotate(angle); // just angle addition, no exponential
-    assert!((rotated.mag - point.mag).abs() < EPSILON);
+    assert!(rotated.near_mag(point.mag));
 
     // scaling without dilator versor D = e^(λe₀∧e∞)
     let scale_factor = 2.0;

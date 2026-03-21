@@ -50,7 +50,7 @@ fn its_a_state_vector() {
 
     // test direct geometric representation
     assert_eq!(state.mag, 1.0); // normalized amplitude
-    assert!((state.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // phase π/4
+    assert!(state.angle.near_rad(PI / 4.0)); // phase π/4
 
     // superposition |ψ⟩ = α|0⟩ + β|1⟩ as single geonum from cartesian
     // equal probability superposition: (|0⟩ + |1⟩)/√2
@@ -59,7 +59,7 @@ fn its_a_state_vector() {
     let superposition = Geonum::new_from_cartesian(alpha, beta);
 
     // test superposition amplitude and phase
-    assert!((superposition.mag - 1.0).abs() < EPSILON); // normalized
+    assert!(superposition.near_mag(1.0)); // normalized
     assert_eq!(superposition.angle, Angle::new(1.0, 4.0)); // 45° phase
 
     // measurement as angle projection
@@ -203,7 +203,7 @@ fn its_an_uncertainty_principle() {
     // test complementarity through angle orthogonality
     // position and momentum are orthogonal dimensions
     let dot_product = position.dot(&momentum);
-    assert!(dot_product.mag.abs() < EPSILON); // orthogonal
+    assert!(dot_product.near_mag(0.0)); // orthogonal
 
     // test wedge product as uncertainty measure
     // the wedge product gives the geometric area representing uncertainty
@@ -217,7 +217,7 @@ fn its_an_uncertainty_principle() {
     let p_dot_x = position.dot(&momentum);
     let p_wedge_x = position.wedge(&momentum);
 
-    assert!(p_dot_x.mag.abs() < EPSILON); // orthogonal
+    assert!(p_dot_x.near_mag(0.0)); // orthogonal
     assert!(p_wedge_x.mag >= 0.5); // maximum uncertainty
 
     // test uncertainty with non-orthogonal observables
@@ -264,7 +264,7 @@ fn its_a_quantum_gate() {
     // test gate application through angle transformation
     let h_applied = hadamard(&qubit);
     assert_eq!(h_applied.mag, qubit.mag); // preserves norm
-    assert!((h_applied.angle.grade_angle() - PI / 4.0).abs() < EPSILON); // creates superposition
+    assert!(h_applied.angle.near_rad(PI / 4.0)); // creates superposition
 
     // test gate composition through angle addition
     // first apply hadamard, then phase gate
@@ -275,7 +275,7 @@ fn its_a_quantum_gate() {
 
     // test unitarity preserved through angle conservation
     // unitary operators preserve the norm (probability)
-    assert!((h_then_s.mag - qubit.mag).abs() < EPSILON);
+    assert!(h_then_s.near_mag(qubit.mag));
 }
 
 #[test]
@@ -345,8 +345,8 @@ fn its_an_entangled_state() {
     assert_eq!(angle_diff.grade_angle(), PI);
 
     // test bell state properties through angle configuration
-    assert!((bell_state.0.mag - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
-    assert!((bell_state.1.mag - 1.0 / 2.0_f64.sqrt()).abs() < EPSILON);
+    assert!(bell_state.0.near_mag(1.0 / 2.0_f64.sqrt()));
+    assert!(bell_state.1.near_mag(1.0 / 2.0_f64.sqrt()));
 
     // test measurement correlation
     // when one particle is measured, the others state is determined
@@ -414,11 +414,11 @@ fn its_a_quantum_harmonic_oscillator() {
 
     // test ladder operators
     let raised = creation(&ground_state, 0);
-    assert!((raised.mag - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
+    assert!(raised.near_mag(1.0_f64.sqrt())); // √1 factor
     assert_eq!(raised.angle, first_excited.angle);
 
     let lowered = annihilation(&first_excited, 1);
-    assert!((lowered.mag - 1.0_f64.sqrt()).abs() < EPSILON); // √1 factor
+    assert!(lowered.near_mag(1.0_f64.sqrt())); // √1 factor
     assert_eq!(lowered.angle, ground_state.angle);
 }
 
@@ -878,7 +878,7 @@ fn it_eliminates_statistical_collections() {
     assert_eq!(pure_state.mag, 1.0); // normalized
                                      // phase is definite, not statistical
     let expected_phase = (0.8_f64).atan2(0.6);
-    assert!((pure_state.angle.grade_angle() - expected_phase).abs() < EPSILON);
+    assert!(pure_state.angle.near_rad(expected_phase));
 
     // measurement outcomes from projection geometry, not probability sampling
     let measurement_axis = Geonum::new(1.0, 0.0, 1.0); // |0⟩ basis
@@ -1079,13 +1079,13 @@ fn it_preserves_unitary_transformation() {
     let state = Geonum::new_from_cartesian(0.6, 0.8);
 
     // test normalized
-    assert!((state.mag - 1.0).abs() < EPSILON);
+    assert!(state.near_mag(1.0));
 
     // unitary transformation: rotate by π/4
     let transformed = state.rotate(Angle::new(1.0, 4.0));
 
     // amplitude preserved (unitarity)
-    assert!((transformed.mag - state.mag).abs() < EPSILON);
+    assert!(transformed.near_mag(state.mag));
 
     // phase changed by π/4
     let expected_angle = state.angle + Angle::new(1.0, 4.0);
@@ -1104,7 +1104,7 @@ fn it_preserves_unitary_transformation() {
     let rotated_inner_product = rotated_a.dot(&rotated_b);
 
     // inner product preserved under unitary transformation
-    assert!((inner_product.mag - rotated_inner_product.mag).abs() < EPSILON);
+    assert!(inner_product.near_mag(rotated_inner_product.mag));
 
     // spinor as single geonum instead of pair
     // traditional spinor (a, b) → geonum with length = ||(a,b)|| and angle encoding ratio
@@ -1116,7 +1116,7 @@ fn it_preserves_unitary_transformation() {
     let rotated_spinor = spinor.rotate(Angle::new(1.0, 3.0)); // π/3 rotation
 
     // magnitude preserved
-    assert!((rotated_spinor.mag - spinor.mag).abs() < EPSILON);
+    assert!(rotated_spinor.near_mag(spinor.mag));
 }
 
 #[test]
@@ -1242,7 +1242,7 @@ fn it_proves_superposition_is_a_cakeism() {
 
     // the state is deterministic, not probabilistic
     assert_eq!(state.angle, theta);
-    assert!((state.mag - 1.0).abs() < EPSILON);
+    assert!(state.near_mag(1.0));
 
     println!("\n=== DETERMINISTIC, NOT PROBABILISTIC ===");
     println!(

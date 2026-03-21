@@ -53,8 +53,8 @@ setting the metric from the quadrature's bivector shields it from entropy with t
 struct Geonum {
     magnitude: f64,   // multiply
     angle: Angle {    // add
-        blade: usize,    // counts π/2 rotations
-        remainder: f64   // current [0, π/2) angle
+        blade: usize,    // π/2 rotation count
+        t: f64           // tan(θ/2) blade projection ratio
     }
 }
 ```
@@ -72,12 +72,12 @@ traditional: dimensions are coordinate axes - you stack more coordinates
 
 Geonum: dimensions are rotational states - you rotate by π/2 increments
 
-| dimension | traditional | Geonum |
-|-----------|-------------|--------|
-| 1D | (x)  | `[magnitude, 0]` |
-| 2D | (x, y)  | `[magnitude, π/2]` |
-| 3D | (x, y, z) | `[magnitude, π]` |
-| 4D | (x, y, z, w) | `[magnitude, 3π/2]` |
+| dimension | traditional  | Geonum              |
+| --------- | ------------ | ------------------- |
+| 1D        | (x)          | `[magnitude, 0]`    |
+| 2D        | (x, y)       | `[magnitude, π/2]`  |
+| 3D        | (x, y, z)    | `[magnitude, π]`    |
+| 4D        | (x, y, z, w) | `[magnitude, 3π/2]` |
 
 geometric numbers break numbers free from pencil & paper math requiring everything to be described as scalars and roman numeral stacked arrays of scalars
 
@@ -178,46 +178,46 @@ trigonometry_test.rs
 
 #### tensor operations: O(n³) vs O(1)
 
-| implementation | size | time | speedup |
-|----------------|------|------|---------|
-| tensor (O(n³)) | 2 | 342 ns | baseline |
-| tensor (O(n³)) | 3 | 772 ns | baseline |
-| tensor (O(n³)) | 4 | 1.35 µs | baseline |
-| tensor (O(n³)) | 8 | 6.88 µs | baseline |
-| geonum (O(1)) | all | 16 ns | 21-430× |
+| implementation | size | time    | speedup  |
+| -------------- | ---- | ------- | -------- |
+| tensor (O(n³)) | 2    | 372 ns  | baseline |
+| tensor (O(n³)) | 3    | 836 ns  | baseline |
+| tensor (O(n³)) | 4    | 1.47 µs | baseline |
+| tensor (O(n³)) | 8    | 7.80 µs | baseline |
+| geonum (O(1))  | all  | 15 ns   | 25-520×  |
 
-geonum achieves constant 16ns regardless of size, while tensor operations scale cubically from 342ns to 6.88µs
+geonum achieves constant 15ns regardless of size, while tensor operations scale cubically from 372ns to 7.80µs
 
 #### extreme dimensions
 
-| implementation | dimensions | time | storage |
-|----------------|------------|------|---------|
-| traditional GA | 10 | 7.18 µs | 2^10 = 1024 components |
-| traditional GA | 30+ | impossible | 2^30 = 1B+ components |
-| traditional GA | 1000+ | impossible | 2^1000 > atoms in universe |
-| geonum | 10 | 31 ns | 2 values |
-| geonum | 30 | 30 ns | 2 values |
-| geonum | 1000 | 30 ns | 2 values |
-| geonum | 1,000,000 | 30 ns | 2 values |
+| implementation | dimensions | time       | storage                    |
+| -------------- | ---------- | ---------- | -------------------------- |
+| traditional GA | 10         | 7.18 µs    | 2^10 = 1024 components     |
+| traditional GA | 30+        | impossible | 2^30 = 1B+ components      |
+| traditional GA | 1000+      | impossible | 2^1000 > atoms in universe |
+| geonum         | 10         | 35 ns      | 2 values                   |
+| geonum         | 30         | 34 ns      | 2 values                   |
+| geonum         | 1000       | 35 ns      | 2 values                   |
+| geonum         | 1,000,000  | 35 ns      | 2 values                   |
 
 geonum enables million-dimensional geometric algebra with constant-time operations
 
 #### operation benchmarks
 
-| operation | traditional | geonum | speedup |
-|-----------|------------|--------|---------|
-| jacobian (10×10) | 1.25 µs | 26 ns | 48× |
-| jacobian (100×100) | 91.7 µs | 25 ns | 3668× |
-| rotation 2D | 4.3 ns | 37 ns | comparable |
-| rotation 3D | 19 ns | 16 ns | 1.2× faster |
-| rotation 10D | 160 ns | 19 ns | 8× |
-| geometric product | decomposition | 17 ns | direct |
-| wedge product 2D | 1.9 ns | 60 ns | trigonometric |
-| wedge product 10D | 45 components | 60 ns | constant |
-| dual operation | pseudoscalar mult | 10 ns | universal |
-| differentiation | numerical approx | 11 ns | exact π/2 rotation |
-| inversion | matrix ops | 10 ns | direct reciprocal |
-| projection | dot products | 15 ns | trigonometric |
+| operation          | traditional       | geonum | speedup            |
+| ------------------ | ----------------- | ------ | ------------------ |
+| jacobian (10×10)   | 1.42 µs           | 23 ns  | 62×                |
+| jacobian (100×100) | 102 µs            | 23 ns  | 4435×              |
+| rotation 2D        | 4.9 ns            | 5 ns   | comparable         |
+| rotation 3D        | 20 ns             | 20 ns  | comparable         |
+| rotation 10D       | 173 ns            | 21 ns  | 8×                 |
+| geometric product  | decomposition     | 18 ns  | direct             |
+| wedge product 2D   | 2.2 ns            | 21 ns  | trigonometric      |
+| wedge product 10D  | 45 components     | 21 ns  | constant           |
+| dual operation     | pseudoscalar mult | 10 ns  | universal          |
+| differentiation    | numerical approx  | 3 ns   | exact π/2 rotation |
+| inversion          | matrix ops        | 13 ns  | direct reciprocal  |
+| projection         | dot products      | 12 ns  | trigonometric      |
 
 all geonum operations maintain constant time regardless of dimension, eliminating exponential scaling of traditional approaches
 
@@ -380,48 +380,48 @@ geometric numbers build dimensions by rotating—not stacking
 
     test suites:
     - tests/numbers_test.rs
-      - its_a_scalar:8-38
-      - its_a_vector:39-74
-      - its_a_real_number:75-110
-      - its_an_imaginary_number:111-141
-      - its_a_complex_number:142-176
-      - its_a_dual_number:177-297
-      - its_an_octonion:298-343
-      - its_a_matrix:344-400
-      - its_a_tensor:401-597
+      - its_a_scalar:8-37
+      - its_a_vector:39-73
+      - its_a_real_number:75-109
+      - its_an_imaginary_number:111-140
+      - its_a_complex_number:142-175
+      - its_a_dual_number:177-296
+      - its_an_octonion:298-342
+      - its_a_matrix:344-399
+      - its_a_tensor:401-596
       - it_dualizes_log2_geometric_algebra_components:647-682
       - its_a_clifford_number:940-1022
 
     - tests/dimension_test.rs
-      - it_solves_the_exponential_complexity_explosion:520-594
-      - it_doesnt_need_a_pseudoscalar:595-792
-      - it_demonstrates_pseudoscalar_elimination_benefits:793-832
-      - it_proves_dualization_as_angle_ops_compresses_ga:833-898
-      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:899-983
-      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1131-1168
+      - it_solves_the_exponential_complexity_explosion:520-593
+      - it_doesnt_need_a_pseudoscalar:595-791
+      - it_demonstrates_pseudoscalar_elimination_benefits:793-831
+      - it_proves_dualization_as_angle_ops_compresses_ga:833-897
+      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:899-981
+      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1131-1166
       - it_proves_rotational_quadrature_expresses_quadratic_forms:1419-1593
 
     - tests/calculus_test.rs
-      - its_a_limit:40-120
-      - its_a_derivative:121-166
+      - its_a_limit:40-119
+      - its_a_derivative:121-165
       - its_an_integral:167-218
-      - it_proves_differentiation_cycles_grades:766-918
-      - its_a_gradient:312-361
-      - its_a_divergence:362-412
-      - its_a_curl:413-455
-      - its_a_laplacian:503-556
-      - its_a_line_integral:609-636
-      - its_a_surface_integral:637-663
-      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1004-1053
+      - its_a_gradient:310-358
+      - its_a_divergence:360-409
+      - its_a_curl:411-499
+      - its_a_laplacian:501-605
+      - its_a_line_integral:607-633
+      - its_a_surface_integral:635-662
+      - it_proves_differentiation_cycles_grades:764-915
+      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1002-1053
 
     - tests/mechanics_test.rs
       - it_changes_kinematic_level_by_cycling_grade:46-195
-      - it_encodes_velocity:268-323
-      - it_encodes_acceleration:324-364
+      - it_encodes_velocity:268-322
+      - it_encodes_acceleration:324-363
       - it_encodes_jerk:365-414
       - it_encodes_kinetic_energy:959-1046
-      - it_handles_energy_conservation:1783-1941
-      - it_handles_momentum_conservation:1942-2052
+      - it_handles_energy_conservation:1783-1940
+      - it_handles_momentum_conservation:1942-2051
       - it_handles_angular_momentum_conservation:2053-2157
 
     create tests/my_test.rs with use geonum::*;

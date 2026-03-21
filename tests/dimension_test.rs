@@ -151,10 +151,10 @@ fn it_shows_dimensions_are_quarter_turns() {
     let constructed_dim_3 = Geonum::create_dimension(1.0, 3); // 3 quarter turns
 
     // these are separated by exactly π/2 rotations
-    assert!((constructed_dim_0.angle.grade_angle() - 0.0).abs() < EPSILON);
-    assert!((constructed_dim_1.angle.grade_angle() - PI / 2.0).abs() < EPSILON);
-    assert!((constructed_dim_2.angle.grade_angle() - PI).abs() < EPSILON);
-    assert!((constructed_dim_3.angle.grade_angle() - 3.0 * PI / 2.0).abs() < EPSILON);
+    assert!(constructed_dim_0.angle.near_rad(0.0));
+    assert!(constructed_dim_1.angle.near_rad(PI / 2.0));
+    assert!(constructed_dim_2.angle.near_rad(PI));
+    assert!(constructed_dim_3.angle.near_rad(3.0 * PI / 2.0));
 
     // rotating between dimensions proves they are angle positions
     let rotated_0_to_1 = constructed_dim_0.rotate(Angle::new(1.0, 2.0)); // +π/2
@@ -228,7 +228,7 @@ fn it_proves_grade_decomposition_ignores_angle_addition() {
     // result: 45° + 45° = 90° rotation, stored as single angle
     assert_eq!(product.mag, 1.0);
     assert_eq!(product.angle.blade(), 1); // 90° rotation (blade 1)
-    assert!(product.angle.rem().abs() < EPSILON); // exactly π/2
+    assert!(product.angle.near_rem(0.0)); // exactly π/2
 
     // geonum stores the angle addition result directly
     // no need to decompose into "scalar" and "bivector" parts
@@ -245,7 +245,7 @@ fn it_proves_grade_decomposition_ignores_angle_addition() {
 
     // angle addition: 0° + 90° = 90°
     assert_eq!(xy_product.angle.blade(), 1); // 90° rotation
-    assert!(xy_product.angle.rem().abs() < EPSILON);
+    assert!(xy_product.angle.near_rem(0.0));
 
     // traditional GA would ignore this angle addition and instead:
     // - compute x·y = 0 (call it "scalar part")
@@ -311,7 +311,7 @@ fn it_proves_vectors_can_never_be_orthogonal() {
 
     // the dot product between vector and bivector is zero
     let dot = forced_x.dot(&forced_y);
-    assert!(dot.mag.abs() < 1e-10); // zero
+    assert!(dot.near_mag(0.0)); // zero
 
     // but this is because they're different grades, not because
     // they're "two orthogonal vectors" - one is a vector, one is a bivector
@@ -1022,7 +1022,7 @@ fn it_proves_angle_space_is_absolute() {
     // prove operations work with absolute positions, not relative signs
     let chain = angle_0 * angle_pi_4 * angle_pi_2 * angle_3pi_4 * angle_pi;
     let total_angle = 0.0 + PI / 4.0 + PI / 2.0 + 3.0 * PI / 4.0 + PI;
-    assert!((chain.angle.grade_angle() - (total_angle % (2.0 * PI))).abs() < EPSILON);
+    assert!(chain.angle.near_rad(total_angle % (2.0 * PI)));
 
     // prove grade transformations are absolute position changes
     let scalar = Geonum::new_with_blade(1.0, 0, 0.0, 1.0); // grade 0
@@ -1078,7 +1078,7 @@ fn it_proves_anticommutativity_is_a_geometric_transformation() {
     let wedge_21 = v2.wedge(&v1);
 
     // same magnitude - the area is invariant
-    assert!((wedge_12.mag - wedge_21.mag).abs() < EPSILON);
+    assert!(wedge_12.near_mag(wedge_21.mag));
 
     // but different blades - this IS the anticommutativity
     let blade_diff = (wedge_12.angle.blade() as i32 - wedge_21.angle.blade() as i32).abs();
@@ -1100,7 +1100,7 @@ fn it_proves_anticommutativity_is_a_geometric_transformation() {
     let meet_ba = b.meet(&a);
 
     // meet is anticommutative through blade transformation
-    assert!((meet_ab.mag - meet_ba.mag).abs() < EPSILON);
+    assert!(meet_ab.near_mag(meet_ba.mag));
     let meet_blade_diff = (meet_ab.angle.blade() as i32 - meet_ba.angle.blade() as i32).abs();
     assert_eq!(
         meet_blade_diff, 2,

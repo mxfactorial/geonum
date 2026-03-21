@@ -398,7 +398,7 @@ fn its_a_parallel_algorithm() {
 
     // test orthogonality
     // dot product is zero for perpendicular operations
-    assert!(sequential.dot(&parallel).mag.abs() < EPSILON);
+    assert!(sequential.dot(&parallel).near_mag(0.0));
 
     // concurrent execution represented by simultaneous operations
     // wedge product represents "computational area" covered by parallel execution
@@ -1213,7 +1213,7 @@ fn it_rejects_complexity_analysis() {
         assert_eq!(c_op.mag, 1.0); // constant stays at 1
         assert_eq!(l_op.mag, n as f64); // linear scales with n
         assert_eq!(q_op.mag, (n * n) as f64); // quadratic scales with n²
-        assert!((log_op.mag - (n as f64).log2()).abs() < EPSILON); // logarithmic scales with log n
+        assert!(log_op.near_mag((n as f64).log2())); // logarithmic scales with log n
 
         // verify operation types (angles)
         let zero_angle = Angle::new(0.0, 1.0);

@@ -70,7 +70,7 @@ fn its_a_naive_set() {
 
     // test intersection as angle correlation
     let dot_product = a.dot(&b);
-    assert!(dot_product.mag.abs() < EPSILON); // orthogonal = no overlap
+    assert!(dot_product.near_mag(0.0)); // orthogonal = no overlap
 
     // test geometric union as angle combination in multivector
     let union = GeoCollection::from(vec![a, b]);
@@ -161,7 +161,7 @@ fn its_a_ring() {
     let bc_sum = Geonum::new_from_cartesian(bc_sum_cartesian[0], bc_sum_cartesian[1]);
 
     // test that cartesian conversion matches direct addition
-    assert_eq!(bc_sum.mag, bc_sum_expected.mag);
+    assert!(bc_sum.near_mag(bc_sum_expected.mag));
     assert_eq!(bc_sum.angle, bc_sum_expected.angle);
 
     // compute a * (b + c)
@@ -196,7 +196,7 @@ fn its_a_ring() {
     assert_eq!(right_side.angle, right_side_expected.angle);
 
     // test that the distributive property holds
-    assert!((left_side.mag - right_side.mag).abs() < EPSILON);
+    assert!(left_side.near_mag(right_side.mag));
 
     // angles might differ by 2π
     let angle_diff = (left_side.angle - right_side.angle).grade_angle();
@@ -226,7 +226,7 @@ fn its_a_field() {
     let quotient = a / b;
 
     // test lengths divide
-    assert!((quotient.mag - 2.0).abs() < EPSILON);
+    assert!(quotient.near_mag(2.0));
 
     // division uses inv() which adds π (2 blades)
     // a has angle π/3, b has angle π/6
@@ -246,7 +246,7 @@ fn its_a_field() {
     // test division property: (a / b) * b = a
     let product = quotient * b;
 
-    assert!((product.mag - a.mag).abs() < EPSILON);
+    assert!(product.near_mag(a.mag));
 
     // quotient * b doesnt return to a due to blade accumulation from inv()
     // quotient.angle = a.angle + b.angle + π
@@ -302,7 +302,7 @@ fn its_a_vector_space() {
     // test independence through angle measurement
     // orthogonal vectors have dot product zero
     let dot = e1.dot(&e2);
-    assert!(dot.mag.abs() < EPSILON);
+    assert!(dot.near_mag(0.0));
 
     // test basis from orthogonality not abstract span
     // basis vectors have orthogonal angles
@@ -393,7 +393,7 @@ fn its_a_lie_algebra() {
     let b_wedge_a = b.wedge(&a);
 
     // test lengths are equal
-    assert!((a_wedge_b.mag - b_wedge_a.mag).abs() < EPSILON);
+    assert!(a_wedge_b.near_mag(b_wedge_a.mag));
 
     // test angles differ by π (orientation flip)
     let angle_diff = (a_wedge_b.angle - b_wedge_a.angle).grade_angle();
@@ -442,7 +442,7 @@ fn its_a_clifford_algebra() {
     let geo_product = e1 * e2;
     let wedge_product = e1.wedge(&e2);
 
-    assert!((geo_product.mag - wedge_product.mag).abs() < EPSILON);
+    assert!(geo_product.near_mag(wedge_product.mag));
 
     // manually set the angles to match for simplicity
     // a full clifford algebra model would handle this more precisely

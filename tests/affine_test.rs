@@ -41,14 +41,14 @@ fn its_a_translation() {
     let expected_angle = Angle::new_from_cartesian(expected_x, expected_y);
 
     // test geometric properties are preserved
-    assert!((translated_point.mag - expected_length).abs() < EPSILON);
+    assert!(translated_point.near_mag(expected_length));
     assert!((translated_point.angle - expected_angle).rem() < EPSILON);
 
     // test that translation is reversible through inverse displacement
     let inverse_translation = translation_vector.negate(); // opposite direction
 
     let back_to_original = translated_point.translate(&inverse_translation);
-    assert!((back_to_original.mag - point.mag).abs() < EPSILON);
+    assert!(back_to_original.near_mag(point.mag));
     assert!((back_to_original.angle - point.angle).rem() < EPSILON);
 
     // geometric numbers avoid the matrix overhead:
@@ -104,10 +104,10 @@ fn it_preserves_parallel_lines_after_shearing() {
     assert!((sheared_line2_p2.angle - (line2_p2.angle + shear_angle)).rem() < EPSILON);
 
     // test that lengths are preserved during shear (fundamental property)
-    assert!((sheared_line1_p1.mag - line1_p1.mag).abs() < EPSILON);
-    assert!((sheared_line1_p2.mag - line1_p2.mag).abs() < EPSILON);
-    assert!((sheared_line2_p1.mag - line2_p1.mag).abs() < EPSILON);
-    assert!((sheared_line2_p2.mag - line2_p2.mag).abs() < EPSILON);
+    assert!(sheared_line1_p1.near_mag(line1_p1.mag));
+    assert!(sheared_line1_p2.near_mag(line1_p2.mag));
+    assert!(sheared_line2_p1.near_mag(line2_p1.mag));
+    assert!(sheared_line2_p2.near_mag(line2_p2.mag));
 
     // geometric numbers make affine properties explicit:
     // parallelism is preserved through consistent angle transformation
@@ -155,10 +155,10 @@ fn it_preserves_area_after_shearing() {
     assert!((sheared_area - 12.0).abs() < EPSILON);
 
     // test that individual lengths are preserved (fundamental property of our shear)
-    assert!((sheared_v1.mag - v1.mag).abs() < EPSILON);
-    assert!((sheared_v2.mag - v2.mag).abs() < EPSILON);
-    assert!((sheared_v3.mag - v3.mag).abs() < EPSILON);
-    assert!((sheared_v4.mag - v4.mag).abs() < EPSILON);
+    assert!(sheared_v1.near_mag(v1.mag));
+    assert!(sheared_v2.near_mag(v2.mag));
+    assert!(sheared_v3.near_mag(v3.mag));
+    assert!(sheared_v4.near_mag(v4.mag));
 
     // test that angles are consistently shifted
     assert!((sheared_v2.angle - (v2.angle + shear_angle)).rem() < EPSILON);
@@ -179,7 +179,7 @@ fn it_increases_angle_after_shearing() {
     let sheared_point = point.shear(shear_angle);
 
     // length remains unchanged
-    assert!((sheared_point.mag - point.mag).abs() < EPSILON);
+    assert!(sheared_point.near_mag(point.mag));
 
     // angle is increased by shear_angle
     assert!((sheared_point.angle - (point.angle + shear_angle)).rem() < EPSILON);

@@ -100,7 +100,7 @@ fn its_a_tensor_product() {
     let sum_products_angle = sum_products_y.atan2(sum_products_x);
 
     // prove distributivity: a ⊗ (b + c) ≈ a ⊗ b + a ⊗ c
-    assert!((left_distribute.mag - sum_products_length).abs() < EPSILON);
+    assert!(left_distribute.near_mag(sum_products_length));
 
     // prove that a ⊗ (b + c) and a ⊗ b + a ⊗ c differ in phase by 45° (π/4 radians)
     // geonum captures this additional structure — tensors do not
@@ -161,7 +161,7 @@ fn its_a_tensor_product() {
 
     // in geonum ijk = [1, π/2 + π + 3π/2] = [1, 3π] = [1, π] = -1
     assert_eq!(ijk.mag, 1.0);
-    assert!((ijk.angle.grade_angle() - PI).abs() < EPSILON);
+    assert!(ijk.angle.near_rad(PI));
 
     // compare with traditional tensor implementation
 
@@ -264,7 +264,7 @@ fn its_a_kronecker_product() {
     let scaled_kronecker = scaled_a * scaled_b;
 
     // scaling factor: 3 × 2 = 6
-    assert!((scaled_kronecker.mag - 6.0 * kronecker.mag).abs() < EPSILON);
+    assert!(scaled_kronecker.near_mag(6.0 * kronecker.mag));
     assert_eq!(scaled_kronecker.angle, kronecker.angle); // angles unchanged by scaling
 
     // test high-dimensional kronecker without component explosion
@@ -306,7 +306,7 @@ fn its_a_contraction() {
 
     // wedge product is antisymmetric: e₁∧e₂ = -e₂∧e₁
     // this manifests as equal magnitudes
-    assert!((b.mag - c.mag).abs() < EPSILON);
+    assert!(b.near_mag(c.mag));
 
     // the antisymmetry is encoded in the angle structure
     // b and c will have different blade counts due to angle ordering
@@ -318,7 +318,7 @@ fn its_a_contraction() {
     let v1_dot_v2 = v1.dot(&v2);
     let expected = 2.0 * 3.0 * (v1.angle - v2.angle).grade_angle().cos();
 
-    assert!((v1_dot_v2.mag - expected).abs() < EPSILON);
+    assert!(v1_dot_v2.near_mag(expected));
 
     // traditional tensor contraction: must track indices and sum over repeated ones
     // example: rank-2 tensor A with components [1,2,3,4] contracted with rank-2 tensor B [5,6,7,8]
@@ -1251,7 +1251,7 @@ fn its_a_multi_linear_map() {
 
     // verify wedge product is antisymmetric (length is the same but angle should differ)
     let wedge_reverse = v2.wedge(&v1);
-    assert!((wedge.mag - wedge_reverse.mag).abs() < EPSILON);
+    assert!(wedge.near_mag(wedge_reverse.mag));
     // wedge of parallel vectors should be zero
     let parallel = v1.wedge(&v1);
     assert!(parallel.mag < EPSILON);
@@ -1264,7 +1264,7 @@ fn its_a_multi_linear_map() {
 
     // verify dot product is symmetric
     let dot_reverse = v2.dot(&v1);
-    assert!((dot.mag - dot_reverse.mag).abs() < EPSILON);
+    assert!(dot.near_mag(dot_reverse.mag));
 
     // test tensor transformation rules
     // in traditional tensor calculus tensors transform with jacobian matrices

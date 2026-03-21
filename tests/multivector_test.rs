@@ -69,7 +69,7 @@ fn it_computes_geometric_product_without_decomposition() {
 
     // geometric product (.geo method) = dot + wedge
     // when dot ≈ 0, .geo() ≈ wedge product
-    assert!((e1e2_geo.mag - wedge_e1e2.mag).abs() < 1e-10);
+    assert!(e1e2_geo.near_mag(wedge_e1e2.mag));
 
     // multiplication (*) vs .geo() give different results - different blade arithmetic
     assert_ne!(e1e2_mult.angle.blade(), e1e2_geo.angle.blade()); // 3 vs 4
@@ -646,7 +646,7 @@ fn it_adds_multivectors_without_component_matching() {
     let v2_y = v2.mag * v2.angle.grade_angle().sin();
     let expected_length = ((v1_x + v2_x).powi(2) + (v1_y + v2_y).powi(2)).sqrt();
 
-    assert!((sum.mag - expected_length).abs() < EPSILON); // exact cartesian formula
+    assert!(sum.near_mag(expected_length)); // exact cartesian formula
     assert_eq!(sum.angle.grade(), 0); // resulting grade from angle arithmetic
 
     // test mixed-grade addition without grade bucket sorting
@@ -710,7 +710,7 @@ fn it_adds_multivectors_without_component_matching() {
     let exact_sum = test_scalar + test_vector; // [3, 0] + [0, 4] = [3, 4]
 
     let manual_length = (3.0_f64.powi(2) + 4.0_f64.powi(2)).sqrt(); // 5.0
-    assert!((exact_sum.mag - manual_length).abs() < EPSILON); // exact: [3,4] → length 5
+    assert!(exact_sum.near_mag(manual_length)); // exact: [3,4] → length 5
 
     // traditional GA: grade bucket sorting prevents direct cartesian computation
     // geonum: unified objects enable direct geometric arithmetic
@@ -751,10 +751,10 @@ fn it_inverts_without_matrix_operations() {
     let trivector_identity = trivector * trivector_inv;
 
     // all identities have unit length
-    assert!((scalar_identity.mag - 1.0).abs() < EPSILON);
-    assert!((vector_identity.mag - 1.0).abs() < EPSILON);
-    assert!((bivector_identity.mag - 1.0).abs() < EPSILON);
-    assert!((trivector_identity.mag - 1.0).abs() < EPSILON);
+    assert!(scalar_identity.near_mag(1.0));
+    assert!(vector_identity.near_mag(1.0));
+    assert!(bivector_identity.near_mag(1.0));
+    assert!(trivector_identity.near_mag(1.0));
 
     // verify inversion blade arithmetic: inv() adds π rotation (2 blades)
     assert_eq!(scalar_inv.angle.blade(), scalar.angle.blade() + 2); // 0 + 2 = 2
@@ -782,11 +782,11 @@ fn it_inverts_without_matrix_operations() {
     let triple_inv = vector_inv.inv().inv();
 
     // double inversion returns to original (modulo blade accumulation)
-    assert!((double_inv.mag - scalar.mag).abs() < EPSILON); // length returns
+    assert!(double_inv.near_mag(scalar.mag)); // length returns
     assert_eq!(double_inv.angle.grade(), scalar.angle.grade()); // grade returns through 4-cycle
 
     // triple inversion equals single inversion
-    assert!((triple_inv.mag - vector_inv.mag).abs() < EPSILON);
+    assert!(triple_inv.near_mag(vector_inv.mag));
     assert_eq!(triple_inv.angle.grade(), vector_inv.angle.grade());
 
     // test inversion preserves geometric relationships
@@ -802,7 +802,7 @@ fn it_inverts_without_matrix_operations() {
         let identity_check = obj * inv_obj;
 
         // all objects invert to unit length identity
-        assert!((identity_check.mag - 1.0).abs() < EPSILON);
+        assert!(identity_check.near_mag(1.0));
         // identity preserves multiplicative structure through blade arithmetic
     }
 

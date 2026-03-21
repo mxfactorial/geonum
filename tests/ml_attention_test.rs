@@ -64,12 +64,12 @@ fn it_returns_a_geonum_from_dot_product() {
     let score_opposed = q.dot(&k_opposed);
 
     assert_eq!(score_aligned.angle.grade(), 0);
-    assert!((score_aligned.mag - 6.0).abs() < EPSILON);
+    assert!(score_aligned.near_mag(6.0));
 
     assert!(score_orthogonal.mag < EPSILON);
 
     assert_eq!(score_opposed.angle.grade(), 2);
-    assert!((score_opposed.mag - 6.0).abs() < EPSILON);
+    assert!(score_opposed.near_mag(6.0));
 }
 
 #[test]
@@ -120,12 +120,12 @@ fn it_weights_values_by_geometric_multiplication() {
 
     let aligned = Geonum::new_with_angle(0.9, Angle::new(0.0, 1.0));
     let reinforced = aligned * value;
-    assert!((reinforced.mag - 0.9).abs() < EPSILON);
+    assert!(reinforced.near_mag(0.9));
     assert_eq!(reinforced.angle.grade(), value.angle.grade());
 
     let opposed = Geonum::new_with_angle(0.3, Angle::new(1.0, 1.0));
     let flipped = opposed * value;
-    assert!((flipped.mag - 0.3).abs() < EPSILON);
+    assert!(flipped.near_mag(0.3));
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn it_normalizes_the_output_not_the_weights() {
 
     let output = raw.normalize();
 
-    assert!((output.mag - 1.0).abs() < EPSILON);
+    assert!(output.near_mag(1.0));
     assert_eq!(output.angle, raw.angle);
 }
 
@@ -204,7 +204,7 @@ fn it_composes_projection_chains_into_one_rotation() {
     let sequential = rots.iter().fold(token, |t, &r| t.rotate(r));
     let composed = token.rotate(rots.iter().fold(Angle::new(0.0, 1.0), |a, &r| a + r));
 
-    assert!((sequential.mag - composed.mag).abs() < EPSILON);
+    assert!(sequential.near_mag(composed.mag));
     assert_eq!(sequential.angle, composed.angle);
 }
 
@@ -343,7 +343,7 @@ fn it_encodes_position_as_rotation() {
         .collect();
 
     for (b, p) in base.iter().zip(positioned.iter()) {
-        assert!((b.mag - p.mag).abs() < EPSILON);
+        assert!(b.near_mag(p.mag));
     }
 
     let dot_adjacent = positioned[0].dot(&positioned[1]);
@@ -367,7 +367,7 @@ fn it_proves_attention_cost_is_independent_of_embedding_dimension() {
 
     let score_high = q_high.dot(&k_high);
 
-    assert!((score_low.mag - score_high.mag).abs() < EPSILON);
+    assert!(score_low.near_mag(score_high.mag));
     assert_eq!(score_low.angle.grade(), score_high.angle.grade());
 }
 

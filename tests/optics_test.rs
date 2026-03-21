@@ -18,7 +18,7 @@ fn its_a_ray() {
 
     // intensity encoded in length, direction in angle
     assert_eq!(ray.mag, 1.0); // unit intensity
-    assert_eq!(ray.angle.rem(), PI / 4.0); // 45° propagation
+    assert!(ray.angle.near_rem(PI / 4.0)); // 45° propagation
 
     // ray propagation: just scale by distance
     let distance = 100.0;
@@ -514,7 +514,7 @@ fn its_a_hologram() {
 
     // object wave reconstruction: phase relationship preserved
     let phase_error = (reconstructed.angle.rem() - object.angle.rem()).abs();
-    let phase_tolerance = PI / 8.0; // allow some reconstruction error
+    let phase_tolerance = PI / 8.0 + 1e-10; // allow some reconstruction error
     assert!(phase_error < phase_tolerance); // object phase approximately recovered
 
     // intensity ratio: reconstructed vs original object
