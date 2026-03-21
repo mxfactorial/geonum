@@ -11,7 +11,7 @@ fn it_adds_aligned_vectors() {
 
     let sum = a + b;
 
-    assert!((sum.mag - 5.0).abs() < EPSILON);
+    assert!(sum.near_mag(5.0));
     assert_eq!(sum.angle, Angle::new(0.0, 1.0));
 }
 
@@ -23,7 +23,7 @@ fn it_handles_opposite_vectors() {
 
     let sum = a + b;
 
-    assert!((sum.mag - 2.0).abs() < EPSILON);
+    assert!(sum.near_mag(2.0));
     assert_eq!(sum.angle, a.angle);
 }
 
@@ -35,9 +35,9 @@ fn it_adds_orthogonal_vectors() {
 
     let sum = a + b;
 
-    assert!((sum.mag - 5.0).abs() < EPSILON);
+    assert!(sum.near_mag(5.0));
     let expected_phase = (4.0_f64).atan2(3.0);
-    assert!((sum.angle.grade_angle() - expected_phase).abs() < EPSILON);
+    assert!(sum.angle.near_rad(expected_phase));
 
     // history policy is preserved internally; direction and length are primary here
 }
@@ -56,7 +56,7 @@ fn it_adds_high_blades_and_preserves_history() {
     let x2 = b.mag * b.angle.grade_angle().cos();
     let y2 = b.mag * b.angle.grade_angle().sin();
     let expected_phase = (y1 + y2).atan2(x1 + x2);
-    assert!((sum.angle.grade_angle() - expected_phase).abs() < EPSILON);
+    assert!(sum.angle.near_rad(expected_phase));
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn it_matches_projection_based_sum() {
 
     // compare to direct addition
     let direct = a + b;
-    assert!((result.mag - direct.mag).abs() < EPSILON);
+    assert!(result.near_mag(direct.mag));
     assert_eq!(result.angle.base_angle(), direct.angle.base_angle());
 
     // pythagorean identity from projections
@@ -97,7 +97,7 @@ fn it_preserves_blade_history_on_cancellation() {
 
     let sum = a + b;
 
-    assert!((sum.mag - 0.0).abs() < EPSILON);
+    assert!(sum.near_mag(0.0));
     // a has blade 7, b has blade 3 + 2 from π = blade 5
     // combined blade count = 7 + 5 = 12
     let expected = Angle::new(0.0, 1.0) // base angle at 0
@@ -122,7 +122,7 @@ fn it_accumulates_blades_in_general_case() {
     let x2 = b.mag * b.angle.grade_angle().cos();
     let y2 = b.mag * b.angle.grade_angle().sin();
     let expected_mag = ((x1 + x2).powi(2) + (y1 + y2).powi(2)).sqrt();
-    assert!((sum.mag - expected_mag).abs() < EPSILON);
+    assert!(sum.near_mag(expected_mag));
 
     // a has blade 5 + π/6, b has blade 8 + π/4
     // cartesian result creates its own angle with blades
@@ -155,11 +155,11 @@ fn it_handles_zero_length_addition() {
     let a = Geonum::new(5.0, 1.0, 3.0);
 
     let zero_plus_a = zero + a;
-    assert!((zero_plus_a.mag - a.mag).abs() < EPSILON);
+    assert!(zero_plus_a.near_mag(a.mag));
     assert_eq!(zero_plus_a.angle.base_angle(), a.angle.base_angle());
 
     let a_plus_zero = a + zero;
-    assert!((a_plus_zero.mag - a.mag).abs() < EPSILON);
+    assert!(a_plus_zero.near_mag(a.mag));
     assert_eq!(a_plus_zero.angle.base_angle(), a.angle.base_angle());
 }
 
@@ -173,7 +173,7 @@ fn it_maintains_commutative_blade_accumulation() {
     let ba = b + a;
 
     // geometric result is same
-    assert!((ab.mag - ba.mag).abs() < EPSILON);
+    assert!(ab.near_mag(ba.mag));
     assert_eq!(ab.angle.base_angle(), ba.angle.base_angle());
 
     // blade accumulation is commutative

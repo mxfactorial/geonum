@@ -59,7 +59,7 @@ fn it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle
         theta2,
         product.angle.grade_angle()
     );
-    assert!((product.angle.grade_angle() - expected_sum).abs() < EPSILON);
+    assert!(product.angle.near_rad(expected_sum));
     assert_eq!(product.angle, g1.angle + g2.angle);
 
     // THE UNADDED ANGLES
@@ -273,7 +273,7 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
         v2_angle,
         product.angle.grade_angle()
     );
-    assert!((product.angle.grade_angle() - (v1_angle + v2_angle)).abs() < EPSILON);
+    assert!(product.angle.near_rad(v1_angle + v2_angle));
 
     // SIDE EFFECT 5: Constraints between coefficients
     // for unit vectors: c₁² + c₂² = 1 must be maintained
@@ -506,7 +506,7 @@ fn it_proves_angle_becomes_implicit_ratio_between_components() {
 
     // rotation is just angle addition: O(1) always
     let g_rotated = g.rotate(Angle::new(rotation, PI));
-    assert!((g_rotated.angle.grade_angle() - (theta + rotation)).abs() < EPSILON);
+    assert!(g_rotated.angle.near_rad(theta + rotation));
     println!(
         "  rotation: {} + {} = {} (direct addition)",
         theta,
@@ -537,7 +537,7 @@ fn it_proves_quaternion_tables_add_back_what_decomposition_subtracts() {
     println!("  θ₁ = π/2 (i)");
     println!("  θ₂ = π (j)");
     println!("  θ₁ + θ₂ = 3π/2 (k) ← EXPECTED geometric composition");
-    assert!((primitive_product.angle.grade_angle() - expected_angle).abs() < EPSILON);
+    assert!(primitive_product.angle.near_rad(expected_angle));
 
     // STEP 2: what happens when you decompose into basis vectors
     println!("\nSTEP 2: Decomposition into Basis Vectors");

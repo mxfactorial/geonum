@@ -124,7 +124,7 @@ fn it_rotates_the_scanner_not_the_scanned() {
                 );
 
                 // magnitude preserved: rotation doesnt change distance from center
-                assert!((rotated.mag - scanner.mag).abs() < EPSILON);
+                assert!(rotated.near_mag(scanner.mag));
             }
         }
     }
@@ -218,18 +218,18 @@ fn it_renders_a_circle_without_coordinates() {
     // pixel at (4, 0): distance to center = 1, inside
     let pixel_near = Geonum::new(4.0, 0.0, 1.0);
     let dist_near = pixel_near.distance_to(&center);
-    assert!((dist_near.mag - 1.0).abs() < EPSILON);
+    assert!(dist_near.near_mag(1.0));
 
     // pixel at (6, 0): distance to center = 3, outside
     let pixel_far = Geonum::new(6.0, 0.0, 1.0);
     let dist_far = pixel_far.distance_to(&center);
-    assert!((dist_far.mag - 3.0).abs() < EPSILON);
+    assert!(dist_far.near_mag(3.0));
 
     // pixel at (3, π/2): distance = sqrt(9 + 9) = sqrt(18), outside
     let pixel_perp = Geonum::new(3.0, 1.0, 2.0);
     let dist_perp = pixel_perp.distance_to(&center);
     let expected_dist = (9.0_f64 + 9.0).sqrt();
-    assert!((dist_perp.mag - expected_dist).abs() < EPSILON);
+    assert!(dist_perp.near_mag(expected_dist));
 }
 
 #[test]
@@ -277,7 +277,7 @@ fn it_zooms_and_rotates_in_one_operation() {
         );
 
         // magnitude = original radius × zoom factor
-        assert!((transformed.mag - radius * zoom).abs() < EPSILON);
+        assert!(transformed.near_mag(radius * zoom));
     }
 }
 
@@ -324,8 +324,8 @@ fn it_renders_the_same_scene_from_different_camera_angles() {
         );
 
         // intensity (magnitude) preserved across camera angles
-        assert!((sweep_default.mag - intensity).abs() < EPSILON);
-        assert!((sweep_rotated.mag - intensity).abs() < EPSILON);
+        assert!(sweep_default.near_mag(intensity));
+        assert!(sweep_rotated.near_mag(intensity));
 
         // distance from center preserved: camera rotation doesnt change object distance
         // distance is encoded in the scene, not in the sweep magnitude here
@@ -333,7 +333,7 @@ fn it_renders_the_same_scene_from_different_camera_angles() {
         // distance determines which radial step the sweep hits
         let position_default = Geonum::new_with_angle(distance, direction);
         let position_rotated = Geonum::new_with_angle(distance, direction + camera_rotation);
-        assert!((position_default.mag - position_rotated.mag).abs() < EPSILON);
+        assert!(position_default.near_mag(position_rotated.mag));
     }
 }
 
@@ -609,9 +609,9 @@ fn it_enables_a_graphics_rendering_stack_rewrite() {
     let v2_world = v2.rotate(model_rotation);
 
     // magnitudes preserved through rotation
-    assert!((v0_world.mag - v0.mag).abs() < EPSILON);
-    assert!((v1_world.mag - v1.mag).abs() < EPSILON);
-    assert!((v2_world.mag - v2.mag).abs() < EPSILON);
+    assert!(v0_world.near_mag(v0.mag));
+    assert!(v1_world.near_mag(v1.mag));
+    assert!(v2_world.near_mag(v2.mag));
 
     // --- 3. view transform: camera panned 15° ---
     // traditional: construct view matrix, multiply 3 vertices

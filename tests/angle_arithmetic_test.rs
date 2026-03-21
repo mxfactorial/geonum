@@ -33,21 +33,21 @@ fn it_decomposes_angles_into_blade_and_value() {
     // 3π/4 = 1 complete π/2 rotation + π/4 remainder
     let three_quarters = Angle::new(3.0, 4.0); // 3 * π/4
     assert_eq!(three_quarters.blade(), 1); // 1 complete π/2 rotation
-    assert!((three_quarters.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                                // blade arithmetic: 3π/4 = 1*(π/2) + π/4
+    assert!(three_quarters.near_rem(PI / 4.0)); // π/4 remainder
+                                                // blade arithmetic: 3π/4 = 1*(π/2) + π/4
 
     // 5π/2 = 5 complete π/2 rotations + 0 remainder
     let five_halves = Angle::new(5.0, 2.0); // 5 * π/2
     assert_eq!(five_halves.blade(), 5); // 5 complete π/2 rotations
-    assert!(five_halves.rem().abs() < EPSILON); // no remainder
-                                                // blade arithmetic: 5π/2 = 5*(π/2) + 0
+    assert!(five_halves.near_rem(0.0)); // no remainder
+                                        // blade arithmetic: 5π/2 = 5*(π/2) + 0
 
     // 7π/3 = 4 complete π/2 rotations + π/6 remainder
     let seven_thirds = Angle::new(7.0, 3.0); // 7 * π/3 = 7π/3
                                              // 7π/3 = 14π/6 = (12π + 2π)/6 = 2π + π/3 = 4*(π/2) + π/3
     assert_eq!(seven_thirds.blade(), 4); // 4 complete π/2 rotations
-    assert!((seven_thirds.rem() - PI / 3.0).abs() < EPSILON); // π/3 remainder
-                                                              // blade arithmetic: 7π/3 = 4*(π/2) + π/3
+    assert!(seven_thirds.near_rem(PI / 3.0)); // π/3 remainder
+                                              // blade arithmetic: 7π/3 = 4*(π/2) + π/3
 
     // proves decomposition always maintains: angle = blade*(π/2) + value
     // with value strictly bounded to [0, π/2) through boundary normalization
@@ -61,20 +61,20 @@ fn it_crosses_pi_2_boundaries() {
     // case 1: angle exactly at π/2 boundary
     let at_boundary = Angle::new(1.0, 2.0); // 1 * π/2 = π/2
     assert_eq!(at_boundary.blade(), 1); // crosses boundary: blade 0 → blade 1
-    assert!(at_boundary.rem().abs() < EPSILON); // value resets to 0
-                                                // blade arithmetic: π/2 = 1*(π/2) + 0
+    assert!(at_boundary.near_rem(0.0)); // value resets to 0
+                                        // blade arithmetic: π/2 = 1*(π/2) + 0
 
     // case 2: angle exceeding π/2 boundary
     let over_boundary = Angle::new(3.0, 4.0); // 3 * π/4 = π/2 + π/4
     assert_eq!(over_boundary.blade(), 1); // crosses boundary once
-    assert!((over_boundary.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                               // blade arithmetic: 3π/4 = 1*(π/2) + π/4
+    assert!(over_boundary.near_rem(PI / 4.0)); // π/4 remainder
+                                               // blade arithmetic: 3π/4 = 1*(π/2) + π/4
 
     // case 3: angle crossing multiple boundaries
     let multiple_cross = Angle::new(7.0, 4.0); // 7 * π/4 = π/2 + π + π/4
     assert_eq!(multiple_cross.blade(), 3); // crosses 3 boundaries: 7π/4 = 3*(π/2) + π/4
-    assert!((multiple_cross.rem() - PI / 4.0).abs() < EPSILON); // π/4 final remainder
-                                                                // blade arithmetic: 7π/4 = 3*(π/2) + π/4
+    assert!(multiple_cross.near_rem(PI / 4.0)); // π/4 final remainder
+                                                // blade arithmetic: 7π/4 = 3*(π/2) + π/4
 
     // proves boundary crossing increments blade count for each π/2 crossed
     // while maintaining value in [0, π/2) invariant
@@ -90,24 +90,24 @@ fn it_adds_angles_with_blade_arithmetic() {
     let angle2 = Angle::new(1.0, 6.0); // π/6 → blade=0, value=π/6
     let sum = angle1 + angle2; // π/8 + π/6 = 7π/24
     assert_eq!(sum.blade(), 0); // 0 + 0 = 0 blades
-    assert!((sum.rem() - 7.0 * PI / 24.0).abs() < EPSILON); // 7π/24 < π/2, no crossing
-                                                            // blade arithmetic: blade₁ + blade₂ = 0 + 0 = 0, value₁ + value₂ = 7π/24
+    assert!(sum.near_rem(7.0 * PI / 24.0)); // 7π/24 < π/2, no crossing
+                                            // blade arithmetic: blade₁ + blade₂ = 0 + 0 = 0, value₁ + value₂ = 7π/24
 
     // case 2: values sum crossing π/2 boundary
     let angle3 = Angle::new(1.0, 3.0); // π/3 → blade=0, value=π/3
     let angle4 = Angle::new(1.0, 4.0); // π/4 → blade=0, value=π/4
     let boundary_sum = angle3 + angle4; // π/3 + π/4 = 7π/12 > π/2
     assert_eq!(boundary_sum.blade(), 1); // boundary crossing increments: 0 + 0 + 1 = 1
-    assert!((boundary_sum.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON); // remainder after crossing
-                                                                                  // blade arithmetic: blade₁ + blade₂ + 1 = 0 + 0 + 1 = 1, value = 7π/12 - π/2 = π/12
+    assert!(boundary_sum.near_rem(7.0 * PI / 12.0 - PI / 2.0)); // remainder after crossing
+                                                                // blade arithmetic: blade₁ + blade₂ + 1 = 0 + 0 + 1 = 1, value = 7π/12 - π/2 = π/12
 
     // case 3: blades sum with value boundary crossing
     let angle5 = Angle::new(3.0, 4.0); // 3π/4 → blade=1, value=π/4
     let angle6 = Angle::new(5.0, 4.0); // 5π/4 → blade=2, value=π/4
     let blade_value_sum = angle5 + angle6; // blades: 1+2=3, values: π/4+π/4=π/2
     assert_eq!(blade_value_sum.blade(), 4); // 3 + 1(crossing) = 4 total blades
-    assert!(blade_value_sum.rem().abs() < EPSILON); // π/2 crossing resets value to 0
-                                                    // blade arithmetic: blade₁ + blade₂ + crossing = 1 + 2 + 1 = 4, value = π/2 → 0
+    assert!(blade_value_sum.near_rem(0.0)); // π/2 crossing resets value to 0
+                                            // blade arithmetic: blade₁ + blade₂ + crossing = 1 + 2 + 1 = 4, value = π/2 → 0
 
     // proves angle addition accumulates blades while handling π/2 overflow
 }
@@ -123,8 +123,8 @@ fn it_handles_new_with_blade_construction() {
                                                          // step 2: blade_increment = 2 * π/2 = π → blade=2, value=0
                                                          // step 3: addition = (0+2, π/4+0) = blade=2, value=π/4
     assert_eq!(with_blade.blade(), 2); // 0 + 2 = 2 blades
-    assert!((with_blade.rem() - PI / 4.0).abs() < EPSILON); // π/4 preserved
-                                                            // blade arithmetic: 2*(π/2) + π/4 = π + π/4 = 2*(π/2) + π/4
+    assert!(with_blade.near_rem(PI / 4.0)); // π/4 preserved
+                                            // blade arithmetic: 2*(π/2) + π/4 = π + π/4 = 2*(π/2) + π/4
 
     // case 2: add blades causing boundary crossing
     let crossing_blade = Angle::new_with_blade(1, 3.0, 4.0); // 1 blade + 3π/4
@@ -132,8 +132,8 @@ fn it_handles_new_with_blade_construction() {
                                                              // step 2: blade_increment = 1 * π/2 → blade=1, value=0
                                                              // step 3: addition = (1+1, π/4+0) = blade=2, value=π/4
     assert_eq!(crossing_blade.blade(), 2); // 1 + 1 = 2 blades
-    assert!((crossing_blade.rem() - PI / 4.0).abs() < EPSILON); // π/4 from base angle
-                                                                // blade arithmetic: 1*(π/2) + 3π/4 = π/2 + (π/2 + π/4) = 2*(π/2) + π/4
+    assert!(crossing_blade.near_rem(PI / 4.0)); // π/4 from base angle
+                                                // blade arithmetic: 1*(π/2) + 3π/4 = π/2 + (π/2 + π/4) = 2*(π/2) + π/4
 
     // case 3: zero additional blades (identity case)
     let zero_blade = Angle::new_with_blade(0, 1.0, 2.0); // 0 blades + π/2
@@ -141,8 +141,8 @@ fn it_handles_new_with_blade_construction() {
                                                          // step 2: blade_increment = 0 * π/2 = 0 → blade=0, value=0
                                                          // step 3: addition = (1+0, 0+0) = blade=1, value=0
     assert_eq!(zero_blade.blade(), 1); // 1 + 0 = 1 blade
-    assert!(zero_blade.rem().abs() < EPSILON); // 0 + 0 = 0
-                                               // blade arithmetic: 0*(π/2) + π/2 = π/2 = 1*(π/2) + 0
+    assert!(zero_blade.near_rem(0.0)); // 0 + 0 = 0
+                                       // blade arithmetic: 0*(π/2) + π/2 = π/2 = 1*(π/2) + 0
 
     // proves new_with_blade performs: base_decomposition + explicit_blade_addition
 }
@@ -158,8 +158,8 @@ fn it_converts_from_cartesian_coordinates() {
                                                        // step 2: π/4 ÷ π = 1/4 pi_radians
                                                        // step 3: Angle::new(1/4, 1.0) → π/4 = 0*(π/2) + π/4
     assert_eq!(cart_45.blade(), 0); // no π/2 crossings
-    assert!((cart_45.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                         // blade arithmetic: π/4 = 0*(π/2) + π/4
+    assert!(cart_45.near_rem(PI / 4.0)); // π/4 remainder
+                                         // blade arithmetic: π/4 = 0*(π/2) + π/4
 
     // case 2: 90° angle (π/2)
     let cart_90 = Angle::new_from_cartesian(0.0, 1.0); // atan2(1,0) = π/2
@@ -167,8 +167,8 @@ fn it_converts_from_cartesian_coordinates() {
                                                        // step 2: π/2 ÷ π = 1/2 pi_radians
                                                        // step 3: Angle::new(1/2, 1.0) → π/2 = 1*(π/2) + 0
     assert_eq!(cart_90.blade(), 1); // 1 π/2 crossing
-    assert!(cart_90.rem().abs() < EPSILON); // no remainder
-                                            // blade arithmetic: π/2 = 1*(π/2) + 0
+    assert!(cart_90.near_rem(0.0)); // no remainder
+                                    // blade arithmetic: π/2 = 1*(π/2) + 0
 
     // case 3: 180° angle (π)
     let cart_180 = Angle::new_from_cartesian(-1.0, 0.0); // atan2(0,-1) = π
@@ -176,8 +176,8 @@ fn it_converts_from_cartesian_coordinates() {
                                                          // step 2: π ÷ π = 1 pi_radians
                                                          // step 3: Angle::new(1.0, 1.0) → π = 2*(π/2) + 0
     assert_eq!(cart_180.blade(), 2); // 2 π/2 crossings
-    assert!(cart_180.rem().abs() < EPSILON); // no remainder
-                                             // blade arithmetic: π = 2*(π/2) + 0
+    assert!(cart_180.near_rem(0.0)); // no remainder
+                                     // blade arithmetic: π = 2*(π/2) + 0
 
     // case 4: 270° angle (3π/2)
     let cart_270 = Angle::new_from_cartesian(0.0, -1.0); // atan2(-1,0) = 3π/2
@@ -185,8 +185,8 @@ fn it_converts_from_cartesian_coordinates() {
                                                          // step 2: 3π/2 ÷ π = 3/2 pi_radians
                                                          // step 3: Angle::new(3/2, 1.0) → 3π/2 = 3*(π/2) + 0
     assert_eq!(cart_270.blade(), 3); // 3 π/2 crossings
-    assert!(cart_270.rem().abs() < EPSILON); // no remainder
-                                             // blade arithmetic: 3π/2 = 3*(π/2) + 0
+    assert!(cart_270.near_rem(0.0)); // no remainder
+                                     // blade arithmetic: 3π/2 = 3*(π/2) + 0
 
     // proves cartesian conversion maintains blade decomposition through atan2 → blade arithmetic
 }
@@ -246,8 +246,8 @@ fn it_applies_dual_through_pi_rotation() {
     // step 3: result = blade=0+2=2, value=0+0=0
     assert_eq!(dual_scalar.blade(), 2); // 0 + 2 = 2 blades
     assert_eq!(dual_scalar.grade(), 2); // 2 % 4 = 2 (bivector)
-    assert!(dual_scalar.rem().abs() < EPSILON); // value unchanged
-                                                // blade arithmetic: dual adds exactly 2 blades (π rotation)
+    assert!(dual_scalar.near_rem(0.0)); // value unchanged
+                                        // blade arithmetic: dual adds exactly 2 blades (π rotation)
 
     // case 2: vector → trivector (grade 1 → grade 3)
     let vector = Angle::new(1.0, 2.0); // blade=1, grade=1
@@ -295,8 +295,8 @@ fn it_implements_add_trait_blade_logic() {
     // step 2: value₁ + value₂ = π/4 + π/6 = 5π/12
     // step 3: 5π/12 < π/2, no boundary crossing
     assert_eq!(sum_owned.blade(), 0); // 0 + 0 = 0 blades
-    assert!((sum_owned.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // 5π/12 value
-                                                                  // blade arithmetic: (0,π/4) + (0,π/6) = (0, 5π/12)
+    assert!(sum_owned.near_rem(5.0 * PI / 12.0)); // 5π/12 value
+                                                  // blade arithmetic: (0,π/4) + (0,π/6) = (0, 5π/12)
 
     // case 2: test all borrowing variants produce identical blade arithmetic
     let sum_borrow1 = angle_a + angle_b; // owned + borrowed
@@ -318,8 +318,8 @@ fn it_implements_add_trait_blade_logic() {
                                           // step 2: value₁ + value₂ = 3π/8 + 5π/8 = π
                                           // step 3: π ≥ π/2, so normalize: π = 2*(π/2) + 0
     assert_eq!(crossing_sum.blade(), 2); // 0 + 0 + 2(crossings) = 2 blades
-    assert!(crossing_sum.rem().abs() < EPSILON); // π normalized to 0 remainder
-                                                 // blade arithmetic: boundary crossing adds 2 blades for π total
+    assert!(crossing_sum.near_rem(0.0)); // π normalized to 0 remainder
+                                         // blade arithmetic: boundary crossing adds 2 blades for π total
 
     // proves Add trait maintains consistent blade accumulation across all ownership patterns
 }
@@ -337,8 +337,8 @@ fn it_implements_sub_trait_blade_logic() {
     // step 2: value₁ - value₂ = 0 - 0 = 0
     // step 3: no borrowing needed
     assert_eq!(simple_diff.blade(), 2); // 3 - 1 = 2 blades
-    assert!(simple_diff.rem().abs() < EPSILON); // 0 - 0 = 0
-                                                // blade arithmetic: (3,0) - (1,0) = (2,0)
+    assert!(simple_diff.near_rem(0.0)); // 0 - 0 = 0
+                                        // blade arithmetic: (3,0) - (1,0) = (2,0)
 
     // case 2: value borrowing (negative value requires blade borrowing)
     let small_value = Angle::new(1.0, 6.0); // π/6 → blade=0, value=π/6
@@ -349,8 +349,8 @@ fn it_implements_sub_trait_blade_logic() {
                                                  // step 3: borrow from blade: blade = 0-1 = -1, value = -π/6 + π/2 = π/3
                                                  // step 4: wrap negative blade: -1 + 4 = 3
     assert_eq!(borrow_diff.blade(), 3); // -1 + 4 = 3 (wrapped)
-    assert!((borrow_diff.rem() - PI / 3.0).abs() < EPSILON); // -π/6 + π/2 = π/3
-                                                             // blade arithmetic: borrowing maintains forward-only angle space
+    assert!(borrow_diff.near_rem(PI / 3.0)); // -π/6 + π/2 = π/3
+                                             // blade arithmetic: borrowing maintains forward-only angle space
 
     // case 3: negative blade wrapping
     let zero_blade = Angle::new(0.0, 1.0); // blade=0, value=0
@@ -360,8 +360,8 @@ fn it_implements_sub_trait_blade_logic() {
                                              // step 2: value₁ - value₂ = 0 - 0 = 0
                                              // step 3: wrap negative blade: -5 + 8 = 3 (add 2*4 rotations)
     assert_eq!(wrap_diff.blade(), 3); // -5 + 8 = 3 (wrapped forward)
-    assert!(wrap_diff.rem().abs() < EPSILON); // 0 - 0 = 0
-                                              // blade arithmetic: negative blades wrap through 4-rotation addition
+    assert!(wrap_diff.near_rem(0.0)); // 0 - 0 = 0
+                                      // blade arithmetic: negative blades wrap through 4-rotation addition
 
     // proves Sub trait maintains forward-only angle space through borrowing and wrapping
 }
@@ -384,8 +384,8 @@ fn it_implements_mul_trait_blade_logic() {
     assert_eq!(product.blade(), addition.blade()); // identical blade arithmetic
     assert_eq!(product.rem(), addition.rem()); // identical value arithmetic
     assert_eq!(product.blade(), 1); // 0 + 0 + 1(crossing) = 1
-    assert!((product.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON); // 7π/12 - π/2 remainder
-                                                                             // blade arithmetic: angle multiplication IS angle addition
+    assert!(product.near_rem(7.0 * PI / 12.0 - PI / 2.0)); // 7π/12 - π/2 remainder
+                                                           // blade arithmetic: angle multiplication IS angle addition
 
     // case 2: verify "angles add, lengths multiply" principle at angle level
     let mult_result = angle_x * angle_y; // calls geometric_add
@@ -402,8 +402,8 @@ fn it_implements_mul_trait_blade_logic() {
     // step 2: value₁ + value₂ = 0 + 0 = 0
     // step 3: no boundary crossing
     assert_eq!(high_product.blade(), 300); // 100 + 200 = 300 blades
-    assert!(high_product.rem().abs() < EPSILON); // 0 + 0 = 0
-                                                 // blade arithmetic: high blade multiplication follows same addition rule
+    assert!(high_product.near_rem(0.0)); // 0 + 0 = 0
+                                         // blade arithmetic: high blade multiplication follows same addition rule
 
     // proves Mul trait implements "angles add" through identical geometric_add calls
 }
@@ -420,8 +420,8 @@ fn it_implements_div_trait_blade_logic() {
     // step 2: divide by scalar = 3π/2 ÷ 2 = 3π/4
     // step 3: re-decompose = 3π/4 = 1*(π/2) + π/4
     assert_eq!(scalar_div.blade(), 1); // 3π/4 crosses π/2 once
-    assert!((scalar_div.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                            // blade arithmetic: scalar division reconstructs → scales → decomposes
+    assert!(scalar_div.near_rem(PI / 4.0)); // π/4 remainder
+                                            // blade arithmetic: scalar division reconstructs → scales → decomposes
 
     // case 2: division by angle (Div<Angle>) - calls geometric_sub
     let dividend = Angle::new(5.0, 4.0); // 5π/4 → blade=2, value=π/4
@@ -431,8 +431,8 @@ fn it_implements_div_trait_blade_logic() {
     // step 2: value₁ - value₂ = π/4 - π/4 = 0
     // step 3: no borrowing needed
     assert_eq!(angle_div.blade(), 2); // 2 - 0 = 2 blades
-    assert!(angle_div.rem().abs() < EPSILON); // π/4 - π/4 = 0
-                                              // blade arithmetic: angle division IS angle subtraction (geometric_sub)
+    assert!(angle_div.near_rem(0.0)); // π/4 - π/4 = 0
+                                      // blade arithmetic: angle division IS angle subtraction (geometric_sub)
 
     // case 3: verify division equivalence with subtraction
     let subtraction_result = dividend - divisor;
@@ -447,7 +447,7 @@ fn it_implements_div_trait_blade_logic() {
     // step 2: divide = 7π/4 ÷ 3 = 7π/12
     // step 3: decompose = 7π/12 = 1*(π/2) + π/12 (since 7π/12 > π/2)
     assert_eq!(divided_complex.blade(), 1); // 7π/12 crosses π/2 once
-    assert!((divided_complex.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON);
+    assert!(divided_complex.near_rem(7.0 * PI / 12.0 - PI / 2.0));
     // π/12 remainder
     // blade arithmetic: scalar division handles complex blade reconstruction
 
@@ -543,8 +543,8 @@ fn it_constructs_geonum_with_basic_new() {
                                            // step 3: blade decomposition = 3π/4 = 1*(π/2) + π/4
     assert_eq!(geo1.mag, 2.0); // length preserved
     assert_eq!(geo1.angle.blade(), 1); // 3π/4 crosses π/2 once
-    assert!((geo1.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                            // blade arithmetic: length passthrough + angle decomposition
+    assert!(geo1.angle.near_rem(PI / 4.0)); // π/4 remainder
+                                            // blade arithmetic: length passthrough + angle decomposition
 
     // case 2: length with exact π/2 angle
     let geo2 = Geonum::new(3.5, 1.0, 2.0); // length=3.5, angle=π/2
@@ -553,8 +553,8 @@ fn it_constructs_geonum_with_basic_new() {
                                            // step 3: blade decomposition = π/2 = 1*(π/2) + 0
     assert_eq!(geo2.mag, 3.5); // length preserved
     assert_eq!(geo2.angle.blade(), 1); // π/2 = 1 blade exactly
-    assert!(geo2.angle.rem().abs() < EPSILON); // no remainder
-                                               // blade arithmetic: exact π/2 creates clean blade boundary
+    assert!(geo2.angle.near_rem(0.0)); // no remainder
+                                       // blade arithmetic: exact π/2 creates clean blade boundary
 
     // case 3: length with high blade angle
     let geo3 = Geonum::new(1.0, 7.0, 2.0); // length=1, angle=7π/2
@@ -563,8 +563,8 @@ fn it_constructs_geonum_with_basic_new() {
                                            // step 3: blade decomposition = 7π/2 = 7*(π/2) + 0
     assert_eq!(geo3.mag, 1.0); // length preserved
     assert_eq!(geo3.angle.blade(), 7); // 7 complete π/2 rotations
-    assert!(geo3.angle.rem().abs() < EPSILON); // no remainder
-                                               // blade arithmetic: high blade angles work identically
+    assert!(geo3.angle.near_rem(0.0)); // no remainder
+                                       // blade arithmetic: high blade angles work identically
 
     // proves Geonum::new preserves length while decomposing angle through blade arithmetic
 }
@@ -591,8 +591,8 @@ fn it_constructs_geonum_with_angle_composition() {
     // step 2: angle = high_angle (direct, no blade modification)
     assert_eq!(high_geo.mag, 2.0); // length direct
     assert_eq!(high_geo.angle.blade(), 1000); // blade preserved exactly
-    assert!((high_geo.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved exactly
-                                                                // blade arithmetic: million-dimensional preservation without processing
+    assert!(high_geo.angle.near_rem(PI / 4.0)); // value preserved exactly
+                                                // blade arithmetic: million-dimensional preservation without processing
 
     // case 3: exact angle state preservation
     let complex_angle = Angle::new(7.0, 4.0); // 7π/4 → blade=3, value=π/4
@@ -617,8 +617,8 @@ fn it_constructs_geonum_from_cartesian() {
     assert_eq!(geo1.mag, 5.0); // pythagorean magnitude
     assert_eq!(geo1.angle.blade(), 0); // angle < π/2, no boundary crossing
     let expected_angle = 4.0_f64.atan2(3.0); // atan2 calculation
-    assert!((geo1.angle.grade_angle() - expected_angle).abs() < EPSILON); // preserves atan2 result
-                                                                          // blade arithmetic: cartesian → polar → blade decomposition
+    assert!(geo1.angle.near_rad(expected_angle)); // preserves atan2 result
+                                                  // blade arithmetic: cartesian → polar → blade decomposition
 
     // case 2: unit circle quadrants (exact blade boundaries)
     let geo_90 = Geonum::new_from_cartesian(0.0, 1.0); // (0,1) = 90°
@@ -627,8 +627,8 @@ fn it_constructs_geonum_from_cartesian() {
                                                        // step 3: blade decomposition = π/2 = 1*(π/2) + 0
     assert_eq!(geo_90.mag, 1.0); // unit magnitude
     assert_eq!(geo_90.angle.blade(), 1); // π/2 crosses boundary once
-    assert!(geo_90.angle.rem().abs() < EPSILON); // exact boundary has no remainder
-                                                 // blade arithmetic: 90° → blade=1, value=0
+    assert!(geo_90.angle.near_rem(0.0)); // exact boundary has no remainder
+                                         // blade arithmetic: 90° → blade=1, value=0
 
     let geo_180 = Geonum::new_from_cartesian(-1.0, 0.0); // (-1,0) = 180°
                                                          // step 1: length = sqrt(1² + 0²) = 1.0
@@ -636,18 +636,18 @@ fn it_constructs_geonum_from_cartesian() {
                                                          // step 3: blade decomposition = π = 2*(π/2) + 0
     assert_eq!(geo_180.mag, 1.0); // unit magnitude
     assert_eq!(geo_180.angle.blade(), 2); // π crosses boundary twice
-    assert!(geo_180.angle.rem().abs() < EPSILON); // exact boundary has no remainder
-                                                  // blade arithmetic: 180° → blade=2, value=0
+    assert!(geo_180.angle.near_rem(0.0)); // exact boundary has no remainder
+                                          // blade arithmetic: 180° → blade=2, value=0
 
     // case 3: first quadrant 45° angle
     let geo_45 = Geonum::new_from_cartesian(1.0, 1.0); // (1,1) = 45°
                                                        // step 1: length = sqrt(1² + 1²) = sqrt(2)
                                                        // step 2: angle = atan2(1.0, 1.0) = π/4
                                                        // step 3: blade decomposition = π/4 = 0*(π/2) + π/4
-    assert!((geo_45.mag - 2.0_f64.sqrt()).abs() < EPSILON); // sqrt(2) magnitude
+    assert!(geo_45.near_mag(2.0_f64.sqrt())); // sqrt(2) magnitude
     assert_eq!(geo_45.angle.blade(), 0); // π/4 < π/2, no crossing
-    assert!((geo_45.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder
-                                                              // blade arithmetic: 45° → blade=0, value=π/4
+    assert!(geo_45.angle.near_rem(PI / 4.0)); // π/4 remainder
+                                              // blade arithmetic: 45° → blade=0, value=π/4
 
     // proves cartesian conversion: magnitude calculation + atan2 blade decomposition
 }
@@ -665,8 +665,8 @@ fn it_constructs_geonum_with_explicit_blade() {
                                                          // step 4: addition = (0+3, π/4+0) = blade=3, value=π/4
     assert_eq!(geo1.mag, 2.0); // length preserved
     assert_eq!(geo1.angle.blade(), 3); // 0 + 3 = 3 blades
-    assert!((geo1.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                            // blade arithmetic: explicit blade addition to computed angle
+    assert!(geo1.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                            // blade arithmetic: explicit blade addition to computed angle
 
     // case 2: million-dimensional control
     let geo_million = Geonum::new_with_blade(1.0, 1_000_000, 0.0, 1.0); // blade=1000000
@@ -676,8 +676,8 @@ fn it_constructs_geonum_with_explicit_blade() {
                                                                         // step 4: addition = (0+1000000, 0+0) = blade=1000000, value=0
     assert_eq!(geo_million.mag, 1.0); // length preserved
     assert_eq!(geo_million.angle.blade(), 1_000_000); // explicit million-dimensional blade
-    assert!(geo_million.angle.rem().abs() < EPSILON); // 0 value
-                                                      // blade arithmetic: enables million-dimensional geometric algebra
+    assert!(geo_million.angle.near_rem(0.0)); // 0 value
+                                              // blade arithmetic: enables million-dimensional geometric algebra
 
     // case 3: explicit blade with boundary crossing base angle
     let geo_cross = Geonum::new_with_blade(1.5, 2, 3.0, 4.0); // length=1.5, 2 blades + 3π/4
@@ -687,8 +687,8 @@ fn it_constructs_geonum_with_explicit_blade() {
                                                               // step 4: addition = (1+2, π/4+0) = blade=3, value=π/4
     assert_eq!(geo_cross.mag, 1.5); // length preserved
     assert_eq!(geo_cross.angle.blade(), 3); // 1 + 2 = 3 total blades
-    assert!((geo_cross.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 from base angle
-                                                                 // blade arithmetic: explicit blade + base angle decomposition
+    assert!(geo_cross.angle.near_rem(PI / 4.0)); // π/4 from base angle
+                                                 // blade arithmetic: explicit blade + base angle decomposition
 
     // proves new_with_blade enables explicit dimensional control through blade arithmetic
 }
@@ -746,16 +746,16 @@ fn it_creates_dimensional_geonums() {
                                                  // step 3: blade decomposition = 0 = 0*(π/2) + 0
     assert_eq!(dim0.mag, 1.0); // unit length
     assert_eq!(dim0.angle.blade(), 0); // 0 π/2 rotations
-    assert!(dim0.angle.rem().abs() < EPSILON); // no remainder
-                                               // blade arithmetic: dimension 0 → blade=0 (scalar direction)
+    assert!(dim0.angle.near_rem(0.0)); // no remainder
+                                       // blade arithmetic: dimension 0 → blade=0 (scalar direction)
 
     let dim1 = Geonum::create_dimension(1.0, 1); // 1st dimension (y-axis)
                                                  // step 1: length = 1.0 (direct)
                                                  // step 2: angle = Angle::new(1.0, 2.0) = 1 * π/2 = π/2
                                                  // step 3: blade decomposition = π/2 = 1*(π/2) + 0
     assert_eq!(dim1.angle.blade(), 1); // 1 π/2 rotation
-    assert!(dim1.angle.rem().abs() < EPSILON); // exact boundary
-                                               // blade arithmetic: dimension 1 → blade=1 (vector direction)
+    assert!(dim1.angle.near_rem(0.0)); // exact boundary
+                                       // blade arithmetic: dimension 1 → blade=1 (vector direction)
 
     // case 2: high dimensional mapping
     let dim1000 = Geonum::create_dimension(2.0, 1000); // 1000th dimension
@@ -764,8 +764,8 @@ fn it_creates_dimensional_geonums() {
                                                        // step 3: blade decomposition = 1000*(π/2) = 1000*(π/2) + 0
     assert_eq!(dim1000.mag, 2.0); // length preserved
     assert_eq!(dim1000.angle.blade(), 1000); // exact blade = dimension index
-    assert!(dim1000.angle.rem().abs() < EPSILON); // no remainder
-                                                  // blade arithmetic: dimension index directly maps to blade count
+    assert!(dim1000.angle.near_rem(0.0)); // no remainder
+                                          // blade arithmetic: dimension index directly maps to blade count
 
     // case 3: dimensional angle relationships
     assert!(dim0.is_orthogonal(&dim1)); // 0 ⊥ π/2 (cos(π/2) = 0)
@@ -789,8 +789,8 @@ fn it_computes_geonum_calculus_through_blade_rotation() {
     // step 3: angle addition = (0+1, π/6+0) = blade=1, value=π/6
     assert_eq!(derivative.mag, 2.0); // length preserved
     assert_eq!(derivative.angle.blade(), 1); // blade=0 + 1 = blade=1
-    assert!((derivative.angle.rem() - PI / 6.0).abs() < EPSILON); // value preserved
-                                                                  // blade arithmetic: differentiation = +1 blade through π/2 rotation
+    assert!(derivative.angle.near_rem(PI / 6.0)); // value preserved
+                                                  // blade arithmetic: differentiation = +1 blade through π/2 rotation
 
     // case 2: integrate adds 3π/2 rotation (forward-only -π/2)
     let integrand = Geonum::new(3.0, 1.0, 4.0); // length=3, angle=π/4 → blade=0, value=π/4
@@ -800,8 +800,8 @@ fn it_computes_geonum_calculus_through_blade_rotation() {
     // step 3: angle addition = (0+3, π/4+0) = blade=3, value=π/4
     assert_eq!(integral.mag, 3.0); // length preserved
     assert_eq!(integral.angle.blade(), 3); // blade=0 + 3 = blade=3
-    assert!((integral.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
-                                                                // blade arithmetic: integration = +3 blades through 3π/2 forward rotation
+    assert!(integral.angle.near_rem(PI / 4.0)); // value preserved
+                                                // blade arithmetic: integration = +3 blades through 3π/2 forward rotation
 
     // case 3: calculus inverse relationship through blade accumulation
     let original = Geonum::new(1.0, 0.0, 1.0); // blade=0, value=0
@@ -811,8 +811,8 @@ fn it_computes_geonum_calculus_through_blade_rotation() {
                                                               // step 3: total = blade=0 → blade=4 (4 blades = 2π rotation)
     assert_eq!(diff_then_int.angle.blade(), 4); // 0 + 1 + 3 = 4 blades
     assert_eq!(diff_then_int.angle.grade(), 0); // 4 % 4 = 0 (same grade)
-    assert!(diff_then_int.angle.rem().abs() < EPSILON); // value preserved
-                                                        // blade arithmetic: d/dx∫ = 4 blade accumulation, not algebraic cancellation
+    assert!(diff_then_int.angle.near_rem(0.0)); // value preserved
+                                                // blade arithmetic: d/dx∫ = 4 blade accumulation, not algebraic cancellation
 
     // proves calculus operations accumulate transformation history through blade arithmetic
 }
@@ -830,15 +830,15 @@ fn it_inverts_geonum_through_length_and_angle_negation() {
     // step 3: blade decomposition = 4π/3 = 2*(π/2) + π/3
     assert_eq!(inverse.mag, 0.5); // 1/2 reciprocal
     assert_eq!(inverse.angle.blade(), 2); // π/3 + π crosses 2 boundaries
-    assert!((inverse.angle.rem() - PI / 3.0).abs() < EPSILON); // π/3 value preserved
-                                                               // blade arithmetic: inv() = [1/r, θ+π] through reciprocal + π rotation
+    assert!(inverse.angle.near_rem(PI / 3.0)); // π/3 value preserved
+                                               // blade arithmetic: inv() = [1/r, θ+π] through reciprocal + π rotation
 
     // case 2: multiplicative identity through blade accumulation
     let identity = geonum * inverse; // z * z^(-1)
                                      // step 1: length = 2.0 * 0.5 = 1.0 (lengths multiply)
                                      // step 2: angle = π/3 + (π/3 + π) = π/3 + 4π/3 = 5π/3 (angles add)
                                      // step 3: blade decomposition = 5π/3 = 3*(π/2) + π/6
-    assert!((identity.mag - 1.0).abs() < EPSILON); // unit magnitude
+    assert!(identity.near_mag(1.0)); // unit magnitude
     assert_eq!(identity.angle.blade(), 3); // 0 + 2 = 3 total blades (from angle addition)
     assert_eq!(identity.angle.grade(), 3); // 3 % 4 = 3 (trivector)
                                            // blade arithmetic: multiplicative identity preserves geometric work history
@@ -851,8 +851,8 @@ fn it_inverts_geonum_through_length_and_angle_negation() {
     // step 3: value preserved = π/4
     assert_eq!(high_inverse.mag, 0.25); // 1/4 reciprocal
     assert_eq!(high_inverse.angle.blade(), 1002); // 1000 + 2 = 1002 blades
-    assert!((high_inverse.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
-                                                                    // blade arithmetic: inversion scales to arbitrary blade magnitudes
+    assert!(high_inverse.angle.near_rem(PI / 4.0)); // value preserved
+                                                    // blade arithmetic: inversion scales to arbitrary blade magnitudes
 
     // proves inv() combines reciprocal length with π rotation through blade arithmetic
 }
@@ -872,8 +872,8 @@ fn it_divides_geonum_through_multiplication_by_inverse() {
     // step 4: blade decomposition = 17π/12 = 2*(π/2) + 5π/12
     assert_eq!(quotient.mag, 3.0); // 6/2 = 3
     assert_eq!(quotient.angle.blade(), 2); // angle sum crosses 2 boundaries
-    assert!((quotient.angle.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // remainder after crossings
-                                                                       // blade arithmetic: division accumulates inversion + multiplication blades
+    assert!(quotient.angle.near_rem(5.0 * PI / 12.0)); // remainder after crossings
+                                                       // blade arithmetic: division accumulates inversion + multiplication blades
 
     // case 2: verify division equivalence with manual inv() + mul()
     let manual_quotient = dividend * divisor.inv();
@@ -891,8 +891,8 @@ fn it_divides_geonum_through_multiplication_by_inverse() {
     // step 3: π/2 boundary = blade=702+1=703, value=0
     assert_eq!(high_quotient.mag, 2.0); // 8/4 = 2
     assert_eq!(high_quotient.angle.blade(), 703); // 500 + (200+2) + 1(crossing) = 703
-    assert!(high_quotient.angle.rem().abs() < EPSILON); // π/2 crossing resets value
-                                                        // blade arithmetic: division accumulates all intermediate blade transformations
+    assert!(high_quotient.angle.near_rem(0.0)); // π/2 crossing resets value
+                                                // blade arithmetic: division accumulates all intermediate blade transformations
 
     // proves div() accumulates blade history through inversion + multiplication compound operation
 }
@@ -922,8 +922,8 @@ fn it_normalizes_geonum_preserving_blade_structure() {
     // step 3: blade/value = blade=1000, value=π/4 (unchanged)
     assert_eq!(high_norm.mag, 1.0); // unit length
     assert_eq!(high_norm.angle.blade(), 1000); // blade preserved exactly
-    assert!((high_norm.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved exactly
-                                                                 // blade arithmetic: normalization preserves high blade structure
+    assert!(high_norm.angle.near_rem(PI / 4.0)); // value preserved exactly
+                                                 // blade arithmetic: normalization preserves high blade structure
 
     // case 3: normalization idempotency
     let already_unit = Geonum::new(1.0, 3.0, 4.0); // length=1, angle=3π/4 → blade=1, value=π/4
@@ -951,7 +951,7 @@ fn it_computes_dot_product_returning_scalar_blade() {
     // step 2: magnitude = 3 * 4 * cos(π/6) = 12 * (√3/2) ≈ 10.39
     // step 3: result = [magnitude, base scalar angle]
     let expected_mag = 3.0 * 4.0 * (PI / 6.0).cos();
-    assert!((dot_result.mag - expected_mag).abs() < EPSILON); // computed magnitude
+    assert!(dot_result.near_mag(expected_mag)); // computed magnitude
     assert_eq!(dot_result.angle, Angle::new(0.0, 1.0)); // positive cosine keeps scalar base angle
 
     // case 2: orthogonal vectors (π/2 apart)
@@ -961,7 +961,7 @@ fn it_computes_dot_product_returning_scalar_blade() {
     // step 1: angle_diff = π/2 - 0 = π/2
     // step 2: magnitude = 2 * 3 * cos(π/2) = 6 * 0 = 0
     // step 3: result = [0, blade=0] (scalar zero)
-    assert!(ortho_dot.mag.abs() < EPSILON); // zero magnitude
+    assert!(ortho_dot.near_mag(0.0)); // zero magnitude
     assert_eq!(ortho_dot.angle, Angle::new(0.0, 1.0)); // zero magnitude uses scalar pair
 
     // case 3: high blade dot product
@@ -990,10 +990,10 @@ fn it_computes_wedge_product_with_blade_increment() {
     // step 2: magnitude = 3 * 4 * |sin(π/6)| = 12 * 0.5 = 6.0
     // step 3: angle_sum = π/6 + π/3 + π/2 = π/6 + 2π/6 + 3π/6 = π
     // step 4: blade decomposition = π = 2*(π/2) + 0
-    assert!((wedge_ab.mag - 6.0).abs() < EPSILON); // computed magnitude
+    assert!(wedge_ab.near_mag(6.0)); // computed magnitude
     assert_eq!(wedge_ab.angle.blade(), 2); // π = 2*(π/2), crosses 2 boundaries
-    assert!(wedge_ab.angle.rem().abs() < EPSILON); // π has no remainder
-                                                   // blade arithmetic: wedge adds π/2 to angle sum, creates bivector
+    assert!(wedge_ab.angle.near_rem(0.0)); // π has no remainder
+                                           // blade arithmetic: wedge adds π/2 to angle sum, creates bivector
 
     // case 2: wedge product with negative orientation (anticommutativity)
     let wedge_ba = vec_b.wedge(&vec_a);
@@ -1002,7 +1002,7 @@ fn it_computes_wedge_product_with_blade_increment() {
     // step 3: angle_sum = π/3 + π/6 + π/2 = π (same base)
     // step 4: orientation correction = π + π = 2π (adds π for negative sin)
     // step 5: blade decomposition = 2π = 4*(π/2) + 0
-    assert!((wedge_ba.mag - 6.0).abs() < EPSILON); // same magnitude
+    assert!(wedge_ba.near_mag(6.0)); // same magnitude
     assert_eq!(wedge_ba.angle.blade(), 4); // 2π = 4*(π/2) with orientation π
                                            // blade arithmetic: negative sin adds π rotation (2 more blades)
 
@@ -1037,7 +1037,7 @@ fn it_computes_geometric_product_combining_dot_and_wedge_blades() {
 
     // case 2: verify geometric product equivalence with manual combination
     let manual_geo = dot_part + wedge_part;
-    assert!((geo_product.mag - manual_geo.mag).abs() < EPSILON); // same magnitude
+    assert!(geo_product.near_mag(manual_geo.mag)); // same magnitude
     assert_eq!(geo_product.angle.blade(), manual_geo.angle.blade()); // same blade
     assert_eq!(geo_product.angle.rem(), manual_geo.angle.rem()); // same value
                                                                  // blade arithmetic: geo() IS dot + wedge through geonum addition
@@ -1074,8 +1074,8 @@ fn it_rotates_geonum_through_angle_addition() {
     // step 3: blade arithmetic = (0+0, π/8+π/6) = blade=0, value=7π/24
     assert_eq!(rotated.mag, 2.0); // length preserved
     assert_eq!(rotated.angle.blade(), 0); // no boundary crossing
-    assert!((rotated.angle.rem() - 7.0 * PI / 24.0).abs() < EPSILON); // combined angle
-                                                                      // blade arithmetic: rotation = angle addition without blade change
+    assert!(rotated.angle.near_rem(7.0 * PI / 24.0)); // combined angle
+                                                      // blade arithmetic: rotation = angle addition without blade change
 
     // case 2: rotation with boundary crossing
     let cross_geo = Geonum::new(3.0, 1.0, 3.0); // length=3, angle=π/3 → blade=0, value=π/3
@@ -1087,8 +1087,8 @@ fn it_rotates_geonum_through_angle_addition() {
     // step 4: blade arithmetic = 7π/12 = 1*(π/2) + π/12
     assert_eq!(cross_rotated.mag, 3.0); // length preserved
     assert_eq!(cross_rotated.angle.blade(), 1); // boundary crossing increments blade
-    assert!((cross_rotated.angle.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON); // remainder
-                                                                                         // blade arithmetic: rotation with crossing = angle addition + boundary handling
+    assert!(cross_rotated.angle.near_rem(7.0 * PI / 12.0 - PI / 2.0)); // remainder
+                                                                       // blade arithmetic: rotation with crossing = angle addition + boundary handling
 
     // case 3: rotation with high blade accumulation
     let high_geo = Geonum::new_with_blade(1.0, 1000, 1.0, 6.0); // blade=1000, value=π/6
@@ -1100,8 +1100,8 @@ fn it_rotates_geonum_through_angle_addition() {
     // step 4: blade arithmetic = (1000+200, π/6+π/4) = blade=1200, value=5π/12
     assert_eq!(high_rotated.mag, 1.0); // length preserved
     assert_eq!(high_rotated.angle.blade(), 1200); // blade accumulation
-    assert!((high_rotated.angle.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // value sum
-                                                                           // blade arithmetic: rotation accumulates blades at arbitrary magnitudes
+    assert!(high_rotated.angle.near_rem(5.0 * PI / 12.0)); // value sum
+                                                           // blade arithmetic: rotation accumulates blades at arbitrary magnitudes
 
     // proves rotate() is pure angle addition preserving length while accumulating blade history
 }
@@ -1119,8 +1119,8 @@ fn it_negates_geonum_through_pi_rotation() {
     // step 3: blade decomposition = 5π/4 = 2*(π/2) + π/4
     assert_eq!(negated.mag, 2.0); // length preserved
     assert_eq!(negated.angle.blade(), 2); // π/4 + π crosses 2 boundaries
-    assert!((negated.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                               // blade arithmetic: negation adds exactly 2 blades (π rotation)
+    assert!(negated.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                               // blade arithmetic: negation adds exactly 2 blades (π rotation)
 
     // case 2: double negation accumulates blades
     let double_neg = negated.negate();
@@ -1130,8 +1130,8 @@ fn it_negates_geonum_through_pi_rotation() {
     assert_eq!(double_neg.mag, 2.0); // length preserved
     assert_eq!(double_neg.angle.blade(), 4); // 2 + 2 = 4 blades total
     assert_eq!(double_neg.angle.grade(), 0); // 4 % 4 = 0 (same grade as original)
-    assert!((double_neg.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
-                                                                  // blade arithmetic: double negation = 4 blade accumulation (2π rotation)
+    assert!(double_neg.angle.near_rem(PI / 4.0)); // value preserved
+                                                  // blade arithmetic: double negation = 4 blade accumulation (2π rotation)
 
     // case 3: negation with high blade count
     let high_geo = Geonum::new_with_blade(1.5, 1000, 1.0, 6.0); // blade=1000, value=π/6
@@ -1141,8 +1141,8 @@ fn it_negates_geonum_through_pi_rotation() {
     // step 3: value = π/6 (preserved through negate)
     assert_eq!(high_negated.mag, 1.5); // length preserved
     assert_eq!(high_negated.angle.blade(), 1002); // 1000 + 2 = 1002 blades
-    assert!((high_negated.angle.rem() - PI / 6.0).abs() < EPSILON); // value preserved
-                                                                    // blade arithmetic: negation adds 2 blades regardless of starting blade count
+    assert!(high_negated.angle.near_rem(PI / 6.0)); // value preserved
+                                                    // blade arithmetic: negation adds 2 blades regardless of starting blade count
 
     // proves negate() implements geometric π rotation preserving transformation history
 }
@@ -1199,8 +1199,8 @@ fn it_handles_scalar_sign_encoding_original() {
     // step 3: blade decomposition = 0 = 0*(π/2) + 0
     assert_eq!(positive.mag, 5.0); // magnitude from abs()
     assert_eq!(positive.angle.blade(), 0); // positive → blade 0
-    assert!(positive.angle.rem().abs() < EPSILON); // 0 angle
-                                                   // blade arithmetic: positive scalar → blade=0 direction
+    assert!(positive.angle.near_rem(0.0)); // 0 angle
+                                           // blade arithmetic: positive scalar → blade=0 direction
 
     // case 2: negative scalar encoding
     let negative = Geonum::scalar(-3.0);
@@ -1209,8 +1209,8 @@ fn it_handles_scalar_sign_encoding_original() {
     // step 3: blade decomposition = π = 2*(π/2) + 0
     assert_eq!(negative.mag, 3.0); // magnitude from abs()
     assert_eq!(negative.angle.blade(), 2); // negative → blade 2 (π rotation)
-    assert!(negative.angle.rem().abs() < EPSILON); // π angle has no remainder
-                                                   // blade arithmetic: negative scalar → blade=2 direction (π rotation)
+    assert!(negative.angle.near_rem(0.0)); // π angle has no remainder
+                                           // blade arithmetic: negative scalar → blade=2 direction (π rotation)
 
     // case 3: zero scalar (boundary case)
     let zero = Geonum::scalar(0.0);
@@ -1219,8 +1219,8 @@ fn it_handles_scalar_sign_encoding_original() {
     // step 3: blade decomposition = 0 = 0*(π/2) + 0
     assert_eq!(zero.mag, 0.0); // zero magnitude
     assert_eq!(zero.angle.blade(), 0); // zero treated as positive → blade 0
-    assert!(zero.angle.rem().abs() < EPSILON); // 0 angle
-                                               // blade arithmetic: zero defaults to positive blade direction
+    assert!(zero.angle.near_rem(0.0)); // 0 angle
+                                       // blade arithmetic: zero defaults to positive blade direction
 
     // case 4: scalar sign detection through blade arithmetic
     assert!(positive.angle.blade() != negative.angle.blade()); // different directions
@@ -1244,8 +1244,8 @@ fn it_increments_blade_through_rotation() {
     // step 3: addition = (0+1, π/4+0) = blade=1, value=π/4
     assert_eq!(incremented.mag, scalar_base.mag); // length preserved
     assert_eq!(incremented.angle.blade(), 1); // blade=0 + 1 = blade=1
-    assert!((incremented.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
-                                                                   // blade arithmetic: π/4 → π/4 + π/2 = 3π/4 = 1*(π/2) + π/4
+    assert!(incremented.angle.near_rem(PI / 4.0)); // value preserved
+                                                   // blade arithmetic: π/4 → π/4 + π/2 = 3π/4 = 1*(π/2) + π/4
 
     // case 2: increment causing grade cycling
     let trivector_base = Geonum::new(1.0, 3.0, 2.0); // 3π/2 → blade=3, value=0
@@ -1255,8 +1255,8 @@ fn it_increments_blade_through_rotation() {
     // step 3: addition = (3+1, 0+0) = blade=4, value=0
     assert_eq!(cycled.angle.blade(), 4); // blade=3 + 1 = blade=4
     assert_eq!(cycled.angle.grade(), 0); // 4 % 4 = 0 (cycling to scalar)
-    assert!(cycled.angle.rem().abs() < EPSILON); // value preserved
-                                                 // blade arithmetic: grade 3 → grade 0 through blade cycling
+    assert!(cycled.angle.near_rem(0.0)); // value preserved
+                                         // blade arithmetic: grade 3 → grade 0 through blade cycling
 
     // case 3: increment high dimensional blade
     let high_dim = Geonum::new_with_blade(1.0, 1000, 0.0, 1.0); // blade=1000
@@ -1284,7 +1284,7 @@ fn it_decrements_blade_through_forward_rotation() {
     // step 3: addition = (1+3, 0+0) = blade=4, value=0
     assert_eq!(decremented.mag, vector_base.mag); // length preserved
     assert_eq!(decremented.angle.blade(), 4); // blade=1 + 3 = blade=4 (not blade=0!)
-    assert!(decremented.angle.rem().abs() < EPSILON); // value preserved
+    assert!(decremented.angle.near_rem(0.0)); // value preserved
     assert_eq!(decremented.angle.grade(), 0); // 4 % 4 = 0 (scalar grade through cycling)
                                               // blade arithmetic: -π/2 → +3π/2 maintains forward-only principle
 
@@ -1296,8 +1296,8 @@ fn it_decrements_blade_through_forward_rotation() {
     // step 3: total transformation = blade=0 → blade=4 (4 blades accumulated)
     assert_eq!(inc_then_dec.angle.blade(), 4); // blade=0 → 1 → 4 (not back to 0)
     assert_eq!(inc_then_dec.angle.grade(), 0); // 4 % 4 = 0 (same grade)
-    assert!((inc_then_dec.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
-                                                                    // blade arithmetic: inc+dec adds 4 blades total (preserves geometric work)
+    assert!(inc_then_dec.angle.near_rem(PI / 4.0)); // value preserved
+                                                    // blade arithmetic: inc+dec adds 4 blades total (preserves geometric work)
 
     // case 3: decrement high dimensional blade
     let high_blade = Geonum::new_with_blade(1.0, 1000, 0.0, 1.0); // blade=1000
@@ -1339,9 +1339,9 @@ fn it_preserves_blade_operations_at_high_dimensions() {
 
     assert_eq!(inc_medium.angle.blade(), 501); // 500 + 1 = 501
     assert_eq!(dec_medium.angle.blade(), 503); // 500 + 3 = 503
-    assert!((inc_medium.angle.rem() - PI / 6.0).abs() < EPSILON); // value preserved
-    assert!((dec_medium.angle.rem() - PI / 6.0).abs() < EPSILON); // value preserved
-                                                                  // blade arithmetic: increment/decrement consistent at medium blade magnitudes
+    assert!(inc_medium.angle.near_rem(PI / 6.0)); // value preserved
+    assert!(dec_medium.angle.near_rem(PI / 6.0)); // value preserved
+                                                  // blade arithmetic: increment/decrement consistent at medium blade magnitudes
 
     // case 3: blade copy operation scaling
     let source_high = Geonum::new_with_blade(1.0, 10_000, 1.0, 8.0); // blade=10000
@@ -1351,8 +1351,8 @@ fn it_preserves_blade_operations_at_high_dimensions() {
     // step 2: rotation = 40000 * π/2 through angle arithmetic
     // step 3: result = blade=10000 + 40000 = blade=50000
     assert_eq!(copied.angle.blade(), 50_000); // exact blade copying at high dimensions
-    assert!((copied.angle.rem() - PI / 8.0).abs() < EPSILON); // value from source preserved
-                                                              // blade arithmetic: copy_blade scales to extreme blade counts
+    assert!(copied.angle.near_rem(PI / 8.0)); // value from source preserved
+                                              // blade arithmetic: copy_blade scales to extreme blade counts
 
     // proves blade operations maintain O(1) complexity regardless of blade magnitude
     // enabling geometric algebra in million-dimensional spaces through blade arithmetic
@@ -1373,8 +1373,8 @@ fn it_reflects_geonum_through_forward_only_formula() {
     // step 4: blade arithmetic = 7π/4 = 3*(π/2) + π/4
     assert_eq!(reflected.mag, point.mag); // length preserved
     assert_eq!(reflected.angle.blade(), 7); // 0 + 0 + 7 = 7 blades total
-    assert!((reflected.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                                 // blade arithmetic: reflection adds 7 blades through forward-only formula
+    assert!(reflected.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                                 // blade arithmetic: reflection adds 7 blades through forward-only formula
 
     // case 2: double reflection accumulates more blades
     let double_reflected = reflected.reflect(&x_axis);
@@ -1431,7 +1431,7 @@ fn it_projects_geonum_onto_another_with_blade_preservation() {
     // step 2: scalar_factor = 0.0 / |b|² = 0.0 / 9.0 = 0.0
     // step 3: projection_magnitude = 0.0 * 3.0 = 0.0
     // step 4: result = [0.0, blade=1, value=0] (preserves onto angle structure)
-    assert!(ortho_proj.mag.abs() < EPSILON); // zero projection
+    assert!(ortho_proj.near_mag(0.0)); // zero projection
     assert_eq!(ortho_proj.angle.blade(), ortho_b.angle.blade()); // blade from onto vector
     assert_eq!(ortho_proj.angle.rem(), ortho_b.angle.rem()); // value from onto vector
                                                              // blade arithmetic: orthogonal projection has zero magnitude but preserves target blade
@@ -1446,8 +1446,8 @@ fn it_projects_geonum_onto_another_with_blade_preservation() {
     // step 4: result angle = target_b.angle (blade=500, value=π/4 preserved)
     assert!(high_proj.mag.is_finite()); // finite projection magnitude
     assert_eq!(high_proj.angle.blade(), 500); // blade from target vector
-    assert!((high_proj.angle.rem() - PI / 4.0).abs() < EPSILON); // value from target vector
-                                                                 // blade arithmetic: projection result inherits target blade structure
+    assert!(high_proj.angle.near_rem(PI / 4.0)); // value from target vector
+                                                 // blade arithmetic: projection result inherits target blade structure
 
     // proves project() preserves target blade structure while computing magnitude through dot product
 }
@@ -1513,7 +1513,7 @@ fn it_detects_orthogonality_through_dot_product_blade_collapse() {
     // step 1: angle_diff = π/2 - 0 = π/2
     // step 2: magnitude = 3 * 4 * cos(π/2) = 12 * 0 = 0
     // step 3: result = [0, blade=0, value=0] (scalar collapse)
-    assert!(dot_xy.mag.abs() < EPSILON); // zero dot product
+    assert!(dot_xy.near_mag(0.0)); // zero dot product
     assert_eq!(dot_xy.angle.blade(), 0); // always scalar blade
     assert!(vec_x.is_orthogonal(&vec_y)); // orthogonality detected
                                           // blade arithmetic: orthogonality independent of input blade structure
@@ -1610,8 +1610,8 @@ fn it_raises_geonum_to_power_through_angle_scaling() {
     // step 4: final angle = π/4 + 2π = π/4 + 4*(π/2) = blade=4, value=π/4
     assert_eq!(squared.mag, 4.0); // 2² = 4
     assert_eq!(squared.angle.blade(), 4); // angle * 2 adds 4 blades (2π)
-    assert!((squared.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                               // blade arithmetic: pow(2) = length² + angle*2 through blade addition
+    assert!(squared.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                               // blade arithmetic: pow(2) = length² + angle*2 through blade addition
 
     // case 2: cube geonum (power of 3)
     let cubed = base_geo.pow(3.0);
@@ -1621,8 +1621,8 @@ fn it_raises_geonum_to_power_through_angle_scaling() {
     // step 4: final angle = π/4 + 3π = π/4 + 6*(π/2) = blade=6, value=π/4
     assert_eq!(cubed.mag, 8.0); // 2³ = 8
     assert_eq!(cubed.angle.blade(), 6); // angle * 3 adds 6 blades (3π)
-    assert!((cubed.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                             // blade arithmetic: pow(3) = length³ + angle*3 through blade addition
+    assert!(cubed.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                             // blade arithmetic: pow(3) = length³ + angle*3 through blade addition
 
     // case 3: fractional power (square root)
     let sqrt_geo = base_geo.pow(0.5);
@@ -1630,10 +1630,10 @@ fn it_raises_geonum_to_power_through_angle_scaling() {
     // step 2: angle scaling = angle * 0.5 = π/4 * 0.5 = π/8
     // step 3: angle multiplication = Angle::new(0.5, 1.0) = π/2 → blade=1, value=0
     // step 4: final angle = π/4 + π/2 = 3π/4 → blade=1, value=π/4
-    assert!((sqrt_geo.mag - 2.0_f64.sqrt()).abs() < EPSILON); // √2
+    assert!(sqrt_geo.near_mag(2.0_f64.sqrt())); // √2
     assert_eq!(sqrt_geo.angle.blade(), 1); // angle * 0.5 adds 1 blade (π/2)
-    assert!((sqrt_geo.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 value preserved
-                                                                // blade arithmetic: pow(0.5) = √length + angle*0.5 through blade addition
+    assert!(sqrt_geo.angle.near_rem(PI / 4.0)); // π/4 value preserved
+                                                // blade arithmetic: pow(0.5) = √length + angle*0.5 through blade addition
 
     // case 4: high blade power scaling
     let high_base = Geonum::new_with_blade(3.0, 100, 1.0, 6.0); // blade=100, value=π/6
@@ -1643,8 +1643,8 @@ fn it_raises_geonum_to_power_through_angle_scaling() {
     // step 3: final blade = 100 + 4 = 104 blades
     assert_eq!(high_squared.mag, 9.0); // 3² = 9
     assert_eq!(high_squared.angle.blade(), 104); // 100 + 4 = 104 blades
-    assert!((high_squared.angle.rem() - PI / 6.0).abs() < EPSILON); // π/6 value preserved
-                                                                    // blade arithmetic: power scaling works at arbitrary blade magnitudes
+    assert!(high_squared.angle.near_rem(PI / 6.0)); // π/6 value preserved
+                                                    // blade arithmetic: power scaling works at arbitrary blade magnitudes
 
     // proves pow() scales length exponentially while multiplying angle through blade arithmetic
 }
@@ -1694,7 +1694,7 @@ fn it_accesses_length_and_angle_components_preserving_blade_state() {
     // step 2: angle() = geo.angle (direct field access)
     assert_eq!(high_length, 3.5); // exact length returned
     assert_eq!(high_angle.blade(), 1000); // exact blade count returned
-    assert!((high_angle.rem() - PI / 4.0).abs() < EPSILON); // exact value returned
+    assert!(high_angle.near_rem(PI / 4.0)); // exact value returned
     assert_eq!(high_angle.grade(), 0); // grade computed from blade: 1000%4=0
                                        // blade arithmetic: accessors expose raw blade/value state without modification
 
@@ -1703,8 +1703,8 @@ fn it_accesses_length_and_angle_components_preserving_blade_state() {
     let low_angle = zero_blade_geo.angle();
     assert_eq!(low_length, 2.0); // exact length
     assert_eq!(low_angle.blade(), 0); // exact blade
-    assert!((low_angle.rem() - PI / 6.0).abs() < EPSILON); // exact value
-                                                           // blade arithmetic: accessors work identically regardless of blade magnitude
+    assert!(low_angle.near_rem(PI / 6.0)); // exact value
+                                           // blade arithmetic: accessors work identically regardless of blade magnitude
 
     // proves accessors provide direct blade state access without any geometric processing
 }
@@ -1749,14 +1749,14 @@ fn it_inverts_through_circle_preserving_angles_transforming_length() {
                                                       // step 4: geonum addition combines: blade=0+500=500 + boundary crossings = 504
     assert_eq!(inverted.mag, 0.5); // 1²/2 = 0.5 distance scaling
     assert_eq!(inverted.angle.blade(), 504); // blade accumulated: 500 + 4 from addition
-    assert!((inverted.angle.rem() - point.angle.rem()).abs() < EPSILON); // value preserved
+    assert!(inverted.angle.near_rem(point.angle.rem())); // value preserved
     assert_eq!(inverted.angle.grade(), point.angle.grade()); // grade preserved: 504%4 = 0 = 500%4
                                                              // blade arithmetic: circle inversion accumulates +4 blades while preserving grade behavior
 
     // case 2: double inversion through compound blade accumulation
     let double_inverted = inverted.invert_circle(&center, 1.0);
     // step 1: second inversion adds another +4 blades: 504 + 4 = 508
-    assert!((double_inverted.mag - point.mag).abs() < 1e-10); // returns to original distance within precision
+    assert!(double_inverted.near_mag(point.mag)); // returns to original distance within precision
     assert_eq!(double_inverted.angle.blade(), 508); // blade=504+4=508 total accumulation
     assert_eq!(double_inverted.angle.grade(), point.angle.grade()); // grade preserved: 508%4=0
                                                                     // blade arithmetic: double inversion accumulates 8 blades total while preserving geometry
@@ -1777,7 +1777,7 @@ fn it_resets_blade_to_grade_minimum_preserving_geometric_behavior() {
     // step 3: preserve value = π/4, preserve length = 2.0
     assert_eq!(reset_scalar.mag, 2.0); // length preserved
     assert_eq!(reset_scalar.angle.blade(), 0); // blade reset: 1000 → 0
-    assert!((reset_scalar.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved
+    assert!(reset_scalar.angle.near_rem(PI / 4.0)); // value preserved
     assert_eq!(reset_scalar.angle.grade(), 0); // grade preserved: 0%4 = 0
                                                // blade arithmetic: transformation history discarded, geometric behavior preserved
 
@@ -1789,8 +1789,8 @@ fn it_resets_blade_to_grade_minimum_preserving_geometric_behavior() {
     // step 3: preserve value = π/6, preserve length = 1.5
     assert_eq!(reset_vector.angle.blade(), 1); // blade reset: 1001 → 1
     assert_eq!(reset_vector.angle.grade(), 1); // grade preserved: 1%4 = 1
-    assert!((reset_vector.angle.rem() - PI / 6.0).abs() < EPSILON); // value preserved
-                                                                    // blade arithmetic: forgets 1000 transformations, keeps vector behavior
+    assert!(reset_vector.angle.near_rem(PI / 6.0)); // value preserved
+                                                    // blade arithmetic: forgets 1000 transformations, keeps vector behavior
 
     // proves base_angle() separates transformation history from geometric behavior
 }
@@ -1809,8 +1809,8 @@ fn it_applies_spiral_similarity_through_scale_and_rotation() {
     // step 3: blade arithmetic = (0+0, π/6+π/4) = blade=0, value=5π/12
     assert_eq!(transformed.mag, 6.0); // 2 * 3 = 6
     assert_eq!(transformed.angle.blade(), 0); // no boundary crossing: 5π/12 < π/2
-    assert!((transformed.angle.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // combined angle
-                                                                          // blade arithmetic: positive spiral similarity = length scaling + angle addition
+    assert!(transformed.angle.near_rem(5.0 * PI / 12.0)); // combined angle
+                                                          // blade arithmetic: positive spiral similarity = length scaling + angle addition
 
     // case 2: negative scaling adds π rotation
     let neg_transformed = geo.scale_rotate(-2.0, rotation);
@@ -1819,8 +1819,8 @@ fn it_applies_spiral_similarity_through_scale_and_rotation() {
     // step 3: rotation addition = (2+0, π/6+π/4) = blade=2, value=5π/12
     assert_eq!(neg_transformed.mag, 4.0); // 2 * |-2| = 4
     assert_eq!(neg_transformed.angle.blade(), 2); // π rotation from negative factor
-    assert!((neg_transformed.angle.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // combined angle
-                                                                              // blade arithmetic: negative spiral adds π rotation + angle addition
+    assert!(neg_transformed.angle.near_rem(5.0 * PI / 12.0)); // combined angle
+                                                              // blade arithmetic: negative spiral adds π rotation + angle addition
 
     // proves scale_rotate() handles sign through blade arithmetic + length/angle composition
 }
@@ -1839,8 +1839,8 @@ fn it_implements_geonum_add_trait_blade_accumulation() {
     // step 3: angle preserved: blade=100, value=π/4 unchanged
     assert_eq!(same_sum.mag, 5.0); // lengths add directly
     assert_eq!(same_sum.angle.blade(), 100); // blade preserved exactly
-    assert!((same_sum.angle.rem() - PI / 4.0).abs() < EPSILON); // value preserved exactly
-                                                                // blade arithmetic: same angle bypass → no blade accumulation, direct length addition
+    assert!(same_sum.angle.near_rem(PI / 4.0)); // value preserved exactly
+                                                // blade arithmetic: same angle bypass → no blade accumulation, direct length addition
 
     // case 2: general case accumulates blades through cartesian conversion
     let diff_a = Geonum::new_with_blade(2.0, 200, 1.0, 6.0); // blade=200, value=π/6
@@ -1859,8 +1859,8 @@ fn it_implements_geonum_add_trait_blade_accumulation() {
     let backward = Geonum::new_with_blade(4.0, 50, 0.0, 1.0); // blade=50, angle=π (opposite direction)
 
     // prove they point in opposite directions
-    assert!((forward.angle.grade_angle() - 0.0).abs() < EPSILON); // forward at 0
-    assert!((backward.angle.grade_angle() - PI).abs() < EPSILON); // backward at π
+    assert!(forward.angle.near_rad(0.0)); // forward at 0
+    assert!(backward.angle.near_rad(PI)); // backward at π
     assert_eq!(forward.mag, backward.mag); // same magnitude
 
     let oppose_sum = forward + backward;
@@ -1902,8 +1902,8 @@ fn it_implements_geonum_mul_trait_angles_add_lengths_multiply() {
     // step 2: angle addition = blade=150+250=400, value=π/8+π/6=7π/24
     assert_eq!(product.mag, 12.0); // lengths multiply
     assert_eq!(product.angle.blade(), 400); // blades add: 150 + 250 = 400
-    assert!((product.angle.rem() - 7.0 * PI / 24.0).abs() < EPSILON); // values add: π/8 + π/6 = 7π/24
-                                                                      // blade arithmetic: multiplication = length multiplication + angle addition
+    assert!(product.angle.near_rem(7.0 * PI / 24.0)); // values add: π/8 + π/6 = 7π/24
+                                                      // blade arithmetic: multiplication = length multiplication + angle addition
 }
 
 #[test]
@@ -1918,8 +1918,8 @@ fn it_implements_geonum_div_trait_through_multiplication_by_inverse() {
     // step 2: multiplication = [8*0.5, blade=300+102=402, value=π/4+π/6=5π/12]
     assert_eq!(quotient.mag, 4.0); // 8/2 = 4
     assert_eq!(quotient.angle.blade(), 402); // blade accumulated: 300 + (100+2) = 402
-    assert!((quotient.angle.rem() - 5.0 * PI / 12.0).abs() < EPSILON); // values add: π/4 + π/6 = 5π/12
-                                                                       // blade arithmetic: division = multiplication with inverted operand blade accumulation
+    assert!(quotient.angle.near_rem(5.0 * PI / 12.0)); // values add: π/4 + π/6 = 5π/12
+                                                       // blade arithmetic: division = multiplication with inverted operand blade accumulation
 }
 
 #[test]
@@ -1934,8 +1934,8 @@ fn it_implements_angle_mul_geonum_trait_angle_addition() {
     // step 2: angle addition = blade=100+200=300, value=π/8+π/6=7π/24
     assert_eq!(result.mag, 3.0); // length preserved from geonum
     assert_eq!(result.angle.blade(), 300); // blades add: 100 + 200 = 300
-    assert!((result.angle.rem() - 7.0 * PI / 24.0).abs() < EPSILON); // values add: π/8 + π/6 = 7π/24
-                                                                     // blade arithmetic: cross-type multiplication = angle addition with length preservation
+    assert!(result.angle.near_rem(7.0 * PI / 24.0)); // values add: π/8 + π/6 = 7π/24
+                                                     // blade arithmetic: cross-type multiplication = angle addition with length preservation
 }
 
 #[test]
@@ -1950,8 +1950,8 @@ fn it_implements_angle_add_geonum_trait_angle_addition() {
     // step 2: angle addition = blade=75+125=200, value=π/8+π/3=11π/24
     assert_eq!(result.mag, 2.5); // length preserved from geonum
     assert_eq!(result.angle.blade(), 200); // blades add: 75 + 125 = 200
-    assert!((result.angle.rem() - 11.0 * PI / 24.0).abs() < EPSILON); // values add: π/8 + π/3 = 11π/24
-                                                                      // blade arithmetic: cross-type addition = identical to multiplication (angle addition)
+    assert!(result.angle.near_rem(11.0 * PI / 24.0)); // values add: π/8 + π/3 = 11π/24
+                                                      // blade arithmetic: cross-type addition = identical to multiplication (angle addition)
 }
 
 #[test]

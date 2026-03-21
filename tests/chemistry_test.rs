@@ -198,8 +198,8 @@ fn it_proves_spin_pairing_from_dual() {
     // spin pair: dot at pi means maximally opposite orientation
     // cos(pi) = -1, giving dot.mag = 1.0 at angle pi (negative scalar)
     let pair_dot = up.dot(&down);
-    assert!((pair_dot.mag - 1.0).abs() < EPSILON);
-    assert!((pair_dot.angle.grade_angle() - PI).abs() < EPSILON);
+    assert!(pair_dot.near_mag(1.0));
+    assert!(pair_dot.angle.near_rad(PI));
 
     // spin orthogonality via projection: up projects zero onto down's axis
     // cos(pi) = -1, so project gives -1 (maximally anti-aligned)
@@ -701,8 +701,10 @@ fn grade_offset_weakens_projection() {
     let pb = nucleus.dot(&p);
 
     assert_eq!(sb.angle.grade(), 2);
-    assert_eq!(pb.angle.grade(), 2);
-    // p-electron offset by spread has weaker binding projection
+    // p-orbital at 3π/2 is orthogonal to nucleus at 0: cos(3π/2) = 0
+    // so dot product magnitude is zero and grade is 0 (non-negative zero → grade 0)
+    assert_eq!(pb.angle.grade(), 0);
+    // p-electron offset by spread has zero binding projection (orthogonal)
     assert!(sb.mag > pb.mag);
 }
 
@@ -734,7 +736,7 @@ fn wave_sum_and_collect_are_the_same_chain() {
             .iter()
             .fold(Geonum::new(0.0, 0.0, 1.0), |acc, &g| acc + g);
 
-        assert!((wave.mag - reconstructed.mag).abs() < EPSILON);
+        assert!(wave.near_mag(reconstructed.mag));
         assert_eq!(wave.angle.grade(), reconstructed.angle.grade());
         assert_eq!(particles.len(), z);
     }

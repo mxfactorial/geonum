@@ -75,9 +75,9 @@ fn its_a_shape_function() {
     let c_at_1 = cubic_shape(1.0);
 
     // test values match expected cubic function
-    assert!((c_at_0.mag - 0.0).abs() < EPSILON);
-    assert!((c_at_half.mag - 0.5).abs() < EPSILON);
-    assert!((c_at_1.mag - 1.0).abs() < EPSILON);
+    assert!(c_at_0.near_mag(0.0));
+    assert!(c_at_half.near_mag(0.5));
+    assert!(c_at_1.near_mag(1.0));
 
     // measure performance with a simulated multi-dimensional element
     // this would normally require O(n³) operations in a traditional FEM code
@@ -103,7 +103,7 @@ fn its_a_shape_function() {
     // r = sqrt(3/4) ≈ 0.866, cubic_r = r²(3-2r) ≈ 0.598
     let expected_r = (0.75_f64).sqrt();
     let expected_length = expected_r * expected_r * (3.0 - 2.0 * expected_r);
-    assert!((high_order_value.mag - expected_length).abs() < EPSILON);
+    assert!(high_order_value.near_mag(expected_length));
 
     // test angle computation: theta = atan2(0.5, 0.5) = π/4
     // phi = acos(0.5/0.866) ≈ 0.955 radians
@@ -111,7 +111,7 @@ fn its_a_shape_function() {
     let expected_theta = 0.5_f64.atan2(0.5);
     let expected_phi = (0.5 / expected_r).acos();
     let expected_angle_value = expected_theta * expected_phi / TAU;
-    assert!((high_order_value.angle.rem() - expected_angle_value).abs() < EPSILON);
+    assert!(high_order_value.angle.near_rem(expected_angle_value));
     assert_eq!(high_order_value.angle.blade(), 0); // small angle, so blade is 0
 }
 
@@ -176,8 +176,8 @@ fn its_a_stiffness_matrix() {
     let stress = compute_stress(&material, &displ_field);
 
     // test the stress computation
-    assert!((stress.mag - 1.0).abs() < EPSILON);
-    assert!((stress.angle.grade_angle() - (PI / 4.0 + PI / 6.0)).abs() < EPSILON);
+    assert!(stress.near_mag(1.0));
+    assert!(stress.angle.near_rad(PI / 4.0 + PI / 6.0));
 
     // demonstrate how a million-element assembly maintains O(1) complexity
     // with geonum's angle representation
@@ -228,7 +228,7 @@ fn its_a_linear_solver() {
     let check = apply_system(&solution);
 
     // test the solution
-    assert!((check.mag - b.mag).abs() < EPSILON);
+    assert!(check.near_mag(b.mag));
     assert_eq!(check.angle, b.angle);
 
     // demonstrate solving a more complex system
@@ -252,7 +252,7 @@ fn its_a_linear_solver() {
     let check_force = apply_stiffness(&displacement);
 
     // test the solution matches the force
-    assert!((check_force.mag - force.mag).abs() < EPSILON);
+    assert!(check_force.near_mag(force.mag));
     assert_eq!(check_force.angle, force.angle);
 
     // demonstrate solving a system with boundary conditions
@@ -296,7 +296,7 @@ fn its_a_linear_solver() {
     let solution_check = million_node_system(&million_node_solution);
 
     // test it matches the expected load
-    assert!((solution_check.mag - complex_load.mag).abs() < EPSILON);
+    assert!(solution_check.near_mag(complex_load.mag));
     assert_eq!(solution_check.angle, complex_load.angle);
 }
 
@@ -358,7 +358,7 @@ fn it_collapses_steps() {
     let result = analysis(&material, &load);
 
     // test the result
-    assert!((result.mag - 2.0).abs() < EPSILON);
+    assert!(result.near_mag(2.0));
     let expected_result_angle = Angle::new(1.0, 2.0) - Angle::new(1.0, 6.0); // PI/2 - PI/6
     assert_eq!(result.angle, expected_result_angle);
 

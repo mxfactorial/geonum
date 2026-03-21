@@ -49,7 +49,7 @@ fn its_a_vector() {
     // test vector properties
     assert_eq!(vector.mag, 2.0);
     assert_eq!(vector.angle.blade(), 1); // blade 1 = vector (grade 1) in geometric algebra
-    assert!((vector.angle.rem() - PI / 4.0).abs() < EPSILON); // π/4 remainder after π/2 rotation
+    assert!(vector.angle.near_rem(PI / 4.0)); // π/4 remainder after π/2 rotation
 
     // test dot product with another vector
     let vector2 = Geonum::new(3.0, 3.0, 4.0); // same 3π/4 angle = blade 1 + π/4
@@ -57,14 +57,14 @@ fn its_a_vector() {
     // compute dot product as |a|*|b|*cos(angle between)
     // with same direction, cos(0) = 1
     let dot_same = vector.dot(&vector2);
-    assert!((dot_same.mag - 6.0).abs() < EPSILON); // 2*3*cos(0) = 6
+    assert!(dot_same.near_mag(6.0)); // 2*3*cos(0) = 6
 
     // test perpendicular vectors for zero dot product
     // 5π/4 = 225° = π + π/4, which is perpendicular to 3π/4
     let perp_vector = Geonum::new(3.0, 5.0, 4.0); // 5 * π/4 = 5π/4 = blade 2 + π/4
 
     let dot_perp = vector.dot(&perp_vector);
-    assert!(dot_perp.mag.abs() < EPSILON); // test value is very close to zero
+    assert!(dot_perp.near_mag(0.0)); // test value is very close to zero
 
     // test wedge product of vector with itself equals zero (nilpotency)
     let wedge_self = vector.wedge(&vector);
@@ -394,7 +394,7 @@ fn its_a_matrix() {
     // matrix inverse: traditional O(n³), geonum O(1)
     let transform_inv = transform_3d.inv();
     let identity_check = transform_3d * transform_inv;
-    assert!((identity_check.mag - 1.0).abs() < EPSILON);
+    assert!(identity_check.near_mag(1.0));
 }
 
 #[test]
@@ -605,7 +605,7 @@ fn its_a_rational_number() {
     let rational = three / four; // 3/4 computed via overloaded Div
 
     // test result is 3/4 = 0.75
-    assert!((rational.mag - 0.75).abs() < EPSILON);
+    assert!(rational.near_mag(0.75));
 
     // test addition of fractions (3/4 + 1/2)
     let one = Geonum::scalar(1.0);
@@ -614,7 +614,7 @@ fn its_a_rational_number() {
 
     // addition of fractions: 3/4 + 1/2 = 5/4 = 1.25
     let fraction_sum = rational + rational2;
-    assert!((fraction_sum.mag - 1.25).abs() < EPSILON);
+    assert!(fraction_sum.near_mag(1.25));
 }
 
 #[test]
@@ -627,15 +627,15 @@ fn its_an_algebraic_number() {
     let sqrt2 = two.pow(0.5); // √2 via pow(0.5)
                               // pow() preserves length relationships but accumulates blade count
     let sqrt2_pow2 = sqrt2.pow(2.0); // [r^n, n*θ] formula: [√2^2, 2*angle] = [2, 2*angle]
-    assert!((sqrt2_pow2.mag - 2.0).abs() < EPSILON); // length: √2^2 = 2 ✓
-                                                     // blade accumulation from pow() means algebraic identity exists at different grade
+    assert!(sqrt2_pow2.near_mag(2.0)); // length: √2^2 = 2 ✓
+                                       // blade accumulation from pow() means algebraic identity exists at different grade
     assert_eq!(sqrt2_pow2.angle.blade(), 5); // angle multiplication: 2 * angle accumulates blades
 
     // square it
     let sqrt2_squared = sqrt2 * sqrt2;
 
     // test result is 2
-    assert!((sqrt2_squared.mag - 2.0).abs() < EPSILON);
+    assert!(sqrt2_squared.near_mag(2.0));
     let expected_angle = sqrt2.angle + sqrt2.angle; // blade arithmetic: 1 + 1 = 2
     assert_eq!(sqrt2_squared.angle, expected_angle);
 
@@ -670,9 +670,9 @@ fn it_dualizes_log2_geometric_algebra_components() {
     // in just the 2 components (length and angle) of the geometric number
 
     // test extracted values for π/4 case
-    assert_eq!(scalar, 2.0 * (PI / 4.0).cos()); // 2 * √2/2 = √2
-    assert_eq!(vector_magnitude, 2.0 * (PI / 4.0).sin()); // 2 * √2/2 = √2
-    assert_eq!(bivector_angle, PI / 4.0); // π/4 angle preserved
+    assert!((scalar - 2.0 * (PI / 4.0).cos()).abs() < 1e-10); // 2 * √2/2 = √2
+    assert!((vector_magnitude - 2.0 * (PI / 4.0).sin()).abs() < 1e-10); // 2 * √2/2 = √2
+    assert!((bivector_angle - PI / 4.0).abs() < 1e-10); // π/4 angle preserved
 
     // log2(4) = 2 components (length and angle) instead of 4 components
     // this matches the statement from the README
@@ -703,7 +703,7 @@ fn it_keeps_information_entropy_zero() {
     );
 
     // test that the recovered geonum equals the original
-    assert!((g1.mag - recovered.mag).abs() < EPSILON);
+    assert!(g1.near_mag(recovered.mag));
     assert_eq!(g1.angle, recovered.angle);
 
     // compute the entropy of transformation between the original and its dual
@@ -834,7 +834,7 @@ fn its_a_quadrature() {
     let result = f_upper - f_lower;
 
     // the length is 1/3
-    assert!((result.mag - exact_result).abs() < EPSILON);
+    assert!(result.near_mag(exact_result));
     // integrate() adds 3 blades, so blade 0 → blade 3 for x³/3
     // then another integrate() adds 3 more: blade 3 → blade 5
     assert_eq!(result.angle.blade(), 5);
@@ -873,7 +873,7 @@ fn its_a_quadrature() {
     );
 
     // prove perfect information preservation (zero entropy)
-    assert!((g.mag - recovered.mag).abs() < EPSILON);
+    assert!(g.near_mag(recovered.mag));
     assert_eq!(g.angle, recovered.angle);
 
     // demonstrate O(1) integration regardless of complexity
@@ -913,7 +913,7 @@ fn its_a_quadrature() {
     let sin_shifted = Geonum::new(1.0, 1.0, 2.0); // sin(π/2) = 1
 
     // prove sin(π/2) = cos(0) = 1
-    assert!((sin_shifted.mag - cos_at_zero.mag).abs() < EPSILON);
+    assert!(sin_shifted.near_mag(cos_at_zero.mag));
 
     // similarly, verify the relationship cos(x+π/2) = -sin(x)
     // at x = 0: cos(0+π/2) = cos(π/2) = 0 and -sin(0) = 0
@@ -921,8 +921,8 @@ fn its_a_quadrature() {
     let neg_sin_at_zero = Geonum::new(0.0, 3.0, 2.0); // -sin(0) = 0 [angle π/2 + π = 3π/2]
 
     // test equality of magnitudes (both are 0)
-    assert!((cos_shifted.mag - 0.0).abs() < EPSILON);
-    assert!((neg_sin_at_zero.mag - 0.0).abs() < EPSILON);
+    assert!(cos_shifted.near_mag(0.0));
+    assert!(neg_sin_at_zero.near_mag(0.0));
 
     // prove the fundamental quadrature relationship in geonum:
     // functions that differ by a π/2 phase represent derivatives/integrals of each other

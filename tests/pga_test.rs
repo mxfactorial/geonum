@@ -482,9 +482,9 @@ fn it_handles_line_representations() {
     let line = p1.wedge(&p2);
 
     // line from p1(1,0) to p2(3,2) has specific geometric properties
-    assert!((line.mag - 2.0).abs() < 1e-10);
+    assert!(line.near_mag(2.0));
     assert_eq!(line.angle.grade(), 1); // wedge produces grade-1 object (line)
-    assert!((line.angle.rem() - 0.5880026035463774).abs() < 1e-10);
+    assert!(line.angle.near_rem(0.5880026035463774));
     assert_eq!(line.angle.blade(), 1);
 
     // parametric points on the line: p(t) = (1-t)p1 + t*p2
@@ -1067,7 +1067,7 @@ fn it_eliminates_matrix_complexity() {
 
     // geonum reveals multiplicative inverse through the operation result
     let identity = transform * inverse;
-    assert!((identity.mag - 1.0).abs() < EPSILON);
+    assert!(identity.near_mag(1.0));
 
     // key insight: a * inv(a) produces [1, traditional_inverse_angle]
     // for transform [3, π/3], traditional inverse would be [1/3, -π/3] = [1/3, 5π/3]

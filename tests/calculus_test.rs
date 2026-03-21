@@ -1105,7 +1105,7 @@ fn it_reveals_integral_as_interference_accumulator() {
         accumulation.mag,
         interference.mag
     );
-    assert!((interference.mag - 8.0).abs() < EPSILON);
+    assert!(interference.near_mag(8.0));
 }
 
 #[test]
