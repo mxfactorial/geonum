@@ -280,7 +280,7 @@ impl Geonum {
     /// the dot product as a scalar geometric number
     pub fn dot(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let cos_component = angle_diff.grade_angle().cos();
+        let (cos_component, _) = angle_diff.cos_sin();
         let scalar_value = self.mag * other.mag * cos_component;
         // encode sign in angle so consumers read grade based polarity instead of raw negatives
         Self::signed_at(scalar_value, Angle::new(0.0, 1.0))
@@ -309,7 +309,7 @@ impl Geonum {
     /// the wedge product as a new geometric number
     pub fn wedge(&self, other: &Geonum) -> Geonum {
         let angle_diff = other.angle - self.angle;
-        let sin_value = angle_diff.grade_angle().sin();
+        let (_, sin_value) = angle_diff.cos_sin();
         let mag = self.mag * other.mag * sin_value.abs();
         let quarter_turn = Angle::new(1.0, 2.0); // π/2
                                                  // wedge product creates bivector (oriented area) by adding π/2 to combined angles
@@ -332,8 +332,25 @@ impl Geonum {
     /// # returns
     /// the geometric product as a single geometric number
     pub fn geo(&self, other: &Geonum) -> Geonum {
-        let dot_part = self.dot(other);
-        let wedge_part = self.wedge(other);
+        // single cos_sin call for both dot and wedge
+        let angle_diff = other.angle - self.angle;
+        let (cos_diff, sin_diff) = angle_diff.cos_sin();
+
+        // dot: |a|·|b|·cos(Δθ)
+        let dot_value = self.mag * other.mag * cos_diff;
+        let dot_part = Self::signed_at(dot_value, Angle::new(0.0, 1.0));
+
+        // wedge: |a|·|b|·|sin(Δθ)| with orientation
+        let wedge_mag = self.mag * other.mag * sin_diff.abs();
+        let quarter_turn = Angle::new(1.0, 2.0);
+        let mut wedge_angle = self.angle + other.angle + quarter_turn;
+        if sin_diff < 0.0 {
+            wedge_angle = wedge_angle + Angle::new(1.0, 1.0);
+        }
+        let wedge_part = Geonum {
+            mag: wedge_mag,
+            angle: wedge_angle,
+        };
 
         dot_part + wedge_part
     }
@@ -495,6 +512,16 @@ impl Geonum {
     /// let diff = a.mag_diff(&b);
     /// assert_eq!(diff, 1.0);
     /// ```
+    /// tests if two geonums are within floating point tolerance
+    pub fn near(&self, other: &Geonum) -> bool {
+        (self.mag - other.mag).abs() < EPSILON && self.angle.near(&other.angle)
+    }
+
+    /// tests if magnitude is within tolerance of a scalar
+    pub fn near_mag(&self, value: f64) -> bool {
+        (self.mag - value).abs() < EPSILON
+    }
+
     pub fn mag_diff(&self, other: &Geonum) -> f64 {
         (self.mag - other.mag).abs()
     }
@@ -644,7 +671,7 @@ impl Geonum {
         // law of cosines: c² = a² + b² - 2ab·cos(θ)
         let angle_between = other.angle - self.angle;
         let distance_squared = self.mag * self.mag + other.mag * other.mag
-            - 2.0 * self.mag * other.mag * angle_between.grade_angle().cos();
+            - 2.0 * self.mag * other.mag * angle_between.cos_sin().0;
         let distance = distance_squared.sqrt();
 
         // return as scalar geonum (blade 0)
@@ -674,15 +701,15 @@ impl Geonum {
     /// geonum cosine anchored to even pair 0↔π
     /// magnitude = |cos(θ)|, sign becomes +π rotation in angle
     pub fn cos(a: Angle) -> Geonum {
-        let v = a.grade_angle().cos();
-        Geonum::signed_at(v, Angle::new(0.0, 1.0))
+        let (c, _) = a.cos_sin();
+        Geonum::signed_at(c, Angle::new(0.0, 1.0))
     }
 
     /// geonum sine anchored to odd pair π/2↔3π/2
     /// magnitude = |sin(θ)|, sign becomes +π rotation in angle
     pub fn sin(a: Angle) -> Geonum {
-        let v = a.grade_angle().sin();
-        Geonum::signed_at(v, Angle::new(1.0, 2.0))
+        let (_, s) = a.cos_sin();
+        Geonum::signed_at(s, Angle::new(1.0, 2.0))
     }
 
     /// geonum tangent defined via sin/cos division so diameter crossings propagate
@@ -696,7 +723,7 @@ impl Geonum {
     /// replaces scalar projection with geonum that preserves geometric meaning
     pub fn project_to_angle(&self, onto: Angle) -> Geonum {
         let angle_diff = onto - self.angle;
-        let cos_component = angle_diff.grade_angle().cos();
+        let (cos_component, _) = angle_diff.cos_sin();
 
         // encode sign in grade: positive at grade 0, negative at grade 2
         if cos_component >= 0.0 {
@@ -749,34 +776,29 @@ impl Add for Geonum {
             }
         }
 
-        // general case: cosine interference between rotations at different angles
-        // follows cosine rule: c² = a² + b² + 2ab*cos(θ) where θ is angle difference
-        let angle1 = self.angle.grade_angle();
-        let angle2 = other.angle.grade_angle();
+        // general case: rational projection via cos_sin (0 sqrts)
+        let (c1, s1) = self.angle.cos_sin();
+        let (c2, s2) = other.angle.cos_sin();
 
-        // compute result angle from opposite and adjacent projections
-        let opp_sum = self.mag * angle1.sin() + other.mag * angle2.sin();
-        let adj_sum = self.mag * angle1.cos() + other.mag * angle2.cos();
-        let result_angle = opp_sum.atan2(adj_sum);
+        let adj = self.mag * c1 + other.mag * c2;
+        let opp = self.mag * s1 + other.mag * s2;
 
-        // compute result magnitude using cosine rule for rotation interference
-        let angle_diff = angle2 - angle1;
-        let result_mag =
-            (self.mag.powi(2) + other.mag.powi(2) + 2.0 * self.mag * other.mag * angle_diff.cos())
-                .sqrt();
+        // magnitude: 1 sqrt (the only one)
+        let result_mag = (adj * adj + opp * opp).sqrt();
 
-        // combine transformation histories
+        // result angle from cartesian — no atan2
         let combined_blade_count = self.angle.blade() + other.angle.blade();
+        let result_angle = Angle::new_from_cartesian(adj, opp);
 
-        // preserve accumulated transformations by setting the combined blade count
-        let blade_shift = (combined_blade_count as f64) * std::f64::consts::PI / 2.0;
-        let adjusted_angle = result_angle - blade_shift;
-        Self::new_with_blade(
-            result_mag,
-            combined_blade_count,
-            adjusted_angle,
-            std::f64::consts::PI,
-        )
+        // grade comes from the geometric result, blade history from the inputs
+        // round combined up so grade matches the natural result
+        let natural_grade = result_angle.grade();
+        let combined_grade = combined_blade_count % 4;
+        let grade_adjust = (natural_grade + 4 - combined_grade) % 4;
+        Self {
+            mag: result_mag,
+            angle: Angle::from_parts(combined_blade_count + grade_adjust, result_angle.t()),
+        }
     }
 }
 
@@ -3176,5 +3198,31 @@ mod tests {
 
         assert!((opp.mag - opp_gateway.mag).abs() < EPSILON);
         assert_eq!(opp.angle, opp_gateway.angle);
+    }
+
+    #[test]
+    fn it_detects_near_geonums() {
+        let a = Geonum::new(3.0, 1.0, 4.0);
+        let b = Geonum::new(3.0, 1.0, 4.0);
+
+        assert!(a.near(&b));
+
+        // different mag → not near
+        let c = Geonum::new(3.1, 1.0, 4.0);
+        assert!(!a.near(&c));
+
+        // different angle → not near
+        let d = Geonum::new(3.0, 1.0, 3.0);
+        assert!(!a.near(&d));
+    }
+
+    #[test]
+    fn it_compares_near_mag() {
+        let a = Geonum::new(5.0, 1.0, 4.0);
+
+        assert!(a.near_mag(5.0));
+        assert!(!a.near_mag(5.1));
+        assert!(a.near_mag(5.0 + 1e-12)); // within tolerance
+        assert!(!a.near_mag(5.0 + 1e-8)); // outside tolerance
     }
 }
