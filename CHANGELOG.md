@@ -1,5 +1,52 @@
 # changelog
 
+## 0.11.0 (2026-03-20)
+
+### breaking
+
+- Angle internal representation changed from radians to stereographic projection ratio `t = tan(θ/2)`
+- `rem()` now derived from `t` via `2.0 * t.atan()` — values match within f64 precision but are no longer stored directly
+- `normalize_boundaries()` removed — boundary logic is algebraic in the tangent sum formula
+- `Display` for Angle now shows `t` instead of `rem`
+
+### added
+
+- `Angle::t()` — projection ratio between adjacent π/2 blades
+- `Angle::from_parts(blade, t)` — direct construction from blade and projection ratio
+- `Angle::cos_sin()` — rational cos/sin: `cos = (1-t²)/(1+t²)`, `sin = 2t/(1+t²)`. no trig calls
+- `Angle::near(&other)` — floating point comparison within tolerance
+- `Angle::near_rad(radians)` — grade_angle comparison within tolerance
+- `Angle::near_rem(radians)` — remainder comparison within tolerance
+- `Geonum::near(&other)` — magnitude + angle comparison within tolerance
+- `Geonum::near_mag(value)` — magnitude comparison within tolerance
+
+### changed
+
+- `Angle::new()` converts π fractions to `t` internally — one `tan()` call at construction
+- `Angle::new_from_cartesian()` uses `t = opp/(hyp + adj)` — one sqrt, no atan2
+- `Angle::geometric_add()` uses tangent sum formula with rational boundary correction `(T-1)/(T+1)`
+- `Angle::geometric_sub()` uses tangent difference formula with rational borrow `(1-|R|)/(1+|R|)`
+- `Angle::dual()`, `conjugate()`, `negate()` simplified to blade arithmetic
+- `Angle::grade_angle()` derives radians from `t` via `atan()`
+- `Angle::project()` uses `cos_sin()` instead of `grade_angle().cos()`
+- `Geonum::dot()`, `wedge()`, `cos()`, `sin()`, `distance_to()`, `project_to_angle()` use `cos_sin()`
+- `Geonum::geo()` computes single `cos_sin()` for both dot and wedge
+- `Geonum` addition uses rational projection pipeline: cos_sin (0 sqrts) → sum → magnitude (1 sqrt) → cartesian recovery (0 sqrts)
+
+### performance
+
+| operation | 0.10.5 | 0.11.0 | speedup |
+|---|---|---|---|
+| addition | 68.8 ns | 13.9 ns | 5.0× |
+| cos | 11.6 ns | 3.5 ns | 3.3× |
+| from_cartesian | 24.4 ns | 3.6 ns | 6.7× |
+| dot product | 11.0 ns | 8.6 ns | 1.3× |
+| wedge product | 12.6 ns | 10.3 ns | 1.2× |
+| geometric product | 25.7 ns | 18 ns | 1.4× |
+| projection | 11.5 ns | 8.6 ns | 1.3× |
+| distance | 21.6 ns | 17.6 ns | 1.2× |
+| differentiate | 4.5 ns | 3.4 ns | 1.3× |
+
 ## 0.10.5 (2026-03-17)
 
 ### added
