@@ -140,6 +140,7 @@ see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how 
 ❯ ls -1 tests
 addition_test.rs
 affine_test.rs
+algebra_test.rs
 algorithms_test.rs
 angle_arithmetic_test.rs
 arithmetic_test.rs
@@ -170,6 +171,7 @@ qm_test.rs
 rendering_test.rs
 robotics_test.rs
 set_theory_test.rs
+taylor_series_test.rs
 tensor_test.rs
 trigonometry_test.rs
 ```
@@ -402,17 +404,17 @@ geometric numbers build dimensions by rotating—not stacking
       - it_proves_rotational_quadrature_expresses_quadratic_forms:1419-1593
 
     - tests/calculus_test.rs
-      - its_a_limit:40-119
-      - its_a_derivative:121-165
-      - its_an_integral:167-218
-      - its_a_gradient:310-358
-      - its_a_divergence:360-409
-      - its_a_curl:411-499
-      - its_a_laplacian:501-605
-      - its_a_line_integral:607-633
-      - its_a_surface_integral:635-662
-      - it_proves_differentiation_cycles_grades:764-915
-      - it_proves_fundamental_theorem_is_accumulation_equals_interference:1002-1053
+      - it_encodes_the_power_in_the_angle:35-88
+      - it_derives_x_squared_without_limits:91-121
+      - it_shows_limits_discard_what_angles_preserve:350-387
+      - it_shows_limits_lose_the_tangent_normal_dual:390-427
+      - it_shows_factorial_emerges_from_angle_descent:501-542
+      - it_proves_differentiation_cycles_grades:586-664
+      - it_proves_fundamental_theorem_is_accumulation_equals_interference:704-743
+      - its_a_gradient:806-853
+      - its_a_laplacian:856-902
+      - its_a_line_integral:909-931
+      - its_a_surface_integral:934-948
 
     - tests/mechanics_test.rs
       - it_changes_kinematic_level_by_cycling_grade:46-195

@@ -685,31 +685,58 @@ impl Mul<&Angle> for &Angle {
     }
 }
 
+impl Mul<f64> for Angle {
+    type Output = Angle;
+
+    fn mul(self, scalar: f64) -> Angle {
+        // scale blade count and remainder separately
+        // avoids converting large blade to radians (blade * π/2 → huge float)
+        let scaled_blade = self.blade as f64 * scalar;
+        let blade_whole = scaled_blade.floor();
+        let blade_frac_rem = (scaled_blade - blade_whole) * (PI / 2.0);
+
+        let scaled_rem = self.rem() * scalar + blade_frac_rem;
+
+        // remainder overflow adjusts blade
+        let quarter_pi = PI / 2.0;
+        let extra_blades = (scaled_rem / quarter_pi).floor();
+        let final_rem = scaled_rem - extra_blades * quarter_pi;
+
+        let total_blade = blade_whole + extra_blades;
+        let normalized_blade = if total_blade < 0.0 {
+            let full = ((-total_blade + 3.0) / 4.0).ceil() * 4.0;
+            (total_blade + full) as usize
+        } else {
+            total_blade as usize
+        };
+
+        if final_rem.abs() < 1e-10 {
+            Angle {
+                blade: normalized_blade,
+                t: 0.0,
+            }
+        } else {
+            Angle {
+                blade: normalized_blade,
+                t: (final_rem / 2.0).tan(),
+            }
+        }
+    }
+}
+
+impl Mul<f64> for &Angle {
+    type Output = Angle;
+
+    fn mul(self, scalar: f64) -> Angle {
+        (*self) * scalar
+    }
+}
+
 impl Div<f64> for Angle {
     type Output = Angle;
 
     fn div(self, divisor: f64) -> Angle {
-        // round-trip through radians — no closed-form t n-section
-        let total_radians = (self.blade as f64) * (PI / 2.0) + 2.0 * self.t.atan();
-        let divided = total_radians / divisor;
-        // convert back: blade from quarter turns, t from remainder
-        let quarter_pi = PI / 2.0;
-        let normalized = if divided < 0.0 {
-            let full = (divided.abs() / (4.0 * quarter_pi)).ceil();
-            divided + full * 4.0 * quarter_pi
-        } else {
-            divided
-        };
-        let blade = (normalized / quarter_pi) as usize;
-        let rem = normalized % quarter_pi;
-        if rem.abs() < 1e-10 {
-            Angle { blade, t: 0.0 }
-        } else {
-            Angle {
-                blade,
-                t: (rem / 2.0).tan(),
-            }
-        }
+        self * (1.0 / divisor)
     }
 }
 
@@ -717,7 +744,7 @@ impl Div<f64> for &Angle {
     type Output = Angle;
 
     fn div(self, divisor: f64) -> Angle {
-        (*self) / divisor
+        *self * (1.0 / divisor)
     }
 }
 

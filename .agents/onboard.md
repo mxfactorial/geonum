@@ -59,7 +59,7 @@ learn how geonum implements the dual in src/angle.rs:473~490
 
 learn how angle impls PartialEq and Eq in src/angle.rs:572~590
 
-learn how angle overloads arithmetic operators in src/angle.rs:592~740
+learn how angle overloads arithmetic operators in src/angle.rs:592~805
 
 learn how to construct geonum with new, new_with_angle from src/geonum_mod.rs:32~49
 
@@ -81,6 +81,6 @@ learn about angle forward only geometry from the it_sets_angle_forward_geometry_
 
 read only tests/angle_arithmetic_test.rs:1~20 because the file is large, but you can learn about the angle forward only blade arithmetic of operations from this file
 
-read the its_a_limit:40-119, it_proves_differentiation_cycles_grades:764-915 tests in tests/calculus_test.rs to understand how geonum automates calculus
+read the it_shows_limits_discard_what_angles_preserve:350-387, it_proves_differentiation_cycles_grades:586-664 tests in tests/calculus_test.rs to understand how geonum automates calculus
 
 tests are styled as trojan horses for simplicity. conventional jargon promising symbol salad but readers get simple arithmetic in test contents. example tests: it_handles_conformal_split:4694-4805, it_handles_inversive_distance:4807-4937 in tests/cga_test.rs

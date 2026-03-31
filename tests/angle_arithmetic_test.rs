@@ -1605,48 +1605,46 @@ fn it_raises_geonum_to_power_through_angle_scaling() {
     let base_geo = Geonum::new(2.0, 1.0, 4.0); // length=2, angle=π/4 → blade=0, value=π/4
     let squared = base_geo.pow(2.0);
     // step 1: length = 2.0^2 = 4.0
-    // step 2: angle scaling = angle * 2 = π/4 * 2 through angle multiplication
-    // step 3: angle multiplication = Angle::new(2.0, 1.0) = 2π → blade=4, value=0
-    // step 4: final angle = π/4 + 2π = π/4 + 4*(π/2) = blade=4, value=π/4
+    // step 2: total angle = π/4, scaled by 2 = π/2 → blade=1, value=0
+    // matches base_geo * base_geo: angles add π/4 + π/4 = π/2 → blade=1, value=0
     assert_eq!(squared.mag, 4.0); // 2² = 4
-    assert_eq!(squared.angle.blade(), 4); // angle * 2 adds 4 blades (2π)
-    assert!(squared.angle.near_rem(PI / 4.0)); // π/4 value preserved
-                                               // blade arithmetic: pow(2) = length² + angle*2 through blade addition
+    assert_eq!(squared.angle.blade(), 1); // 2 * π/4 = π/2 = 1 blade
+    assert!(squared.angle.near_rem(0.0)); // exactly on boundary
+                                          // blade arithmetic: pow(2) matches repeated multiplication
 
     // case 2: cube geonum (power of 3)
     let cubed = base_geo.pow(3.0);
     // step 1: length = 2.0^3 = 8.0
-    // step 2: angle scaling = angle * 3 = π/4 * 3 through angle multiplication
-    // step 3: angle multiplication = Angle::new(3.0, 1.0) = 3π → blade=6, value=0
-    // step 4: final angle = π/4 + 3π = π/4 + 6*(π/2) = blade=6, value=π/4
+    // step 2: total angle = π/4, scaled by 3 = 3π/4 → blade=1, value=π/4
+    // matches base_geo * base_geo * base_geo
     assert_eq!(cubed.mag, 8.0); // 2³ = 8
-    assert_eq!(cubed.angle.blade(), 6); // angle * 3 adds 6 blades (3π)
-    assert!(cubed.angle.near_rem(PI / 4.0)); // π/4 value preserved
-                                             // blade arithmetic: pow(3) = length³ + angle*3 through blade addition
+    assert_eq!(cubed.angle.blade(), 1); // 3π/4 = 1 blade + π/4
+    assert!(cubed.angle.near_rem(PI / 4.0)); // π/4 remainder
+                                             // blade arithmetic: pow(3) matches repeated multiplication
 
     // case 3: fractional power (square root)
     let sqrt_geo = base_geo.pow(0.5);
     // step 1: length = 2.0^0.5 = √2
-    // step 2: angle scaling = angle * 0.5 = π/4 * 0.5 = π/8
-    // step 3: angle multiplication = Angle::new(0.5, 1.0) = π/2 → blade=1, value=0
-    // step 4: final angle = π/4 + π/2 = 3π/4 → blade=1, value=π/4
+    // step 2: total angle = π/4, scaled by 0.5 = π/8 → blade=0, value=π/8
     assert!(sqrt_geo.near_mag(2.0_f64.sqrt())); // √2
-    assert_eq!(sqrt_geo.angle.blade(), 1); // angle * 0.5 adds 1 blade (π/2)
-    assert!(sqrt_geo.angle.near_rem(PI / 4.0)); // π/4 value preserved
-                                                // blade arithmetic: pow(0.5) = √length + angle*0.5 through blade addition
+    assert_eq!(sqrt_geo.angle.blade(), 0); // π/8 < π/2 so blade stays 0
+    assert!(sqrt_geo.angle.near_rem(PI / 8.0)); // π/8
+                                                // blade arithmetic: pow(0.5) halves the total angle
 
     // case 4: high blade power scaling
     let high_base = Geonum::new_with_blade(3.0, 100, 1.0, 6.0); // blade=100, value=π/6
     let high_squared = high_base.pow(2.0);
     // step 1: length = 3.0^2 = 9.0
-    // step 2: angle multiplication = angle * 2 adds Angle::new(2.0, 1.0) = 2π = 4 blades
-    // step 3: final blade = 100 + 4 = 104 blades
+    // step 2: total angle = 100*π/2 + π/6 = 301π/6, scaled by 2 = 301π/3
+    //   blade = floor(301π/3 / (π/2)) = floor(602/3) = 200
+    //   value = 301π/3 - 200*π/2 = π/3
+    // matches high_base * high_base: blades add 100+100=200, rems add π/6+π/6=π/3
     assert_eq!(high_squared.mag, 9.0); // 3² = 9
-    assert_eq!(high_squared.angle.blade(), 104); // 100 + 4 = 104 blades
-    assert!(high_squared.angle.near_rem(PI / 6.0)); // π/6 value preserved
-                                                    // blade arithmetic: power scaling works at arbitrary blade magnitudes
+    assert_eq!(high_squared.angle.blade(), 200); // 100 + 100 = 200 blades
+    assert!(high_squared.angle.near_rem(PI / 3.0)); // π/6 + π/6 = π/3
+                                                    // blade arithmetic: pow matches repeated multiplication at arbitrary blade magnitudes
 
-    // proves pow() scales length exponentially while multiplying angle through blade arithmetic
+    // proves pow() scales length exponentially while scaling total angle by n
 }
 
 #[test]

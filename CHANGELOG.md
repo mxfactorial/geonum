@@ -1,5 +1,19 @@
 # changelog
 
+## 0.12.0 (2026-03-31)
+
+### fixed
+- **BREAKING**: pow() now scales the total angle by n instead of adding nπ — matches repeated multiplication for all n
+
+### added
+- Mul<f64> for Angle and &Angle: scalar multiplication of angles
+- calculus_test.rs: power rule as angle readout, factorials from angle descent, limits as lossy projections, fundamental theorem as geometric interference, gradient, laplacian, line/surface/volume integrals
+- taylor_series_test.rs: taylor coefficients as geometric normalizations, e^x as uniform angle contribution, sin/cos as grade-filtered projections, euler's formula as grade decomposition, convergence as angle descent dominance
+- algebra_test.rs: fundamental theorem of algebra via winding numbers — degree = wraps, roots = unwindings, polynomial evaluation on circles, roots of unity as generalized Q lattice
+
+### changed
+- replaced old calculus_test.rs (24 tests) with power-rule-anchored suite (23 tests)
+
 ## 0.11.0 (2026-03-20)
 
 ### breaking
@@ -8,6 +22,9 @@
 - `rem()` now derived from `t` via `2.0 * t.atan()` — values match within f64 precision but are no longer stored directly
 - `normalize_boundaries()` removed — boundary logic is algebraic in the tangent sum formula
 - `Display` for Angle now shows `t` instead of `rem`
+
+### fixed
+- pow() now scales the total angle by n instead of adding nπ — matches repeated multiplication for all n
 
 ### added
 
@@ -19,6 +36,10 @@
 - `Angle::near_rem(radians)` — remainder comparison within tolerance
 - `Geonum::near(&other)` — magnitude + angle comparison within tolerance
 - `Geonum::near_mag(value)` — magnitude comparison within tolerance
+- Mul<f64> for Angle and &Angle: scalar multiplication of angles
+- calculus_test.rs: power rule as angle readout, factorials from angle descent, limits as lossy projections, fundamental theorem as geometric interference, gradient, laplacian, line/surface/volume integrals
+- taylor_series_test.rs: taylor coefficients as geometric normalizations, e^x as uniform angle contribution, sin/cos as grade-filtered projections, euler's formula as grade decomposition, convergence as angle descent dominance
+- algebra_test.rs: fundamental theorem of algebra via winding numbers — degree = wraps, roots = unwindings, polynomial evaluation on circles, roots of unity as generalized Q lattice
 
 ### changed
 
@@ -32,6 +53,8 @@
 - `Geonum::dot()`, `wedge()`, `cos()`, `sin()`, `distance_to()`, `project_to_angle()` use `cos_sin()`
 - `Geonum::geo()` computes single `cos_sin()` for both dot and wedge
 - `Geonum` addition uses rational projection pipeline: cos_sin (0 sqrts) → sum → magnitude (1 sqrt) → cartesian recovery (0 sqrts)
+- replaced old calculus_test.rs (24 tests) with power-rule-anchored suite (23 tests)
+- updated angle_arithmetic_test, numbers_test, geonum_mod unit test pow expectations to match corrected angle scaling
 
 ### performance
 
