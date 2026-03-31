@@ -535,9 +535,10 @@ impl Geonum {
     /// # returns
     /// a new geometric number representing self^n
     pub fn pow(self, n: f64) -> Self {
+        // x^n = [mag^n, n*angle]
         Self {
             mag: self.mag.powf(n),
-            angle: self.angle * Angle::new(n, 1.0),
+            angle: self.angle * n,
         }
     }
 
@@ -1691,25 +1692,23 @@ mod tests {
     fn it_computes_powers() {
         let g = Geonum::new(2.0, 1.0, 4.0); // [2, PI/4] blade=0, value=PI/4
 
+        // pow scales total angle by n: [mag^n, n*angle]
+        // matches repeated multiplication: g * g adds angles π/4 + π/4 = π/2 → blade=1
         let squared = g.pow(2.0);
         assert_eq!(squared.mag, 4.0); // 2^2 = 4
-                                      // pow(2.0) adds Angle::new(2.0, 1.0) which is 2*PI radians = 4 quarter-turns
-                                      // original blade=0, added blade=4, final blade=4
-        assert_eq!(squared.angle.blade(), 4);
-        assert!((squared.angle.rem() - PI / 4.0).abs() < EPSILON);
+        assert_eq!(squared.angle.blade(), 1); // 2 * π/4 = π/2 = 1 blade
+        assert!(squared.angle.rem().abs() < EPSILON); // exactly on boundary
 
+        // pow(1.0) scales angle by 1: identity
         let identity = g.pow(1.0);
         assert!((identity.mag - g.mag).abs() < EPSILON);
-        // pow(1.0) adds Angle::new(1.0, 1.0) which is PI radians = 2 quarter-turns
-        // original blade=0, added blade=2, final blade=2
-        assert_eq!(identity.angle.blade(), 2);
+        assert_eq!(identity.angle.blade(), g.angle.blade());
         assert!((identity.angle.rem() - g.angle.rem()).abs() < EPSILON);
 
+        // pow(3.0) scales angle by 3: 3 * π/4 = 3π/4 → blade=1, rem=π/4
         let cubed = g.pow(3.0);
         assert_eq!(cubed.mag, 8.0); // 2^3 = 8
-                                    // pow(3.0) adds Angle::new(3.0, 1.0) which is 3*PI radians = 6 quarter-turns
-                                    // original blade=0, added blade=6, final blade=6
-        assert_eq!(cubed.angle.blade(), 6);
+        assert_eq!(cubed.angle.blade(), 1); // 3π/4 = 1 blade + π/4
         assert!((cubed.angle.rem() - PI / 4.0).abs() < EPSILON);
     }
 
