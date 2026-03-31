@@ -628,8 +628,8 @@ fn its_an_algebraic_number() {
                               // pow() preserves length relationships but accumulates blade count
     let sqrt2_pow2 = sqrt2.pow(2.0); // [r^n, n*θ] formula: [√2^2, 2*angle] = [2, 2*angle]
     assert!(sqrt2_pow2.near_mag(2.0)); // length: √2^2 = 2 ✓
-                                       // blade accumulation from pow() means algebraic identity exists at different grade
-    assert_eq!(sqrt2_pow2.angle.blade(), 5); // angle multiplication: 2 * angle accumulates blades
+                                       // scalar at angle 0: pow scales 0 by 2 = 0, so blade stays 0
+    assert_eq!(sqrt2_pow2.angle.blade(), 0); // angle scaling: 2 * 0 = 0
 
     // square it
     let sqrt2_squared = sqrt2 * sqrt2;
