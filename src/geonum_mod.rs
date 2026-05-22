@@ -666,6 +666,46 @@ impl Geonum {
         }
     }
 
+    /// boosts this event by the Bondi factor `k` along the spatial direction `axis`
+    ///
+    /// a lorentz boost is a squeeze of the (space, time) plane that fixes the
+    /// light cone. the cone's two null rays sit a quarter turn off the boost axis
+    /// (the forward null) and three quarters off (the backward null). the boost
+    /// projects the event onto each null, stretches the forward one by k = e^φ
+    /// and compresses the backward one by 1/k, then sums — projection and scale,
+    /// no (t±x) component arithmetic. the interval is preserved because the two
+    /// scalings cancel, k·(1/k) = 1
+    ///
+    /// this is the boost on a spacetime VECTOR — it keeps magnitude, a squeeze.
+    /// [`Angle::boost`] is the companion action on a celestial DIRECTION, where
+    /// dropping the magnitude turns the same null-pair scaling into aberration
+    ///
+    /// # arguments
+    /// * `axis` - the spatial boost direction; the event's angle is read from it,
+    ///   so `Angle::new(0.0, 1.0)` boosts along x (nulls at π/4 and 3π/4)
+    /// * `k` - the Bondi / Doppler factor e^φ for rapidity φ (k > 0); k > 1 boosts
+    ///   toward the axis
+    ///
+    /// # examples
+    /// ```
+    /// use geonum::{Geonum, Angle};
+    /// let event = Geonum::new_from_cartesian(0.5, 2.0); // (x, t) = (0.5, 2.0)
+    /// let boosted = event.boost(Angle::new(0.0, 1.0), 0.6_f64.exp()); // along x
+    /// // the interval t²−x² is invariant under the boost
+    /// let (cos, sin) = boosted.angle.cos_sin();
+    /// let (xb, tb) = (boosted.mag * cos, boosted.mag * sin);
+    /// assert!((tb * tb - xb * xb - (2.0 * 2.0 - 0.5 * 0.5)).abs() < 1e-9);
+    /// ```
+    pub fn boost(&self, axis: Angle, k: f64) -> Geonum {
+        // the two light-cone nulls: a forward ray a quarter turn off the axis,
+        // a backward ray three quarters off — bisecting the axis and time
+        let forward = Geonum::new_with_angle(1.0, axis + Angle::new(1.0, 4.0)); // axis + π/4
+        let backward = Geonum::new_with_angle(1.0, axis + Angle::new(3.0, 4.0)); // axis + 3π/4
+
+        // stretch the forward null by k, compress the backward by 1/k, sum
+        self.project(&forward).scale(k) + self.project(&backward).scale(1.0 / k)
+    }
+
     /// computes distance between two points using law of cosines
     /// returns a scalar geonum representing the distance
     pub fn distance_to(&self, other: &Geonum) -> Geonum {
@@ -3223,5 +3263,43 @@ mod tests {
         assert!(!a.near_mag(5.1));
         assert!(a.near_mag(5.0 + 1e-12)); // within tolerance
         assert!(!a.near_mag(5.0 + 1e-8)); // outside tolerance
+    }
+
+    #[test]
+    fn it_boosts_an_event_preserving_the_interval() {
+        let x_axis = Angle::new(0.0, 1.0);
+        let k = 0.6_f64.exp();
+
+        // boost an event (x, t) along the x-axis; the interval t²−x² is invariant
+        let event = Geonum::new_from_cartesian(0.5, 2.0); // (x, t)
+        let b = event.boost(x_axis, k);
+        let (cos, sin) = b.angle.cos_sin();
+        let (xb, tb) = (b.mag * cos, b.mag * sin);
+        assert!((tb * tb - xb * xb - (2.0 * 2.0 - 0.5 * 0.5)).abs() < 1e-9);
+
+        // boosts compose: the Bondi factors multiply
+        let twice = event.boost(x_axis, 1.5).boost(x_axis, 2.0);
+        let once = event.boost(x_axis, 3.0);
+        assert!(twice.near(&once));
+
+        // the light cone is invariant: a null event (t = x) stays null
+        let null = Geonum::new_from_cartesian(1.0, 1.0);
+        let nb = null.boost(x_axis, k);
+        let (c2, s2) = nb.angle.cos_sin();
+        let (xn, tn) = (nb.mag * c2, nb.mag * s2);
+        assert!((tn * tn - xn * xn).abs() < 1e-9);
+
+        // the axis is a free parameter: boosting along a tilted direction still
+        // preserves the interval measured in that axis's frame
+        let tilt = Angle::new(1.0, 5.0); // π/5
+        let n = Geonum::new_with_angle(1.0, tilt);
+        let along = event.mag * event.angle.project(tilt);
+        let perp = event.reject(&n).mag;
+        let bt = event.boost(tilt, k);
+        let along_b = bt.mag * bt.angle.project(tilt);
+        let perp_b = bt.reject(&n).mag;
+        assert!(
+            ((perp_b * perp_b - along_b * along_b) - (perp * perp - along * along)).abs() < 1e-9
+        );
     }
 }

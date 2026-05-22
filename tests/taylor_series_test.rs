@@ -50,8 +50,8 @@ fn it_produces_taylor_coefficients_from_angle_descent() {
     }
 
     // angle ratios at each level
-    for i in 1..=7 {
-        let ratio = powers[i].angle.grade_angle() / x_angle;
+    for (i, p) in powers.iter().enumerate().skip(1) {
+        let ratio = p.angle.grade_angle() / x_angle;
         assert!(
             (ratio - i as f64).abs() < EPSILON,
             "x^{} angle ratio = {}",
@@ -62,8 +62,8 @@ fn it_produces_taylor_coefficients_from_angle_descent() {
 
     // factorials from cumulative products of angle ratios
     let mut factorial = 1.0;
-    for n in 1..=7 {
-        let ratio = powers[n].angle.grade_angle() / x_angle;
+    for (n, p) in powers.iter().enumerate().skip(1) {
+        let ratio = p.angle.grade_angle() / x_angle;
         factorial *= ratio;
 
         // the taylor coefficient for the nth term is 1/n!

@@ -37,3 +37,5 @@ pub use traits::Projection;
 pub use traits::Waves;
 #[cfg(feature = "ml")]
 pub use traits::{Activation, MachineLearning};
+#[cfg(feature = "chemistry")]
+pub use traits::{Chemistry, Lattice};

@@ -1,5 +1,19 @@
 # changelog
 
+## 0.12.1 (2026-05-22)
+
+### added
+- `GeoCollection::wave_sum` — interfering vector sum of a collection (the superposition), the counterpart to `total_magnitude`; `wave_sum().mag <= total_magnitude()`, the gap is angular cancellation
+- `Angle::boost(k)` — celestial-sphere (relativistic aberration) boost: scales the stored half-tangent by the Bondi factor `k` via the grade-keyed Cayley maps, rational, no trig
+- `Geonum::boost(axis, k)` — Lorentz event boost: projection onto the two light-cone nulls (a quarter turn apart) scaled by `k` and `1/k`, interval-preserving, for any boost axis
+- `chemistry` feature: `Chemistry` extension trait on `Geonum` deriving the periodic table from blade arithmetic — `madelung_order`, `electron_shell`/`electron_wave`, `valence_shell`/`relativistic_valence_shell`, `ionization_projection`, and the observables `ionization_energy` (IE1, IE2, successive), `electron_affinity`, `electronegativity`; configured by the `Lattice` enum (`Canonical`/`Custom`), validated against NIST
+- spacetime_test.rs: metric signature as a π rotation, causal structure (timelike/spacelike/lightlike by grade), Lorentz boosts, the dual as the metric involution (`t → −1/t`, fixed points the isotropic vectors), the three conics in one half-tangent
+- chem_constants_test.rs: the three lattice constants (π/2, π/3, π/4) proven forced as distinct rotation closures, and the 1/n radial law as inv(winding count)
+
+### changed
+- metric signature test relocated from tensor_test.rs into a dedicated spacetime_test.rs
+- chemistry model moved into the `chemistry` library trait; the chemistry test suites thinned to validate it against NIST
+
 ## 0.12.0 (2026-03-31)
 
 ### fixed

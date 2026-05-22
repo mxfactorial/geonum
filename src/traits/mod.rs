@@ -33,3 +33,8 @@ pub use waves::Waves;
 pub mod affine;
 #[cfg(feature = "affine")]
 pub use affine::Affine;
+
+#[cfg(feature = "chemistry")]
+pub mod chemistry;
+#[cfg(feature = "chemistry")]
+pub use chemistry::{Chemistry, Lattice};

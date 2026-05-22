@@ -1161,8 +1161,8 @@ fn bench_rendering(c: &mut Criterion) {
         let cos_r = (PI / 6.0).cos();
         let sin_r = (PI / 6.0).sin();
         let mut mat = [[0.0_f64; 10]; 10];
-        for i in 0..10 {
-            mat[i][i] = 1.0;
+        for (i, row) in mat.iter_mut().enumerate() {
+            row[i] = 1.0;
         }
         mat[0][0] = cos_r;
         mat[0][1] = -sin_r;
@@ -1190,8 +1190,8 @@ fn bench_rendering(c: &mut Criterion) {
         let cos_r = (PI / 6.0).cos();
         let sin_r = (PI / 6.0).sin();
         let mut mat = [[0.0_f64; 100]; 100];
-        for i in 0..100 {
-            mat[i][i] = 1.0;
+        for (i, row) in mat.iter_mut().enumerate() {
+            row[i] = 1.0;
         }
         mat[0][0] = cos_r;
         mat[0][1] = -sin_r;

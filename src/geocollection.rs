@@ -145,6 +145,17 @@ impl GeoCollection {
         self.objects.iter().map(|g| g.mag).sum()
     }
 
+    /// the interfering vector sum of all objects — the superposition. complements
+    /// [`total_magnitude`](Self::total_magnitude) (the scalar sum): because `+` is
+    /// cosine interference, `wave_sum().mag <= total_magnitude()`, the gap being
+    /// angular cancellation. this is the wave the electron shell, the attention
+    /// output, and summed decay products are each a vector sum of
+    pub fn wave_sum(&self) -> Geonum {
+        self.objects
+            .iter()
+            .fold(Geonum::scalar(0.0), |acc, g| acc + *g)
+    }
+
     /// finds the dominant object (largest magnitude) in the collection
     ///
     /// useful for identifying primary contributions, maximum forces,
@@ -187,6 +198,31 @@ mod tests {
     use super::*;
     use crate::{Angle, Geonum};
     use std::f64::consts::PI;
+
+    #[test]
+    fn it_superposes_with_interference_below_the_scalar_sum() {
+        // two equal magnitudes a half turn apart cancel: the vector sum is zero
+        // while the scalar sum is 2 — interference, not addition of lengths
+        let opposed = GeoCollection::from(vec![
+            Geonum::new(1.0, 0.0, 1.0), // [1, 0]
+            Geonum::new(1.0, 1.0, 1.0), // [1, π]
+        ]);
+        assert!(opposed.wave_sum().mag < 1e-10);
+        assert_eq!(opposed.total_magnitude(), 2.0);
+
+        // aligned objects reinforce: the vector sum reaches the scalar sum
+        let aligned =
+            GeoCollection::from(vec![Geonum::new(1.0, 1.0, 4.0), Geonum::new(1.0, 1.0, 4.0)]);
+        assert!(aligned.wave_sum().near_mag(aligned.total_magnitude()));
+
+        // in general the wave sum never exceeds the scalar sum
+        let mixed = GeoCollection::from(vec![
+            Geonum::new(2.0, 1.0, 6.0),
+            Geonum::new(3.0, 1.0, 4.0),
+            Geonum::new(1.0, 7.0, 6.0),
+        ]);
+        assert!(mixed.wave_sum().mag <= mixed.total_magnitude() + 1e-10);
+    }
 
     #[test]
     fn it_creates_empty_collection() {
