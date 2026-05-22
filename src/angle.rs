@@ -557,6 +557,64 @@ impl Angle {
         let (cos_val, _) = diff.cos_sin();
         cos_val
     }
+
+    /// boosts this direction on the celestial sphere by the Bondi factor `k`
+    ///
+    /// a unit direction at polar angle θ from the boost axis has stereographic
+    /// coordinate tan(θ/2). a lorentz boost along the axis is the Möbius dilation
+    /// that scales it by 1/k, where k = √((1+β)/(1−β)) = e^φ is the Bondi
+    /// (Doppler) factor for velocity β, rapidity φ. this is relativistic
+    /// aberration — k > 1 crowds directions toward the forward axis (the
+    /// headlight effect)
+    ///
+    /// the stereographic coordinate is rational in the stored (grade, t) — the
+    /// Cayley maps of the half-tangent — so the boost is one rational scale, no
+    /// trig, for any blade:
+    /// * grade 0: tan(θ/2) = t            grade 1: (1+t)/(1−t)
+    /// * grade 2: −1/t                    grade 3: (t−1)/(t+1)
+    ///
+    /// the forward pole (θ=0) and backward pole (θ=π) are the fixed points
+    ///
+    /// # arguments
+    /// * `k` - the Bondi / Doppler factor (k > 0); k > 1 boosts toward the axis
+    ///
+    /// # examples
+    /// ```
+    /// use geonum::Angle;
+    /// let ray = Angle::new(1.0, 3.0); // θ = π/3, forward hemisphere
+    /// let aberrated = ray.boost(2.0); // boost by Bondi factor k = 2
+    /// // a forward ray's stereographic coordinate (its stored t) scales by 1/k
+    /// assert!((aberrated.t() - ray.t() / 2.0).abs() < 1e-10);
+    /// ```
+    pub fn boost(&self, k: f64) -> Angle {
+        const EPSILON: f64 = 1e-10;
+
+        // the backward pole θ=π (stereographic coordinate ∞) is a fixed point
+        if self.grade() == 2 && self.t.abs() < EPSILON {
+            return *self;
+        }
+
+        // stereographic coordinate tan(θ/2), rational in (grade, t)
+        let t = self.t;
+        let s = match self.grade() {
+            0 => t,
+            1 => (1.0 + t) / (1.0 - t),
+            2 => -1.0 / t,
+            _ => (t - 1.0) / (t + 1.0),
+        };
+
+        // the Möbius dilation, then rebuild into the quadrant it landed in
+        let s = s / k;
+        if (0.0..=1.0).contains(&s) {
+            Angle::from_parts(0, s)
+        } else if s > 1.0 {
+            Angle::from_parts(1, (s - 1.0) / (s + 1.0))
+        } else if s < -1.0 {
+            Angle::from_parts(2, -1.0 / s)
+        } else {
+            Angle::from_parts(3, (1.0 + s) / (1.0 - s))
+        }
+    }
 }
 
 /// normalize negative blade to positive by adding full rotations
@@ -1859,5 +1917,31 @@ mod tests {
         // lattice: rem = 0
         let c = Angle::new(1.0, 2.0); // π/2
         assert!(c.near_rem(0.0));
+    }
+
+    #[test]
+    fn it_boosts_the_half_tangent_by_the_bondi_factor() {
+        // forward hemisphere (grade 0): the boost scales the stored half-tangent
+        // by 1/k — one rational division, no trig
+        let ray = Angle::new(1.0, 3.0); // π/3
+        assert!((ray.boost(2.0).t() - ray.t() / 2.0).abs() < EPSILON);
+
+        // k = 1 is the identity
+        assert!(ray.boost(1.0).near(&ray));
+
+        // both poles are fixed points: the forward axis θ=0 (t=0) and the
+        // backward pole θ=π (grade 2, t=0)
+        assert!(Angle::new(0.0, 1.0).boost(2.0).t().abs() < EPSILON);
+        let back = Angle::new(1.0, 1.0); // π
+        assert!(back.boost(2.0).near(&back));
+
+        // boosts compose: the Bondi dilations multiply (rapidity adds)
+        assert!((ray.boost(1.5).boost(2.0).t() - ray.boost(3.0).t()).abs() < EPSILON);
+
+        // a backward-hemisphere ray (grade 1, past π/2) boosts across the blade
+        // boundary into the forward hemisphere under a strong enough boost
+        let rear = Angle::new(2.0, 3.0); // 2π/3, grade 1
+        assert_eq!(rear.blade(), 1);
+        assert_eq!(rear.boost(0.6_f64.exp()).grade(), 0);
     }
 }
