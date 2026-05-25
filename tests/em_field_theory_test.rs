@@ -443,27 +443,33 @@ fn its_an_electromagnetic_wave() {
         Geonum::disperse(pos, t, k_geonum, omega_geonum)
     };
 
-    // compare representations at a point
+    // compare representations at a point. the sample sits off the π/2 lattice
+    // boundaries (where the half-tangent t → 1 is fragile) so the cosine readout
+    // is unambiguous — the round value 0.5e-9 would put pos+1 exactly on 19π
     let pos_sample = 2.0;
-    let time_sample = 0.5e-9;
+    let time_sample = 0.3e-9;
 
     let _complex = _complex_wave(pos_sample, time_sample);
     let geometric = geometric_wave(pos_sample, time_sample);
 
-    // test that disperse creates waves with expected properties
-    // verify the wave satisfies the dispersion relation φ = kx - ωt
-    let expected_phase = k_geonum * Geonum::new(pos_sample, 0.0, 1.0)
-        - omega_geonum * Geonum::new(time_sample, 0.0, 1.0);
-
-    // geometric wave has unit amplitude and phase from dispersion relation
+    // disperse carries the phase in the ANGLE: E = [1, kx − ωt], so cos_sin reads
+    // the field. the wave has unit amplitude and a cosine equal to cos(kx − ωt)
     assert!(geometric.near_mag(1.0));
-    assert_eq!(geometric.angle, expected_phase.angle);
+    let phi = k_geonum.mag * pos_sample - omega_geonum.mag * time_sample;
+    let (cos_geo, _) = geometric.angle.cos_sin();
+    assert!(
+        (cos_geo - phi.cos()).abs() < 1e-9,
+        "the dispersed wave's cosine is cos(kx − ωt) — the dispersion relation in the angle"
+    );
 
-    // test wave at different positions - phase changes by k*Δx
+    // test wave at different positions - a step Δx advances the phase by k·Δx
     let geometric2 = geometric_wave(pos_sample + 1.0, time_sample);
-    let phase_diff = geometric2.angle - geometric.angle;
-    let expected_diff = k_geonum.angle;
-    assert_eq!(phase_diff, expected_diff);
+    let phi2 = k_geonum.mag * (pos_sample + 1.0) - omega_geonum.mag * time_sample;
+    let (cos_geo2, _) = geometric2.angle.cos_sin();
+    assert!(
+        (cos_geo2 - phi2.cos()).abs() < 1e-9,
+        "moving Δx advances the phase by k·Δx — the spatial phase rate"
+    );
 
     // demonstrate high-dimensional advantage
 

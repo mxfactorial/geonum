@@ -148,13 +148,17 @@ astrophysics_test.rs
 calculus_test.rs
 category_theory_test.rs
 cga_test.rs
+chem_constants_test.rs
 chemistry_test.rs
 computer_vision_test.rs
 dimension_test.rs
 economics_test.rs
+einstein_test.rs
 em_field_theory_test.rs
 fem_test.rs
 finance_test.rs
+grade_test.rs
+gravitational_wave_test.rs
 linear_algebra_test.rs
 machine_learning_test.rs
 mechanics_test.rs
@@ -167,10 +171,14 @@ numbers_test.rs
 optics_test.rs
 optimization_test.rs
 pga_test.rs
+pseudoscalar_test.rs
 qm_test.rs
 rendering_test.rs
 robotics_test.rs
+schwarzschild_test.rs
 set_theory_test.rs
+spacetime_test.rs
+sr_gr_collapse_test.rs
 taylor_series_test.rs
 tensor_test.rs
 trigonometry_test.rs
@@ -382,26 +390,30 @@ geometric numbers build dimensions by rotating—not stacking
 
     test suites:
     - tests/numbers_test.rs
-      - its_a_scalar:8-37
-      - its_a_vector:39-73
-      - its_a_real_number:75-109
-      - its_an_imaginary_number:111-140
-      - its_a_complex_number:142-175
-      - its_a_dual_number:177-296
-      - its_an_octonion:298-342
-      - its_a_matrix:344-399
-      - its_a_tensor:401-596
-      - it_dualizes_log2_geometric_algebra_components:647-682
-      - its_a_clifford_number:940-1022
+      - its_a_scalar:8-36
+      - its_a_vector:39-72
+      - its_a_real_number:75-108
+      - its_an_imaginary_number:111-139
+      - its_a_complex_number:142-174
+      - its_a_dual_number:177-295
+      - its_an_octonion:298-341
+      - its_a_matrix:344-398
+      - its_a_tensor:401-595
+      - it_dualizes_log2_geometric_algebra_components:647-680
+      - its_a_clifford_number:940-1020
+
+    - tests/pseudoscalar_test.rs
+      - it_solves_the_exponential_complexity_explosion:18-79
+      - it_doesnt_need_a_pseudoscalar:93-288
+      - it_demonstrates_pseudoscalar_elimination_benefits:291-328
+      - it_proves_dualization_as_angle_ops_compresses_ga:331-394
+
+    - tests/grade_test.rs
+      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:259-341
+      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:344-379
 
     - tests/dimension_test.rs
-      - it_solves_the_exponential_complexity_explosion:520-593
-      - it_doesnt_need_a_pseudoscalar:595-791
-      - it_demonstrates_pseudoscalar_elimination_benefits:793-831
-      - it_proves_dualization_as_angle_ops_compresses_ga:833-897
-      - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:899-981
-      - it_compresses_traditional_ga_grades_to_two_involutive_pairs:1131-1166
-      - it_proves_rotational_quadrature_expresses_quadratic_forms:1419-1593
+      - it_proves_rotational_quadrature_expresses_quadratic_forms:640-814
 
     - tests/calculus_test.rs
       - it_encodes_the_power_in_the_angle:35-88
@@ -417,13 +429,13 @@ geometric numbers build dimensions by rotating—not stacking
       - its_a_surface_integral:934-948
 
     - tests/mechanics_test.rs
-      - it_changes_kinematic_level_by_cycling_grade:46-195
-      - it_encodes_velocity:268-322
-      - it_encodes_acceleration:324-363
-      - it_encodes_jerk:365-414
-      - it_encodes_kinetic_energy:959-1046
-      - it_handles_energy_conservation:1783-1940
-      - it_handles_momentum_conservation:1942-2051
+      - it_changes_kinematic_level_by_cycling_grade:46-193
+      - it_encodes_velocity:268-321
+      - it_encodes_acceleration:324-362
+      - it_encodes_jerk:365-412
+      - it_encodes_kinetic_energy:959-1044
+      - it_handles_energy_conservation:1783-1939
+      - it_handles_momentum_conservation:1942-2050
       - it_handles_angular_momentum_conservation:2053-2157
 
     create tests/my_test.rs with use geonum::*;

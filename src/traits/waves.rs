@@ -3,6 +3,7 @@
 //! defines the Waves trait and related functionality for wave propagation modeling
 
 use crate::{angle::Angle, geonum_mod::Geonum};
+use std::f64::consts::PI;
 
 pub trait Waves: Sized {
     /// propagates waves through spacetime using wave equation principles
@@ -37,13 +38,17 @@ impl Waves for Geonum {
     }
 
     fn disperse(position: Self, time: Self, wavenumber: Self, frequency: Self) -> Self {
-        // compute phase based on dispersion relation: φ = kx - ωt
+        // the dispersion relation φ = kx − ωt is the wave's ANGLE, the polar form
+        // E = [1, kx − ωt], so cos_sin reads the field straight off the angle
         let k_x = wavenumber * position;
         let omega_t = frequency * time;
         let phase = k_x - omega_t;
 
-        // create new geometric number with unit magnitude and phase angle
-        Geonum::new_with_angle(1.0, phase.angle)
+        // signed phase = the (kx − ωt) vector projected onto the real axis. rotating
+        // a unit wave by it carries φ in the angle, where cos_sin can recover it —
+        // storing φ in the magnitude (the earlier form) collapsed it to a sign
+        let phi = phase.mag * phase.angle.grade_angle().cos();
+        Geonum::new_with_angle(1.0, Angle::new(phi / PI, 1.0))
     }
 
     fn frequency(&self, other: &Self, time_interval: Self) -> Self {
@@ -131,72 +136,85 @@ mod tests {
 
     #[test]
     fn it_disperses() {
-        // define wave parameters as geonums
-        let wavenumber = Geonum::new(2.0 * PI, 0.0, 1.0); // 2π rad/m (wavelength = 1m)
-        let frequency = Geonum::new(3.0e8 * 2.0 * PI, 0.0, 1.0); // ω = c·k for light
-        let position_1 = Geonum::new(0.0, 0.0, 1.0);
-        let position_2 = Geonum::new(0.5, 0.0, 1.0); // half a wavelength
-        let time_1 = Geonum::new(0.0, 0.0, 1.0);
-        let time_2 = Geonum::new(1.0 / (3.0e8 * 2.0 * PI / (2.0 * PI)), 0.0, 1.0); // one period
+        // a plane wave is E = [1, kx − ωt]: the dispersion relation lives in the
+        // ANGLE, so cos_sin reads the field. k = 2π gives wavelength 1; null
+        // dispersion ω = ck carries the wave at the speed of light
+        let c = 3.0e8;
+        let k = 2.0 * PI; // 2π rad/m, wavelength 1 m
+        let omega = c * k; // ω = ck for light
+        let wavenumber = Geonum::scalar(k);
+        let frequency = Geonum::scalar(omega);
 
-        // create waves at different positions and times
-        let wave_x1_t1 = Geonum::disperse(position_1, time_1, wavenumber, frequency);
-        let wave_x2_t1 = Geonum::disperse(position_2, time_1, wavenumber, frequency);
-        let wave_x1_t2 = Geonum::disperse(position_1, time_2, wavenumber, frequency);
-
-        // prove all waves have unit amplitude
-        assert_eq!(wave_x1_t1.mag, 1.0, "dispersed waves have unit amplitude");
-
-        // prove phase at origin and t=0 has blade 2 from 0-0 subtraction
-        assert_eq!(
-            wave_x1_t1.angle,
-            Angle::new_with_blade(2, 0.0, 1.0),
-            "phase at origin and t=0 has blade 2 from subtraction"
+        // at the origin the phase is 0 — the wave sits at its crest, cos = 1
+        let crest = Geonum::disperse(
+            Geonum::scalar(0.0),
+            Geonum::scalar(0.0),
+            wavenumber,
+            frequency,
         );
-
-        // prove spatial phase difference after half a wavelength
-        // compute the actual phase difference from the disperse operations
-        let actual_phase_diff = wave_x2_t1.angle - wave_x1_t1.angle;
-
-        // compute phase difference using geonum operations
-        // (at half wavelength this represents π radians or blade 2 geometrically)
-        let k_x1 = wavenumber * position_1;
-        let k_x2 = wavenumber * position_2;
-        let omega_t = frequency * time_1;
-        let phase_1 = k_x1 - omega_t;
-        let phase_2 = k_x2 - omega_t;
-        let expected_phase_diff = phase_2.angle - phase_1.angle;
-
-        assert_eq!(
-            actual_phase_diff, expected_phase_diff,
-            "spatial phase difference equals wavenumber times distance"
-        );
-
-        // prove temporal phase difference after one period
-        // compute actual phase difference between t2 and t1
-        let k_x = wavenumber * position_1;
-        let omega_t1 = frequency * time_1;
-        let omega_t2 = frequency * time_2;
-        let phase_t1 = k_x - omega_t1;
-        let phase_t2 = k_x - omega_t2;
-
-        // the phase difference should complete a full cycle (2π)
-        let phase_diff_angle = wave_x1_t2.angle - wave_x1_t1.angle;
-        let expected_temporal_diff = phase_t2.angle - phase_t1.angle;
-
-        // test that blade difference is 4 (full rotation) or equivalent
-        assert_eq!(
-            phase_diff_angle, expected_temporal_diff,
-            "temporal phase evolution matches expected value"
-        );
-
-        // prove dispersion relation by comparing wave phase velocities
-        // For k=2π, ω=2πc, wave speed should be c
-        let wave_speed = frequency.mag / wavenumber.mag;
-        let expected_speed = 3.0e8; // speed of light
+        assert!(crest.near_mag(1.0), "dispersed waves have unit amplitude");
+        let (cos_crest, _) = crest.angle.cos_sin();
         assert!(
-            (wave_speed - expected_speed).abs() / expected_speed < 1e-10,
-            "dispersion relation yields correct wave speed"
+            (cos_crest - 1.0).abs() < 1e-12,
+            "phase 0 at the origin — the wave's crest, cos = 1"
+        );
+
+        // a quarter wavelength out kx = π/2: the phase lands at grade 1, a node
+        let node = Geonum::disperse(
+            Geonum::scalar(0.25),
+            Geonum::scalar(0.0),
+            wavenumber,
+            frequency,
+        );
+        assert_eq!(
+            node.angle.grade(),
+            1,
+            "kx = π/2 lands at grade 1 — the node"
+        );
+        let (cos_node, _) = node.angle.cos_sin();
+        assert!(
+            cos_node.abs() < 1e-12,
+            "a quarter wavelength is a node — cos = 0"
+        );
+
+        // half a wavelength out kx = π: the phase is grade 2, the trough, cos = −1
+        let trough = Geonum::disperse(
+            Geonum::scalar(0.5),
+            Geonum::scalar(0.0),
+            wavenumber,
+            frequency,
+        );
+        assert_eq!(
+            trough.angle.grade(),
+            2,
+            "kx = π lands at grade 2 — the trough"
+        );
+        let (cos_trough, _) = trough.angle.cos_sin();
+        assert!(
+            (cos_trough + 1.0).abs() < 1e-12,
+            "half a wavelength is the trough — cos = −1"
+        );
+
+        // one period later t = 2π/ω the wave returns to the same phase — periodic,
+        // the angle's blade arithmetic handling the wraparound with no manual modulo
+        let period = 2.0 * PI / omega;
+        let later = Geonum::disperse(
+            Geonum::scalar(0.0),
+            Geonum::scalar(period),
+            wavenumber,
+            frequency,
+        );
+        let (cos_later, _) = later.angle.cos_sin();
+        assert!(
+            (cos_later - cos_crest).abs() < 1e-9,
+            "the wave repeats after one period T = 2π/ω"
+        );
+
+        // the phase velocity ω/k recovers the speed of light — the null dispersion
+        let wave_speed = frequency.mag / wavenumber.mag;
+        assert!(
+            (wave_speed - c).abs() / c < 1e-10,
+            "ω/k = c — the dispersion relation yields lightspeed"
         );
     }
 }

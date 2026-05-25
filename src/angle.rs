@@ -605,6 +605,11 @@ impl Angle {
 
         // the Möbius dilation, then rebuild into the quadrant it landed in
         let s = s / k;
+        // k → 0 sends the coordinate to ±∞ — the backward pole θ=π, the boost's
+        // other fixed point. every ray collapses there (the horizon's one-way limit)
+        if !s.is_finite() {
+            return Angle::from_parts(2, 0.0);
+        }
         if (0.0..=1.0).contains(&s) {
             Angle::from_parts(0, s)
         } else if s > 1.0 {

@@ -1,5 +1,19 @@
 # changelog
 
+## 0.13.0 (2026-05-24)
+
+### breaking
+- `Geonum::disperse` now carries the phase `kx − ωt` in the angle (was a sign-only blade) — `disperse` finally matches its docstring; the return is `[1, kx − ωt]`, so `.cos_sin()` reads the wave
+
+### fixed
+- `Angle::boost(0.0)` returns the `(grade 2, t = 0)` backward pole instead of `NaN` — the horizon limit, every ray collapsing to one null direction
+
+### added
+- general relativity test series: schwarzschild_test (the bondi field — redshift, precession, horizon), einstein_test (the field equation as one local condition on that field), gravitational_wave_test (`disperse` on the light cone), sr_gr_collapse_test (SR/GR as one boost, the knob constant or position/time-varying)
+
+### changed
+- split dimension_test.rs into pseudoscalar_test.rs (the 2^n/pseudoscalar elimination) and grade_test.rs (grades and the k→4−k duality)
+
 ## 0.12.1 (2026-05-22)
 
 ### added
