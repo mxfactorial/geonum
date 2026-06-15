@@ -326,3 +326,85 @@ fn it_demonstrates_why_single_geonum_fails_here() {
     // This demonstrates the clear utility of GeoCollection as a collection
     // when dealing with multiple distinct geometric entities
 }
+
+#[test]
+fn it_measures_phase_alignment_as_the_wave_sum_magnitude() {
+    // wave_sum superposes the collection as phasors. Add is vector addition, so the resultant
+    // magnitude follows the law of cosines |a+b|² = |a|² + |b|² + 2|a||b|·cos(Δθ) — the cosine
+    // cross-term is the interference. the magnitude reads how ALIGNED the phases are: coherent
+    // phases reinforce to the full sum, a balanced lattice of equally-spaced phases cancels.
+    // this is the documented bound wave_sum().mag <= total_magnitude(), tight under agreement
+    // and zero under cancellation
+
+    // agreement: five units all at π/4 reinforce — the resultant carries the whole magnitude
+    let aligned: GeoCollection = (0..5).map(|_| Geonum::new(1.0, 1.0, 4.0)).collect();
+    assert!(
+        aligned.wave_sum().near_mag(aligned.total_magnitude()),
+        "phases in agreement: resultant = the full magnitude, the bound is tight"
+    );
+
+    // a balanced lattice: the q equally-spaced phases (q-th roots of unity) cancel to the
+    // centroid — total destructive interference, the resultant near zero
+    let q = 7;
+    let lattice: GeoCollection = (0..q)
+        .map(|k| Geonum::new(1.0, 2.0 * k as f64, q as f64))
+        .collect();
+    assert!(
+        lattice.wave_sum().near_mag(0.0),
+        "the balanced lattice cancels: resultant ~ 0"
+    );
+    assert!(
+        (lattice.total_magnitude() - q as f64).abs() < EPSILON,
+        "while the scalar sum stays q — the gap is pure angular cancellation"
+    );
+
+    // partial alignment lands strictly between: real interference, neither full nor cancelled
+    let spread: GeoCollection = [0.0, 1.0, 2.0]
+        .iter()
+        .map(|&k| Geonum::new(1.0, k, 6.0))
+        .collect(); // 0, π/6, π/3
+    let r = spread.wave_sum().mag;
+    assert!(
+        0.0 < r && r < spread.total_magnitude(),
+        "partial coherence: 0 < {r} < 3"
+    );
+}
+
+#[test]
+fn it_lands_a_symmetric_phase_set_on_a_pure_grade() {
+    // a phase set symmetric about an axis sums to a resultant ON that axis: the perpendicular
+    // components cancel in pairs, the parallel ones survive. the resultant is real, and its
+    // SIGN is carried by the grade — grade 0 the positive ray, grade 2 the negative ray
+    let mag = 2.0 * (PI / 5.0).cos(); // |resultant| of a ±π/5 pair
+
+    // symmetric about +x: π/5 and its reflection 9π/5 (= −π/5) → the positive real ray
+    let plus = GeoCollection::from(vec![Geonum::new(1.0, 1.0, 5.0), Geonum::new(1.0, 9.0, 5.0)]);
+    let r_plus = plus.wave_sum();
+    assert_eq!(
+        r_plus.angle.grade(),
+        0,
+        "symmetric about +x → positive ray, grade 0"
+    );
+    assert!(
+        r_plus.angle.near_rad(0.0),
+        "the perpendicular cancelled — points along +x"
+    );
+    assert!(
+        r_plus.near_mag(mag),
+        "magnitude 2cos(π/5) survives along the axis"
+    );
+
+    // symmetric about −x: 4π/5 and 6π/5 → the negative real ray, sign read as grade 2
+    let minus = GeoCollection::from(vec![Geonum::new(1.0, 4.0, 5.0), Geonum::new(1.0, 6.0, 5.0)]);
+    let r_minus = minus.wave_sum();
+    assert_eq!(
+        r_minus.angle.grade(),
+        2,
+        "symmetric about −x → negative ray: the sign is grade 2"
+    );
+    assert!(
+        r_minus.angle.near_rad(PI),
+        "the perpendicular cancelled — points along −x"
+    );
+    assert!(r_minus.near_mag(mag), "same magnitude, opposite ray");
+}

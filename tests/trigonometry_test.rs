@@ -273,82 +273,55 @@ fn it_adds_vectors_with_cosine_interference() {
 
 #[test]
 fn it_derives_pythagorean_identity_from_quadrature() {
-    // sin²+cos² = 1 is the pythagorean identity
-    // but it comes from quadrature: sin(θ+π/2) = cos(θ)
+    // sin²+cos²=1 is not an arithmetic fact about squares — it is the QUADRATURE
+    // DECOMPOSITION CLOSING. cos and sin are one unit object's projections onto two
+    // axes a quarter-turn (Q) apart: cos on the even pair (0↔π), sin on the odd pair
+    // (π/2↔3π/2). because the axes are orthogonal the two legs re-add to the object
+    // itself, magnitude 1 — the identity computed by geonum addition, not a squared
+    // sum. and it is EXACT: in the half-tangent t, cos²+sin² =
+    // ((1−t²)² + (2t)²)/(1+t²)² = (1+t²)²/(1+t²)² = 1, a rational identity
 
-    let angle = Angle::new(2.0, 7.0); // 2π/7
+    // sample every quadrant so the grade-encoded signs all participate
+    let angles = [
+        Angle::new(1.0, 6.0),  // π/6   — QI
+        Angle::new(2.0, 3.0),  // 2π/3  — QII
+        Angle::new(7.0, 6.0),  // 7π/6  — QIII
+        Angle::new(11.0, 6.0), // 11π/6 — QIV
+    ];
 
-    // quadrature relationship
-    let angle_plus_quarter = angle + Angle::new(1.0, 2.0);
-    let sin_shifted = angle_plus_quarter.grade_angle().sin();
-    let cos_original = angle.grade_angle().cos();
+    println!("sin²+cos²=1 as the quadrature decomposition closing (no scalar squared):");
+    for a in angles {
+        let cos_leg = Geonum::cos(a); // projection onto the even pair (0↔π)
+        let sin_leg = Geonum::sin(a); // projection onto the odd pair (π/2↔3π/2)
 
-    println!("Quadrature relationship:");
-    println!(
-        "  sin(θ+π/2) = sin({:.3}) = {:.3}",
-        angle_plus_quarter.grade_angle(),
-        sin_shifted
-    );
-    println!(
-        "  cos(θ) = cos({:.3}) = {:.3}",
-        angle.grade_angle(),
-        cos_original
-    );
-    assert!((sin_shifted - cos_original).abs() < EPSILON);
+        // the legs live on orthogonal axes — that orthogonality IS the quadrature
+        assert_eq!(cos_leg.angle.grade() % 2, 0, "cos lands on the even pair");
+        assert_eq!(
+            sin_leg.angle.grade() % 2,
+            1,
+            "sin lands on the odd pair, a quarter-turn off"
+        );
 
-    // pythagorean identity from quadrature
-    let sin_val = angle.grade_angle().sin();
-    let cos_val = angle.grade_angle().cos();
-    let identity = sin_val.powi(2) + cos_val.powi(2);
-
-    println!("\nPythagorean identity:");
-    println!(
-        "  sin²({:.3}) + cos²({:.3}) = {:.3}² + {:.3}² = {:.3}",
-        angle.grade_angle(),
-        angle.grade_angle(),
-        sin_val,
-        cos_val,
-        identity
-    );
-    assert!((identity - 1.0).abs() < EPSILON);
-
-    // now connect to 3-4-5: if hypotenuse is at angle θ
-    // and we project onto 0° and 90° directions
-    // we get adjacent = hyp×cos(θ) and opposite = hyp×sin(θ)
-    let hypotenuse = 5.0_f64;
-    let theta = (4.0_f64 / 5.0_f64).asin(); // angle for 3-4-5 triangle
-
-    let adj = hypotenuse * theta.cos(); // should be 3
-    let opp = hypotenuse * theta.sin(); // should be 4
-
-    println!("\n3-4-5 triangle from quadrature:");
-    println!("  hypotenuse: {}", hypotenuse);
-    println!("  angle: {:.3}", theta);
-    println!(
-        "  adjacent: {} × cos({:.3}) = {:.3}",
-        hypotenuse, theta, adj
-    );
-    println!(
-        "  opposite: {} × sin({:.3}) = {:.3}",
-        hypotenuse, theta, opp
-    );
-
-    assert!((adj - 3.0).abs() < EPSILON);
-    assert!((opp - 4.0).abs() < EPSILON);
-
-    // the pythagorean theorem is really saying:
-    // (hyp×cos)² + (hyp×sin)² = hyp²
-    // which simplifies to: hyp²(cos²+sin²) = hyp²
-    // which uses the quadrature identity: cos²+sin² = 1
-
-    let check = adj.powi(2) + opp.powi(2);
-    println!("  check: {:.3}² + {:.3}² = {:.3}", adj, opp, check);
-    assert!((check - hypotenuse.powi(2)).abs() < EPSILON);
-
-    println!("\nPythagorean theorem is quadrature in disguise:");
-    println!("  3² + 4² = 5² ↔ (5cos)² + (5sin)² = 5²");
-    println!("  ↔ 25(cos²+sin²) = 25");
-    println!("  ↔ cos²+sin² = 1 (quadrature identity)");
+        // re-adding the orthogonal legs reconstructs the unit object: magnitude 1,
+        // pointing back along θ — this IS sin²+cos²=1
+        let reconstructed = cos_leg + sin_leg;
+        println!(
+            "  θ={:.3}: |cos(grade {}) + sin(grade {})| = {:.6}, re-adding along {:.3}",
+            a.grade_angle(),
+            cos_leg.angle.grade(),
+            sin_leg.angle.grade(),
+            reconstructed.mag,
+            reconstructed.angle.grade_angle()
+        );
+        assert!(
+            reconstructed.near_mag(1.0),
+            "the quadrature legs re-add to the unit object"
+        );
+        assert!(
+            (reconstructed.angle.grade_angle() - a.grade_angle()).abs() < EPSILON,
+            "and along the original ray θ"
+        );
+    }
 }
 
 #[test]
