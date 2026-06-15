@@ -1,6 +1,6 @@
 // why the three lattice constants are π/2, π/3, π/4 — and why all three
 //
-// the chemistry IE model (tests/chemistry_test.rs, acts VII-XII) runs on three
+// the chemistry IE model (tests/chemistry_test.rs, acts VII–XV) runs on three
 // constants with denominators 2, 3, 4 and calls them "zero fitted parameters".
 // this file proves that claim: the denominators are not chosen small, they are
 // the three smallest each first to fill a distinct rotation-closure role on the
