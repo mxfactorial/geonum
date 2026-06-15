@@ -151,14 +151,18 @@ cga_test.rs
 chem_constants_test.rs
 chemistry_test.rs
 computer_vision_test.rs
+curve_test.rs
 dimension_test.rs
 economics_test.rs
 einstein_test.rs
 em_field_theory_test.rs
+exponential_test.rs
 fem_test.rs
 finance_test.rs
+geocollection_test.rs
 grade_test.rs
 gravitational_wave_test.rs
+integral_test.rs
 linear_algebra_test.rs
 machine_learning_test.rs
 mechanics_test.rs
@@ -171,8 +175,10 @@ numbers_test.rs
 optics_test.rs
 optimization_test.rs
 pga_test.rs
+projection_test.rs
 pseudoscalar_test.rs
 qm_test.rs
+quaternion_test.rs
 rendering_test.rs
 robotics_test.rs
 schwarzschild_test.rs
@@ -396,11 +402,11 @@ geometric numbers build dimensions by rotating—not stacking
       - its_an_imaginary_number:111-139
       - its_a_complex_number:142-174
       - its_a_dual_number:177-295
-      - its_an_octonion:298-341
-      - its_a_matrix:344-398
-      - its_a_tensor:401-595
-      - it_dualizes_log2_geometric_algebra_components:647-680
-      - its_a_clifford_number:940-1020
+      - its_an_octonion:298-318
+      - its_a_matrix:321-375
+      - its_a_tensor:378-572
+      - it_dualizes_log2_geometric_algebra_components:624-657
+      - its_a_clifford_number:917-997
 
     - tests/pseudoscalar_test.rs
       - it_solves_the_exponential_complexity_explosion:18-79
