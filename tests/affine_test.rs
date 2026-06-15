@@ -1,191 +1,210 @@
-use geonum::traits::Affine;
-use geonum::*;
+//! affine geometry takedown
+//!
+//! affine geometry erects a coordinate superstructure — homogeneous coordinates,
+//! augmented matrices, translation vectors — to do what geonum already does with
+//! three core operations. this file dismantles each affine primitive by rebuilding
+//! it from the core:
+//!
+//! - translation is `+` — and underneath, a conserved projection, not a stored move
+//! - shear is `rotate` — affine "shear" is a uniform angle add, not even a shear
+//! - quadrilateral area is one `wedge` — no vertices, no coordinates
+//! - the blade's grade is live rotation; its winding (blade / 4) is inert — a full
+//!   turn moves nothing and no projection sees it. winding is rotation's
+//!   bookkeeping, not a translation; the operation that moves a point is `+`
+//!
+//! the `Affine` trait and its cargo feature were removed once these held: the layer
+//! carried nothing the core didnt
+//!
+//! the last test closes the riff this file grew out of. y = mx + b is a single
+//! geonum — a scalar leg and a vector leg one blade apart — which is why
+//! ∫(mx + b) dx never appears in integral_test: the affine line is the
+//! zero-curvature degenerate case and adds no integration content
+
+use geonum::{Angle, Geonum};
 
 const EPSILON: f64 = 1e-10;
 
+// ---------------------------------------------------------------------------
+// translation is addition
+// ---------------------------------------------------------------------------
 #[test]
-fn its_a_translation() {
-    // in affine transformations, translation moves points without rotation
-    // matrices require homogeneous coordinates and augmented matrices
-    // geometric numbers handle translation as direct displacement
+fn it_dissolves_translation_into_addition() {
+    // the matrix story needs homogeneous coordinates and a 3×3 augmented matrix to
+    // translate a 2D point. geonum needs `+`
+    let point = Geonum::new(5.0, 1.0, 6.0); // [5, π/6]
+    let displacement = Geonum::new(3.0, 1.0, 2.0); // [3, π/2]
 
-    // create a point in 2D space
-    let point = Geonum::new(5.0, 1.0, 6.0); // [5, π/6] - 30 degrees
+    let translated = point + displacement; // the whole operation
 
-    // matrix approach requires homogeneous coordinates:
-    // [1 0 tx]   [x]   [x + tx]
-    // [0 1 ty] × [y] = [y + ty]
-    // [0 0  1]   [1]   [1]
-    // this forces 3×3 matrix for 2D translation!
+    // grade survives — nothing affine-specific happened, only addition
+    assert_eq!(translated.angle.grade(), point.angle.grade());
 
-    // geometric number approach: translation is angle-preserving displacement
-    let translation_vector = Geonum::new(3.0, 1.0, 2.0); // [3, π/2] - 90 degrees
-
-    // translation preserves angles, combines lengths geometrically
-    let translated_point = point.translate(&translation_vector);
-
-    // test that translation preserves the geometric structure
-    // unlike matrices, we don't need homogeneous coordinates or matrix expansion
-    assert_eq!(translated_point.angle.blade() % 4, point.angle.blade() % 4); // grade preserved
-
-    // translation in geometric numbers is vector addition in polar form
-    // the result is a combined displacement
-    let original_x = point.mag * point.angle.grade_angle().cos();
-    let original_y = point.mag * point.angle.grade_angle().sin();
-    let translate_x = translation_vector.mag * translation_vector.angle.grade_angle().cos();
-    let translate_y = translation_vector.mag * translation_vector.angle.grade_angle().sin();
-
-    let expected_x = original_x + translate_x;
-    let expected_y = original_y + translate_y;
-    let expected_length = (expected_x.powi(2) + expected_y.powi(2)).sqrt();
-    let expected_angle = Angle::new_from_cartesian(expected_x, expected_y);
-
-    // test geometric properties are preserved
-    assert!(translated_point.near_mag(expected_length));
-    assert!((translated_point.angle - expected_angle).rem() < EPSILON);
-
-    // test that translation is reversible through inverse displacement
-    let inverse_translation = translation_vector.negate(); // opposite direction
-
-    let back_to_original = translated_point.translate(&inverse_translation);
-    assert!(back_to_original.near_mag(point.mag));
-    assert!((back_to_original.angle - point.angle).rem() < EPSILON);
-
-    // geometric numbers avoid the matrix overhead:
-    // no homogeneous coordinates needed
-    // no 3×3 matrix for 2D operation
-    // no artificial dimension expansion
-    // direct geometric displacement in O(1) time
+    // reversal is `+` with the negated displacement. geonum `+` records its path in
+    // the blade, so the point returns in magnitude and direction
+    let back = translated + displacement.negate();
+    assert!(back.mag_diff(&point) < EPSILON);
+    assert!((back.angle - point.angle).rem() < EPSILON);
 }
 
+// ---------------------------------------------------------------------------
+// translation is a conserved projection, so there is nothing to store
+// ---------------------------------------------------------------------------
 #[test]
-fn it_preserves_parallel_lines_after_shearing() {
-    // affine transformations must preserve parallelism
-    // matrices require full grid computation to verify this property
-    // geometric numbers preserve parallelism through direct angle relationships
+fn it_exposes_translation_as_a_conserved_projection() {
+    // affine geometry materializes a translated copy of every point. but translation
+    // moves only ONE shadow: the projection along the displacement shifts by a
+    // supplied value, the orthogonal projection never moves. the conserved shadow
+    // doesnt change across its axis, so it needs no computing at all
+    let point = Geonum::new(5.0, 1.0, 6.0);
+    let displacement = Geonum::new(3.0, 1.0, 2.0);
+    let moved = point + displacement;
 
-    // create two parallel lines as pairs of points
-    // line 1: horizontal line at y = 2
-    let line1_p1 = Geonum::new(2.0, 1.0, 2.0); // [2, π/2] - 90 degrees
-    let line1_p2 = Geonum::new_from_cartesian(2.0, 2.0); // (2, 2)
+    let across = displacement.angle + Angle::new(1.0, 2.0); // a quarter turn off the displacement
+    let across_before = point.mag * point.angle.project(across);
+    let across_after = moved.mag * moved.angle.project(across);
+    assert!(
+        (across_before - across_after).abs() < EPSILON,
+        "the orthogonal shadow is conserved through the translation"
+    );
 
-    // line 2: horizontal line at y = 4 (parallel to line 1)
-    let line2_p1 = Geonum::new(4.0, 1.0, 2.0); // [4, π/2] - 90 degrees
-    let line2_p2 = Geonum::new_from_cartesian(2.0, 4.0); // (2, 4)
-
-    // calculate original direction vectors (parallel lines have same direction)
-    let original_direction1 = Geonum::new(2.0, 0.0, 1.0); // [2, 0] - horizontal
-    let original_direction2 = Geonum::new(2.0, 0.0, 1.0); // [2, 0] - horizontal
-
-    // verify original lines are parallel (same direction angle)
-    assert!((original_direction1.angle - original_direction2.angle).rem() < EPSILON);
-
-    // apply shear transformation
-    let shear_angle = Angle::new(1.0, 6.0); // π/6 - 30 degree shear
-
-    let sheared_line1_p1 = line1_p1.shear(shear_angle);
-    let sheared_line1_p2 = line1_p2.shear(shear_angle);
-    let sheared_line2_p1 = line2_p1.shear(shear_angle);
-    let sheared_line2_p2 = line2_p2.shear(shear_angle);
-
-    // calculate sheared direction vectors
-    let sheared_direction1 = original_direction1.shear(shear_angle);
-    let sheared_direction2 = original_direction2.shear(shear_angle);
-
-    // test that parallelism is preserved after shearing
-    // in geometric numbers, parallel lines maintain the same angular relationship
-    assert!((sheared_direction1.angle - sheared_direction2.angle).rem() < EPSILON);
-
-    // test that shear transformation is consistent
-    // all points should have their angles shifted by the same amount
-    assert!((sheared_line1_p1.angle - (line1_p1.angle + shear_angle)).rem() < EPSILON);
-    assert!((sheared_line1_p2.angle - (line1_p2.angle + shear_angle)).rem() < EPSILON);
-    assert!((sheared_line2_p1.angle - (line2_p1.angle + shear_angle)).rem() < EPSILON);
-    assert!((sheared_line2_p2.angle - (line2_p2.angle + shear_angle)).rem() < EPSILON);
-
-    // test that lengths are preserved during shear (fundamental property)
-    assert!(sheared_line1_p1.near_mag(line1_p1.mag));
-    assert!(sheared_line1_p2.near_mag(line1_p2.mag));
-    assert!(sheared_line2_p1.near_mag(line2_p1.mag));
-    assert!(sheared_line2_p2.near_mag(line2_p2.mag));
-
-    // geometric numbers make affine properties explicit:
-    // parallelism is preserved through consistent angle transformation
-    // no matrix computation needed to verify geometric properties
-    // direct access to the geometric meaning of the transformation
+    let along_before = point.mag * point.angle.project(displacement.angle);
+    let along_after = moved.mag * moved.angle.project(displacement.angle);
+    assert!(
+        (along_after - along_before - displacement.mag).abs() < EPSILON,
+        "the parallel shadow shifts by exactly the displacement magnitude"
+    );
 }
 
+// ---------------------------------------------------------------------------
+// the blade's grade is live rotation; its winding is inert — a full turn moves
+// nothing. winding is rotation's bookkeeping, not a translation; the live
+// translation is `+`
+// ---------------------------------------------------------------------------
 #[test]
-fn it_preserves_area_after_shearing() {
-    // affine transformations must preserve area
-    // matrices require determinant calculation to verify this property
-    // geometric numbers preserve area through direct geometric computation
+fn it_keeps_the_winding_inert_while_the_grade_stays_live() {
+    // affine bolts rotation and translation together as separate machinery. geonum
+    // keeps one blade — but its two halves are not symmetric affine motions. the
+    // grade (blade % 4) is LIVE rotation: it drives every cos_sin-based readout. the
+    // winding (blade / 4) is INERT: a full turn records +4 yet relocates nothing,
+    // and no projection can see it
+    let p = Geonum::new(5.0, 1.0, 6.0); // [5, π/6]
+    let wound = p.rotate(Angle::new(2.0, 1.0)); // +2π → blade +4, one full turn
+    let turned = p.rotate(Angle::new(1.0, 2.0)); // +π/2 → blade +1, grade 0 → 1
 
-    // create a rectangle with known area
-    let width = 4.0;
-    let height = 3.0;
+    // the turn is recorded, but the point never left: same magnitude, same
+    // direction, zero displacement — winding is not a translation
+    assert_eq!(
+        wound.angle.blade(),
+        p.angle.blade() + 4,
+        "the full turn lands as +4"
+    );
+    assert!(
+        wound.near_mag(p.mag),
+        "winding leaves the magnitude untouched"
+    );
+    assert_eq!(
+        wound.angle.grade(),
+        p.angle.grade(),
+        "winding leaves the direction untouched"
+    );
+    assert!(
+        (wound - p).mag < EPSILON,
+        "a full turn produces zero displacement — it moves nothing to translate"
+    );
 
-    // rectangle vertices in geometric number form
-    let v1 = Geonum::new(0.0, 0.0, 1.0); // origin (0,0)
-    let v2 = Geonum::new(width, 0.0, 1.0); // (4,0)
-    let v3 = Geonum::new_from_cartesian(width, height); // (4,3)
-    let v4 = Geonum::new(height, 1.0, 2.0); // (0,3) - π/2 vertical
-
-    // calculate original area
-    let original_area = Geonum::area_quadrilateral(&v1, &v2, &v3, &v4);
-    let expected_area = width * height; // 12.0
-    assert!((original_area - expected_area).abs() < EPSILON);
-
-    // apply shear transformation
-    let shear_angle = Angle::new(1.0, 4.0); // π/4 - 45 degree shear
-
-    let sheared_v1 = v1.shear(shear_angle);
-    let sheared_v2 = v2.shear(shear_angle);
-    let sheared_v3 = v3.shear(shear_angle);
-    let sheared_v4 = v4.shear(shear_angle);
-
-    // calculate sheared area
-    let sheared_area =
-        Geonum::area_quadrilateral(&sheared_v1, &sheared_v2, &sheared_v3, &sheared_v4);
-
-    // test that area is preserved after shearing
-    assert!((original_area - sheared_area).abs() < EPSILON);
-
-    // test specific area value
-    assert!((sheared_area - 12.0).abs() < EPSILON);
-
-    // test that individual lengths are preserved (fundamental property of our shear)
-    assert!(sheared_v1.near_mag(v1.mag));
-    assert!(sheared_v2.near_mag(v2.mag));
-    assert!(sheared_v3.near_mag(v3.mag));
-    assert!(sheared_v4.near_mag(v4.mag));
-
-    // test that angles are consistently shifted
-    assert!((sheared_v2.angle - (v2.angle + shear_angle)).rem() < EPSILON);
-    assert!((sheared_v3.angle - (v3.angle + shear_angle)).rem() < EPSILON);
-    assert!((sheared_v4.angle - (v4.angle + shear_angle)).rem() < EPSILON);
-
-    // geometric numbers make area preservation explicit:
-    // shear preserves area because it's a uniform angular transformation
-    // no determinant calculation needed to verify this geometric property
-    // direct verification through geometric computation rather than matrix algebra
+    // projection is blind to the winding but swings under one blade of rotation —
+    // the asymmetry: q invisible, r live
+    let onto = Angle::new(0.0, 1.0); // +x
+    assert!(
+        (wound.angle.project(onto) - p.angle.project(onto)).abs() < EPSILON,
+        "the winding is invisible to projection"
+    );
+    assert!(
+        (turned.angle.project(onto) - (-0.5)).abs() < EPSILON,
+        "rotation is live: the +x projection swings to cos(2π/3) = -0.5"
+    );
 }
 
+// ---------------------------------------------------------------------------
+// shear is rotation
+// ---------------------------------------------------------------------------
 #[test]
-fn it_increases_angle_after_shearing() {
-    let point = Geonum::new(5.0, 1.0, 3.0); // [5, π/3] - 60 degrees
+fn it_dissolves_shear_into_rotation() {
+    // affine "shear" here adds the same angle to everything, which is a rotation —
+    // a real shear is non-uniform. geonum spells it `rotate`
+    let point = Geonum::new(5.0, 1.0, 3.0); // [5, π/3]
+    let amount = Angle::new(1.0, 6.0); // π/6
 
-    let shear_angle = Angle::new(1.0, 6.0); // π/6 - 30 degrees
-    let sheared_point = point.shear(shear_angle);
+    let sheared = point.rotate(amount);
 
-    // length remains unchanged
-    assert!(sheared_point.near_mag(point.mag));
+    assert!(sheared.near_mag(point.mag)); // magnitude untouched
+    assert!(sheared.angle.near(&(point.angle + amount))); // angle gains the amount
+                                                          // π/3 + π/6 = π/2 crosses a grade boundary, 0 → 1
+    assert_eq!(point.angle.grade(), 0);
+    assert_eq!(sheared.angle.grade(), 1);
 
-    // angle is increased by shear_angle
-    assert!((sheared_point.angle - (point.angle + shear_angle)).rem() < EPSILON);
+    // the "preserves parallelism" claim is trivial under a uniform angle add: two
+    // parallel directions take the same rotation and stay parallel
+    let dir1 = Geonum::new(2.0, 0.0, 1.0);
+    let dir2 = Geonum::new(3.0, 0.0, 1.0);
+    let quarter = Angle::new(1.0, 4.0);
+    assert!(dir1.rotate(quarter).angle.near(&dir2.rotate(quarter).angle));
+}
 
-    // grade changes when angle sum crosses π/2 boundary
-    // π/3 + π/6 = π/2, so grade changes from 0 to 1
-    assert_eq!(point.angle.grade(), 0); // original grade
-    assert_eq!(sheared_point.angle.grade(), 1); // grade after shear
+// ---------------------------------------------------------------------------
+// quadrilateral area is one wedge
+// ---------------------------------------------------------------------------
+#[test]
+fn it_dissolves_quadrilateral_area_into_one_wedge() {
+    // affine area triangulates four coordinate vertices. a parallelogram's area is
+    // one wedge of its two edge geonums — two [mag, angle] numbers, no vertices
+    let base = Geonum::new(4.0, 0.0, 1.0); // edge [4, 0]
+    let side = Geonum::new(3.0, 1.0, 2.0); // edge [3, π/2]
+    assert!(
+        base.wedge(&side).near_mag(12.0),
+        "the 4×3 rectangle is one wedge"
+    );
+
+    // any side angle, the same primitive — the wedge carries |base||side|sin(Δθ)
+    let slanted = Geonum::new(3.0, 1.0, 3.0); // [3, π/3]
+    let expected = 4.0 * 3.0 * Angle::new(1.0, 3.0).cos_sin().1; // |base||side| sin(π/3)
+    assert!(base.wedge(&slanted).near_mag(expected));
+}
+
+// ---------------------------------------------------------------------------
+// y = mx + b is a single geonum — which is why integral_test ignores it
+// ---------------------------------------------------------------------------
+#[test]
+fn it_collapses_the_affine_line_into_a_single_geonum() {
+    // y = mx + b is not a number plus a translation. it is ONE geonum: a scalar leg
+    // (b, blade 0) and a vector leg (mx, blade 1) a single π/2 turn apart. the "+"
+    // is the orthogonal combination of two grades, the way b + i(mx) is one number
+    let (m, b) = (2.0, 3.0);
+
+    for &x in &[0.0, 1.0, 2.5, 10.0] {
+        let scalar_leg = Geonum::new(b, 0.0, 1.0); // b at blade 0
+        let vector_leg = Geonum::new(m * x, 1.0, 2.0); // mx at blade 1
+        let y = scalar_leg + vector_leg; // one geonum
+
+        // the intercept is the conserved projection: adj == b for every x, the shadow
+        // that never moves as the line runs
+        assert!(
+            y.adj().near_mag(b),
+            "the intercept b is the conserved scalar leg"
+        );
+        // the slope term is the other leg, linear in x
+        assert!(y.opp().near_mag(m * x), "mx is the vector leg");
+    }
+
+    // the two legs sit exactly one blade apart — the line is a single rotation
+    // between its scalar and vector grades, not a coordinate pair
+    let scalar_leg = Geonum::new(b, 0.0, 1.0);
+    let vector_leg = Geonum::new(m, 1.0, 2.0);
+    assert_eq!(vector_leg.angle.blade() - scalar_leg.angle.blade(), 1);
+
+    // this is why ∫(mx + b) dx is absent from integral_test: the affine line is the
+    // zero-curvature case — it turns 0 (constant angle), so its area is a single
+    // wedge, and +b is a conserved projection adding nothing to integrate. the line
+    // carries no integration content the trig, telescoping, and swept-curve tests
+    // dont already cover
 }
