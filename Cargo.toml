@@ -1,6 +1,6 @@
 [package]
 name = "geonum"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
 description = "geometric number library supporting unlimited dimensions with O(1) complexity"
@@ -17,9 +17,8 @@ projection = []
 ml = []
 em = []
 waves = []
-affine = []
 chemistry = []
-all = ["optics", "projection", "ml", "em", "waves", "affine", "chemistry"]
+all = ["optics", "projection", "ml", "em", "waves", "chemistry"]
 
 [dependencies]
 

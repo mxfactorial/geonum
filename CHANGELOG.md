@@ -1,5 +1,18 @@
 # changelog
 
+## 0.14.0 (2026-06-14)
+
+### removed
+- `affine` trait and feature — translate was `+`, shear was `rotate`; the layer only re-vocabularied the core
+
+### fixed
+- chemistry `electron_affinity` signs by subshell continuity (was a grade proxy), matching NIST except nitrogen
+- `it_computes_ijk_product`, `its_an_octonion`: assert the primitive product's commutativity/associativity (`i·j = k`, `ijk = −1`) instead of bailing on the non-commutativity/non-associativity the decomposition table adds back (linear_algebra_test)
+
+### added
+- projection_test, curve_test, integral_test, exponential_test: line, area, and the integral as angle-first ops; `wave_sum` interference coverage in geocollection_test
+- quaternion_test: the quaternion product factored — commutative rotor (`*`) and anti-symmetric wedge (`a∧b = −b∧a`), `ijk = −1` in blade arithmetic, rotation composition order-dependent by exactly the geometric angle; plus a guard test that `e3∧e1 = 0` is a dropped-blade shadow, not a broken cycle
+
 ## 0.13.0 (2026-05-24)
 
 ### breaking
