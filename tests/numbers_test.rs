@@ -296,48 +296,25 @@ fn its_a_dual_number() {
 
 #[test]
 fn its_an_octonion() {
-    // octonions extend quaternions with 8 components
-    // they are non-associative, meaning (a*b)*c ≠ a*(b*c)
+    // octonions are 8 units, non-associative in the decomposed algebra. geonum places them as
+    // 8 angles (k·π/4) and composes by angle addition — which ASSOCIATES, because blade
+    // addition does. the non-associativity is a decomposition artifact (linear_algebra_test),
+    // not a property of the primitive product
+    let units: GeoCollection = (0..8).map(|k| Geonum::new(1.0, k as f64, 4.0)).collect();
+    assert_eq!(units.len(), 8, "8 octonion units, one per π/4 step");
 
-    // octonion non-associativity through multiplication order:
-    // traditional: 8 components for octonion algebra
-    // geonum: non-associativity emerges from angle composition
-
-    // for test compatibility, create collection:
-    let octonion = GeoCollection::from(vec![
-        Geonum::new(1.0, 0.0, 1.0), // scalar part
-        Geonum::new(0.5, 1.0, 4.0), // e1 (π/4)
-        Geonum::new(0.5, 1.0, 2.0), // e2 (π/2)
-        Geonum::new(0.5, 3.0, 4.0), // e3 (3π/4)
-        Geonum::new(0.5, 2.0, 2.0), // e4 (π)
-        Geonum::new(0.5, 5.0, 4.0), // e5 (5π/4)
-        Geonum::new(0.5, 3.0, 2.0), // e6 (3π/2)
-        Geonum::new(0.5, 7.0, 4.0), // e7 (7π/4)
-    ]);
-
-    // test octonion properties: test non-associativity
-    // create some basis elements
     let e1 = Geonum::new(1.0, 1.0, 4.0); // π/4
-    let e2 = Geonum::new(1.0, 1.0, 2.0); // π/2
-    let e4 = Geonum::new(1.0, 2.0, 2.0); // π
+    let e2 = Geonum::new(1.0, 2.0, 4.0); // π/2
+    let e4 = Geonum::new(1.0, 4.0, 4.0); // π
 
-    // compute (e1*e2)*e4
-    let e1e2 = e1 * e2;
-    let e1e2e4 = e1e2 * e4;
-
-    // compute e1*(e2*e4)
-    let e2e4 = e2 * e4;
-    let e1e2e4_alt = e1 * e2e4;
-
-    // test that they're not equal (non-associative)
-    // test if lengths or angles differ
-    let _equal = (e1e2e4.mag - e1e2e4_alt.mag).abs() < EPSILON
-        && (e1e2e4.angle.grade_angle() - e1e2e4_alt.angle.grade_angle()).abs() < EPSILON;
-
-    // if they're not exactly equal, non-associativity is demonstrated
-    // note: in this simplification, the actual values depend on how
-    // the octonion multiplication table is implemented
-    assert!(octonion.len() == 8); // confirm it has 8 components
+    // (e1·e2)·e4 and e1·(e2·e4) land together — angle addition regroups freely
+    let left = (e1 * e2) * e4;
+    let right = e1 * (e2 * e4);
+    assert!(
+        left.near(&right),
+        "octonion composition associates here: the non-associativity the algebra needs is the \
+         decomposition correction, not this product"
+    );
 }
 
 #[test]
