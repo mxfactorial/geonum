@@ -291,28 +291,39 @@ fn it_multiplies_vectors_with_scalars() {
 
 #[test]
 fn it_computes_ijk_product() {
-    // from the spec: ijk = [1, 0 + pi/2] × [1, pi/2 + pi/2] × [1, pi + pi/2] = [1, 3pi] = [1, pi]
+    // geonum composes by adding blades, so the quaternion identities fall out of angle
+    // addition: i·j = k and ijk = −1. the table's non-commutativity (i·j = −j·i) is the
+    // decomposition correction proven in linear_algebra_test, not a property of this product —
+    // here the primitive product commutes
+    let i = Geonum::create_dimension(1.0, 1); // [1, π/2], blade 1
+    let j = Geonum::create_dimension(1.0, 2); // [1, π], blade 2
+    let k = Geonum::create_dimension(1.0, 3); // [1, 3π/2], blade 3
 
-    // transition from coordinate scaffolding to direct vector creation
-    // old design: required declaring dimensional "space" before creating vectors
-    // new design: create geometric numbers representing i, j, k directly
-    // create individual dimensions:
-    let i = Geonum::create_dimension(1.0, 1); // vector at dimension 1 = [1, pi/2]
-    let j = Geonum::create_dimension(1.0, 2); // vector at dimension 2 = [1, pi]
-    let k = Geonum::create_dimension(1.0, 3); // vector at dimension 3 = [1, 3pi/2]
+    // i·j = k: blade 1 + blade 2 = blade 3, the same number as k
+    let ij = i * j;
+    assert_eq!(ij.angle, k.angle, "i·j = k by blade addition");
 
-    // verify each vector has the correct angle
-    assert_eq!(i.angle, Angle::new(1.0, 2.0));
-    assert_eq!(j.angle, Angle::new(1.0, 1.0));
-    assert_eq!(k.angle, Angle::new(3.0, 2.0));
+    // j·i lands on the same k — angle addition commutes. quaternion's i·j = −j·i is the
+    // decomposition artifact, not this primitive
+    assert_eq!(
+        (j * i).angle,
+        ij.angle,
+        "j·i = i·j — primitive composition commutes"
+    );
 
-    // compute the ijk product
-    let ij = i * j; // blade 1 + blade 2 = blade 3, angle pi/2 + pi = 3pi/2
-    let ijk = ij * k; // blade 3 + blade 3 = blade 6, angle 3pi/2 + 3pi/2 = 3pi
-
-    // check result
+    // ijk = −1: blade 6 = grade 2, the negative real ray, magnitude 1
+    let ijk = ij * k;
     assert_eq!(ijk.mag, 1.0);
-    assert_eq!(ijk.angle, Angle::new(6.0, 2.0)); // 3pi = 6 * pi/2
+    assert_eq!(
+        ijk.angle.grade(),
+        2,
+        "ijk lands on the negative real ray = −1"
+    );
+    assert_eq!(
+        ijk.angle,
+        Angle::new(6.0, 2.0),
+        "blade 6 = 3π, the winding kept"
+    );
 }
 
 #[test]
