@@ -75,6 +75,21 @@ fn last_filled(z: usize) -> usize {
     n
 }
 
+/// which (n, l) subshell the z-th electron lands in, by the madelung walk.
+/// the affinity sign turns on whether the added electron continues a subshell
+/// or opens a new one — `subshell_of(z + 1) == subshell_of(z)`
+fn subshell_of(z: usize) -> (usize, usize) {
+    let mut placed = 0;
+    for (n, l) in Geonum::madelung_order(6) {
+        let cap = 2 * (2 * l + 1);
+        if placed + cap >= z {
+            return (n, l);
+        }
+        placed += cap;
+    }
+    (0, 0)
+}
+
 /// the unsigned binding of the (z+1)th electron stepping on — a screened (+1)
 /// nucleus, projected over the anion's valence shell. shared by `electron_affinity`
 /// (signed) and `electronegativity`
@@ -118,8 +133,8 @@ pub trait Chemistry: Sized {
     fn ionization_energy(z: usize, electrons: usize, lattice: Lattice) -> f64;
 
     /// signed electron affinity in eV: the next electron stepping on. bound
-    /// (positive) for open shells, repulsive (negative) where it would open a new
-    /// shell — a closed-shell marginal lands at grade 2 and the sign flips
+    /// (positive) when it extends the open subshell, repulsive (negative) when it
+    /// opens a fresh closure — the sign is `subshell_of(z + 1) == subshell_of(z)`
     fn electron_affinity(z: usize, lattice: Lattice) -> f64;
 
     /// Mulliken electronegativity, (IE1 + EA binding)/2
@@ -226,12 +241,15 @@ impl Chemistry for Geonum {
     }
 
     fn electron_affinity(z: usize, lattice: Lattice) -> f64 {
-        let marginal = Geonum::electron_wave(z + 1, lattice) - Geonum::electron_wave(z, lattice);
         let bind = affinity_binding(z, lattice);
-        if marginal.angle.grade() == 2 {
-            -bind // a closed shell refuses the electron — repulsive
-        } else {
+        // bound iff the added (z+1)th electron extends the open subshell; unbound
+        // iff it is the first occupant of a fresh closure that repels it. grade
+        // cannot sign this — the alkali spin-pair (bound) and the noble shell
+        // jump (unbound) both land grade 2 — but subshell continuity can
+        if subshell_of(z + 1) == subshell_of(z) {
             bind
+        } else {
+            -bind
         }
     }
 
