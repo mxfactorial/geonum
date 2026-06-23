@@ -69,15 +69,19 @@ impl Electromagnetics for Geonum {
         angle: Angle,
         constant: Geonum,
     ) -> Self {
-        let magnitude = constant.mag * charge.mag / distance.mag.powf(power.mag);
-        // angle calculation for negative charges
-        let direction = if charge.angle.grade_angle().cos() >= 0.0 {
-            angle
+        // the field is the source spread over the flux boundary: constant·charge spread
+        // over a surface of magnitude r^power oriented at `angle`. spread divides the
+        // magnitude and composes the directions, so a negative charge (sign π) flips the
+        // field. arbitrary `power` keeps powf here; for the integer inverse-square,
+        // electric_field spreads over a wedge area with no powf at all
+        let sign = if charge.angle.grade_angle().cos() >= 0.0 {
+            Angle::new(0.0, 1.0)
         } else {
-            angle + Angle::new(1.0, 1.0) // add π
+            Angle::new(1.0, 1.0) // negative charge → π
         };
-
-        Geonum::new_with_angle(magnitude, direction)
+        let source = Geonum::new_with_angle(constant.mag * charge.mag, sign);
+        let boundary = Geonum::new_with_angle(distance.mag.powf(power.mag), angle);
+        source.spread(boundary)
     }
 
     fn electric_potential(charge: Geonum, distance: Geonum) -> Geonum {
@@ -87,10 +91,19 @@ impl Electromagnetics for Geonum {
     }
 
     fn electric_field(charge: Geonum, distance: Geonum) -> Self {
-        let k = Geonum::scalar(1.0 / (4.0 * PI * VACUUM_PERMITTIVITY));
-        let power = Geonum::scalar(2.0);
-        let angle = Angle::new(1.0, 1.0); // π
-        Self::inverse_field(charge, distance, power, angle, k)
+        // the inverse-square field as a spread over the grade-2 flux area — no powf. the
+        // sphere's r² is the wedge of two perpendicular radial edges (a bivector at π),
+        // and the field is k·charge spread over it, the charge's sign flipping the direction
+        let k = 1.0 / (4.0 * PI * VACUUM_PERMITTIVITY);
+        let sign = if charge.angle.grade_angle().cos() >= 0.0 {
+            Angle::new(0.0, 1.0)
+        } else {
+            Angle::new(1.0, 1.0) // negative charge → π
+        };
+        let source = Geonum::new_with_angle(k * charge.mag, sign);
+        let r = distance.mag;
+        let area = Geonum::new(r, 0.0, 1.0).wedge(&Geonum::new(r, 1.0, 2.0)); // r², grade 2 at π
+        source.spread(area)
     }
 
     fn poynting_vector(&self, b_field: &Self) -> Self {
