@@ -23,7 +23,7 @@ fn bohr(n: usize) -> f64 {
 /// the constants the model runs on. `Canonical` is the assignment the suite proves
 /// forced: spin = π/3 (the pairing closure), radial = 1/n, q = π/4 (the phase
 /// coefficient). `Custom` varies them to probe why the canonical one is forced
-/// (tests/chem_constants_test.rs). spread = π/2 is the lattice itself and is
+/// (tests/chem_constants_test.rs). grade_step = π/2 is the lattice itself and is
 /// never varied, so it is not part of the configuration.
 #[derive(Clone, Copy)]
 pub enum Lattice {
@@ -46,9 +46,9 @@ impl Lattice {
 
 /// the orbital positions of a subshell at grade l: 2l+1 orbitals stepping across
 /// the π/2 quadrant from `base`, each with its spin pair one `spin` offset away
-fn grade_positions(base: Angle, l: usize, spread: Angle, spin: Angle) -> Vec<Angle> {
+fn grade_positions(base: Angle, l: usize, grade_step: Angle, spin: Angle) -> Vec<Angle> {
     let n_orb = 2 * l + 1;
-    let orbital_step = spread / n_orb as f64;
+    let orbital_step = grade_step / n_orb as f64;
     let mut pos = Vec::new();
     let mut angle = base;
     for _ in 0..n_orb {
@@ -167,7 +167,7 @@ impl Chemistry for Geonum {
 
     fn electron_shell(z: usize, lattice: Lattice) -> GeoCollection {
         let (spin, radial, _) = lattice.constants();
-        let spread = Angle::new(1.0, 2.0); // π/2 — the lattice
+        let grade_step = Angle::new(1.0, 2.0); // π/2 — the lattice
         let mut electrons = Vec::new();
         let mut placed = 0;
         for (n, l) in Geonum::madelung_order(6) {
@@ -176,9 +176,9 @@ impl Chemistry for Geonum {
             }
             let mut base = Angle::new(1.0, 1.0); // π
             for _ in 0..l {
-                base = base + spread;
+                base = base + grade_step;
             }
-            let positions = grade_positions(base, l, spread, spin);
+            let positions = grade_positions(base, l, grade_step, spin);
             let to_fill = positions.len().min(z - placed);
             let mag = radial(n);
             for &p in positions.iter().take(to_fill) {

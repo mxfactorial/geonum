@@ -54,7 +54,7 @@
 // collect decomposes it, amplitude contains all pairs
 //
 // act VII: ionization energy from three lattice constants —
-// spread = π/2, spin = π/3, Q = π/4 — denominators 2, 3, 4
+// grade_step = π/2, spin = π/3, Q = π/4 — denominators 2, 3, 4
 // zero fitted parameters, both anomalies (Be > B, N > O)
 //
 // act VIII: the outer shell is max(n) across filled subshells —
@@ -118,7 +118,7 @@ const ELEMENT: [&str; 80] = [
     "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
 ];
 
-fn spread() -> Angle {
+fn grade_step() -> Angle {
     Angle::new(1.0, 2.0) // π/2 — one grade step
 }
 
@@ -243,7 +243,7 @@ fn it_walks_aufbau_through_the_blade_lattice() {
     // increment_blade, the same quarter turn that separates grades
     let tier_2p = Geonum::new(1.0, 3.0, 2.0); // 3·π/2, blade 3, the 2p tier
     assert_eq!(
-        tier_2p.rotate(spread()).angle.blade(),
+        tier_2p.rotate(grade_step()).angle.blade(),
         4,
         "the next tier is one π/2 rotation past"
     );
@@ -802,7 +802,7 @@ fn it_contains_all_pairs_in_the_wave_amplitude() {
 
 // act VII: ionization energy from three lattice constants
 //
-// spread = π/2 = Angle::new(1.0, 2.0) — one grade step
+// grade_step = π/2 = Angle::new(1.0, 2.0) — one grade step
 // spin   = π/3 = Angle::new(1.0, 3.0) — pairing angle
 // Q      = π/4 = Angle::new(1.0, 4.0) — the opp coefficient: π/4's radian (≈0.785)
 //          weights the π/2-axis projection (the 38° ray, not the bisector — see
@@ -880,7 +880,7 @@ fn it_computes_ionization_energy_from_geometry() {
     assert!(rmse < 3.0, "RMSE={:.2} should be < 3.0", rmse);
 
     eprintln!("\n═══ act VII: ionization energy from geometry ═══\n");
-    eprintln!("  spread = π/2, spin = π/3, Q = π/4");
+    eprintln!("  grade_step = π/2, spin = π/3, Q = π/4");
     eprintln!("  denominators: 2, 3, 4 — zero fitted parameters\n");
     for z in 1..=18 {
         let ie = ie_model(z);
@@ -1830,7 +1830,7 @@ fn it_climbs_the_wall_with_a_phased_quantum() {
 // the (ns, ls) subshell's standing wave, rebuilt from the lattice placement
 fn subshell_wave(z: usize, ns: usize, ls: usize) -> Geonum {
     let spin = Angle::new(1.0, 3.0);
-    let spread = Angle::new(1.0, 2.0);
+    let grade_step = Angle::new(1.0, 2.0);
     let mut acc = Geonum::scalar(0.0);
     let mut placed = 0;
     for (n, l) in Geonum::madelung_order(6) {
@@ -1839,10 +1839,10 @@ fn subshell_wave(z: usize, ns: usize, ls: usize) -> Geonum {
         }
         let mut base = Angle::new(1.0, 1.0);
         for _ in 0..l {
-            base = base + spread;
+            base = base + grade_step;
         }
         let n_orb = 2 * l + 1;
-        let step = spread / n_orb as f64;
+        let step = grade_step / n_orb as f64;
         let mut pos = Vec::new();
         let mut a = base;
         for _ in 0..n_orb {

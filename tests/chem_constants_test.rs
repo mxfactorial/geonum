@@ -332,7 +332,7 @@ fn it_needs_both_a_dual_closure_and_a_bisector() {
 
 // ─────────────────────────────────────────────────────────────────────────
 // the empirical confirmation: the minimal IE model, run with the two constants
-// swapped. spread = π/2 is held fixed (it is the lattice). only spin and Q vary
+// swapped. grade_step = π/2 is held fixed (it is the lattice). only spin and Q vary
 // ─────────────────────────────────────────────────────────────────────────
 
 // the 1/n radial law (Bohr momentum ∝ 1/n), and a flat foil that ignores the shell
