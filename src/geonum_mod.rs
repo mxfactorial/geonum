@@ -773,6 +773,42 @@ impl Geonum {
             Geonum::new_with_angle(self.mag * (-cos_component), Angle::new(1.0, 1.0))
         }
     }
+
+    /// distributes this quantity over a boundary measure: divides the magnitude, composes
+    /// the directions — `[self.mag / boundary.mag, self.angle + boundary.angle]`.
+    ///
+    /// the one inverse-power / point-source field operation, owned by no domain. gravity,
+    /// electrostatics, and light all spread a conserved source over the surface its
+    /// influence crosses; they differ only in the constant folded into the source and the
+    /// sign carried in its angle. it is `scale(1/boundary.mag).rotate(boundary.angle)`, a
+    /// named composition the way `project` is a named `cos` — no new primitive.
+    ///
+    /// whether a square appears is the boundary's doing, not the op's:
+    /// - over a SOLID ANGLE `[steradians, 0]` it is square-free: a flux becomes the
+    ///   intensity (flux per steradian), free of any distance — the conserved quantity
+    /// - over an AREA `[r^k, direction]` it is the inverse-power field: an intensity
+    ///   becomes the per-area field `intensity / r^k`, pointed along the boundary's
+    ///   direction. the `1/r²` law is spreading over a grade-2 area, `1/r` over grade-1 —
+    ///   the falloff exponent is the boundary's grade, not a coordinate count
+    ///
+    /// composes, because magnitudes multiply and angles add:
+    /// `x.spread(a).spread(b) == x.spread(a * b)`. so spreading a flux over a solid angle
+    /// then an area equals spreading it over their geometric product — the field in one
+    /// step. the inverse-square's `r²` lives only in an area boundary's magnitude; spread
+    /// itself never squares anything (it_keeps_the_square_only_in_the_projection)
+    ///
+    /// # arguments
+    /// * `boundary` - the measure to spread over. its MAGNITUDE is what the source's
+    ///   strength is divided by — steradians for an intensity, an area `r^k` for a field.
+    ///   its ANGLE composes into the result's direction. a solid angle is the scalar
+    ///   `[steradians, 0]` (no direction); an area is `[r^k, direction]`
+    ///
+    /// # returns
+    /// the spread quantity `[self.mag / boundary.mag, self.angle + boundary.angle]` — an
+    /// intensity if the boundary was a solid angle, a field if it was an area
+    pub fn spread(&self, boundary: Geonum) -> Geonum {
+        self.scale(1.0 / boundary.mag).rotate(boundary.angle)
+    }
 }
 
 impl Add for Geonum {
@@ -1076,6 +1112,47 @@ mod tests {
         assert!((g.mag - 1.0).abs() < EPSILON);
         assert!((g.angle.rem() - PI / 4.0).abs() < EPSILON);
         assert_eq!(g.angle.blade(), 0);
+    }
+
+    #[test]
+    fn it_spreads_over_a_boundary() {
+        // spread divides the magnitude by the boundary measure and composes the angle
+
+        // over a solid angle the result is square-free: flux per steradian, no distance
+        let flux = Geonum::new(100.0, 0.0, 1.0);
+        let full_sphere = Geonum::scalar(4.0 * PI);
+        let intensity = flux.spread(full_sphere);
+        assert!(
+            intensity.near_mag(100.0 / (4.0 * PI)),
+            "intensity = flux / 4π"
+        );
+
+        // over an area `[r², direction]` the result is the inverse-square field
+        let r = 2.0;
+        let area = Geonum::new(r * r, 1.0, 3.0); // [r², π/3]
+        let field = intensity.spread(area);
+        assert!(
+            field.near_mag(intensity.mag / (r * r)),
+            "field = intensity / r²"
+        );
+
+        // composition: spreading over two boundaries is spreading over their product
+        let one_step = flux.spread(full_sphere * area);
+        assert!(
+            field.near(&one_step),
+            "x.spread(a).spread(b) == x.spread(a*b)"
+        );
+
+        // the boundary's angle composes into the direction; magnitude divides regardless
+        let sourced = Geonum::new(6.0, 1.0, 2.0); // [6, π/2]
+        let spread = sourced.spread(Geonum::new(3.0, 1.0, 4.0)); // boundary [3, π/4]
+        assert!(spread.near_mag(2.0), "6 / 3 = 2");
+        assert!(
+            spread
+                .angle
+                .near(&(Angle::new(1.0, 2.0) + Angle::new(1.0, 4.0))),
+            "π/2 + π/4 directions compose"
+        );
     }
 
     #[test]
