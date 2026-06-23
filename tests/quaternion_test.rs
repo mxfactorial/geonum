@@ -21,7 +21,7 @@ use std::f64::consts::PI;
 // a geonum is a plane — the wedge of two directions is a grade-2 bivector
 // ---------------------------------------------------------------------------
 #[test]
-fn it_is_a_plane() {
+fn its_a_plane() {
     let a = Geonum::new(1.0, 0.0, 1.0); // [1, 0]
     let b = Geonum::new(1.0, 1.0, 2.0); // [1, π/2]
     let plane = a.wedge(&b);
