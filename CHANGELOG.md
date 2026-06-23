@@ -1,5 +1,20 @@
 # changelog
 
+## 0.15.0 (2026-06-23)
+
+### added
+- `Geonum::spread` — the inverse-power / point-source field op, `scale(1/boundary.mag).rotate(boundary.angle)`, a named composition the way `project` is a named `cos`. square-free over a solid angle (flux → intensity), the `1/r^k` field over an area whose grade IS the falloff exponent; composes as `x.spread(a).spread(b) == x.spread(a*b)`
+- geometry_test: point, line, and metric as rotations/projections — the metric as the self-cancelling π dual (`e² = −1`), a line as a projection (sign = the cosine, "negative" = a π turn), length as the magnitude vs the `√(x²+y²)` repair, length in any dimension without a squared sum
+- cosmology_test: redshift as a boost (Bondi `k = e^φ`), comoving distance as the rapidity, velocity as `tanh φ`, expansion as magnitude scaling — the coasting distance-redshift law with no density parameter
+- field_test: the inverse-square field via `spread` (gravity and charge alike), superposition as `wave_sum`, the falloff exponent as the boundary's grade
+- orbit_test: an orbit as a rotation at fixed magnitude, the ω/rate split, spiral winding as a blade count, the rotation-curve residual, mercury precession
+
+### changed
+- `electric_field`/`inverse_field` route through `Geonum::spread` — the inverse-square is a spread over the grade-2 wedge area, no `powf`, the field direction falling out of the area's grade
+- astrophysics_test rebuilt as inter-body dynamics matched to observation: binary period (Sirius ~50 yr), Earth–Sun L1 (SOHO, 1.5 M km), equilateral three-body (L4/L5), light deflection (eddington 1.75″), Earth–Mars conjunction (780 d), one influence law from surface gravity to orbit
+- em_field_theory_test rebuilt around what two numbers do that the tensor cannot: the field in 2 values (vs `F_μν` ~ n²), the Poynting flux as the wedge where no cross product exists, curl as a grade-raising rotation — all in any dimension
+- `quaternion_test::it_is_a_plane` → `its_a_plane`
+
 ## 0.14.0 (2026-06-14)
 
 ### removed

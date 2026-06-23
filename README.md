@@ -151,6 +151,7 @@ cga_test.rs
 chem_constants_test.rs
 chemistry_test.rs
 computer_vision_test.rs
+cosmology_test.rs
 curve_test.rs
 dimension_test.rs
 economics_test.rs
@@ -158,8 +159,10 @@ einstein_test.rs
 em_field_theory_test.rs
 exponential_test.rs
 fem_test.rs
+field_test.rs
 finance_test.rs
 geocollection_test.rs
+geometry_test.rs
 grade_test.rs
 gravitational_wave_test.rs
 integral_test.rs
@@ -174,6 +177,7 @@ multivector_test.rs
 numbers_test.rs
 optics_test.rs
 optimization_test.rs
+orbit_test.rs
 pga_test.rs
 projection_test.rs
 pseudoscalar_test.rs
