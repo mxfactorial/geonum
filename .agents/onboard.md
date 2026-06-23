@@ -63,7 +63,7 @@ learn how angle overloads arithmetic operators in src/angle.rs:655~844
 
 learn how to construct geonum with new, new_with_angle from src/geonum_mod.rs:23~49
 
-learn how geonum overloads arithmetic operators in src/geonum_mod.rs:778~1044
+learn how geonum overloads arithmetic operators in src/geonum_mod.rs:814~1080
 
 learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-108, its_an_imaginary_number:111-139, its_a_complex_number:142-174, its_a_dual_number:177-295, its_an_octonion:298-318 tests in tests/numbers_test.rs
 
