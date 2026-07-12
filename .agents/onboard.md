@@ -57,15 +57,15 @@ learn how angle subtraction borrows blades rationally in src/angle.rs:383~445
 
 learn how geonum implements the dual in src/angle.rs:463~478
 
-learn how angle impls PartialEq and Eq in src/angle.rs:635~653
+learn how angle impls PartialEq and Eq in src/angle.rs:640~658
 
-learn how angle overloads arithmetic operators in src/angle.rs:655~844
+learn how angle overloads arithmetic operators in src/angle.rs:660~849
 
 learn how to construct geonum with new, new_with_angle from src/geonum_mod.rs:23~49
 
-learn how geonum overloads arithmetic operators in src/geonum_mod.rs:814~1080
+learn how geonum overloads arithmetic operators in src/geonum_mod.rs:814~1081
 
-learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-108, its_an_imaginary_number:111-139, its_a_complex_number:142-174, its_a_dual_number:177-295, its_an_octonion:298-318 tests in tests/numbers_test.rs
+learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-103, its_an_imaginary_number:106-134, its_a_complex_number:137-169, its_a_dual_number:172-218, its_an_octonion:221-241 tests in tests/numbers_test.rs
 
 learn how geonum eliminates angle slack created by decomposing angles into scalar coefficients by reading the it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle_addition:13-84, it_proves_decomposition_distributes_one_angle_across_multiple_scalars:87-160, it_proves_quaternion_tables_add_back_what_decomposition_subtracts:519-660, it_proves_anticommutativity_exists_because_decomposition_subtracts_different_amounts:663-726 tests in tests/linear_algebra_test.rs
 
