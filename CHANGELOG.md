@@ -1,5 +1,14 @@
 # changelog
 
+## 0.16.0 (2026-07-11)
+
+### changed
+- `Geonum` addition previously erased blade history at complete cancellation — opposing angles summing to zero magnitude snapped the result to a bare lattice point (`t = 0`), a recorded history the operands never had. the branch now preserves it: the zero-magnitude result carries the summed blade count AND the operands' shared projection ratio, `Angle::from_parts(blade_a + blade_b, t)`, the same history preservation the dominance branches always had
+
+### added
+- a bunch of domain integration tests
+- `Angle::boost` doc names the orbital-anomaly identity: kepler's eccentric ↔ true conversion is the boost at `k = √((1−e)/(1+e))` — aberration at `β = −e`, perihelion and aphelion the fixed poles
+
 ## 0.15.0 (2026-06-23)
 
 ### added

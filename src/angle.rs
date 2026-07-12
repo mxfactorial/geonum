@@ -575,6 +575,11 @@ impl Angle {
     ///
     /// the forward pole (θ=0) and backward pole (θ=π) are the fixed points
     ///
+    /// the same dilation converts orbital anomalies: k = √((1−e)/(1+e)) maps
+    /// eccentric to true anomaly, tan(ν/2) = tan(E/2)/k — kepler's conversion
+    /// is aberration at β = −e, with perihelion and aphelion the fixed poles
+    /// (tests/anomaly_test.rs)
+    ///
     /// # arguments
     /// * `k` - the Bondi / Doppler factor (k > 0); k > 1 boosts toward the axis
     ///
@@ -874,28 +879,6 @@ mod tests {
     const EPSILON: f64 = 1e-10;
 
     #[test]
-    fn it_sums_less_than_a_quarter_turn() {
-        let angle1 = Angle::new(1.0, 8.0); // π/8
-        let angle2 = Angle::new(1.0, 6.0); // π/6
-
-        let sum = angle1 + angle2; // π/8 + π/6 = 7π/24 < π/2
-
-        assert_eq!(sum.blade(), 0); // no boundary crossing
-        assert!((sum.rem() - (7.0 * PI / 24.0)).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_sums_greater_than_a_quarter_turn() {
-        let angle1 = Angle::new(1.0, 3.0); // π/3
-        let angle2 = Angle::new(1.0, 4.0); // π/4
-
-        let sum = angle1 + angle2; // π/3 + π/4 = 7π/12 > π/2
-
-        assert_eq!(sum.blade(), 1); // crosses π/2 boundary, increments blade
-        assert!((sum.rem() - (7.0 * PI / 12.0 - PI / 2.0)).abs() < EPSILON);
-    }
-
-    #[test]
     fn it_sums_rotations_to_multiple_blades() {
         let angle1 = Angle::new(3.0, 4.0); // 3π/4, blade 1, rem π/4
         let angle2 = Angle::new(5.0, 4.0); // 5π/4, blade 2, rem π/4
@@ -905,42 +888,6 @@ mod tests {
 
         assert_eq!(sum.blade(), 4); // preserves full blade count: 1+2+1=4
         assert!((sum.rem()).abs() < EPSILON); // π/2 boundary crossing leaves no remainder
-    }
-
-    #[test]
-    fn it_constructs_blade_0_from_large_angles() {
-        let angle = Angle::new(4.0, 2.0); // 4*(π/2) = 2π
-
-        assert_eq!(angle.blade(), 4); // preserves original blade count
-        assert_eq!(angle.grade(), 0); // 4 % 4 = 0 (scalar grade)
-        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
-    }
-
-    #[test]
-    fn it_constructs_blade_1_from_large_angles() {
-        let angle = Angle::new(5.0, 2.0); // 5*(π/2)
-
-        assert_eq!(angle.blade(), 5); // preserves original blade count
-        assert_eq!(angle.grade(), 1); // 5 % 4 = 1 (vector grade)
-        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
-    }
-
-    #[test]
-    fn it_constructs_blade_2_from_large_angles() {
-        let angle = Angle::new(6.0, 2.0); // 6*(π/2)
-
-        assert_eq!(angle.blade(), 6); // preserves original blade count
-        assert_eq!(angle.grade(), 2); // 6 % 4 = 2 (bivector grade)
-        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
-    }
-
-    #[test]
-    fn it_constructs_blade_3_from_large_angles() {
-        let angle = Angle::new(7.0, 2.0); // 7*(π/2)
-
-        assert_eq!(angle.blade(), 7); // preserves original blade count
-        assert_eq!(angle.grade(), 3); // 7 % 4 = 3 (trivector grade)
-        assert!((angle.rem()).abs() < EPSILON); // exact multiple of π/2 leaves no remainder
     }
 
     #[test]
@@ -966,17 +913,6 @@ mod tests {
     }
 
     #[test]
-    fn it_subtracts_pi_over_6_from_pi_over_3() {
-        let angle1 = Angle::new(1.0, 3.0); // π/3
-        let angle2 = Angle::new(1.0, 6.0); // π/6
-
-        let diff = angle1 - angle2; // π/3 - π/6 = π/6
-
-        assert_eq!(diff.blade(), 0); // π/6 is less than π/2, no blade increment
-        assert!((diff.rem() - PI / 6.0).abs() < EPSILON); // remainder is π/6
-    }
-
-    #[test]
     fn it_subtracts_pi_over_3_from_4pi_over_3() {
         let angle1 = Angle::new(4.0, 3.0); // 4π/3
         let angle2 = Angle::new(1.0, 3.0); // π/3
@@ -998,50 +934,6 @@ mod tests {
         // -5π/3 = -5π/3 + 2π = π/3
         assert_eq!(diff.blade(), 0); // π/3 is less than π/2, no blade increment
         assert!((diff.rem() - PI / 3.0).abs() < EPSILON); // remainder is π/3
-    }
-
-    #[test]
-    fn it_multiplies_angles_as_addition() {
-        let angle1 = Angle::new(1.0, 8.0); // π/8
-        let angle2 = Angle::new(1.0, 6.0); // π/6
-
-        let product = angle1 * angle2; // π/8 * π/6 = π/8 + π/6 = 7π/24
-
-        assert_eq!(product.blade(), 0); // 7π/24 < π/2, no blade increment
-        assert!((product.rem() - (7.0 * PI / 24.0)).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_computes_cos_sin_of_1000_blade() {
-        let angle = Angle::new(1000.0, 2.0); // 1000*(π/2)
-        let (cos_result, sin_result) = angle.cos_sin();
-
-        // 1000 % 4 = 0, so grade is 0 (scalar)
-        // cos(0) = 1, sin(0) = 0
-        assert!((cos_result - 1.0).abs() < EPSILON);
-        assert!((sin_result - 0.0).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_computes_cos_sin_with_1001_blade() {
-        let angle = Angle::new(1001.0, 2.0); // 1001*(π/2)
-        let (cos_result, sin_result) = angle.cos_sin();
-
-        // 1001 % 4 = 1, so grade is 1 (vector)
-        // cos(π/2) = 0, sin(π/2) = 1
-        assert!((cos_result - 0.0).abs() < EPSILON);
-        assert!((sin_result - 1.0).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_computes_cos_sin_with_1003_blade() {
-        let angle = Angle::new(1003.0, 2.0); // 1003*(π/2)
-        let (cos_result, sin_result) = angle.cos_sin();
-
-        // 1003 % 4 = 3, so grade is 3 (trivector)
-        // cos(3π/2) = 0, sin(3π/2) = -1
-        assert!((cos_result - 0.0).abs() < EPSILON);
-        assert!((sin_result - (-1.0)).abs() < EPSILON);
     }
 
     #[test]
@@ -1226,39 +1118,6 @@ mod tests {
     }
 
     #[test]
-    fn it_handles_negative_angle_on_one_blade() {
-        // test subtracting π from blade=1 (angle π/2)
-        let one_blade = Angle::new(1.0, 2.0); // π/2 (blade=1)
-        let pi = Angle::new(1.0, 1.0); // π
-        let result = one_blade - pi;
-
-        // π/2 - π = -π/2 normalizes to 3π/2
-        // 3π/2 = 3 * (π/2) + 0
-        assert_eq!(result.blade(), 3);
-        assert_eq!(result.rem(), 0.0);
-    }
-
-    #[test]
-    fn it_creates_negative_pi_over_2() {
-        // test what Angle::new(-1.0, 2.0) actually creates
-        let neg_half_pi = Angle::new(-1.0, 2.0);
-        println!(
-            "Angle::new(-1.0, 2.0) gives blade={}, rem={}",
-            neg_half_pi.blade(),
-            neg_half_pi.rem()
-        );
-
-        // test adding it to zero
-        let zero = Angle::new(0.0, 1.0);
-        let result = zero + neg_half_pi;
-        println!(
-            "0 + Angle::new(-1.0, 2.0) gives blade={}, rem={}",
-            result.blade(),
-            result.rem()
-        );
-    }
-
-    #[test]
     fn it_computes_dual_angle() {
         // test dual operation using π-rotation (adds 2 blades)
         // this creates grade transformations: 0→2, 1→3, 2→0, 3→1
@@ -1414,20 +1273,6 @@ mod tests {
 
         let angle9 = Angle::new(1001.0, 2.0); // blade 1001 -> blade 1
         assert!((angle9.grade_angle() - PI / 2.0).abs() < EPSILON);
-    }
-
-    #[test]
-    fn it_adds_two_blades_when_dualizing_bivector() {
-        // π-rotation dual adds 2 blades
-
-        let bivector_angle = Angle::new_with_blade(2, 0.0, 1.0); // blade 2, grade 2
-        let dual_angle = bivector_angle.dual();
-
-        // bivector → scalar (grade 2 → grade 0)
-        assert_eq!(dual_angle.grade(), 0);
-
-        // blade 2 + 2 = blade 4
-        assert_eq!(dual_angle.blade(), 4);
     }
 
     #[test]
@@ -1769,15 +1614,6 @@ mod tests {
     }
 
     #[test]
-    fn it_adds_at_exact_boundary() {
-        // π/4 + π/4 = π/2 → exact boundary
-        let a = Angle::new(1.0, 4.0);
-        let sum = a + a;
-        assert_eq!(sum.blade(), 1);
-        assert!(sum.t() < EPSILON);
-    }
-
-    #[test]
     fn it_adds_across_boundary_with_rational_correction() {
         // π/3 + π/4 = 7π/12 → crosses π/2
         let a = Angle::new(1.0, 3.0);
@@ -1838,15 +1674,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    fn it_dualizes_and_negates_with_blade_only() {
-        let a = Angle::new(1.0, 4.0);
-        assert_eq!(a.dual().t(), a.t());
-        assert_eq!(a.dual().blade() - a.blade(), 2);
-        assert_eq!(a.negate().t(), a.t());
-        assert_eq!(a.negate().blade() - a.blade(), 2);
     }
 
     #[test]

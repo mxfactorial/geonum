@@ -1,5 +1,5 @@
 use geonum::*;
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::PI;
 
 // small value for floating-point comparisons
 const EPSILON: f64 = 1e-10;
@@ -73,38 +73,33 @@ fn its_a_vector() {
 
 #[test]
 fn its_a_real_number() {
-    // real numbers are just scalars on the real number line
-    // in geometric numbers, they have angle 0 (positive) or pi (negative)
+    // a real number is a scalar on a line: magnitude with angle 0 for positive, π for
+    // negative. addition and subtraction run through Geonum's own ops — same-angle
+    // magnitudes add, opposite angles (0 vs π) interfere
 
-    let real = Geonum::new(3.0, 0.0, 1.0); // real number as scalar
+    let three = Geonum::new(3.0, 0.0, 1.0); // +3
+    let four = Geonum::new(4.0, 0.0, 1.0); // +4
 
-    // test addition with another real
-    let real2 = Geonum::new(4.0, 0.0, 1.0); // real number as scalar
+    // same direction: the magnitudes add, the sum stays on the positive ray
+    let sum = three + four;
+    assert!(sum.near_mag(7.0), "3 + 4 = 7");
+    assert_eq!(sum.angle.grade(), 0, "the sum is a positive real");
 
-    // convert to cartesian for addition
-    let sum_cartesian = real.mag + real2.mag; // 3 + 4 = 7
+    // subtraction is addition of the negative — 7 − 4 lands +3 on the positive ray
+    let seven = Geonum::new(7.0, 0.0, 1.0);
+    let diff = seven - four;
+    assert!(diff.near_mag(3.0), "7 − 4 = 3");
+    assert_eq!(diff.angle.grade(), 0, "positive result on the 0 ray");
 
-    let sum = Geonum::new(sum_cartesian, 0.0, 1.0); // real number sum as scalar
-
-    assert_eq!(sum.mag, 7.0);
-    assert_eq!(sum.angle, Angle::new(0.0, 1.0));
-
-    // test subtraction
-    let real3 = Geonum::new(10.0, 0.0, 1.0); // real number as scalar
-
-    let real4 = Geonum::new(7.0, 0.0, 1.0); // real number as scalar
-
-    // convert to cartesian for subtraction
-    let diff_cartesian = real3.mag - real4.mag; // 10 - 7 = 3
-
-    let diff = Geonum::new(
-        diff_cartesian.abs(),
-        if diff_cartesian >= 0.0 { 0.0 } else { 2.0 },
-        if diff_cartesian >= 0.0 { 1.0 } else { 2.0 },
-    ); // real number difference as scalar
-
-    assert_eq!(diff.mag, 3.0);
-    assert_eq!(diff.angle, Angle::new(0.0, 1.0));
+    // a negative real sits a half turn away — 3 + (−7) lands −4 on the π ray
+    let neg_seven = Geonum::new(7.0, 1.0, 1.0); // −7 at angle π
+    let signed = three + neg_seven;
+    assert!(signed.near_mag(4.0), "3 + (−7) = −4");
+    assert_eq!(
+        signed.angle.grade(),
+        2,
+        "the negative result lands on the π ray"
+    );
 }
 
 #[test]
@@ -175,123 +170,51 @@ fn its_a_complex_number() {
 
 #[test]
 fn its_a_dual_number() {
-    // dual numbers have the form a + bε where ε² = 0
-    // they're useful for automatic differentiation
+    // a dual number a + bε packs a value and its derivative into two slots, and ε² = 0 is the
+    // truncation keeping the derivative from folding onto the value. geonum needs no ε:
+    // differentiate is a quarter turn, so the value and its derivative sit at orthogonal
+    // grades — that grade separation is what ε² = 0 enforces. the derivative VALUE (2x) is
+    // read from the power in the angle (calculus_test::it_encodes_the_power_in_the_angle);
+    // here the structure is the point, not the number
 
-    // traditional: dual numbers track f(x) and f'(x) separately
-    // geonum: differentiation is π/2 rotation
+    // f(x) = x² at x = 3: the value is a grade-0 scalar
+    let value = Geonum::new(9.0, 0.0, 1.0); // f(3) = 9
 
-    // test dual number properties with automatic differentiation
-    let x = 3.0;
-
-    // create function f(x) = x²
-    let f_x = Geonum::new(x * x, 0.0, 1.0); // f(3) = 9
-
-    // differentiate using geonum's automatic differentiation
-    let f_prime = f_x.differentiate(); // f'(x) via π/2 rotation
-
-    // verify differentiation produces correct grade
-    assert_eq!(f_prime.angle.grade(), 1, "derivative at grade 1 (vector)");
-    assert_eq!(f_prime.mag, 9.0, "differentiation preserves magnitude");
-
-    // test the dual unit property
-    // in dual numbers, ε represents the infinitesimal unit where ε² = 0
-    // in geonum, we can represent this with angle relationships
-    let epsilon = Geonum::new(1.0, 2.0, 2.0); // dual unit as π angle
-    let epsilon_squared = epsilon * epsilon;
-
-    // ε² should map back to scalar (blade 0 or 4)
-    assert_eq!(epsilon_squared.mag, 1.0);
-    // angle doubles: π + π = 2π ≡ 0 (mod 2π)
-    let angle_mod = epsilon_squared.angle.grade_angle();
+    // the derivative is the value rotated a quarter turn — the ε slot, grade 1
+    let derivative = value.differentiate();
+    assert_eq!(
+        derivative.angle.grade(),
+        1,
+        "the derivative sits a quarter turn off the value"
+    );
     assert!(
-        angle_mod < EPSILON || (TAU - angle_mod) < EPSILON,
-        "ε² returns to scalar"
+        derivative.near_mag(value.mag),
+        "the quarter turn carries the magnitude, no ε algebra"
     );
 
-    // demonstrate dual number arithmetic for f(x) = x³
-    let x_cubed = x * x * x; // 27
-    let f_cubic = Geonum::new(x_cubed, 0.0, 1.0);
-
-    // derivative of x³ is 3x² = 3 * 9 = 27
-    let f_cubic_prime = f_cubic.differentiate();
-    assert_eq!(
-        f_cubic_prime.angle.grade(),
-        1,
-        "cubic derivative at grade 1"
+    // value ⊥ derivative — the dot vanishes. that orthogonality is what ε² = 0 buys the
+    // scalar dual number: the value and derivative slots cannot mix
+    assert!(
+        value.dot(&derivative).near_mag(0.0),
+        "value ⊥ derivative — the ε² = 0 separation, geometric"
     );
-    assert_eq!(f_cubic_prime.mag, 27.0, "magnitude preserved as 27");
 
-    // second derivative: f''(x) = 6x = 18
-    let f_cubic_double_prime = f_cubic_prime.differentiate();
-    assert_eq!(
-        f_cubic_double_prime.angle.grade(),
-        2,
-        "second derivative at grade 2"
+    // ε² = 0 stops the scalar dual number at first order. geonum does not stop: differentiate
+    // on and the grade cycles 1 → 2 → 3 → 0, the higher derivatives landing in their own
+    // slots where the truncated dual number has nothing
+    let mut d = value;
+    for expected in [1usize, 2, 3, 0] {
+        d = d.differentiate();
+        assert_eq!(
+            d.angle.grade(),
+            expected,
+            "differentiation cycles the grade past ε's first order"
+        );
+    }
+    assert!(
+        d.near_mag(value.mag),
+        "magnitude preserved through the full cycle"
     );
-    assert_eq!(f_cubic_double_prime.mag, 27.0, "magnitude still preserved");
-
-    // for comparison with traditional dual numbers
-    // traditional: f(x+ε) = f(x) + f'(x)ε where ε² = 0
-    // geonum: f.differentiate() rotates by π/2 to encode derivative
-
-    // test with more complex function: f(x) = x² + 2x + 1
-    let f_complex = Geonum::new(x * x + 2.0 * x + 1.0, 0.0, 1.0); // f(3) = 16
-    let f_complex_prime = f_complex.differentiate();
-
-    // f'(x) = 2x + 2 = 8 at x=3
-    // the magnitude is preserved, angle encodes derivative relationship
-    assert_eq!(f_complex_prime.mag, 16.0, "complex function magnitude");
-    assert_eq!(f_complex_prime.angle.grade(), 1, "derivative grade");
-
-    // demonstrate dual number collection for tracking multiple derivatives
-    let f_dual_collection = GeoCollection::from(vec![
-        Geonum::new(x * x, 0.0, 1.0),   // f(x) = x² = 9
-        Geonum::new(2.0 * x, 2.0, 2.0), // manually computed f'(x) = 2x = 6 at π
-    ]);
-
-    // extract function value and derivative
-    let function_value = f_dual_collection[0].mag; // 9
-    let derivative_value = f_dual_collection[1].mag; // 6
-
-    assert_eq!(function_value, 9.0, "f(3) = 9");
-    assert_eq!(derivative_value, 6.0, "f'(3) = 6");
-
-    // verify the dual relationship
-    // in traditional dual numbers: (a + bε)² = a² + 2abε
-    // in geonum: angles encode this relationship geometrically
-
-    let a = Geonum::scalar(3.0);
-    let b_epsilon = Geonum::new(2.0, 2.0, 2.0); // 2ε at angle π
-
-    let dual_sum = a + b_epsilon;
-    let dual_squared = dual_sum * dual_sum;
-
-    // verify the result maintains dual structure
-    assert!(dual_squared.mag > 0.0, "squared dual has magnitude");
-
-    // test chain rule with dual numbers
-    // for f(g(x)), derivative is f'(g(x)) * g'(x)
-
-    let g_x = Geonum::new(2.0 * x, 0.0, 1.0); // g(x) = 2x = 6
-    let f_of_g = Geonum::new(g_x.mag * g_x.mag, 0.0, 1.0); // f(g(x)) = (2x)² = 36
-
-    let f_of_g_prime = f_of_g.differentiate();
-    assert_eq!(
-        f_of_g_prime.angle.grade(),
-        1,
-        "chain rule derivative at grade 1"
-    );
-    assert_eq!(f_of_g_prime.mag, 36.0, "chain rule preserves magnitude");
-
-    // key insight: dual numbers in traditional math require ε² = 0 constraint
-    // geonum achieves this naturally through angle arithmetic
-    // π/2 rotations encode differentiation without special dual algebra
-
-    println!("Dual number autodiff via π/2 rotation:");
-    println!("  f(x) = x² at x=3: {}", f_x.mag);
-    println!("  f'(x) via rotation: grade {}", f_prime.angle.grade());
-    println!("  No ε² = 0 constraint needed");
 }
 
 #[test]
@@ -503,26 +426,10 @@ fn its_a_tensor() {
     );
 
     // === METRIC TENSOR ===
-    // traditional: gᵢⱼ matrix for inner products
-    // geonum: metric emerges from angle relationships
-
-    // minkowski metric: timelike = π angle (negative), spacelike = 0 angle (positive)
-    let timelike = Geonum::new(1.0, 1.0, 1.0); // π angle
-    let spacelike = Geonum::new(1.0, 0.0, 1.0); // 0 angle
-
-    // inner product automatically handles metric signature
-    let interval = timelike * timelike + spacelike * spacelike;
-
-    // timelike² gives negative contribution (cos(π) = -1)
-    // spacelike² gives positive contribution (cos(0) = 1)
-    // both squares have length 1 at angle 0, sum gives length 2
-    assert_eq!(interval.mag, 2.0, "interval magnitude");
-    assert_eq!(interval.angle.rem(), 0.0, "interval at angle 0");
-    assert_eq!(
-        interval.angle.grade(),
-        0,
-        "interval at scalar grade (blade 4)"
-    );
+    // the metric signature is a π rotation, not a matrix of inner products: a basis squares to
+    // + or − by the angle it sits at, and a squared time axis at π/2 lands the negative grade.
+    // that proof lives in spacetime_test::its_a_metric_signature — deferred here so the tensor
+    // suite stays on tensor operations
 
     // === CHRISTOFFEL SYMBOLS ===
     // traditional: Γⁱⱼₖ connection coefficients, O(n³) storage
@@ -657,51 +564,38 @@ fn it_dualizes_log2_geometric_algebra_components() {
 }
 
 #[test]
-fn it_keeps_information_entropy_zero() {
-    // information entropy measures uncertainty or randomness in a system
-    // a key property of geometric numbers is that dualization preserves information
-    // meaning two dual geonums contain exactly the same information
+fn it_dualizes_as_a_magnitude_preserving_involution() {
+    // the dual loses nothing because it is a magnitude-preserving involution: dual(dual(x))
+    // returns x's grade and length untouched, in any dimension, where the Hodge star k→(n−k)
+    // needs the metric and the dimension count. the recovery is not a trivial unrotate — the
+    // dual genuinely moves (a half turn away) and comes back
 
-    // create a geometric number
-    let g1 = Geonum::new(3.0, 2.0, 3.0); // π/3 angle, blade 0 (scalar)
+    let g = Geonum::new(3.0, 2.0, 3.0); // [3, 2π/3], grade 1
+    let d = g.dual(); // adds π, two blades
 
-    // create a dual geometric number
-    // which is perpendicular to the original in angle
-    let g2 = Geonum::new_with_angle(
-        g1.mag,
-        g1.angle + Angle::new(1.0, 2.0), // add π/2 for dual
+    // the dual moved — a half turn away, not the identity dressed up
+    assert!(
+        d.angle.is_opposite(&g.angle),
+        "the dual is a half turn away, a real move"
     );
+    assert!(d.near_mag(g.mag), "and it keeps the length");
 
-    // demonstrate that these dual numbers preserve all original information
-    // we can recover the original from its dual
-    let recovered = Geonum::new_with_angle(
-        g2.mag,
-        g2.angle - Angle::new(1.0, 2.0), // subtract π/2 to recover
+    // dual of dual returns the original grade and magnitude — an involution, nothing lost
+    let back = d.dual();
+    assert_eq!(
+        back.angle.grade(),
+        g.angle.grade(),
+        "dual∘dual returns the grade"
     );
+    assert!(back.near_mag(g.mag), "and the magnitude");
 
-    // test that the recovered geonum equals the original
-    assert!(g1.near_mag(recovered.mag));
-    assert_eq!(g1.angle, recovered.angle);
-
-    // compute the entropy of transformation between the original and its dual
-    // in classical information theory, the entropy formula is: -∑p_i * log2(p_i)
-    // but for a perfect dualization, this equals 0 (no information is lost)
-
-    // reconstruct original data from both geonums
-    let original_data = (g1.mag, g1.angle.grade_angle());
-    let dual_data = (g2.mag, g2.angle.grade_angle() - PI / 2.0);
-
-    // compute difference (represents information loss if any)
-    let length_diff = (original_data.0 - dual_data.0).abs();
-    let angle_diff = (original_data.1 - dual_data.1).abs();
-
-    // test that the entropy is zero (perfect information preservation)
-    assert!(length_diff < EPSILON);
-    assert!(angle_diff < EPSILON);
-
-    // this demonstrates why geonum is so efficient: the dual representation
-    // preserves 100% of the information while enabling O(1) operations
-    // across any number of dimensions, keeping entropy at zero
+    // it holds a million dimensions out, where Hodge's k→(n−k) would need the dimension
+    let hi = Geonum::new_with_angle(3.0, Angle::new_with_blade(1_000_000, 2.0, 3.0));
+    assert_eq!(
+        hi.dual().dual().angle.grade(),
+        hi.angle.grade(),
+        "involutive at any blade, no dimension consulted"
+    );
 }
 
 #[test]
@@ -766,151 +660,76 @@ fn its_a_bernoulli_number() {
 }
 
 #[test]
+fn it_lands_quotients_at_grade_2_and_winds_the_sign_home() {
+    // division carries the inversion's π: 1/z inverts through the unit circle, a π rotation, so
+    // inv() adds two blades and every quotient lands two grades from its dividend. the sign of a
+    // ratio is a position, not a bit — B₄'s −1/30 reads +1/30 once its numerator's π and the
+    // inversion's π wind a full turn home
+
+    // a positive-over-positive quotient lands at grade 2 — the inversion's π, not a negative
+    let quotient = Geonum::scalar(3.0) / Geonum::scalar(4.0);
+    assert!(quotient.near_mag(0.75), "3/4 = 0.75");
+    assert_eq!(
+        quotient.angle.grade(),
+        2,
+        "the quotient carries the inversion's π"
+    );
+
+    // −1 over a positive: the numerator's π plus the inversion's π wind to 2π — a full turn
+    // home to grade 0, so (−1)/30 lands +1/30, a positive on the scalar ray
+    let neg_one = Geonum::new(1.0, 1.0, 1.0); // −1 at angle π
+    let b4 = neg_one / Geonum::scalar(30.0);
+    assert!(b4.near_mag(1.0 / 30.0), "|B₄| = 1/30");
+    assert_eq!(
+        b4.angle.grade(),
+        0,
+        "π (numerator) + π (inversion) = 2π, wound home"
+    );
+
+    // read it as a signed scalar: the grade-0 landing projects to +1/30 — the winding is the sign
+    let signed = b4.mag * b4.angle.grade_angle().cos();
+    assert!(
+        (signed - 1.0 / 30.0).abs() < EPSILON,
+        "the sign is the winding: +1/30 at grade 0"
+    );
+}
+
+#[test]
 fn its_a_quadrature() {
-    // in geonum, quadrature refers to the perpendicular relationship between
-    // a geometric number and its dual (rotated by π/2)
-    // this is fundamental to how geonum represents mathematical operations
+    // quadrature is the quarter turn between a geonum and its dual: cos and sin are one unit
+    // object read a π/2 apart, and that same quarter turn IS differentiation. the quadrature
+    // is why 2 components (length, angle) carry what GA spends 4 on — sin(θ+π/2) = cos(θ)
+    // folds the extra grades back
 
-    // create a function f(x) = x² as a geonum transformation
-    let f = |x: Geonum| -> Geonum {
-        // square the input using geonum's multiplication
-        // for a geonum [r, θ], squaring gives [r², 2θ]
-        x * x
-    };
+    let theta = Angle::new(2.0, 7.0); // some θ = 2π/7
 
-    // exact result for ∫[0,1] x²dx = 1/3
-    let exact_result = 1.0 / 3.0;
-
-    // traditional numerical integration would sample multiple points
-    // but with geonum, we can use the fundamental theorem of calculus directly
-    // since differentiation is just rotation by π/2, integration is rotation by -π/2
-
-    // demonstrate geonum's geometric integration
-    // in geonum, integration rotates by -π/2, which is the inverse of differentiation
-
-    // for the integral ∫x² dx = x³/3, we can demonstrate this geometrically
-
-    // the antiderivative involves x³/3
-    // but the key insight is that integration rotates the result by -π/2
-    let antiderivative = |x: Geonum| -> Geonum {
-        // compute x³/3
-        let x_cubed_over_3 = (x * x * x) / Geonum::new(3.0, 0.0, 1.0);
-        // integrate rotates by -π/2
-        x_cubed_over_3.integrate()
-    };
-
-    // for bounds [0, 1], evaluate F(1) - F(0)
-    let upper = Geonum::new(1.0, 0.0, 1.0);
-    let lower = Geonum::new(0.0, 0.0, 1.0);
-
-    let f_upper = antiderivative(upper);
-    let f_lower = antiderivative(lower);
-
-    // the integral result is the difference
-    // both results are at blade 3 (trivector grade) after integration
-    let result = f_upper - f_lower;
-
-    // the length is 1/3
-    assert!(result.near_mag(exact_result));
-    // integrate() adds 3 blades, so blade 0 → blade 3 for x³/3
-    // then another integrate() adds 3 more: blade 3 → blade 5
-    assert_eq!(result.angle.blade(), 5);
-
-    // demonstrate the quadrature relationship between a function and its derivative
-    let x = Geonum::new(0.5, 0.0, 1.0); // Sample point x = 0.5
-
-    // original function f(x) = x²
-    let _fx = f(x);
-
-    // in geonum, the derivative of a function is related to its quadrature
-    // for f(x) = x², the derivative f'(x) = 2x
-
-    // compute the derivative at x = 0.5 analytically
-    let analytical_derivative = 2.0 * x.mag; // f'(0.5) = 2*0.5 = 1.0
-
-    // for polynomial functions in geonum representation, the derivative
-    // involves both magnitude scaling and angle rotation
-    // for f(x) = x² = [x², 0], the derivative is f'(x) = 2x = [2x, 0]
-    let numerical_derivative = 2.0 * x.mag;
-
-    assert!((numerical_derivative - analytical_derivative).abs() < EPSILON);
-
-    // prove dual representation preserving information
-    // a geonum and its dual (rotated by π/2) preserve all information
-    let g = Geonum::new(0.5, 1.0, 4.0); // π/4
-    let g_dual = Geonum::new_with_angle(
-        g.mag,
-        g.angle + Angle::new(1.0, 2.0), // add π/2
+    // sin(θ + π/2) = cos(θ): the quarter turn maps one onto the other, exactly
+    let (cos_theta, _) = theta.cos_sin();
+    let (_, sin_shifted) = (theta + Angle::new(1.0, 2.0)).cos_sin();
+    assert!(
+        (cos_theta - sin_shifted).abs() < EPSILON,
+        "sin(θ+π/2) = cos(θ) — the quadrature identity"
     );
 
-    // recover original from dual
-    let recovered = Geonum::new_with_angle(
-        g_dual.mag,
-        g_dual.angle - Angle::new(1.0, 2.0), // subtract π/2
+    // that quarter turn is differentiation: a unit object and its derivative are perpendicular
+    let f = Geonum::new_with_angle(1.0, theta);
+    let f_prime = f.differentiate();
+    assert!(
+        f.dot(&f_prime).near_mag(0.0),
+        "f ⊥ f′ — differentiation is the quadrature quarter turn"
     );
 
-    // prove perfect information preservation (zero entropy)
-    assert!(g.near_mag(recovered.mag));
-    assert_eq!(g.angle, recovered.angle);
-
-    // demonstrate O(1) integration regardless of complexity
-    // integration is fundamentally a rotation operation in geonum
-    // this works for any function where the antiderivative can be represented
-
-    // prove the fundamental quadrature relationship between sin and cos
-    // this showcases the true power of geonum's representation
-
-    // in traditional understanding: sin'(x) = cos(x) and cos'(x) = -sin(x)
-    // in geonum, these relationships are represented by a 90° rotation
-
-    // create sin(x) and cos(x) representations
-    let _sin_fn = Geonum::new(1.0, 1.0, 2.0); // Represents sin [1, π/2]
-    let _cos_fn = Geonum::new(1.0, 0.0, 1.0); // Represents cos [1, 0]
-
-    // trigonometric function use in geonum is more nuanced
-    // based on the tests we've seen, we need to understand that:
-    // 1. sin is represented as [1, π/2]
-    // 2. cos is represented as [1, 0]
-    // 3. When we rotate sin by π/2, we get [1, π], which is -1
-
-    // the true quadrature relationship in geonum is that rotating by π/2
-    // represents the operation of differentiation
-    // since sin'(x) = cos(x), let's express that relationship
-
-    // create a point where we calculate these values (e.g., at x = 0)
-    // artifact of geonum automation: kept for conceptual understanding of trigonometric values
-    let _sin_at_zero = Geonum::new(0.0, 1.0, 2.0); // sin(0) = 0
-    let cos_at_zero = Geonum::new(1.0, 0.0, 1.0); // cos(0) = 1
-
-    // instead of testing angle equality after rotation, we'll test
-    // the fundamental relationship between sin and cos functions
-    // sin(x+π/2) = cos(x) for all x
-
-    // prove this at x = 0: sin(0+π/2) = sin(π/2) = 1 = cos(0)
-    let sin_shifted = Geonum::new(1.0, 1.0, 2.0); // sin(π/2) = 1
-
-    // prove sin(π/2) = cos(0) = 1
-    assert!(sin_shifted.near_mag(cos_at_zero.mag));
-
-    // similarly, verify the relationship cos(x+π/2) = -sin(x)
-    // at x = 0: cos(0+π/2) = cos(π/2) = 0 and -sin(0) = 0
-    let cos_shifted = Geonum::new(0.0, 0.0, 1.0); // cos(π/2) = 0
-    let neg_sin_at_zero = Geonum::new(0.0, 3.0, 2.0); // -sin(0) = 0 [angle π/2 + π = 3π/2]
-
-    // test equality of magnitudes (both are 0)
-    assert!(cos_shifted.near_mag(0.0));
-    assert!(neg_sin_at_zero.near_mag(0.0));
-
-    // prove the fundamental quadrature relationship in geonum:
-    // functions that differ by a π/2 phase represent derivatives/integrals of each other
-
-    // this quadrature relationship is what allows geonum to compress 4 components
-    // (1 scalar + 2 vector + 1 bivector) into just 2 components (length and angle)
-    // while preserving all information
-
-    // this demonstrates how integration can be performed in O(1) time
-    // regardless of the function's complexity, by exploiting the
-    // fundamental quadrature relationship in the geonum representation
+    // integration is the inverse quarter turn — it returns f, magnitude and grade intact
+    let recovered = f_prime.integrate();
+    assert_eq!(
+        recovered.angle.grade(),
+        f.angle.grade(),
+        "integrate undoes the quarter turn"
+    );
+    assert!(
+        recovered.near_mag(f.mag),
+        "no magnitude lost across the round trip"
+    );
 }
 
 #[test]

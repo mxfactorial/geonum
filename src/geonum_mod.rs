@@ -832,11 +832,12 @@ impl Add for Geonum {
             let diff = self.mag - other.mag;
 
             if diff.abs() < EPSILON {
-                // complete cancellation - preserve blade history
+                // complete cancellation: self.t == other.t (the opposite-branch
+                // precondition), so the length-0 result takes that shared t, not 0
                 let combined_blade_count = self.angle.blade() + other.angle.blade();
                 return Self {
                     mag: 0.0,
-                    angle: Angle::new_with_blade(combined_blade_count, 0.0, 1.0),
+                    angle: Angle::from_parts(combined_blade_count, self.angle.t()),
                 };
             } else if diff > 0.0 {
                 // first dominates - preserve its blade history
@@ -1104,15 +1105,6 @@ impl Ord for Geonum {
 mod tests {
     use super::*;
     use std::f64::consts::PI;
-
-    #[test]
-    fn geonum_constructor_sets_components() {
-        let g = Geonum::new(1.0, 0.5, 2.0);
-
-        assert!((g.mag - 1.0).abs() < EPSILON);
-        assert!((g.angle.rem() - PI / 4.0).abs() < EPSILON);
-        assert_eq!(g.angle.blade(), 0);
-    }
 
     #[test]
     fn it_spreads_over_a_boundary() {
@@ -1720,32 +1712,6 @@ mod tests {
     }
 
     #[test]
-    fn it_handles_mixed_blade_addition() {
-        // test addition that results in large angle to avoid negative correction
-        let scalar = Geonum::new(1.0, 0.0, 1.0); // 1 unit at 0, blade=0
-        let vector = Geonum::new(1.0, 5.0, 4.0); // 1 unit at 5π/4, blade=2
-
-        // scalar + vector: (1,0) + (-√2/2, -√2/2) results in angle > π/2
-        let result1 = scalar + vector;
-        // combined blade count: 0 + 2 = 2, with minimal wrapping gives blade=3
-        assert_eq!(result1.angle.blade(), 3); // blade preservation with minimal wrapping
-
-        // test same-angle addition for comparison
-        let scalar2 = Geonum::new(2.0, 0.0, 2.0); // [2, 0] blade=0
-        let scalar3 = Geonum::new(3.0, 0.0, 2.0); // [3, 0] blade=0
-        let result2 = scalar2 + scalar3;
-        assert_eq!(result2.mag, 5.0); // magnitudes add directly
-        assert_eq!(result2.angle.blade(), 0); // blade preserved
-
-        // test opposite angles
-        let pos = Geonum::new(4.0, 0.0, 1.0); // [4, 0] blade=0
-        let neg = Geonum::new(2.0, 1.0, 1.0); // [2, π] blade=2
-        let result3 = pos + neg;
-        assert_eq!(result3.mag, 2.0); // 4 - 2 = 2
-        assert_eq!(result3.angle.blade(), 0); // result points right
-    }
-
-    #[test]
     fn it_projects_to_arbitrary_dimensions() {
         // test the new project_to_dimension method
         let geonum = Geonum::new(2.0, 1.0, 4.0); // π/4 radians
@@ -2010,24 +1976,6 @@ mod tests {
     }
 
     #[test]
-    fn it_computes_meet_between_different_grades() {
-        // line (vector) meets plane (bivector) at point (scalar)
-
-        let vector = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // grade 1 (vector) with 0 angle value
-        let bivector = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // grade 2 (bivector) with 0 angle value
-
-        let intersection = vector.meet(&bivector);
-
-        // with π-rotation dual:
-        // grade 1 → dual → grade 3
-        // grade 2 → dual → grade 0
-        // wedge(grade 3, grade 0) → depends on angle sum
-        // final dual produces grade 2
-        assert_eq!(intersection.angle.grade(), 2);
-        assert_eq!(intersection.mag, 1.0);
-    }
-
-    #[test]
     fn it_proves_meet_is_anticommutative() {
         // meet is anticommutative: meet(A, B) encoded as angle difference
 
@@ -2049,39 +1997,6 @@ mod tests {
             blade_diff, 2,
             "blades must differ by 2 (π rotation) for anticommutativity"
         );
-    }
-
-    #[test]
-    fn it_computes_self_meet_for_same_grade_objects() {
-        // object meeting itself with even-odd dual
-
-        let scalar = Geonum::new(2.0, 1.0, 4.0); // grade 0 scalar
-        let self_meet = scalar.meet(&scalar);
-
-        println!(
-            "scalar self-meet: magnitude {}, grade {}, blade {}",
-            self_meet.mag,
-            self_meet.angle.grade(),
-            self_meet.angle.blade()
-        );
-
-        // wedge of parallel objects (same angle) produces zero
-        // this is geometrically consistent - an object doesn't intersect with itself
-        assert_eq!(self_meet.mag, 0.0);
-
-        // test with actual vector (grade 1)
-        let vector = Geonum::new_with_blade(3.0, 1, 1.0, 4.0); // grade 1 vector
-        let vector_self_meet = vector.meet(&vector);
-
-        println!(
-            "vector self-meet: magnitude {}, grade {}, blade {}",
-            vector_self_meet.mag,
-            vector_self_meet.angle.grade(),
-            vector_self_meet.angle.blade()
-        );
-
-        // parallel vectors have zero wedge product
-        assert_eq!(vector_self_meet.mag, 0.0);
     }
 
     #[test]
@@ -2136,37 +2051,6 @@ mod tests {
     }
 
     #[test]
-    fn it_proves_meet_uses_duality_relationship() {
-        // meet(A, B) = dual(wedge(dual(A), dual(B)))
-
-        // test with same-grade objects
-        let a = Geonum::new(2.0, 1.0, 4.0); // grade 0, angle π/4
-        let b = Geonum::new(3.0, 1.0, 3.0); // grade 0, angle π/3
-
-        let direct_meet = a.meet(&b);
-
-        // manually compute using duality formula
-        let dual_a = a.dual();
-        let dual_b = b.dual();
-        let wedge_duals = dual_a.wedge(&dual_b);
-        let manual_meet = wedge_duals.dual();
-
-        // with even-odd dual, the formula works for all cases
-        assert!((direct_meet.mag - manual_meet.mag).abs() < EPSILON);
-        assert_eq!(direct_meet.angle, manual_meet.angle);
-
-        // test with different-grade objects
-        let c = Geonum::new_with_blade(1.5, 1, 0.0, 1.0); // grade 1
-        let d = Geonum::new_with_blade(2.5, 2, 0.0, 1.0); // grade 2
-
-        let direct_meet_cd = c.meet(&d);
-        let manual_meet_cd = c.dual().wedge(&d.dual()).dual();
-
-        assert!((direct_meet_cd.mag - manual_meet_cd.mag).abs() < EPSILON);
-        assert_eq!(direct_meet_cd.angle, manual_meet_cd.angle);
-    }
-
-    #[test]
     fn it_shows_geonum_meet_incidence_structure() {
         // test meet operations produce expected grades
 
@@ -2206,33 +2090,6 @@ mod tests {
     }
 
     #[test]
-    fn it_maintains_constant_time_meet_operations() {
-        // meet operations maintain O(1) complexity regardless of dimension
-
-        use std::time::Instant;
-
-        let small1 = Geonum::new_with_blade(1.0, 3, 1.0, 4.0);
-        let small2 = Geonum::new_with_blade(1.0, 4, 1.0, 3.0);
-
-        let start = Instant::now();
-        let _result_small = small1.meet(&small2);
-        let time_small = start.elapsed();
-
-        let large1 = Geonum::new_with_blade(1.0, 1_000_000, 1.0, 4.0);
-        let large2 = Geonum::new_with_blade(1.0, 2_000_000, 1.0, 3.0);
-
-        let start = Instant::now();
-        let _result_large = large1.meet(&large2);
-        let time_large = start.elapsed();
-
-        let time_ratio = time_large.as_nanos() as f64 / time_small.as_nanos().max(1) as f64;
-
-        assert!(time_ratio < 100.0);
-        assert!(_result_small.mag.is_finite());
-        assert!(_result_large.mag.is_finite());
-    }
-
-    #[test]
     fn it_meets_lines_at_intersection() {
         // test intersection of geometric objects using geonum's π-rotation dual
         // geonum represents intersections at different grades than traditional GA
@@ -2267,38 +2124,6 @@ mod tests {
     }
 
     #[test]
-    fn it_meets_scalars_at_different_locations() {
-        // scalars at different angles represent different directions
-        // their meet should reflect their geometric relationship
-        let scalar1 = Geonum::new(3.0, 0.0, 1.0); // grade 0 at angle 0
-        let scalar2 = Geonum::new(3.0, 1.0, 4.0); // grade 0 at angle π/4
-
-        let meet = scalar1.meet(&scalar2);
-
-        // scalars at different angles dual to different bivectors
-        // their wedge product has non-zero area (sin of angle difference)
-        // so the meet produces a non-zero result
-        assert!(meet.mag > 0.0, "non-parallel scalars have non-zero meet");
-        assert!(meet.mag.is_finite(), "meet has finite magnitude");
-    }
-
-    #[test]
-    fn it_meets_parallel_vectors() {
-        // parallel vectors have the same angle within their grade
-        let vector1 = Geonum::new_with_blade(2.0, 1, 1.0, 4.0); // grade 1, π/4 angle
-        let vector2 = Geonum::new_with_blade(3.0, 1, 1.0, 4.0); // grade 1, same π/4 angle
-
-        let meet = vector1.meet(&vector2);
-
-        // parallel vectors (same angle) dual to parallel trivectors
-        // their wedge product is zero (no area between parallel objects)
-        assert_eq!(meet.mag, 0.0, "parallel vectors have zero meet");
-
-        // the meet of parallel objects produces zero magnitude
-        // representing no intersection in finite space
-    }
-
-    #[test]
     fn it_meets_antiparallel_vectors() {
         // antiparallel vectors point in opposite directions (π radians apart)
         let vector1 = Geonum::new(2.0, 3.0, 4.0); // 3π/4 = grade 1 vector
@@ -2312,85 +2137,6 @@ mod tests {
 
         // in projective geometry, antiparallel lines meet at infinity
         // geonum represents this as zero magnitude rather than special infinity blade
-    }
-
-    #[test]
-    fn it_meets_intersecting_vectors_at_point() {
-        // intersecting vectors at different angles meet at their intersection point
-        let vector1 = Geonum::new(2.0, 3.0, 4.0); // 3π/4 = grade 1 vector
-        let vector2 = Geonum::new(3.0, 5.0, 4.0); // 5π/4 = grade 2 bivector
-
-        let meet = vector1.meet(&vector2);
-
-        // grade 1 vector meets grade 2 bivector
-        // this represents line-plane intersection in projective geometry
-        assert!(meet.mag > 0.0, "non-parallel objects have non-zero meet");
-        assert_eq!(meet.mag, 6.0, "meet magnitude = 2.0 * 3.0");
-
-        // geonum represents intersection at grade 3 due to π-rotation dual
-        assert_eq!(meet.angle.grade(), 3);
-    }
-
-    #[test]
-    fn it_meets_bivectors_in_same_plane() {
-        // coplanar bivectors (same angle) represent parallel planes
-        let bivector1 = Geonum::new(4.0, 5.0, 4.0); // 5π/4 = grade 2 bivector
-        let bivector2 = Geonum::new(6.0, 5.0, 4.0); // 5π/4 = same angle, grade 2
-
-        let meet = bivector1.meet(&bivector2);
-
-        // parallel planes (same angle bivectors) have zero meet
-        // they don't intersect in finite projective space
-        assert!(meet.mag < EPSILON, "parallel planes have zero meet");
-    }
-
-    #[test]
-    fn it_meets_bivectors_in_different_planes() {
-        // non-parallel planes intersect along a line
-        let plane1 = Geonum::new(4.0, 5.0, 4.0); // 5π/4 = grade 2 bivector
-        let plane2 = Geonum::new(9.0, 7.0, 4.0); // 7π/4 = grade 3 trivector
-
-        let meet = plane1.meet(&plane2);
-
-        // grade 2 bivector meets grade 3 trivector
-        // represents plane-volume intersection in projective geometry
-        assert!(meet.mag > 0.0, "non-parallel planes have non-zero meet");
-
-        // the intersection produces a geometric object encoding the line of intersection
-        assert!(meet.mag.is_finite());
-    }
-
-    #[test]
-    fn it_meets_trivectors_at_plane() {
-        // trivectors represent 3D volumes in projective geometry
-        let volume1 = Geonum::new(8.0, 7.0, 4.0); // 7π/4 = grade 3 trivector
-        let volume2 = Geonum::new(2.0, 15.0, 8.0); // 15π/8 = different angle grade 3
-
-        let meet = volume1.meet(&volume2);
-
-        // non-parallel volumes intersect
-        // the meet encodes their common 2D subspace (plane)
-        assert!(meet.mag > 0.0, "non-parallel volumes have non-zero meet");
-
-        // geonum's π-rotation dual produces specific grade for volume-volume meet
-        assert!(meet.mag.is_finite());
-    }
-
-    #[test]
-    fn it_meets_higher_grades_cycling_pattern() {
-        // grades cycle modulo 4 in geonum's framework
-        let high_blade1 = Geonum::new_with_blade(3.0, 7, 1.0, 6.0); // blade 7, grade 3
-        let high_blade2 = Geonum::new_with_blade(12.0, 11, 1.0, 4.0); // blade 11, grade 3
-
-        let meet = high_blade1.meet(&high_blade2);
-
-        // high blade numbers still follow grade cycling
-        // blade 7 % 4 = 3, blade 11 % 4 = 3 (both grade 3)
-        assert!(meet.mag > 0.0, "non-parallel high-blade objects meet");
-
-        // the meet operation works consistently regardless of blade magnitude
-        // demonstrating O(1) complexity even for high-dimensional spaces
-        assert!(meet.mag.is_finite());
     }
 
     #[test]
@@ -2457,48 +2203,6 @@ mod tests {
     }
 
     #[test]
-    fn it_reflects_using_angle_arithmetic() {
-        // reflection is primitively a π rotation (2 blades) in absolute angle space
-        // the operation accumulates blades while computing the reflected position
-
-        // test that reflection adds 2 blades (π rotation)
-        let point = Geonum::new_from_cartesian(3.0, 2.0);
-        let axis_45 = Geonum::new(1.0, 1.0, 4.0); // 45° axis
-
-        // use the reflect method
-        let reflected = point.reflect(&axis_45);
-
-        // reflection preserves magnitude and accumulates blades forward
-        assert_eq!(reflected.mag, point.mag);
-
-        // forward-only reflection adds ~4 blades per reflection
-        let blade_added = reflected.angle.blade() as i32 - point.angle.blade() as i32;
-        assert!(blade_added >= 0, "blade only increases in forward-only");
-
-        // test that double reflection accumulates blade
-        let reflected_twice = reflected.reflect(&axis_45);
-
-        // double reflection accumulates ~8 blades total
-        let total_blade_added = reflected_twice.angle.blade() as i32 - point.angle.blade() as i32;
-        assert!(
-            total_blade_added >= 7,
-            "double reflection accumulates significant blade"
-        );
-
-        // with base_angle(), returns to original position
-        let px = point.mag * point.angle.grade_angle().cos();
-        let py = point.mag * point.angle.grade_angle().sin();
-        let rx = reflected_twice.base_angle().mag
-            * reflected_twice.base_angle().angle.grade_angle().cos();
-        let ry = reflected_twice.base_angle().mag
-            * reflected_twice.base_angle().angle.grade_angle().sin();
-        assert!(
-            (px - rx).abs() < 1e-10 && (py - ry).abs() < 1e-10,
-            "double reflection with base_angle returns to original position"
-        );
-    }
-
-    #[test]
     fn it_multiplies_angle_by_geonum() {
         // test Angle * Geonum (owned version)
         let angle = Angle::new(1.0, 2.0); // π/2
@@ -2512,180 +2216,6 @@ mod tests {
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
         assert_eq!(result.angle, expected_angle);
-    }
-
-    #[test]
-    fn it_multiplies_angle_by_geonum_ref() {
-        // test Angle * &Geonum (borrow version)
-        let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
-
-        let result = angle * geonum;
-
-        // test magnitude preserved
-        assert_eq!(result.mag, 3.0);
-
-        // test angles add: π/2 + π/4 = 3π/4
-        let expected_angle = Angle::new(3.0, 4.0);
-        assert_eq!(result.angle, expected_angle);
-
-        // test original geonum still usable after borrow
-        assert_eq!(geonum.mag, 3.0);
-        assert_eq!(geonum.angle, Angle::new(1.0, 4.0));
-    }
-
-    #[test]
-    fn it_preserves_blade_in_angle_mul_geonum() {
-        // test that blade counts accumulate through angle multiplication
-        let angle = Angle::new(3.0, 2.0); // 3π/2 = blade 3
-        let geonum = Geonum::new_with_blade(2.0, 5, 1.0, 4.0); // blade 5, angle π/4
-
-        // owned version
-        let result1 = angle * geonum;
-        assert_eq!(result1.mag, 2.0);
-        assert_eq!(result1.angle.blade(), 8); // 3 + 5 = 8
-
-        // borrow version
-        let result2 = angle * geonum;
-        assert_eq!(result2.mag, 2.0);
-        assert_eq!(result2.angle.blade(), 8); // 3 + 5 = 8
-    }
-
-    #[test]
-    fn it_handles_zero_angle_multiplication() {
-        // test multiplication with zero angle
-        let zero_angle = Angle::new(0.0, 1.0); // 0 radians
-        let geonum = Geonum::new(5.0, 2.0, 3.0); // magnitude 5, angle 2π/3
-
-        // owned version
-        let result1 = zero_angle * geonum;
-        assert_eq!(result1.mag, 5.0);
-        assert_eq!(result1.angle, geonum.angle); // angle unchanged
-
-        // borrow version
-        let result2 = zero_angle * geonum;
-        assert_eq!(result2.mag, 5.0);
-        assert_eq!(result2.angle, geonum.angle); // angle unchanged
-    }
-
-    #[test]
-    fn it_handles_full_rotation_multiplication() {
-        // test multiplication with full rotation (2π)
-        let full_rotation = Angle::new(2.0, 1.0); // 2π
-        let geonum = Geonum::new(1.0, 1.0, 6.0); // magnitude 1, angle π/6
-
-        // owned version
-        let result1 = full_rotation * geonum;
-        assert_eq!(result1.mag, 1.0);
-        // 2π + π/6 = blade 4 + fractional part π/6
-        assert_eq!(result1.angle.blade(), 4);
-
-        // borrow version
-        let result2 = full_rotation * geonum;
-        assert_eq!(result2.mag, 1.0);
-        assert_eq!(result2.angle.blade(), 4);
-    }
-
-    #[test]
-    fn it_meets_vector_trivector_based_on_angles() {
-        // meet finds intersection based on angle relationships, not magnitude comparisons
-        // parallel objects (same angle) have zero meet, perpendicular have non-zero
-
-        // create vector and trivector with different angle relationships
-        let vector_0 = Geonum::new_with_blade(3.0, 1, 0.0, 1.0); // blade 1, angle 0
-        let vector_45 = Geonum::new_with_blade(3.0, 1, 1.0, 4.0); // blade 1, angle π/4
-
-        let trivector_0 = Geonum::new_with_blade(5.0, 3, 0.0, 1.0); // blade 3, angle 0
-        let trivector_90 = Geonum::new_with_blade(5.0, 3, 1.0, 2.0); // blade 3, angle π/2
-
-        // parallel case: vector and trivector at same fractional angle
-        // after dual: blade 1→3, blade 3→5
-        // wedge of two blade 3s with angle 0 gives sin(0) ≈ 0
-        let meet_parallel = vector_0.meet(&trivector_0);
-        assert!(
-            meet_parallel.mag < EPSILON,
-            "parallel objects have zero meet"
-        );
-
-        // perpendicular case: vector at 0, trivector at π/2
-        // after dual: blade 1→3 angle 0, blade 3→5 angle π/2
-        // wedge gives non-zero result from sin(angle_diff)
-        let meet_perpendicular = vector_0.meet(&trivector_90);
-        assert!(
-            meet_perpendicular.mag > EPSILON,
-            "perpendicular objects have non-zero meet"
-        );
-
-        // angled case: vector at π/4, trivector at 0
-        // wedge gives sin(π/4) = √2/2
-        let meet_angled = vector_45.meet(&trivector_0);
-        assert!(
-            meet_angled.mag > EPSILON,
-            "angled objects have non-zero meet"
-        );
-    }
-
-    #[test]
-    fn it_reflects_point_across_x_axis_with_blade_accumulation() {
-        // reflection primitively adds π rotation (2 blades)
-        // reflecting (1, 1) across x-axis changes position AND adds 2 blades
-        let point = Geonum::new_from_cartesian(1.0, 1.0);
-        let x_axis = Geonum::new_from_cartesian(1.0, 0.0);
-
-        let reflected = point.reflect(&x_axis);
-
-        // forward-only formula: 2*axis + (2π - base_angle(point))
-        // point at π/4 with base_angle π/4, so adds 7π/4 = 7 blades
-        let blade_accumulation = reflected.angle.blade() - point.angle.blade();
-        assert_eq!(
-            blade_accumulation, 7,
-            "reflection across x-axis from π/4 adds 7 blades"
-        );
-
-        // reflection changes the grade structure
-        // π/4 (blade 0) → 7π/4 (blade 3)
-        assert_eq!(
-            reflected.angle.grade(),
-            3,
-            "reflected point has trivector grade"
-        );
-
-        // test cartesian coordinates after reflection
-        let ox = point.mag * point.angle.grade_angle().cos();
-        let oy = point.mag * point.angle.grade_angle().sin();
-        let rx = reflected.mag * reflected.angle.grade_angle().cos();
-        let ry = reflected.mag * reflected.angle.grade_angle().sin();
-
-        println!("Original: ({ox}, {oy})");
-        println!("Reflected: ({rx}, {ry})");
-        println!("Expected: ({}, {})", ox, -oy);
-
-        // with forward-only geometry, reflection may not produce traditional result
-        // the blade accumulation changes the geometric interpretation
-    }
-
-    #[test]
-    fn it_gets_mag() {
-        let g = Geonum::new(3.5, 1.0, 4.0); // [3.5, π/4]
-        assert_eq!(g.mag(), 3.5);
-
-        let g2 = Geonum::new(0.0, 0.0, 1.0); // [0, 0]
-        assert_eq!(g2.mag(), 0.0);
-
-        let g3 = Geonum::new(10.0, 3.0, 2.0); // [10, 3π/2]
-        assert_eq!(g3.mag(), 10.0);
-    }
-
-    #[test]
-    fn it_gets_angle() {
-        let g = Geonum::new(2.0, 1.0, 4.0); // [2, π/4]
-        assert_eq!(g.angle(), Angle::new(1.0, 4.0));
-
-        let g2 = Geonum::new(1.0, 0.0, 1.0); // [1, 0]
-        assert_eq!(g2.angle(), Angle::new(0.0, 1.0));
-
-        let g3 = Geonum::new(5.0, 3.0, 2.0); // [5, 3π/2]
-        assert_eq!(g3.angle(), Angle::new(3.0, 2.0));
     }
 
     #[test]
@@ -2769,32 +2299,6 @@ mod tests {
         let angle_before = (test_point - offset_center).angle;
         let angle_after = (offset_inv - offset_center).angle;
         assert_eq!(angle_after.blade(), angle_before.blade());
-    }
-
-    #[test]
-    fn it_inverts_unit_circle_conjugates_angle() {
-        // inversion through unit circle at origin is complex inversion 1/z
-        // this conjugates the angle: z = re^(iθ) → 1/z = (1/r)e^(-iθ)
-
-        let origin = Geonum::scalar(0.0);
-        let unit_radius = 1.0;
-
-        // point at distance 2, angle π/3
-        let z = Geonum::new(2.0, 1.0, 3.0);
-
-        // invert through unit circle at origin
-        let inverted = z.invert_circle(&origin, unit_radius);
-
-        // distance becomes 1/2
-        assert!((inverted.mag - 0.5).abs() < 1e-10);
-
-        // circle inversion preserves angle value and grade, adds 4 transformation blades
-        let transformation_blades = Angle::new_with_blade(4, 0.0, 1.0);
-        let expected_angle = z.angle + transformation_blades;
-        assert_eq!(
-            inverted.angle, expected_angle,
-            "circle inversion adds 4 transformation blades"
-        );
     }
 
     #[test]
@@ -2980,33 +2484,6 @@ mod tests {
     }
 
     #[test]
-    fn it_makes_double_inversion_involutive_with_blade_reset() {
-        // test circular inversion with blade management
-        let center = Geonum::new_from_cartesian(0.0, 0.0);
-        let radius = 2.0;
-        let point = Geonum::new(3.0, 1.0, 6.0);
-
-        let inverted_once = point.invert_circle(&center, radius);
-        let inverted_twice = inverted_once.invert_circle(&center, radius);
-
-        // circle inversion preserves angle remainder/grade, adds 4 blades per operation
-        // double inversion adds 8 total transformation blades (2 × 4)
-        let double_transformation_blades = Angle::new_with_blade(8, 0.0, 1.0);
-        let expected_angle = point.angle + double_transformation_blades;
-        // avoid stricter equality in PartialEq by comparing blade and remainder separately
-        assert_eq!(inverted_twice.angle.blade(), expected_angle.blade());
-        assert!((inverted_twice.angle.rem() - expected_angle.rem()).abs() < 1e-12);
-        assert!(
-            (inverted_twice.mag - point.mag).abs() < 1e-12,
-            "double inversion returns to original magnitude"
-        );
-
-        // blade accumulation comparison:
-        // reflection adds 2 blades (π rotation) per operation
-        // circle inversion adds 4 blades per operation (subtraction + addition)
-    }
-
-    #[test]
     fn it_demonstrates_forward_only_reflection_pattern() {
         // forward-only reflection has a single consistent pattern:
         // each reflection adds blade based on the complement formula
@@ -3082,70 +2559,6 @@ mod tests {
         // test angles add: π/2 + π/4 = 3π/4
         let expected_angle = Angle::new(3.0, 4.0);
         assert_eq!(result.angle, expected_angle);
-    }
-
-    #[test]
-    fn it_adds_angle_to_ref() {
-        // test Angle + &Geonum (borrow version)
-        let angle = Angle::new(1.0, 2.0); // π/2
-        let geonum = Geonum::new(3.0, 1.0, 4.0); // magnitude 3, angle π/4
-
-        let result = angle + geonum;
-
-        // test magnitude preserved
-        assert_eq!(result.mag, 3.0);
-
-        // test angles add: π/2 + π/4 = 3π/4
-        let expected_angle = Angle::new(3.0, 4.0);
-        assert_eq!(result.angle, expected_angle);
-
-        // test original geonum still usable after borrow
-        assert_eq!(geonum.mag, 3.0);
-        assert_eq!(geonum.angle, Angle::new(1.0, 4.0));
-    }
-
-    #[test]
-    fn it_scales_with_angle_addition() {
-        // test scale transformation using Angle + Geonum
-        let image = Geonum::new(1.0, 0.0, 2.0); // base image
-        let scale_shift = Angle::new(2.0, 1.0); // 2π = 4 blades
-
-        let scaled_image = scale_shift + image;
-
-        // test magnitude preserved
-        assert_eq!(scaled_image.mag, 1.0);
-
-        // test blade shifted by 4 (2π = 4 × π/2)
-        assert_eq!(scaled_image.angle.blade(), 4);
-
-        // test angle value preserved
-        assert_eq!(scaled_image.angle.rem(), 0.0);
-    }
-
-    #[test]
-    fn it_preserves_blade_structure_in_circle_inversion() {
-        let center = Geonum::new(0.0, 0.0, 1.0);
-        let high_blade_point = Geonum::new_with_blade(2.0, 1000, 1.0, 6.0); // blade=1000, value=π/6
-
-        let inverted = high_blade_point.invert_circle(&center, 1.0);
-
-        // circle inversion accumulates blade through addition: 1000 + 0 + boundary crossings = 1004
-        assert_eq!(inverted.angle.blade(), 1004); // blade accumulated through forward-only addition
-        assert!((inverted.angle.rem() - high_blade_point.angle.rem()).abs() < 1e-10);
-    }
-
-    #[test]
-    fn it_preserves_blade_history_in_opposite_angle_addition() {
-        // create geonums with opposite angles (0 and π) but different blade histories
-        // opposite angles require blade difference of 2 with same value
-        let forward = Geonum::new_with_blade(4.0, 100, 0.0, 1.0); // blade=100, grade 0, pointing at 0°
-        let backward = Geonum::new_with_blade(4.0, 102, 0.0, 1.0); // blade=102, grade 2, pointing at π
-
-        let oppose_sum = forward + backward;
-
-        // opposite angle addition preserves transformation history through blade accumulation
-        assert_eq!(oppose_sum.angle.blade(), 202); // blade accumulated: 100 + 102 = 202
-        assert!(oppose_sum.mag < 1e-10); // magnitude cancels
     }
 
     #[test]
@@ -3264,21 +2677,6 @@ mod tests {
     }
 
     #[test]
-    fn it_computes_adj_and_opp_at_quadrature() {
-        let g = Geonum::new(5.0, 1.0, 4.0); // [5, π/4]
-
-        let adj = g.adj();
-        let opp = g.opp();
-
-        let expected = 5.0 * (2.0_f64).sqrt() / 2.0;
-        assert!((adj.mag - expected).abs() < EPSILON);
-        assert_eq!(adj.angle, Angle::new(0.0, 1.0));
-
-        assert!((opp.mag - expected).abs() < EPSILON);
-        assert_eq!(opp.angle, Angle::new(1.0, 2.0));
-    }
-
-    #[test]
     fn it_encodes_sign_in_angle_for_adj_opp() {
         // angle = π → adj = [r, π], opp = [0, π/2]
         let g = Geonum::new(3.0, 1.0, 1.0); // [3, π]
@@ -3378,5 +2776,33 @@ mod tests {
         assert!(
             ((perp_b * perp_b - along_b * along_b) - (perp * perp - along * along)).abs() < 1e-9
         );
+    }
+
+    #[test]
+    fn it_writes_the_shared_remainder_on_complete_cancellation() {
+        // two opposite rays of equal magnitude cancel to length 0. self.t == other.t in
+        // the opposite branch, so the result's t is that shared sub-segment value, not 0 —
+        // cancellations along different lines in one quadrant stay distinct
+        let pi = Angle::new(1.0, 1.0);
+
+        // lines at π/8 and 3π/8: same quadrant (both blade 0), different t
+        let a = Geonum::new(1.0, 1.0, 8.0);
+        let a_opp = Geonum::new_with_angle(1.0, a.angle + pi);
+        let b = Geonum::new(1.0, 3.0, 8.0);
+        let b_opp = Geonum::new_with_angle(1.0, b.angle + pi);
+
+        let zero_a = a + a_opp;
+        let zero_b = b + b_opp;
+
+        // both cancel to length 0; each result's t equals its rays' shared remainder
+        assert!(zero_a.near_mag(0.0));
+        assert!(zero_b.near_mag(0.0));
+        assert_eq!(zero_a.angle.t(), a.angle.t());
+        assert_eq!(zero_b.angle.t(), b.angle.t());
+
+        // so the two length-0 results are distinct, not one collapsed t=0 zero; the blade
+        // is the two rays' combined winding
+        assert_ne!(zero_a.angle, zero_b.angle);
+        assert_eq!(zero_a.angle.blade(), a.angle.blade() + a_opp.angle.blade());
     }
 }

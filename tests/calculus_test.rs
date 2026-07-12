@@ -762,40 +762,37 @@ fn it_shows_subtraction_in_fundamental_theorem_is_interference() {
 
 #[test]
 fn it_encodes_definite_integrals_with_value_and_domain() {
-    // traditional: ∫₂⁵ x² dx = 39 (value only)
-    // angle space: [magnitude=39, angle=3π] — value AND domain in one geonum
+    // ∫₂⁵ x² dx = 39, but the scalar keeps only the value and drops the domain [2,5] it ran
+    // over. the geonum carries both: the value in the magnitude, the domain span b−a in the
+    // angle. and the value is not hand-subtracted — F(b) − F(a) is geonum subtraction, the
+    // "minus" a π rotation that interferes the endpoints, the way the FTC test does it above
 
-    let a: f64 = 2.0;
-    let b: f64 = 5.0;
-    let traditional = (b.powi(3) - a.powi(3)) / 3.0; // 39
+    let (a, b): (f64, f64) = (2.0, 5.0);
 
-    // encode bounds as angles
-    let angle_a = Angle::new(a, 1.0); // 2π
-    let angle_b = Angle::new(b, 1.0); // 5π
+    // the antiderivative of x² is x³/3, read at the two endpoints on the scalar ray
+    let f_a = Geonum::new(a.powi(3) / 3.0, 0.0, 1.0); // F(2) = 8/3
+    let f_b = Geonum::new(b.powi(3) / 3.0, 0.0, 1.0); // F(5) = 125/3
 
-    // antiderivative values with angle encoding
-    let f_a = Geonum::new_with_angle(a.powi(3) / 3.0, angle_a);
-    let f_b = Geonum::new_with_angle(b.powi(3) / 3.0, angle_b);
-
-    // magnitude encodes the integral value
-    let value = f_b.mag - f_a.mag;
+    // F(b) − F(a): subtraction negates F(a) to angle π and interferes — the value falls out
+    let value = f_b - f_a;
     assert!(
-        (value - traditional).abs() < EPSILON,
-        "magnitude = integral value = 39"
+        value.near_mag(39.0),
+        "∫₂⁵ x² dx = 39 by endpoint interference"
+    );
+    assert_eq!(value.angle.grade(), 0, "a positive value on the scalar ray");
+
+    // the domain the scalar forgot is the span b − a, carried as an angle — three half-turns
+    let domain = Angle::new(b, 1.0) - Angle::new(a, 1.0); // 5π − 2π = 3π
+    assert_eq!(
+        domain,
+        Angle::new(3.0, 1.0),
+        "the angle carries the domain span, 3π"
     );
 
-    // angle encodes the integration domain
-    let domain = f_b.angle - f_a.angle;
-    let expected_domain = Angle::new(b - a, 1.0); // 3π
-    assert_eq!(domain, expected_domain, "angle encodes domain span 3π");
-
-    // the complete encoding
-    let integral = Geonum::new_with_angle(value, domain);
-    assert!(
-        (integral.mag - 39.0).abs() < EPSILON,
-        "magnitude: integral value"
-    );
-    assert_eq!(integral.angle, Angle::new(3.0, 1.0), "angle: domain span");
+    // one geonum holds both — the value the scalar keeps and the domain it drops
+    let integral = Geonum::new_with_angle(value.mag, domain);
+    assert!(integral.near_mag(39.0), "value in the magnitude");
+    assert_eq!(integral.angle, Angle::new(3.0, 1.0), "domain in the angle")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

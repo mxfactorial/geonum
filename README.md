@@ -8,7 +8,7 @@
 [![docs](https://docs.rs/geonum/badge.svg)](https://docs.rs/geonum)
 [![dependency status](https://deps.rs/repo/github/mxfactorial/geonum/status.svg)](https://deps.rs/repo/github/mxfactorial/geonum)
 [![crates.io](https://img.shields.io/crates/v/geonum.svg)](https://crates.io/crates/geonum)
-[![Discord](https://img.shields.io/discord/868565277955203122.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/KQdC65bG)
+[![Discord](https://img.shields.io/discord/1519537430414495845.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/rPyRAbwK3)
 [![contribute](https://img.shields.io/badge/contribute-paypal-brightgreen.svg)](https://www.paypal.com/paypalme/mxfactorial)
 </div>
 
@@ -28,7 +28,7 @@ with most requiring "sparsity" to conceal how many explicit zeros appear declari
 
 the omission of geometry is so extreme at this point its suspicious
 
-now your number must hobble through a prison of complicated "matrix" and "tensor" operations computing expensive dot & cross products in a scalar-dimension chain gang with other "linearly independent" scalars—only to reconstruct the simple detail of the direction its facing
+now your number hobbles through a prison of complicated "matrix" and "tensor" operations computing expensive dot & cross products in a scalar-dimension chain gang with other "linearly independent" scalars—only to reconstruct the simple detail of the direction its facing
 
 and if you want to change its rate of motion, it must freeze all other scalar dimensions in a "partial derivative" with even more zeros
 
@@ -143,17 +143,23 @@ affine_test.rs
 algebra_test.rs
 algorithms_test.rs
 angle_arithmetic_test.rs
+anomaly_test.rs
 arithmetic_test.rs
 astrophysics_test.rs
+atomic_clock_test.rs
 calculus_test.rs
 category_theory_test.rs
 cga_test.rs
 chem_constants_test.rs
 chemistry_test.rs
 computer_vision_test.rs
+control_test.rs
+convolution_test.rs
 cosmology_test.rs
+crystallography_test.rs
 curve_test.rs
 dimension_test.rs
+directional_stats_test.rs
 economics_test.rs
 einstein_test.rs
 em_field_theory_test.rs
@@ -161,11 +167,15 @@ exponential_test.rs
 fem_test.rs
 field_test.rs
 finance_test.rs
+fluid_test.rs
+gauss_bonnet_test.rs
 geocollection_test.rs
 geometry_test.rs
 grade_test.rs
 gravitational_wave_test.rs
+holonomy_test.rs
 integral_test.rs
+interferometer_test.rs
 linear_algebra_test.rs
 machine_learning_test.rs
 mechanics_test.rs
@@ -173,25 +183,36 @@ ml_attention_test.rs
 ml_training_test.rs
 monetary_policy_test.rs
 motion_laws_test.rs
+multivalued_test.rs
 multivector_test.rs
+music_test.rs
 numbers_test.rs
 optics_test.rs
 optimization_test.rs
 orbit_test.rs
 pga_test.rs
+phasor_test.rs
 projection_test.rs
 pseudoscalar_test.rs
 qm_test.rs
+quantum_computing_test.rs
 quaternion_test.rs
 rendering_test.rs
+renormalization_test.rs
 robotics_test.rs
+sampling_test.rs
 schwarzschild_test.rs
 set_theory_test.rs
+smith_chart_test.rs
 spacetime_test.rs
+spinor_test.rs
 sr_gr_collapse_test.rs
+stability_test.rs
 taylor_series_test.rs
 tensor_test.rs
+thermo_test.rs
 trigonometry_test.rs
+whisper_test.rs
 ```
 
 ### benches
@@ -323,15 +344,12 @@ so:
 
 - a 1d number or scalar: `[4, 0]`
     - 4 units long facing 0 radians
-- a 2d number or vector: `[[4, 0], [4, pi/2]]`
-    - one component 4 units at 0 radians
-    - one component 4 units at pi/2 radians
-- a 3d number: `[[4, 0], [4, pi/2], [4, pi]]`
-    - one component 4 units at 0 radians
-    - one component 4 units at pi/2 radians
-    - one component 4 units at pi radians
+- a 2d number or vector: `[4, pi/2]`
+    - the same 4 units, one quarter turn on
+- a 3d number: `[4, pi]`
+    - two quarter turns — still two components, not three
 
-higher dimensions just keep adding components rotated by +pi/2 each time
+higher dimensions just keep rotating by +pi/2 — the millionth dimension costs the same two components as the first
 
 dimensions are created by rotations and not stacking coordinates
 
@@ -402,15 +420,15 @@ geometric numbers build dimensions by rotating—not stacking
     - tests/numbers_test.rs
       - its_a_scalar:8-36
       - its_a_vector:39-72
-      - its_a_real_number:75-108
-      - its_an_imaginary_number:111-139
-      - its_a_complex_number:142-174
-      - its_a_dual_number:177-295
-      - its_an_octonion:298-318
-      - its_a_matrix:321-375
-      - its_a_tensor:378-572
-      - it_dualizes_log2_geometric_algebra_components:624-657
-      - its_a_clifford_number:917-997
+      - its_a_real_number:75-103
+      - its_an_imaginary_number:106-134
+      - its_a_complex_number:137-169
+      - its_a_dual_number:172-218
+      - its_an_octonion:221-241
+      - its_a_matrix:244-298
+      - its_a_tensor:301-479
+      - it_dualizes_log2_geometric_algebra_components:531-564
+      - its_a_clifford_number:736-816
 
     - tests/pseudoscalar_test.rs
       - it_solves_the_exponential_complexity_explosion:18-79
@@ -433,20 +451,20 @@ geometric numbers build dimensions by rotating—not stacking
       - it_shows_factorial_emerges_from_angle_descent:501-542
       - it_proves_differentiation_cycles_grades:586-664
       - it_proves_fundamental_theorem_is_accumulation_equals_interference:704-743
-      - its_a_gradient:806-853
-      - its_a_laplacian:856-902
-      - its_a_line_integral:909-931
-      - its_a_surface_integral:934-948
+      - its_a_gradient:803-850
+      - its_a_laplacian:853-899
+      - its_a_line_integral:906-928
+      - its_a_surface_integral:931-945
 
     - tests/mechanics_test.rs
-      - it_changes_kinematic_level_by_cycling_grade:46-193
-      - it_encodes_velocity:268-321
-      - it_encodes_acceleration:324-362
-      - it_encodes_jerk:365-412
-      - it_encodes_kinetic_energy:959-1044
-      - it_handles_energy_conservation:1783-1939
-      - it_handles_momentum_conservation:1942-2050
-      - it_handles_angular_momentum_conservation:2053-2157
+      - it_cycles_the_kinematic_hierarchy_through_grades:30-53
+      - it_carries_its_own_motion_in_the_quarter_turn:56-105
+      - it_grows_displacement_quadratically_from_derived_acceleration:108-145
+      - it_reads_kinematic_level_off_grade_not_blade:148-166
+      - it_dots_velocity_into_kinetic_energy:266-289
+      - it_conserves_energy_as_the_phase_magnitude:556-597
+      - it_conserves_momentum_because_the_interaction_forces_are_pi_apart:437-464
+      - it_conserves_angular_momentum_because_the_wedge_is_antisymmetric:467-503
 
     create tests/my_test.rs with use geonum::*;
     ```

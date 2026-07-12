@@ -23,9 +23,6 @@
 // it straight off, no atan2, no cartesian round-trip.
 
 use geonum::*;
-use std::f64::consts::PI;
-
-const TAU: f64 = 2.0 * PI;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PART 1 — THE MONOMIAL: counting, no winding integral needed
@@ -81,32 +78,27 @@ fn it_multiplies_angles() {
 
 #[test]
 fn it_sweeps_n_times_as_theta_sweeps_once() {
-    // as θ goes 0 → 2π, nθ goes 0 → n×2π: the output angle wraps past 0 exactly n times
+    // as θ goes 0 → 2π, nθ goes 0 → n×2π: the output's blade climbs four
+    // quarter-turns per wrap, monotonically, and lands at exactly 4n — the
+    // wrap count read off storage, no crossing watched for
     let samples = 3600;
 
-    for n in 1..=8 {
-        let mut crossings = 0;
-        let mut prev: Option<f64> = None;
-
+    for n in 1..=8usize {
+        let mut prev_blade = 0;
         for i in 0..=samples {
             // θ = (2i/samples)·π — swept once around the circle
-            let angle = unit(2.0 * i as f64 / samples as f64, 1.0)
+            let blade = unit(2.0 * i as f64 / samples as f64, 1.0)
                 .pow(n as f64)
                 .angle
-                .grade_angle();
-
-            if let Some(p) = prev {
-                // a crossing: the output angle wraps past 0
-                if p > TAU * 0.9 && angle < TAU * 0.1 {
-                    crossings += 1;
-                }
-            }
-            prev = Some(angle);
+                .blade();
+            assert!(blade >= prev_blade, "degree {n}: the winding only climbs");
+            prev_blade = blade;
         }
 
         assert_eq!(
-            crossings, n,
-            "degree {n}: output wrapped {crossings} times (expected {n})"
+            prev_blade,
+            4 * n,
+            "degree {n}: the sweep stored 4n quarter-turns — n full wraps"
         );
     }
 }
@@ -254,10 +246,10 @@ fn it_shows_i_squared_is_minus_one_as_angle_addition() {
 // PART 2 — THE GENERAL POLYNOMIAL: the winding number
 //
 // p(z) is a sum of monomials, so its angle is nθ only to leading order. the winding
-// number recovers the count anyway: sweep z around a circle, accumulate the change in
-// the OUTPUT angle, divide by 2π. on a large circle it reads the degree; shrink past a
-// root and it drops by one. the output direction is read straight off grade_angle —
-// the same angle the monomial section counts, now summed around a path.
+// number recovers the count anyway: sweep z around a circle and watch the output's
+// grade — its quadrant address — walk the four-step cycle; the net walks are the
+// winding. on a large circle it reads the degree; shrink past a root and it drops by
+// one — the count the monomial section reads off the blade, now counted around a path.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// a real coefficient: positive sits at angle 0, negative at π — sign IS the angle
@@ -282,33 +274,33 @@ fn eval_poly(coeffs: &[Geonum], z: Geonum) -> Geonum {
 }
 
 /// winding number of p(z) around the origin on a circle of given radius: sweep z = [r, θ]
-/// once around, accumulate the signed change in the output's direction (grade_angle, read
-/// straight off the angle), and divide the total by 2π
+/// once around and watch the output's GRADE — its quadrant address — walk the four-step
+/// cycle. forward steps count +1 quarter, backward −1, and the winding is the net walks
+/// around the cycle: an integer by counting, no angle unwrapped, no rounding
 fn winding_number(coeffs: &[Geonum], radius: f64) -> i32 {
     let num_points = 10000;
-    let mut total = 0.0;
-    let mut prev: Option<f64> = None;
+    let mut quarters: i32 = 0;
+    let mut prev: Option<usize> = None;
 
     for i in 0..=num_points {
         let z = Geonum::new(radius, 2.0 * i as f64 / num_points as f64, 1.0); // [r, θ]
         let p_z = eval_poly(coeffs, z);
-        let current = p_z.angle.grade_angle(); // the output direction, no atan2
 
+        let grade = p_z.angle.grade(); // the output's quadrant address
         if let Some(p) = prev {
-            // the signed step, unwrapped onto (−π, π]
-            let mut delta = current - p;
-            while delta > PI {
-                delta -= TAU;
+            match (grade + 4 - p) % 4 {
+                1 => quarters += 1, // the output stepped forward a quadrant
+                3 => quarters -= 1, // and here it stepped back
+                2 => unreachable!("quarter-step ambiguity — sample denser"),
+                _ => {}
             }
-            while delta < -PI {
-                delta += TAU;
-            }
-            total += delta;
         }
-        prev = Some(current);
+        prev = Some(grade);
     }
 
-    (total / TAU).round() as i32
+    // z closes its circle, so p(z) closes too: the walk lands whole turns
+    assert_eq!(quarters % 4, 0, "the closed sweep lands whole turns");
+    quarters / 4
 }
 
 // the polynomial root checks evaluate p(z) at a candidate angle; the horner chain of
