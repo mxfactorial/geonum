@@ -1,5 +1,13 @@
 # changelog
 
+## 0.16.1 (2026-07-14)
+
+### added
+- basic quaternion_test.rs coverage
+
+### changed
+- shortened robotics_test.rs: anchors on the textbook det(J) = l1·l2·sin θ2 as one wedge, IK angles built from their own cosine (no acos round-trip), gimbal lock named as the vanished wedge, cable wind-up as the blade count, gravity moments as wedges against vertical, exact null-space cancellation and (1 − k) feedback scaling
+
 ## 0.16.0 (2026-07-11)
 
 ### changed
