@@ -9,6 +9,8 @@
 
 // eliminating systemic default risk eliminates monetary inflation
 
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::Geonum;
 use std::f64::consts::{PI, TAU};
 use std::time::Instant;
@@ -245,6 +247,7 @@ fn it_models_causal_transaction_structure() {
     let duration = start.elapsed();
 
     // prove constant time complexity regardless of transaction count
+    #[cfg(not(coverage))]
     assert!(
         duration.as_nanos() < 100000, // increased threshold for test stability
         "bivector operations have O(1) complexity"
@@ -386,6 +389,7 @@ fn it_models_investment_network_resilience() {
     println!("computation time: {:.2} nanoseconds", duration.as_nanos());
 
     // test O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_nanos() < 100000, // increased threshold for test stability
         "investment network analysis runs with O(1) complexity"
@@ -591,6 +595,7 @@ fn it_measures_the_cost_of_capital_without_a_federal_reserve_board() {
     );
 
     // verify O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_nanos() < 100000, // increased threshold for test stability
         "cost of capital calculation should be O(1) complexity"

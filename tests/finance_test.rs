@@ -17,6 +17,8 @@
 // state space, enabling direct analysis of economic flows through geometric transformations
 // without the need for traditional financial intermediaries or complex derivative instruments
 
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::*;
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -79,6 +81,7 @@ fn it_prices_options() {
     let duration = start.elapsed();
 
     // computation is extremely fast
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 5000, // 1000 option pricings in under 5ms
         "geometric option pricing is extremely efficient"
@@ -151,6 +154,7 @@ fn it_computes_portfolio_optimization() {
     let duration = start.elapsed();
 
     // verify optimization completed in constant time regardless of asset count
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 1000, // under 1ms for 1000 assets
         "geometric portfolio optimization is O(1) regardless of portfolio size"
@@ -237,6 +241,7 @@ fn it_computes_risk_measures() {
     let duration = start.elapsed();
 
     // risk measures are calculated in microseconds rather than milliseconds
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 10000, // 10000 calculations in under 10ms
         "geometric risk calculations are extremely efficient"
@@ -340,12 +345,14 @@ fn it_simulates_asset_price_movements() {
     assert_eq!(multiple_paths.len(), path_count);
 
     // geonum is significantly faster than traditional monte carlo
+    #[cfg(not(coverage))]
     assert!(
         duration_multi.as_millis() < 1000, // 1000 paths in under 1 second
         "geometric path simulation is faster than traditional monte carlo"
     );
 
     // average computation time per path is microseconds, not milliseconds
+    #[cfg(not(coverage))]
     assert!(
         duration_single.as_micros() < 1000, // single path in under 1 millisecond
         "geometric path simulation is efficient"
@@ -414,6 +421,7 @@ fn it_performs_interest_rate_modeling() {
     let duration = start.elapsed();
 
     // prove O(1) complexity regardless of time horizon
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 10000, // 10000 calculations in under 10ms
         "interest rate evolution is O(1) complexity"
@@ -515,6 +523,7 @@ fn it_calculates_credit_risk() {
     let duration = start.elapsed();
 
     // Verify O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 50000, // 10000 calculations in under 50ms
         "Credit risk calculations are O(1) complexity"
@@ -622,6 +631,7 @@ fn it_computes_arbitrage_opportunities() {
     let duration = start.elapsed();
 
     // Verify O(1) complexity for individual arbitrage calculations
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 10000, // 10000 calculations in under 10ms
         "Arbitrage detection has O(1) complexity per market pair"
@@ -733,6 +743,7 @@ fn it_performs_high_frequency_trading_calcs() {
     );
 
     // verify calculation was extremely fast (nanoseconds per calculation)
+    #[cfg(not(coverage))]
     assert!(
         ns_per_calc < 1500.0, // less than 1500 nanoseconds per calculation
         "high frequency calculation takes less than 1500 nanoseconds"
@@ -878,6 +889,7 @@ fn it_analyzes_cga_transaction_streams() {
     );
 
     // demonstrate O(1) complexity with growing transaction volume
+    #[cfg(not(coverage))]
     assert!(
         duration.as_nanos() < 100000, // increased threshold for test stability
         "CGA transaction analysis is O(1) regardless of volume"
@@ -1025,6 +1037,7 @@ fn it_calculates_multi_asset_derivatives() {
     let avg_time_per_calculation = timing_duration.as_micros() as f64 / 100.0;
 
     // Option pricing is fast and independent of basket size
+    #[cfg(not(coverage))]
     assert!(
         avg_time_per_calculation < 500.0, // less than 500 microseconds per calculation
         "Basket option pricing is O(1) complexity regardless of asset count"
@@ -1230,6 +1243,7 @@ fn it_analyzes_trading_strategies() {
     );
 
     // Verify performance calculation is O(1) complexity regardless of history length
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 5000, // Backtest is fast
         "Strategy analysis has O(1) complexity per period"

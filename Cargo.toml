@@ -1,6 +1,6 @@
 [package]
 name = "geonum"
-version = "0.16.1"
+version = "0.16.2"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
 description = "geometric number library supporting unlimited dimensions with O(1) complexity"
@@ -29,3 +29,6 @@ geonum = { path = ".", features = ["all"] }
 [[bench]]
 name = "geonum_benchmarks"
 harness = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)"] }

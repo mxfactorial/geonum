@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::*;
 use std::f64::consts::{PI, TAU};
 use std::time::Instant;
@@ -125,6 +127,7 @@ fn its_a_tensor_product() {
     let duration = start_time.elapsed();
 
     // this operation completes in nanoseconds regardless of dimension size
+    #[cfg(not(coverage))]
     assert!(duration.as_micros() < 10); // completes in less than 10 microseconds
 
     // demonstrate million-dimensional tensor product
@@ -145,6 +148,7 @@ fn its_a_tensor_product() {
     let high_dim_duration = start_high_dim.elapsed();
 
     // even in million dimensions operation completes quickly
+    #[cfg(not(coverage))]
     assert!(high_dim_duration.as_millis() < 100);
 
     // demonstrate relation to the ijk product
@@ -1758,6 +1762,7 @@ fn its_a_tensor_comparison() {
     if trad_ratio > 1.2 {
         // only check if there's meaningful scaling
         // geonum remains relatively constant (allowing up to 20x variation due to timing noise)
+        #[cfg(not(coverage))]
         assert!(
             geo_ratio < 20.0,
             "geonum scaling ratio {geo_ratio} exceeds expected constant behavior"

@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::Geonum;
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -110,6 +112,7 @@ fn it_models_business_cycles() {
 
     // fast regardless of how many indicators we analyze
     // demonstrates O(1) complexity advantage of geometric algebra design
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "business cycle analysis runs with O(1) complexity regardless of indicator count"
@@ -288,6 +291,7 @@ fn it_models_payroll_tax_impact_across_income_brackets() {
     let duration = start.elapsed();
 
     // test performance is O(1) complexity regardless of dimensions analyzed
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 10000, // under 10ms for all analyses
         "tax impact analysis runs with O(1) complexity"
@@ -473,6 +477,7 @@ fn it_detects_early_recession_indicators() {
     let lead_time = 6.0 * warning_signal.mag / 0.5; // 6 months at 0.5 signal strength
 
     // test O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 50000, // under 50ms for 10,000 iterations
         "recession detection runs with O(1) complexity"
@@ -679,6 +684,7 @@ fn it_analyzes_small_business_cashflow_after_rate_change() {
     let duration = start.elapsed();
 
     // test O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 10000,
         "cashflow impact analysis runs with O(1) complexity"
@@ -901,6 +907,7 @@ fn it_analyzes_housing_payment_patterns() {
     };
 
     // test O(1) complexity
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 100000, // increased threshold for test stability
         "housing market analysis runs with O(1) complexity"
@@ -1012,6 +1019,7 @@ fn it_models_global_trade_flows() {
     let duration = start.elapsed();
 
     // test O(1) complexity regardless of network size
+    #[cfg(not(coverage))]
     assert!(
         duration.as_micros() < 100000, // increased threshold for test stability
         "trade network model execs with O(1) complexity"
@@ -1118,6 +1126,7 @@ fn it_measures_economic_sectoral_balance() {
     // geometric angle shifts in sectoral balances
 
     // verify analysis time is constant regardless of transaction volume
+    #[cfg(not(coverage))]
     assert!(
         duration.as_nanos() < 100000, // increased threshold for test stability
         "sectoral balance analysis should have O(1) complexity"
