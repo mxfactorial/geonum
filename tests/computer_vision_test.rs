@@ -31,6 +31,8 @@
 // this isnt just more efficient - it enables direct computation of image transformations
 // through angle composition rather than matrix operations, and scales to high-dimensional feature spaces
 
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::{Angle, GeoCollection, Geonum};
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -137,6 +139,7 @@ fn its_a_feature_detector() {
 
     // traditional feature spaces are limited to ~128 dimensions due to computation/storage
     // geonum enables 1000+ dimensions with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 5000,
         "High-dimensional feature computation should be fast"
@@ -259,6 +262,7 @@ fn its_an_optical_flow_estimator() {
 
     // traditional dense optical flow scales poorly to many points
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_millis() < 100,
         "Dense optical flow computation should be fast"
@@ -367,6 +371,7 @@ fn its_a_camera_calibration() {
 
     // traditional camera arrays require O(n³) matrix operations
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 1000,
         "Multi-camera projection should be fast"
@@ -497,6 +502,7 @@ fn its_a_3d_reconstruction() {
 
     // traditional SfM systems scale poorly to large scenes
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 5000,
         "Large-scale reconstruction is fast"
@@ -577,6 +583,7 @@ fn its_an_image_registration() {
 
     // traditional registration scales poorly to many features
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 5000,
         "High-resolution image registration should be fast"
@@ -629,6 +636,7 @@ fn it_proves_computational_complexity_elimination() {
     // complexity proof through timing bounds
     assert_eq!(transformed_features.len(), num_features);
     assert!(multiscale_result.mag.is_finite());
+    #[cfg(not(coverage))]
     assert!(elapsed.as_micros() < 10000); // <10ms for 10k features across 3 scales
 
     // COMPLEXITY COMPARISON:
@@ -745,6 +753,7 @@ fn its_a_neural_image_processing() {
 
     // traditional CNN would be O(n²k²) per layer
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_millis() < 5000,
         "Deep neural network processing should be fast"
@@ -847,6 +856,7 @@ fn its_a_segmentation_algorithm() {
 
     // traditional segmentation scales poorly to megapixel images
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 1000,
         "High-resolution segmentation should be fast"
@@ -986,6 +996,7 @@ fn its_an_object_detection() {
 
     // traditional multi-class detection scales poorly to many classes
     // geonum scales linearly with O(n) operations
+    #[cfg(not(coverage))]
     assert!(
         elapsed.as_micros() < 5000,
         "Multi-class detection should be fast"

@@ -4,6 +4,7 @@
 
 ### changed
 - readme discord badge links a non-expiring invite, replacing the expired one
+- timing assertions skip under `cfg(coverage)` so llvm-cov instrumentation overhead cant fail them
 
 ## 0.16.1 (2026-07-14)
 

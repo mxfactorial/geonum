@@ -29,3 +29,6 @@ geonum = { path = ".", features = ["all"] }
 [[bench]]
 name = "geonum_benchmarks"
 harness = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)"] }

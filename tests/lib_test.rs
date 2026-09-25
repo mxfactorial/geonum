@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, allow(unused_variables))]
+
 use geonum::*;
 use std::f64::consts::PI;
 
@@ -387,6 +389,7 @@ fn it_operates_in_extreme_dimensions() {
     // confirm operation completed in reasonable time (should be milliseconds)
     // if this were a traditional GA implementation, it would take longer than
     // the age of the universe to even allocate storage for the calculation
+    #[cfg(not(coverage))]
     assert!(duration.as_secs() < 1); // should complete in under a second
 
     // OPTIONAL: Print performance info
