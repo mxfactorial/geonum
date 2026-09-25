@@ -8,7 +8,7 @@
 [![docs](https://docs.rs/geonum/badge.svg)](https://docs.rs/geonum)
 [![dependency status](https://deps.rs/repo/github/mxfactorial/geonum/status.svg)](https://deps.rs/repo/github/mxfactorial/geonum)
 [![crates.io](https://img.shields.io/crates/v/geonum.svg)](https://crates.io/crates/geonum)
-[![Discord](https://img.shields.io/discord/1519537430414495845.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/rPyRAbwK3)
+[![Discord](https://img.shields.io/discord/1519537430414495845.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/FdYg9Yzb2D)
 [![contribute](https://img.shields.io/badge/contribute-paypal-brightgreen.svg)](https://www.paypal.com/paypalme/mxfactorial)
 </div>
 

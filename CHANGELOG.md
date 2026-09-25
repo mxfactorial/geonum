@@ -1,5 +1,10 @@
 # changelog
 
+## 0.16.2 (2026-09-25)
+
+### changed
+- readme discord badge links a non-expiring invite, replacing the expired one
+
 ## 0.16.1 (2026-07-14)
 
 ### added
