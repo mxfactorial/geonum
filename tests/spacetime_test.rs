@@ -455,6 +455,66 @@ fn it_finds_the_light_cone_where_the_dual_cancels() {
 }
 
 #[test]
+fn it_crosses_the_present_where_the_time_shadow_vanishes() {
+    // halfway through the half turn the event crosses the even station.
+    // there its time shadow is zero and its space shadow is full: the
+    // event is entirely here and not at all then — the flat present
+    let r = 2.0_f64.sqrt();
+    let ahead = Geonum::new(r, 1.0, 2.0);
+    let quarter = Angle::new(1.0, 2.0);
+    let time_axis = Angle::new(1.0, 2.0);
+    let space_axis = Angle::new(1.0, 1.0); // the even station the passage crosses
+
+    let crossing = ahead.rotate(quarter); // [r, π]
+    assert_eq!(crossing.angle.grade(), 2, "the crossing is an even station");
+    assert!(
+        crossing.project_to_angle(time_axis).near_mag(0.0),
+        "no time shadow at the crossing"
+    );
+    assert!(
+        crossing.project_to_angle(space_axis).near_mag(r),
+        "full space shadow at the crossing"
+    );
+    assert!(
+        crossing.rotate(quarter).near(&ahead.dual()),
+        "one more quarter turn and the event is behind"
+    );
+
+    // either side of the crossing the time shadow flips seat and the space
+    // shadow does not move at first order. the deficit r − space is the
+    // stored half-tangent times the time shadow — the crest is flat by the
+    // same rational identity cos_sin runs on
+    for off in [
+        Angle::new(1.0, 8.0),
+        Angle::new(1.0, 6.0),
+        Angle::new(1.0, 5.0),
+    ] {
+        let before = ahead.rotate(quarter - off); // π − δ, still ahead
+        let after = crossing.rotate(off); // π + δ, now behind
+
+        let t_before = before.project_to_angle(time_axis);
+        let t_after = after.project_to_angle(time_axis);
+        assert_eq!(t_before.angle.grade(), 0, "before the crossing: ahead");
+        assert_eq!(t_after.angle.grade(), 2, "after the crossing: behind");
+        assert!(
+            t_after.near_mag(t_before.mag),
+            "the time shadow is mirrored across the crossing"
+        );
+
+        let s_before = before.project_to_angle(space_axis);
+        let s_after = after.project_to_angle(space_axis);
+        assert!(
+            s_after.near_mag(s_before.mag),
+            "the space shadow is the same on both sides"
+        );
+        assert!(
+            Geonum::scalar(r - s_before.mag).near_mag(off.t() * t_before.mag),
+            "r − space = t × time: the space shadow moves one order later than the time shadow"
+        );
+    }
+}
+
+#[test]
 fn it_shows_a_scalar_interval_discards_causal_structure() {
     // the lesson algebra_test draws for winding numbers, drawn here for causality:
     // a scalar |s²| cant tell timelike from spacelike. two events with s² = +9
