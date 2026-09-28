@@ -1,5 +1,14 @@
 # changelog
 
+## 0.16.3 (2026-09-27)
+
+### added
+- spacetime as stereographic projection: minkowski's coordinates, metric, matrix and interval read back as the stored half-tangent, the dual, the dilation and the null product; a transaction as two events with places and times, visible from a place once its cone arrives; combinatorial game theory as the human layer over it — conway's engine as the foil, the board dropping out of one projection, the thermograph as a light cone, the seat as a saddle, the present flow as one SELECT (cgt, minkowski_space, economic_spacetime, stereographic tests)
+
+### changed
+- spacetime_test crosses the present where the time shadow vanishes, `r − space = t × time`
+- `mag_diff` rustdoc sits on `mag_diff`; readme test listing regenerated; `tmp/` gitignored
+
 ## 0.16.2 (2026-09-25)
 
 ### changed

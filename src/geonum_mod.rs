@@ -490,6 +490,16 @@ impl Geonum {
         dot_result.mag.abs() < EPSILON
     }
 
+    /// tests if two geonums are within floating point tolerance
+    pub fn near(&self, other: &Geonum) -> bool {
+        (self.mag - other.mag).abs() < EPSILON && self.angle.near(&other.angle)
+    }
+
+    /// tests if magnitude is within tolerance of a scalar
+    pub fn near_mag(&self, value: f64) -> bool {
+        (self.mag - value).abs() < EPSILON
+    }
+
     /// computes the absolute difference between the magnitudes of two geometric numbers
     ///
     /// useful for comparing field strengths in electromagnetic contexts
@@ -512,16 +522,6 @@ impl Geonum {
     /// let diff = a.mag_diff(&b);
     /// assert_eq!(diff, 1.0);
     /// ```
-    /// tests if two geonums are within floating point tolerance
-    pub fn near(&self, other: &Geonum) -> bool {
-        (self.mag - other.mag).abs() < EPSILON && self.angle.near(&other.angle)
-    }
-
-    /// tests if magnitude is within tolerance of a scalar
-    pub fn near_mag(&self, value: f64) -> bool {
-        (self.mag - value).abs() < EPSILON
-    }
-
     pub fn mag_diff(&self, other: &Geonum) -> f64 {
         (self.mag - other.mag).abs()
     }

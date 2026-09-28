@@ -150,6 +150,7 @@ atomic_clock_test.rs
 calculus_test.rs
 category_theory_test.rs
 cga_test.rs
+cgt_test.rs
 chem_constants_test.rs
 chemistry_test.rs
 computer_vision_test.rs
@@ -160,6 +161,7 @@ crystallography_test.rs
 curve_test.rs
 dimension_test.rs
 directional_stats_test.rs
+economic_spacetime_test.rs
 economics_test.rs
 einstein_test.rs
 em_field_theory_test.rs
@@ -179,6 +181,7 @@ interferometer_test.rs
 linear_algebra_test.rs
 machine_learning_test.rs
 mechanics_test.rs
+minkowski_space_test.rs
 ml_attention_test.rs
 ml_training_test.rs
 monetary_policy_test.rs
@@ -208,6 +211,7 @@ spacetime_test.rs
 spinor_test.rs
 sr_gr_collapse_test.rs
 stability_test.rs
+stereographic_test.rs
 taylor_series_test.rs
 tensor_test.rs
 thermo_test.rs
