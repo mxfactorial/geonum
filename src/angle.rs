@@ -784,10 +784,8 @@ impl Mul<f64> for Angle {
                 t: 0.0,
             }
         } else {
-            Angle {
-                blade: normalized_blade,
-                t: (final_rem / 2.0).tan(),
-            }
+            // a remainder at the π/2 boundary snaps to the next blade, as in new
+            Angle::from_parts(normalized_blade, (final_rem / 2.0).tan())
         }
     }
 }
@@ -797,6 +795,39 @@ impl Mul<f64> for &Angle {
 
     fn mul(self, scalar: f64) -> Angle {
         (*self) * scalar
+    }
+}
+
+impl Mul<usize> for Angle {
+    type Output = Angle;
+
+    /// an integer multiple of an angle is the angle added to itself n times.
+    /// each addition is the tangent sum on the stored ratio, rational, and the
+    /// blade carry is addition's own, so no radians are computed and a multiple
+    /// that lands on a quarter-turn boundary lands there exactly. the additions
+    /// are grouped by the bits of n, doubling as they go
+    fn mul(self, n: usize) -> Angle {
+        let mut total = Angle::new(0.0, 1.0);
+        let mut power = self;
+        let mut remaining = n;
+        while remaining > 0 {
+            if remaining & 1 == 1 {
+                total = total + power;
+            }
+            remaining >>= 1;
+            if remaining > 0 {
+                power = power + power;
+            }
+        }
+        total
+    }
+}
+
+impl Mul<usize> for &Angle {
+    type Output = Angle;
+
+    fn mul(self, n: usize) -> Angle {
+        (*self) * n
     }
 }
 
@@ -877,6 +908,28 @@ mod tests {
     use super::*;
 
     const EPSILON: f64 = 1e-10;
+
+    #[test]
+    fn it_multiplies_by_an_integer_as_repeated_addition() {
+        // three thirds of a turn: the loop and the multiple agree, and both
+        // land on the lattice exactly, blade 4 with t = 0
+        let third = Angle::new(2.0, 3.0);
+        let by_loop = (0..3).fold(Angle::new(0.0, 1.0), |acc, _| acc + third);
+        assert_eq!(third * 3, by_loop);
+        assert_eq!(third * 3, Angle::new(2.0, 1.0));
+
+        // a million and one quarter turns stay exact
+        assert_eq!(
+            Angle::new(1.0, 2.0) * 1_000_001,
+            Angle::new_with_blade(1_000_001, 0.0, 1.0)
+        );
+
+        // off the lattice the integer path and the real path agree
+        let odd = Angle::new(2.0, 7.0);
+        assert!((odd * 7).near(&(odd * 7.0)));
+        assert!((odd * 5).near(&(odd * 5.0)));
+        assert_eq!(odd * 0, Angle::new(0.0, 1.0));
+    }
 
     #[test]
     fn it_sums_rotations_to_multiple_blades() {
