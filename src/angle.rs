@@ -928,7 +928,8 @@ mod tests {
         let odd = Angle::new(2.0, 7.0);
         assert!((odd * 7).near(&(odd * 7.0)));
         assert!((odd * 5).near(&(odd * 5.0)));
-        assert_eq!(odd * 0, Angle::new(0.0, 1.0));
+        let no_times = 0_usize;
+        assert_eq!(odd * no_times, Angle::new(0.0, 1.0));
     }
 
     #[test]
