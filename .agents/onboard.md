@@ -59,11 +59,11 @@ learn how geonum implements the dual in src/angle.rs:463~478
 
 learn how angle impls PartialEq and Eq in src/angle.rs:640~658
 
-learn how angle overloads arithmetic operators in src/angle.rs:660~849
+learn how angle overloads arithmetic operators in src/angle.rs:660~880
 
 learn how to construct geonum with new, new_with_angle from src/geonum_mod.rs:23~49
 
-learn how geonum overloads arithmetic operators in src/geonum_mod.rs:814~1081
+learn how geonum overloads arithmetic operators in src/geonum_mod.rs:839~1106
 
 learn how geonum can express any number type from the its_a_scalar:8-36, its_a_vector:39-72, its_a_real_number:75-103, its_an_imaginary_number:106-134, its_a_complex_number:137-169, its_a_dual_number:172-218, its_an_octonion:221-241 tests in tests/numbers_test.rs
 

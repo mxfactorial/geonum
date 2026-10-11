@@ -526,8 +526,13 @@ impl Geonum {
         (self.mag - other.mag).abs()
     }
 
-    /// raises this geometric number to a power
+    /// raises this geometric number to a real power
     /// for [r, θ], the result is [r^n, n*θ]
+    ///
+    /// for real exponents — roots and irrational powers — where the angle
+    /// multiple is a transcendental. an integer exponent is a count of
+    /// multiplications and belongs to [`powi`](Self::powi), which keeps the
+    /// angle rational
     ///
     /// # arguments
     /// * `n` - the exponent
@@ -538,6 +543,26 @@ impl Geonum {
         // x^n = [mag^n, n*angle]
         Self {
             mag: self.mag.powf(n),
+            angle: self.angle * n,
+        }
+    }
+
+    /// raises this geometric number to an integer power: the magnitude
+    /// multiplied n times and the angle added n times
+    ///
+    /// the angle path is the tangent sum on the stored ratio with the blade
+    /// carry falling out of addition, so an integer power never computes an
+    /// angle it already stores, and a power that lands on a quarter-turn
+    /// boundary lands there exactly
+    ///
+    /// # arguments
+    /// * `n` - the exponent, a count of multiplications
+    ///
+    /// # returns
+    /// a new geometric number representing self^n
+    pub fn powi(self, n: usize) -> Self {
+        Self {
+            mag: self.mag.powi(n as i32),
             angle: self.angle * n,
         }
     }
@@ -1105,6 +1130,20 @@ impl Ord for Geonum {
 mod tests {
     use super::*;
     use std::f64::consts::PI;
+
+    #[test]
+    fn it_raises_to_an_integer_power_by_repeated_multiplication() {
+        // [2, π/3] cubed: magnitudes multiply to 8, angles add to π, and the
+        // sum lands on the lattice exactly, blade 2 with t = 0
+        let g = Geonum::new(2.0, 1.0, 3.0);
+        assert!(g.powi(3).near(&(g * g * g)));
+        assert!(g.powi(3).near_mag(8.0));
+        assert_eq!(g.powi(3).angle, Angle::new(1.0, 1.0));
+        assert!(g.powi(0).near(&Geonum::scalar(1.0)));
+        // the real path agrees where it is not on a boundary
+        let h = Geonum::new(1.5, 2.0, 7.0);
+        assert!(h.powi(5).near(&h.pow(5.0)));
+    }
 
     #[test]
     fn it_spreads_over_a_boundary() {
