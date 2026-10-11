@@ -149,6 +149,7 @@ astrophysics_test.rs
 atomic_clock_test.rs
 calculus_test.rs
 category_theory_test.rs
+causal_economics_test.rs
 cga_test.rs
 cgt_test.rs
 chem_constants_test.rs
@@ -317,7 +318,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 - `Angle::new_from_cartesian(x, y)` - angle from coordinates
 
 #### special operations
-- `.pow(n)` for exponentiation preserving angle-magnitude relationship
+- `.powi(n)` for integer powers as n-fold multiplication, the angle added n times; `.pow(n)` for real exponents, roots and irrational powers
 - `.invert_circle(center, radius)` for conformal inversions
 - angle predicates: `.is_scalar()`, `.is_vector()`, `.is_bivector()`, `.is_trivector()`
 - angle functions: `.sin()`, `.cos()`, `.tan()`, `.is_opposite()`

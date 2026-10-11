@@ -1,5 +1,15 @@
 # changelog
 
+## 0.17.0 (2026-10-11)
+
+### added
+- causal economics as the kernel under the spacetime suites: a transaction as two prices a half turn apart cancelling to the null, the summed blades as its record, and an account spending only what reached it through a closed pair (causal_economics_test)
+- `Angle * usize` as n-fold angle addition, rational on the stored ratio with the blade carry falling out of addition, and `Geonum::powi(n)` on it; `pow(f64)` keeps real exponents, roots and irrational powers
+
+### changed
+- `Angle * f64`, and so `pow`, snaps a scaled remainder at the π/2 boundary to the next blade with `t = 0`, as `new`, `from_parts` and addition already did; `[1, 2π/3].pow(3.0)` lands on blade 4 instead of blade 3 with `t = 1 − 1e-16`. a `blade()` or `grade()` read after a `pow` that lands on a quarter-turn boundary changes, hence the minor bump
+- readme test listing adds causal_economics_test and the features list names `powi` beside `pow`; onboard line ranges revised for the angle and geonum operator blocks
+
 ## 0.16.3 (2026-09-27)
 
 ### added
