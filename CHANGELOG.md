@@ -1,5 +1,10 @@
 # changelog
 
+## 0.17.1 (2026-10-17)
+
+### changed
+- quaternion_test refactored from ten tests to five: anti-commutativity read off the quadrature as the dot shifted a quarter turn, the quaternion slots as the stored t normalized, the book demo computed in geonum with the hamilton product corroborating; the ijk test defers to lib_test, "rotor" is gone, and every "plane" is bound to the turn that draws it (#112)
+
 ## 0.17.0 (2026-10-11)
 
 ### added
