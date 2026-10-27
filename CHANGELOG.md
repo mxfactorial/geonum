@@ -1,5 +1,10 @@
 # changelog
 
+## 0.17.2 (2026-10-27)
+
+### changed
+- readme intro cut to three lines above the struct: dimensions as quarter turns each number counts, `[0, 0, 1] -> blade: 2`, and 2 components at any dimension. the dual bullet names k → (k + 2) mod 4 against traditional GA's k → n − k, the dimensions section says the blade counts quarter turns, and the create_dimension, conjugate and meet lines describe what src computes (#114)
+
 ## 0.17.1 (2026-10-17)
 
 ### changed
