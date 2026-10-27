@@ -14,39 +14,11 @@
 
 # geonum
 
-removing an explicit angle from numbers in the name of "pure" math throws away primitive geometric information
+dimensions as quarter turns each number [counts](https://en.wikipedia.org/wiki/Blade_(geometry)) instead of a shared array of scalars
 
-once you amputate the angle from a number to create a "scalar", you throw away its compass
+`[0, 0, 1]` -> `blade: 2` frees up numbers from algebras, and their vectors from spaces, matrices & tensors
 
-computing angles when they deserve to be static forces math into a cave where numbers must be cast from linearly combined shadows
-
-you start by creating a massive artificial "scalar" superstructure of "dimensions" to store **every possible position** where your scalar vector component can appear—and as a "linear combination" of the dimensions it "spans" with other scalars called "basis vectors"
-
-this brute force scalar alchemy explodes into scalars **everywhere**
-
-with most requiring "sparsity" to conceal how many explicit zeros appear declaring *nothing changed*
-
-the omission of geometry is so extreme at this point its suspicious
-
-now your number hobbles through a prison of complicated "matrix" and "tensor" operations computing expensive dot & cross products in a scalar-dimension chain gang with other "linearly independent" scalars—only to reconstruct the simple detail of the direction its facing
-
-and if you want to change its rate of motion, it must freeze all other scalar dimensions in a "partial derivative" with even more zeros
-
-### protect your numbers
-
-setting a metric with euclidean and squared norms between "linearly combined scalars" creates an n-dimensional, rank-k (`n^k`) component orthogonality search problem for transforming vectors
-
-and supporting traditional geometric algebra operations requires `2^n` components to represent multivectors in `n` dimensions
-
-geonum reduces `n^k(2^n)` to 2
-
-geonum dualizes (⋆) components inside algebra's most general form
-
-setting the metric from the quadrature's bivector shields it from entropy with the `log2(4)` bit minimum:
-
-- 1 scalar, `cos(θ)`
-- 2 vector, `sin(θ)cos(φ), sin(θ)sin(φ)`
-- 1 bivector, `sin(θ+π/2) = cos(θ)`
+"scalars" drop the angle and spend `n^k` tensor and `2^n` multivector components recovering it. geonum stores it: angles add, mags multiply, 2 components at any dimension
 
 ```rs
 /// dimension-free, geometric number
@@ -59,14 +31,13 @@ struct Geonum {
 }
 ```
 * project(onto: Angle) -> angle_diff.cos() into any dimension without defining it first
-* dual() = blade + 2, duality operation adds π rotation and involutively maps grades (0 ↔ 2, 1 ↔ 3)
+* dual() = blade + 2, duality adds π and maps grades k → (k + 2) mod 4 (0 ↔ 2, 1 ↔ 3) at every n, whereas traditional GA's k → n − k has to be told n
 * grade() = blade % 4, geometric grade
 * differentiate() = angle + π/2, polynomial coefficients computed from sin(θ+π/2) = cos(θ) quadrature identity
-* replaces "pseudoscalar" with blade arithmetic
 
 ### how dimensions work
 
-dimensions = blade, how many dimensions the angle spans
+dimensions = blade, how many quarter turns the angle counts
 
 traditional: dimensions are coordinate axes - you stack more coordinates
 
@@ -261,11 +232,11 @@ geonum enables million-dimensional geometric algebra with constant-time operatio
 | wedge product 2D   | 2.2 ns            | 21 ns  | trigonometric      |
 | wedge product 10D  | 45 components     | 21 ns  | constant           |
 | dual operation     | pseudoscalar mult | 10 ns  | universal          |
-| differentiation    | numerical approx  | 3 ns   | exact π/2 rotation |
+| differentiation    | numerical approx  | 3 ns   | π/2 rotation       |
 | inversion          | matrix ops        | 13 ns  | direct reciprocal  |
 | projection         | dot products      | 12 ns  | trigonometric      |
 
-all geonum operations maintain constant time regardless of dimension, eliminating exponential scaling of traditional approaches
+all geonum operations maintain constant time regardless of dimension, eliminating exponential scaling of the scalar array
 
 ### features
 
@@ -275,7 +246,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 - rotations `.rotate()`, reflections `.reflect()`, projections `.project()`, rejections `.reject()`
 - scale `.scale()`, scale-rotate `.scale_rotate()`, negate `.negate()`
 - differentiation `.differentiate()` via π/2 rotation, integration `.integrate()` via -π/2 rotation
-- meet `.meet()` for subspace intersection with geonum's π-rotation incidence structure
+- meet `.meet()`, the dual of the wedge of duals, geonum's π-rotation incidence
 - orthogonality test `.is_orthogonal()`, distance `.distance_to()`, magnitude difference `.mag_diff()`
 
 #### angle-blade architecture
@@ -289,7 +260,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 #### dimension handling
 - million-dimension geometric algebra with O(1) complexity
 - `.project_to_dimension(n)` computes projection to any dimension on demand
-- `.create_dimension(length, n)` creates standardized n-dimensional basis element
+- `.create_dimension(length, n)` places a geonum at quarter turn n
 - dimensions emerge from angle arithmetic, no predefined basis vectors needed
 - conformal geometric algebra without 32-component storage
 - projective geometric algebra without homogeneous coordinates
@@ -297,7 +268,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 #### duality without pseudoscalars
 - `.dual()` adds π rotation (2 blades), maps grades 0↔2, 1↔3
 - `.undual()` identical to dual in 4-cycle structure  
-- `.conjugate()` for clifford conjugation
+- `.conjugate()` adds π, the complex conjugate as a position
 - universal k→(k+2)%4 duality replaces dimension-specific k→(n-k) formulas
 - eliminates I = e₁∧...∧eₙ pseudoscalar and its 2^n storage requirement
 
