@@ -1,11 +1,12 @@
 [package]
 name = "geonum"
-version = "0.17.2"
+version = "0.17.3"
 edition = "2021"
 repository = "https://github.com/mxfactorial/geonum"
 description = "geometric number library supporting unlimited dimensions with O(1) complexity"
 license = "BSD-3-Clause"
 readme = "README.md"
+exclude = ["assets/"]
 keywords = ["geonum", "geometry", "math", "algebra", "geometric-algebra"]
 categories = ["mathematics", "simulation", "algorithms", "data-structures"]
 authors = ["mxfactorial"]
