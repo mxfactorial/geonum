@@ -1,5 +1,5 @@
 <br>
-<p align="center"><img width="225" alt="dual" src="shield.gif"></p>
+<p align="center"><img width="225" alt="dual" src="assets/shield.gif"></p>
 <br>
 <p align="center">scaling scientific computing with the <a href="https://gist.github.com/mxfactorial/c151619d22ef6603a557dbf370864085" target="_blank">geometric number</a> spec</p>
 <div align="center">
@@ -16,7 +16,7 @@
 
 dimensions as quarter turns each number [counts](https://en.wikipedia.org/wiki/Blade_(geometry)) instead of a shared array of scalars
 
-`[0, 0, 1]` -> `blade: 2` frees up numbers from algebras, and their vectors from spaces, matrices & tensors
+`[1, 1, 1]` -> `blade: 3` frees up numbers from algebras, and their vectors from spaces, matrices & tensors
 
 "scalars" drop the angle and spend `n^k` tensor and `2^n` multivector components recovering it. geonum stores it: angles add, mags multiply, 2 components at any dimension
 
@@ -60,7 +60,7 @@ a bladed angle lets them travel and transform freely without ever needing to kno
 cargo add geonum
 ```
 
-### example
+### example 1
 
 draw points and lines from one angle — dimension free
 
@@ -104,6 +104,140 @@ assert!((p_million.mag - p3.mag).abs() < 1e-10);
 ```
 
 projection creates dimensional relationships on demand — no basis vectors, no coordinate scaffolding
+
+### example 2
+
+three components from one angle
+
+```rust
+use geonum::*;
+
+// one angle, three components
+let v = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
+
+let x = v.project_to_dimension(0); // blade 0
+let y = v.project_to_dimension(1); // blade 1, a quarter turn on
+let z = v.project_to_dimension(2); // blade 2, a half turn on
+
+// the three readings of one angle
+let theta = std::f64::consts::PI / 6.0;
+assert!((x - 2.0 * theta.cos()).abs() < 1e-10); // m cos θ
+assert!((y - 2.0 * theta.sin()).abs() < 1e-10); // m sin θ
+assert!((z + 2.0 * theta.cos()).abs() < 1e-10); // −m cos θ
+
+// the quadrature ties them: a quarter turn apart squares to the magnitude,
+// a half turn apart cancels
+assert!((x * x + y * y - 4.0).abs() < 1e-10);
+assert!((x + z).abs() < 1e-10);
+```
+
+one geonum, three readings, and the identities between them are the quadrature
+
+### example 3
+
+three components that share no angle
+
+```rust
+use geonum::*;
+
+// three measurements that share no angle
+let rail = Geonum::new(3.0, 0.0, 1.0); // [3, 0]
+let height = Geonum::new(4.0, 1.0, 3.0); // [4, π/3]
+let depth = Geonum::new(5.0, 5.0, 4.0); // [5, 5π/4]
+
+let v: GeoCollection = vec![rail, height, depth].into();
+assert_eq!(v.len(), 3);
+
+// each component reads back off its own geonum, no basis to project through
+assert!(v[0].near_mag(3.0));
+assert!(v[1].near_mag(4.0));
+assert!(v[2].near_mag(5.0));
+assert_eq!(v[2].angle, Angle::new(5.0, 4.0));
+
+// rotating the whole thing is one angle add per member, no matrix
+let turned = v.rotate_all(Angle::new(1.0, 2.0));
+assert!(turned[1].near_mag(4.0));
+assert_eq!(turned[1].angle, Angle::new(1.0, 3.0) + Angle::new(1.0, 2.0));
+
+// two components per member at any blade
+assert_eq!(std::mem::size_of::<Geonum>(), 24);
+```
+
+three geonums, three angles, two components each — no space to declare and no matrix to hold them
+
+### example 4
+
+computing angles when they deserve to be static forces math into a cave where numbers must be cast from linearly combined shadows. static angles stay out of the cave: the direction is stored, each +π/2 is the next dimension, and a projection onto any of them is one cosine
+
+```rust
+use geonum::*;
+
+let v = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
+
+// its own angle: the number comes back whole
+let facing = v.project(&Geonum::new_with_angle(1.0, v.angle));
+assert!(facing.near(&v));
+
+// three dimensions, each a quarter turn on from the last, three shadows of one angle
+let x = v.project(&Geonum::new(1.0, 0.0, 1.0)); // onto 0: m cos θ
+let y = v.project(&Geonum::new(1.0, 1.0, 2.0)); // onto π/2: m sin θ
+let z = v.project(&Geonum::new(1.0, 1.0, 1.0)); // onto π: −m cos θ
+let theta = std::f64::consts::PI / 6.0;
+assert!(x.near_mag(2.0 * theta.cos()));
+assert!(y.near_mag(2.0 * theta.sin()));
+assert!(z.near_mag(2.0 * theta.cos()));
+
+// the third dimension is a half turn from the first, so its shadow is the first
+// negated: −m cos θ lands back on the 0 ray, four blades on
+assert!(z.base_angle().near(&x.base_angle()));
+assert_eq!(z.angle.blade(), x.angle.blade() + 4);
+
+// any direction at all, one cosine
+let shadow = v.angle.project(Angle::new(5.0, 12.0)); // onto 5π/12
+assert!((shadow - (std::f64::consts::PI / 4.0).cos()).abs() < 1e-10); // cos(5π/12 − π/6)
+```
+
+one angle casts every shadow, and every quarter turn adds the next dimension at the same cost. each dimension is orthogonal to the one before it, not to all of them, so x, y, z are three readings of one number with the third the first negated. nothing is rebuilt, because the number was never reduced to its shadows — trigonometry_test::it_is_projection
+
+![one angle, every shadow](assets/example-4.svg)
+
+### example 5
+
+orthogonality expressed with ordinals appears mutual by repeating one quarter turn on whats left: the first splits the number into a shadow and a remainder, the second splits the remainder
+
+```rust
+use geonum::*;
+
+let v = Geonum::new(2.0, 1.0, 6.0); // [2, π/6]
+
+// 1 scalar, cos(θ): one quarter turn splits v into a shadow and a remainder
+let x = v.adj(); // m cos θ, along the first direction
+let rest = v.opp(); // m sin θ, a quarter turn on
+
+// 2 vector, sin(θ)cos(φ), sin(θ)sin(φ): the remainder split again by its own angle φ
+let phi = Angle::new(1.0, 3.0); // π/3
+let turned = Geonum::new_with_angle(rest.mag, phi);
+let y = turned.adj(); // m sin θ cos φ
+let z = turned.opp(); // m sin θ sin φ
+
+// 1 bivector, sin(θ+π/2) = cos(θ): the scalar slot read a quarter turn on
+let (cos_theta, _) = v.angle.cos_sin();
+let (_, sin_shifted) = (v.angle + Angle::new(1.0, 2.0)).cos_sin();
+assert!((sin_shifted - cos_theta).abs() < 1e-10);
+
+// setting the metric from the quadrature's bivector shields it from entropy with
+// the log2(4) bit minimum: the three squares add to m²
+let theta = std::f64::consts::PI / 6.0;
+let phi_f = std::f64::consts::PI / 3.0;
+assert!(x.near_mag(2.0 * theta.cos()));
+assert!(y.near_mag(2.0 * theta.sin() * phi_f.cos()));
+assert!(z.near_mag(2.0 * theta.sin() * phi_f.sin()));
+assert!((x.mag * x.mag + y.mag * y.mag + z.mag * z.mag - 4.0).abs() < 1e-10);
+```
+
+z is orthogonal to x by inheritance, cut from a remainder that was already a quarter turn from x and given its own angle. mutual orthogonality is this order with the ordinals dropped: the three axes look like equals once the page forgets which split came first and whose remainder the second one opened. the fourth slot is the first read a quarter turn on, so four slots carry two values: `log2(4)`
+
+![mutual from ordered](assets/example-5.svg)
 
 see [tests](https://github.com/mxfactorial/geonum/tree/main/tests) to learn how geometric numbers unify and simplify mathematical foundations including set theory, category theory and algebraic structures:
 

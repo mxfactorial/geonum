@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" width="864" height="504" role="img" aria-labelledby="t d">
+  <title id="t">geonum example 5: mutual from ordered</title>
+  <desc id="d">a geonum v = [2, π/6] split by one quarter turn into a shadow m cos θ along x and a remainder m sin θ perpendicular to x, then the remainder split by a second quarter turn at angle φ = π/3 into m sin θ cos φ along y and m sin θ sin φ along z inside the plane perpendicular to x. the three squares add to m². the mutually perpendicular triad is two quarter turns, one nested in the other</desc>
+  <style>
+    text { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .ink  { fill: #6e7781; }
+    .lbl  { fill: #8b949e; }
+    .ray  { stroke: #8b949e; fill: none; }
+    .plane{ stroke: #8b949e; fill: #8b949e; fill-opacity: 0.07; }
+    .blue { stroke: #2f81f7; }
+    .bluef{ fill: #2f81f7; }
+    .or   { stroke: #e16f24; fill: none; }
+    .orf  { fill: #e16f24; }
+  </style>
+  <defs>
+    <marker id="tip" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" class="bluef"/>
+    </marker>
+  </defs>
+
+  <!-- origin O = (150,300), 120 px per unit. x right, y up, z oblique (0.85, -0.3) per unit -->
+  <!-- the first direction -->
+  <line x1="150" y1="300" x2="480" y2="300" class="ray" stroke-width="1.2"/>
+  <text x="488" y="304" font-size="12" class="lbl">x</text>
+
+  <!-- the plane perpendicular to x, standing at the foot of the first shadow. its two
+       edges from the foot are the directions of the second split: y up, z into depth -->
+  <path d="M357.8,300 L357.8,175 L479.8,132 L479.8,257 Z" class="plane" stroke-width="1"/>
+  <text x="357.8" y="166" font-size="12" class="lbl" text-anchor="middle">y</text>
+  <text x="490" y="250" font-size="12" class="lbl">z</text>
+
+  <!-- the box: dotted edges from the two second-split feet to the tip -->
+  <g class="ray" stroke-width="1" stroke-dasharray="2 3">
+    <line x1="357.8" y1="240" x2="446.1" y2="208.8"/>
+    <line x1="446.1" y1="268.8" x2="446.1" y2="208.8"/>
+  </g>
+
+  <!-- first split: the shadow on x and the remainder, a quarter turn on -->
+  <line x1="150" y1="300" x2="357.8" y2="300" class="or" stroke-width="5"/>
+  <line x1="357.8" y1="300" x2="446.1" y2="208.8" class="or" stroke-width="3"/>
+  <path d="M349.8,300 L349.8,292 L357.8,292" class="ray" stroke-width="1"/>
+  <path d="M331.8,300 A26,26 0 0 1 357.8,274" class="ray" stroke-width="1"/>
+  <text x="322" y="268" font-size="11" class="lbl" text-anchor="middle">+π/2</text>
+
+  <!-- second split: the remainder's two shadows inside the plane, φ from y -->
+  <line x1="357.8" y1="300" x2="357.8" y2="240" class="or" stroke-width="5"/>
+  <line x1="357.8" y1="300" x2="446.1" y2="268.8" class="or" stroke-width="5"/>
+  <path d="M357.8,291 L364.4,288.7 L364.4,297.7" class="ray" stroke-width="1"/>
+  <text x="384" y="314" font-size="11" class="lbl">+π/2</text>
+  <path d="M357.8,256 A44,44 0 0 1 388.4,268.4" class="ray" stroke-width="1"/>
+  <text x="379" y="248" font-size="11" class="lbl" text-anchor="middle">φ</text>
+
+  <!-- v = [2, π/6] -->
+  <line x1="150" y1="300" x2="446.1" y2="208.8" class="blue" stroke-width="3" marker-end="url(#tip)"/>
+  <circle cx="150" cy="300" r="3.5" class="ink"/>
+  <text x="454" y="204" font-size="12" class="bluef">v = [2, π/6]</text>
+
+  <!-- readings -->
+  <g font-size="12" class="orf">
+    <text x="254" y="322" text-anchor="middle">m cos θ</text>
+    <text x="454" y="222">m sin θ</text>
+    <text x="349" y="226" text-anchor="end">m sin θ cos φ</text>
+    <text x="454" y="278">m sin θ sin φ</text>
+  </g>
+
+  <!-- caption -->
+  <g font-size="11" class="lbl">
+    <text x="80" y="362">one quarter turn, then the same quarter turn on the remainder</text>
+    <text x="80" y="380">m² = (m cos θ)² + (m sin θ cos φ)² + (m sin θ sin φ)²</text>
+    <text x="80" y="398">z is orthogonal to x by inheritance: cut from a remainder already a quarter turn from x</text>
+  </g>
+</svg>
