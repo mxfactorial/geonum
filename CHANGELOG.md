@@ -6,7 +6,7 @@
 - readme examples 2 through 5 with two figures: one angle read at three quarter turns as x, y, z; three measurements sharing no angle as three geonums; the cave, project onto its own angle returning the number whole and the third shadow landing on the first; and mutual orthogonality from one quarter turn repeated on the remainder, the log2(4) list as its code comments (#116)
 
 ### changed
-- intro opens on `[1, 1, 1] -> blade: 3`, the three units of a 3D space multiplied to one geonum; images move to `assets/`, excluded from the crate
+- intro opens on `[1, 1, 1] -> blade: 3`, the three units of a 3D space multiplied to one geonum; the figures live in `assets/`, excluded from the crate
 
 ## 0.17.2 (2026-10-27)
 
