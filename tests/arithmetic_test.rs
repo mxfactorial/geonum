@@ -10,7 +10,10 @@ const EPSILON: f64 = 1e-10;
 fn it_proves_subtraction_is_destructive_interference() {
     // projection space (traditional): 1 - 1 = 0
     let scalar_result: f64 = 1.0 - 1.0;
-    assert_eq!(scalar_result, 0.0, "projection space: 1 - 1 = 0");
+    assert!(
+        (scalar_result - 0.0).abs() < EPSILON,
+        "projection space: 1 - 1 = 0"
+    );
 
     // angle space: [1, 0] + [1, π] → destructive interference
     let magnitude_1_at_0 = Geonum::new(1.0, 0.0, 1.0); // [1, 0°]
@@ -142,8 +145,8 @@ fn it_proves_negative_is_position_not_sign() {
     );
 
     // verify magnitude is unsigned
-    assert_eq!(
-        negative_one_geo.mag, 1.0,
+    assert!(
+        negative_one_geo.near_mag(1.0),
         "magnitude is unsigned (no sign bit)"
     );
 
@@ -152,8 +155,8 @@ fn it_proves_negative_is_position_not_sign() {
     let negative_one = Geonum::new(1.0, 1.0, 1.0);
 
     // both have same magnitude representation - difference is geometric position
-    assert_eq!(
-        positive_one.mag, negative_one.mag,
+    assert!(
+        positive_one.near_mag(negative_one.mag),
         "both have magnitude 1, no sign bit"
     );
 

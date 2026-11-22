@@ -69,8 +69,8 @@ fn it_matches_projection_based_sum() {
     let delta = (b.angle.grade_angle() - a.angle.grade_angle()).rem_euclid(2.0 * PI);
 
     // resolve b in a’s frame
-    let adj = Geonum::cos(Angle::new(delta, PI)).scale(b.mag);
-    let opp = Geonum::sin(Angle::new(delta, PI)).scale(b.mag);
+    let adj = Geonum::cos(Angle::new(delta / PI, 1.0)).scale(b.mag);
+    let opp = Geonum::sin(Angle::new(delta / PI, 1.0)).scale(b.mag);
 
     // a along 0 in its frame
     let a_along = Geonum::cos(Angle::new(0.0, 1.0)).scale(a.mag);

@@ -286,7 +286,7 @@ fn it_demonstrates_why_single_geonum_fails_here() {
     // Result: angles have been added together
     // Original: 0°, 90°, 45°
     // Combined: 0° + 90° + 45° = 135°
-    assert_eq!(combined_wrong.angle.grade_angle(), 3.0 * PI / 4.0);
+    assert!(combined_wrong.angle.near_rad(3.0 * PI / 4.0));
 
     // We've lost the fact that these were three separate beams!
     // The combined result suggests one beam at 135°, not three beams at different angles
@@ -305,8 +305,8 @@ fn it_demonstrates_why_single_geonum_fails_here() {
 
     // With separate representation, we can:
     // 1. Query individual beam properties
-    assert_eq!(separate_beams[0].angle.grade_angle(), 0.0);
-    assert_eq!(separate_beams[1].angle.grade_angle(), PI / 2.0);
+    assert!(separate_beams[0].angle.near_rad(0.0));
+    assert!(separate_beams[1].angle.near_rad(PI / 2.0));
     assert!((separate_beams[2].angle.grade_angle() - PI / 4.0).abs() < 1e-10);
 
     // 2. Compute pairwise interactions

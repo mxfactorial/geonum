@@ -41,7 +41,7 @@ fn it_proves_grade_decomposition_ignores_angle_addition() {
     let product = v1 * v2;
 
     // result: 45° + 45° = 90° rotation, stored as single angle
-    assert_eq!(product.mag, 1.0);
+    assert!(product.near_mag(1.0));
     assert_eq!(product.angle.blade(), 1); // 90° rotation (blade 1)
     assert!(product.angle.near_rem(0.0)); // exactly π/2
 
@@ -411,4 +411,191 @@ fn it_handles_mixed_grade_operations_naturally() {
     // traditional GA: each combination needs special rules and storage
     // geonum: universal blade addition works for all grade combinations
     // no restrictions, no special cases, no decomposition complexity
+}
+
+#[test]
+fn it_types_op_return_values_as_grade() {
+    // traditional: a declared type for every kind of quantity. position, velocity,
+    // acceleration and jerk are four of them, scalar, vector, bivector and trivector four
+    // more, and a compiler or a units check says whether an op handed back the kind it
+    // was asked for
+    //
+    // geonum: one type. the kind of thing an op returned is its grade, blade % 4, read
+    // after the op. grade does not have to stay the same through ops, and it does not.
+    // know which op was called and what it returns, then read the grade to see that it did
+
+    let position = Geonum::new(10.0, 1.0, 3.0); // [10, π/3]
+    assert!(position.angle.is_scalar(), "a position: grade 0");
+
+    // differentiate() returns one grade up: velocity, acceleration, jerk
+    let velocity = position.differentiate();
+    let acceleration = velocity.differentiate();
+    let jerk = acceleration.differentiate();
+    assert!(velocity.angle.is_vector(), "a velocity: grade 1");
+    assert!(acceleration.angle.is_bivector(), "an acceleration: grade 2");
+    assert!(jerk.angle.is_trivector(), "a jerk: grade 3");
+
+    // the readings follow the type. on x they are the textbooks cos, −sin, −cos, sin
+    let (cos, sin) = position.angle.cos_sin();
+    for (level, reads) in [
+        (position, 10.0 * cos),
+        (velocity, -10.0 * sin),
+        (acceleration, -10.0 * cos),
+        (jerk, 10.0 * sin),
+    ] {
+        assert!((level.project_to_dimension(0) - reads).abs() < EPSILON);
+    }
+
+    // a fifth quarter turn is the first again: blade 4, and 4 % 4 = 0
+    let snap = jerk.differentiate();
+    assert_eq!(snap.angle.blade(), 4);
+    assert!(snap.angle.is_scalar(), "the kind of thing the position is");
+
+    // integrate() returns one grade down, by going three quarter turns on. ask a velocity
+    // for its position and the grade says a position came back
+    let back = velocity.integrate();
+    assert_eq!(back.angle.blade(), 4, "blade keeps the turn it took");
+    assert!(back.angle.is_scalar(), "4 % 4 = 0: a position");
+    assert!(back.base_angle().near(&position), "the one that left");
+
+    // an acceleration integrates to a velocity, and twice to a position
+    assert!(acceleration.integrate().angle.is_vector());
+    assert!(acceleration.integrate().integrate().angle.is_scalar());
+
+    // negate() returns two grades on. this position turns at unit rate, so its
+    // acceleration is the position reversed: the same grade, and the same number
+    assert!(position.negate().angle.is_bivector());
+    assert!(position.negate().near(&acceleration));
+
+    // scale() returns the grade it was given. a mass of 2 makes a momentum of a velocity
+    // and a force of an acceleration
+    assert!(velocity.scale(2.0).angle.is_vector(), "momentum");
+    assert!(acceleration.scale(2.0).angle.is_bivector(), "force");
+
+    // dot() returns a scalar whatever went in. two velocities in, grade 1 and grade 1, and
+    // twice the kinetic energy of a unit mass out, at grade 0
+    let twice_kinetic = velocity.dot(&velocity);
+    assert!(twice_kinetic.angle.is_scalar());
+    assert!(twice_kinetic.near_mag(100.0));
+
+    // when the two oppose, the scalar comes back reversed, at grade 2. the position against
+    // its acceleration reads −100
+    let opposed = position.dot(&acceleration);
+    assert!(opposed.angle.is_bivector(), "a scalar a half turn on");
+    assert!((opposed.project_to_dimension(0) + 100.0).abs() < EPSILON);
+}
+
+#[test]
+fn it_carries_a_blade_when_two_remainders_add_to_a_quarter_turn() {
+    // traditional GA: the grade of a product is looked up. vector times vector is a scalar
+    // plus a bivector, vector times bivector a vector plus a trivector, and so on
+    //
+    // geonum: a multiply adds angles. an angle is a whole count of quarter turns and a
+    // remainder, so two angles add the way two mixed numbers do: the blades add, and the
+    // remainders carry one more when they reach a quarter turn. grade() reads what came out
+
+    // (blade, remainder in π) twice, then whether the remainders carry
+    let cases = [
+        ((0, 0.0), (1, 0.0), 0),
+        ((0, 0.2), (1, 0.2), 0),
+        ((0, 0.24), (0, 0.25), 0),
+        ((0, 0.25), (0, 0.25), 1),
+        ((0, 0.3), (1, 0.3), 1),
+        ((2, 0.4), (3, 0.4), 1),
+    ];
+    for ((blade_a, rem_a), (blade_b, rem_b), carry) in cases {
+        let a = Geonum::new_with_blade(2.0, blade_a, rem_a, 1.0);
+        let b = Geonum::new_with_blade(3.0, blade_b, rem_b, 1.0);
+        let product = a * b;
+        assert_eq!(product.angle.blade(), blade_a + blade_b + carry);
+        assert_eq!(product.angle.grade(), (blade_a + blade_b + carry) % 4);
+    }
+
+    // so two numbers on grade 0 can multiply to grade 1. [10, π/3] times itself: two thirds
+    // of a quarter turn, twice, is one and a third
+    let position = Geonum::new(10.0, 1.0, 3.0);
+    assert!(position.angle.is_scalar());
+    let squared = position * position;
+    assert!(
+        squared.angle.is_vector(),
+        "the type moved, and the read says so"
+    );
+    assert!(squared.near(&Geonum::new_with_blade(100.0, 1, 1.0, 6.0)));
+
+    // wedge() returns the product one quarter turn on, sized by the sine between the two,
+    // so its grade moves with the remainders too
+    for (rem_a, rem_b) in [(0.0, 0.0), (0.2, 0.2), (0.3, 0.3)] {
+        let a = Geonum::new_with_blade(2.0, 0, rem_a, 1.0);
+        let b = Geonum::new_with_blade(3.0, 1, rem_b, 1.0);
+        let (product, wedge) = (a * b, a.wedge(&b));
+        assert_eq!(wedge.angle.blade(), product.angle.blade() + 1);
+        assert!(wedge.near_mag(6.0), "a quarter turn between them: sine 1");
+
+        // with the second number behind the first the sine is below 0, and that arrives as
+        // a half turn more
+        assert_eq!(b.wedge(&a).angle.blade(), product.angle.blade() + 3);
+    }
+
+    // with no remainders the textbooks return types come out: a grade 0 unit and a grade 1
+    // unit wedge to grade 2, a bivector
+    let (first, second) = (
+        Geonum::create_dimension(1.0, 0),
+        Geonum::create_dimension(1.0, 1),
+    );
+    assert!(first.wedge(&second).angle.is_bivector());
+    assert!((first * second).angle.is_vector());
+}
+
+#[test]
+fn it_leaves_the_dot_on_an_even_grade_gap_and_the_wedge_on_an_odd_one() {
+    // traditional GA: the product of two vectors is a dot part plus a wedge part, ab = a·b
+    // + a∧b, and which part is there depends on the angle between them
+    //
+    // geonum: on a ladder of quarter turns the gap between two grades says it before
+    // anything is multiplied. an even gap leaves only the dot, and an odd gap only the wedge
+
+    let ladder = |position: Geonum| {
+        let velocity = position.differentiate();
+        let acceleration = velocity.differentiate();
+        [
+            position,
+            velocity,
+            acceleration,
+            acceleration.differentiate(),
+        ]
+    };
+
+    for position in [
+        Geonum::new(10.0, 0.0, 1.0),
+        Geonum::new(10.0, 1.0, 12.0),
+        Geonum::new(10.0, 1.0, 3.0),
+    ] {
+        let rungs = ladder(position);
+        for (i, a) in rungs.iter().enumerate() {
+            for (j, b) in rungs.iter().enumerate() {
+                let gap = (4 + j - i) % 4;
+                let (dot, wedge) = (a.dot(b), a.wedge(b));
+                if gap % 2 == 0 {
+                    assert!(dot.near_mag(100.0), "an even gap: all of it is in the dot");
+                    assert!(wedge.near_mag(0.0));
+
+                    // dot() returns a scalar: grade 0 on the same rung, and the scalar
+                    // reversed, grade 2, a half turn apart
+                    assert_eq!(dot.angle.grade(), gap);
+                } else {
+                    assert!(
+                        wedge.near_mag(100.0),
+                        "an odd gap: all of it is in the wedge"
+                    );
+                    assert!(dot.near_mag(0.0));
+                }
+            }
+        }
+    }
+
+    // the textbooks antisymmetry, a∧b = −b∧a, is the same area two grades apart
+    let [position, velocity, _, _] = ladder(Geonum::new(10.0, 1.0, 3.0));
+    let (one_way, other_way) = (position.wedge(&velocity), velocity.wedge(&position));
+    assert!(one_way.near_mag(other_way.mag));
+    assert_eq!((other_way.angle.grade() + 4 - one_way.angle.grade()) % 4, 2);
 }

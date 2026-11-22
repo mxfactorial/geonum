@@ -580,7 +580,7 @@ fn it_flattens_the_price_surface_as_every_seat_receives_the_cut_and_leaves_the_w
         "and the record sums the pair's windings"
     );
 
-    // p = mv: momentum is the value at its rate, the quarter turn. at the
+    // p = mv: momentum is the value at its rate, the quarter turn against its own angle. at the
     // start its magnitude is the cost; at the end it is zero, and what
     // remains is the winding — the information the scalar could not hold,
     // conserved in the angle. the knowledge-accumulating currency is the

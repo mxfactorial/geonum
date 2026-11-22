@@ -34,6 +34,10 @@ fn it_cycles_the_kinematic_hierarchy_through_grades() {
     // rides through untouched
 
     let position = Geonum::new(10.0, 1.0, 3.0); // [10, π/3], grade 0
+
+    // each derivative here is against the number's own angle, turning at unit rate, so the
+    // bare quarter turn is the whole of it. the next test says why, and orbit_test scales
+    // the turn when the rate is not 1
     let velocity = position.differentiate();
     let acceleration = velocity.differentiate();
     let jerk = acceleration.differentiate();
@@ -112,6 +116,9 @@ fn it_grows_displacement_quadratically_from_derived_acceleration() {
     // term outruns the linear as t grows — the ½t² overtaking the t
 
     let position = Geonum::new(5.0, 1.0, 4.0); // 5 m at π/4
+
+    // at unit rate again: velocity and acceleration are bare quarter turns of a position
+    // turning one radian per unit of time, which is why both keep the magnitude 5
     let velocity = position.differentiate(); // grade 1, |v| = 5
     let acceleration = velocity.differentiate(); // grade 2, |a| = 5
 
@@ -155,6 +162,7 @@ fn it_reads_kinematic_level_off_grade_not_blade() {
 
     let mut a = low;
     let mut b = high;
+    // each differentiate() is against the number's own angle, at unit rate
     for _ in 0..4 {
         a = a.differentiate();
         b = b.differentiate();
@@ -172,6 +180,9 @@ fn it_recovers_position_by_integrating_back_down_the_hierarchy() {
     // same direction, no drift because the rotation is exact
 
     let position = Geonum::new(7.0, 2.0, 5.0); // [7, 2π/5]
+
+    // three quarter turns up and three integrate() turns back down, each against the
+    // number's own angle at unit rate, so the magnitude never needs rescaling
     let jerk = position.differentiate().differentiate().differentiate();
 
     let recovered = jerk.integrate().integrate().integrate().base_angle();
@@ -231,6 +242,9 @@ fn it_wedges_lever_and_force_into_torque() {
     let momentum = Geonum::new_with_blade(4.0, 1, 1.0, 4.0);
     let l = r.wedge(&momentum);
     assert_eq!(l.angle.grade(), 2, "angular momentum is a bivector");
+
+    // dL/dt as a bare quarter turn: L against its own angle, at unit rate. only the
+    // grade is read here, not a size
     assert_eq!(
         l.differentiate().angle.grade(),
         3,
@@ -386,6 +400,9 @@ fn it_scales_velocity_into_momentum_and_differentiates_it_to_force() {
         1,
         "momentum rides the velocity grade"
     );
+
+    // dp/dt as a bare quarter turn: p against its own angle, at unit rate. only the
+    // grade is read here, not a size
     assert_eq!(
         momentum.differentiate().angle.grade(),
         2,
@@ -517,6 +534,10 @@ fn it_conserves_angular_momentum_because_the_wedge_is_antisymmetric() {
 // term: a damper's −cv² has no π partner, so the magnitude drains by exactly
 // that dot. no lagrangian, no symmetry search: the energy is a magnitude, the
 // dynamics is rotation, and rotation never touches magnitude
+//
+// each test runs newton's integrator first and then states the same thing with no
+// steps: the oscillator as one number turning at ω, where every band the integrator
+// needs closes to nothing
 
 const MASS: f64 = 2.0;
 const SPRING_K: f64 = 8.0;
@@ -538,6 +559,19 @@ fn phase(x: &Geonum, v: &Geonum) -> Geonum {
 
 fn spring(x: &Geonum) -> Geonum {
     x.negate().scale(SPRING_K) // hooke: −kx, the negate a π rotation
+}
+
+// the same oscillator with no steps. the position is the dimension 0 reading of one number
+// turning at ω, and the velocity is that number rotated a quarter turn and scaled by the
+// rate, the way orbit_test scales its quarter turn. both come back on the 0/π rays the
+// integrator's state rides, so phase() and spring() take them as they are
+fn turning(turn: Angle) -> (Geonum, Geonum) {
+    let position = Geonum::new_with_angle(AMPLITUDE, turn); // [A, ωt]
+    let velocity = position.differentiate().scale(OMEGA); // [Aω, ωt + π/2]
+    (
+        Geonum::new_from_cartesian(position.project_to_dimension(0), 0.0),
+        Geonum::new_from_cartesian(velocity.project_to_dimension(0), 0.0),
+    )
 }
 
 // kick-drift under a supplied force — newton only, no energy constructed
@@ -594,6 +628,29 @@ fn it_conserves_energy_as_the_phase_magnitude() {
         max_speed > 0.99 * AMPLITUDE * OMEGA,
         "speed reaches Aω: max {max_speed:.3}"
     );
+
+    // the same motion with no steps: one number turning at ω. newton's law is two
+    // quarter turns at that rate landing on the spring's negate, since mω² = k
+    let position = Geonum::new_with_angle(AMPLITUDE, Angle::new(1.0, 3.0)); // anywhere on the turn
+    let acceleration = position
+        .differentiate()
+        .scale(OMEGA)
+        .differentiate()
+        .scale(OMEGA);
+    assert!(
+        acceleration
+            .scale(MASS)
+            .near(&position.negate().scale(SPRING_K)),
+        "ma = −kx with nothing integrated"
+    );
+
+    // and the energy is the phase magnitude squared at every eighth of the period, with
+    // no drift to allow for
+    for n in 0..8 {
+        let (x, v) = turning(Angle::new(n as f64, 4.0));
+        let p = phase(&x, &v);
+        assert!(p.dot(&p).near_mag(E0), "eighth {n}: E0 exactly");
+    }
 }
 
 #[test]
@@ -657,6 +714,31 @@ fn it_exchanges_the_legs_by_the_quarter_turn() {
             }
         }
     }
+
+    // with no steps the same eight readings are exact. the two legs are the cos² and sin²
+    // of the turn, and the phase point walks the grades 3, 2, 1, 0 at the odd eighths
+    for i in 1..=8usize {
+        let turn = Angle::new(i as f64, 4.0);
+        let (x, v) = turning(turn);
+        let pe = x.dot(&x).scale(0.5 * SPRING_K);
+        let ke = v.dot(&v).scale(0.5 * MASS);
+        let (cos, sin) = turn.cos_sin();
+        assert!(
+            pe.near_mag(E0 * cos * cos),
+            "eighth {i}: potential leg E0·cos²"
+        );
+        assert!(
+            ke.near_mag(E0 * sin * sin),
+            "eighth {i}: kinetic leg E0·sin²"
+        );
+        if i % 2 == 1 {
+            assert_eq!(
+                phase(&x, &v).angle.grade(),
+                (7 - i) / 2,
+                "eighth {i}: the phase point walks the grade cycle"
+            );
+        }
+    }
 }
 
 #[test]
@@ -698,6 +780,14 @@ fn it_cancels_the_kinetic_credit_against_the_potential_debit() {
         credit_sample.angle.is_opposite(&debit_sample.angle),
         "credit and debit sit π apart — the pairing is the conservation"
     );
+
+    // with no steps, at the same eighth of the period, the credit is kA²ω/2 with no band
+    let (x, v) = turning(Angle::new(1.0, 4.0));
+    let credit = spring(&x).dot(&v);
+    let debit = x.scale(SPRING_K).dot(&v);
+    assert!(credit.near_mag(expected_power), "18 W exactly");
+    assert!((credit + debit).near_mag(0.0), "and the debit cancels it");
+    assert!(credit.angle.is_opposite(&debit.angle), "a half turn apart");
 }
 
 #[test]
@@ -742,4 +832,81 @@ fn it_drains_energy_only_through_the_unpartnered_power() {
         e_final / E0,
         envelope
     );
+
+    // with no steps: the damped oscillator is one number that shrinks as it turns. it
+    // moves as itself times one fixed number, [ω, π/2 + δ]: scaled by ω and rotated a
+    // little past a quarter turn, the little δ being the damping
+    use std::f64::consts::PI;
+    let gamma = DAMP_C / (2.0 * MASS); // how fast it shrinks
+    let omega_d = (OMEGA * OMEGA - gamma * gamma).sqrt(); // how fast it turns
+    let delta = Angle::new((gamma / omega_d).atan() / PI, 1.0);
+    let motion = Geonum::new_with_angle(OMEGA, Angle::new(1.0, 2.0) + delta);
+    let number = |t: f64| {
+        Geonum::new_with_angle(
+            AMPLITUDE * OMEGA / omega_d * (-gamma * t).exp(),
+            Angle::new(2.0, 1.0) + Angle::new(omega_d * t / PI, 1.0) - delta,
+        )
+    };
+
+    // shrinking is a step back along its ray and turning is a step along its quarter turn.
+    // added, they are that one multiply
+    let z = number(0.7);
+    let moved = z.scale(-gamma) + z.differentiate().scale(omega_d);
+    for dimension in [0, 1] {
+        assert!(
+            (moved.project_to_dimension(dimension) - (z * motion).project_to_dimension(dimension))
+                .abs()
+                < EPSILON,
+            "out plus around is the number times [ω, π/2 + δ]"
+        );
+    }
+
+    // position and velocity are its readings: released at A, from rest
+    let read = |t: f64| {
+        let z = number(t);
+        (
+            z.project_to_dimension(0),
+            (z * motion).project_to_dimension(0),
+        )
+    };
+    let (x0, v0) = read(0.0);
+    assert!((x0 - AMPLITUDE).abs() < EPSILON && v0.abs() < EPSILON);
+    let energy = |t: f64| {
+        let (x, v) = read(t);
+        0.5 * SPRING_K * x * x + 0.5 * MASS * v * v
+    };
+
+    // the drain is −c·v² summed over the period. v² is a number that only shrinks plus one
+    // that shrinks as it turns, and each goes backward in one divide by how it moves: the
+    // first by its shrink rate, the second by twice the motion above
+    let t_end = STEPS as f64 * DT;
+    let shrinking = |t: f64| (-2.0 * gamma * t).exp() / (-2.0 * gamma);
+    let twice_motion = Geonum::new_with_angle(2.0 * OMEGA, Angle::new(1.0, 2.0) + delta);
+    let shrinking_as_it_turns = |t: f64| {
+        let wave = Geonum::new_with_angle(
+            (-2.0 * gamma * t).exp(),
+            Angle::new(2.0 * omega_d * t / PI, 1.0) + Angle::new(1.0, 1.0),
+        ); // [e^(−2γt), 2ω′t + π]
+        Geonum::new_with_angle(
+            wave.mag / twice_motion.mag,
+            wave.angle + Angle::new(2.0, 1.0) - twice_motion.angle,
+        )
+        .project_to_dimension(0)
+    };
+    let speed = AMPLITUDE * OMEGA * OMEGA / omega_d;
+    let drained_exactly = -DAMP_C * speed * speed / 2.0
+        * (shrinking(t_end) - shrinking(0.0) + shrinking_as_it_turns(t_end)
+            - shrinking_as_it_turns(0.0));
+
+    // the budget closes with no band: every joule lost is in that sum
+    assert!(
+        (energy(t_end) - E0 - drained_exactly).abs() < 1e-9,
+        "energy loss = unpartnered power, exactly: {:.6} vs {:.6}",
+        energy(t_end) - E0,
+        drained_exactly
+    );
+
+    // and the integrator's ledger lands within its own band of both
+    assert!((e_final - energy(t_end)).abs() / E0 < 1e-2);
+    assert!((drained - drained_exactly).abs() / E0 < 1e-2);
 }

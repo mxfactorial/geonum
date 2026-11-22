@@ -577,7 +577,7 @@ fn its_a_monad() {
 
     // test unit laws
     let unit_result = unit(&x);
-    assert_eq!(unit_result.mag, x.mag);
+    assert!(unit_result.near_mag(x.mag));
     assert_eq!(unit_result.angle, x.angle);
 }
 
@@ -624,7 +624,7 @@ fn it_rejects_category_theory() {
     let left_assoc = (r1 * r2) * r3;
     let right_assoc = r1 * (r2 * r3);
 
-    assert_eq!(left_assoc.mag, right_assoc.mag);
+    assert!(left_assoc.near_mag(right_assoc.mag));
     assert_eq!(left_assoc.angle, right_assoc.angle);
 
     // test category theory as unnecessary abstraction

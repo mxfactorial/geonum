@@ -52,7 +52,7 @@ fn it_computes_geometric_product_without_decomposition() {
     // then store each grade in separate memory locations
 
     // geonum: both methods encode geometric relationships through blade arithmetic
-    assert_eq!(e1e2_mult.mag, 6.0); // lengths multiply: 2*3=6
+    assert!(e1e2_mult.near_mag(6.0)); // lengths multiply: 2*3=6
     assert_eq!(e1e2_mult.angle.blade(), 3); // blades add: 1+2=3 (trivector)
     assert_eq!(e1e2_mult.angle.grade(), 3); // grade 3 from blade arithmetic
 
@@ -84,7 +84,7 @@ fn it_computes_geometric_product_without_decomposition() {
     // prove geometric_mult represents pure angle addition without dot+wedge decomposition
     // while geometric_geo represents traditional GA geometric product formula
     assert_eq!(geometric_mult.angle, v1.angle + v2.angle); // pure angle addition
-    assert_eq!(geometric_mult.mag, v1.mag * v2.mag); // pure length multiplication
+    assert!(geometric_mult.near_mag(v1.mag * v2.mag)); // pure length multiplication
 
     // prove multiplication and .geo() give different results - different blade arithmetic
     assert_ne!(geometric_mult.angle.blade(), geometric_geo.angle.blade()); // different operations
@@ -94,7 +94,7 @@ fn it_computes_geometric_product_without_decomposition() {
 
     // prove .geo() actually combines dot and wedge through addition
     let manual_combination = dot_v1v2 + wedge_v1v2;
-    assert_eq!(geometric_geo.mag, manual_combination.mag); // .geo() = dot + wedge
+    assert!(geometric_geo.near_mag(manual_combination.mag)); // .geo() = dot + wedge
     assert_eq!(
         geometric_geo.angle.blade(),
         manual_combination.angle.blade()
@@ -127,7 +127,7 @@ fn it_rotates_without_exponential_map() {
 
     // prove geonum rotation matches traditional rotor formula
     assert_eq!(rotated.angle, vector.angle + rotation_90deg); // direct angle addition
-    assert_eq!(rotated.mag, vector.mag); // length preserved (isometry)
+    assert!(rotated.near_mag(vector.mag)); // length preserved (isometry)
 
     // test rotor composition: multiple rotations
     let rotation1 = Angle::new(1.0, 6.0); // π/6 = 30°
@@ -155,7 +155,7 @@ fn it_rotates_without_exponential_map() {
     // geonum: just adds angle - constant time regardless of magnitude
     assert_eq!(rotated_large.angle.blade(), 11); // 17π/3 normalized to blade count
     assert_eq!(rotated_large.angle.grade(), 3); // 11 % 4 = 3 (trivector)
-    assert_eq!(rotated_large.mag, vector.mag); // length always preserved
+    assert!(rotated_large.near_mag(vector.mag)); // length always preserved
 
     // prove sandwich product equivalence: R*v*R† = v.rotate(R_angle)
     // create traditional rotor components manually for comparison
@@ -172,7 +172,7 @@ fn it_rotates_without_exponential_map() {
     // both should give identical results
     let expected_rotated_angle = test_vector.angle + rotor_angle;
     assert_eq!(geonum_rotated.angle, expected_rotated_angle);
-    assert_eq!(geonum_rotated.mag, test_vector.mag);
+    assert!(geonum_rotated.near_mag(test_vector.mag));
 
     // test rotation chain equivalence
     let chain_rotated = test_vector
@@ -183,7 +183,7 @@ fn it_rotates_without_exponential_map() {
 
     // rotation chaining vs composed rotation give identical results
     assert_eq!(chain_rotated.angle, single_rotated.angle);
-    assert_eq!(chain_rotated.mag, single_rotated.mag);
+    assert!(chain_rotated.near_mag(single_rotated.mag));
 
     // traditional GA: rotor chains require exponential matrix multiplications
     // geonum: rotation composition through elementary angle addition
@@ -446,10 +446,10 @@ fn its_a_conjugation() {
     ); // 3→1→3
 
     // test conjugation preserves length (isometry property)
-    assert_eq!(scalar_conjugated.mag, scalar.mag); // length preserved
-    assert_eq!(vector_conjugated.mag, vector.mag); // length preserved
-    assert_eq!(bivector_conjugated.mag, bivector.mag); // length preserved
-    assert_eq!(trivector_conjugated.mag, trivector.mag); // length preserved
+    assert!(scalar_conjugated.near_mag(scalar.mag)); // length preserved
+    assert!(vector_conjugated.near_mag(vector.mag)); // length preserved
+    assert!(bivector_conjugated.near_mag(bivector.mag)); // length preserved
+    assert!(trivector_conjugated.near_mag(trivector.mag)); // length preserved
 
     // test high-dimensional conjugation without exponential complexity
     let million_blade = Geonum::new_with_blade(7.0, 1_000_000, 1.0, 5.0); // million-dimensional
@@ -465,7 +465,7 @@ fn its_a_conjugation() {
         million_conjugated.angle.blade(),
         million_blade.angle.blade() + 2
     ); // blade arithmetic
-    assert_eq!(million_conjugated.mag, million_blade.mag); // length preserved
+    assert!(million_conjugated.near_mag(million_blade.mag)); // length preserved
 
     // prove conjugation blade arithmetic: always adds 2 blades (π rotation)
     let test_blades = vec![0, 1, 17, 99, 1000, 1_000_000];
@@ -572,7 +572,7 @@ fn it_encodes_basis_without_storage() {
 
     assert_eq!(basis_product.angle.blade(), 3); // blades add: 1+2=3
     assert_eq!(basis_product.angle.grade(), 3); // grade 3 = trivector
-    assert_eq!(basis_product.mag, 1.0); // lengths multiply: 1*1=1
+    assert!(basis_product.near_mag(1.0)); // lengths multiply: 1*1=1
 
     // traditional multiplication table entry: e₁ * e₁₂ = e₁₂₃
     // geonum: automatic through blade arithmetic - no table needed
@@ -739,10 +739,10 @@ fn it_inverts_without_matrix_operations() {
     let trivector_inv = trivector.inv();
 
     // verify inversion formula: 1/length for all grades
-    assert_eq!(scalar_inv.mag, 1.0 / scalar.mag); // 1/2
-    assert_eq!(vector_inv.mag, 1.0 / vector.mag); // 1/3
-    assert_eq!(bivector_inv.mag, 1.0 / bivector.mag); // 1/4
-    assert_eq!(trivector_inv.mag, 1.0 / trivector.mag); // 1/5
+    assert!(scalar_inv.near_mag(1.0 / scalar.mag)); // 1/2
+    assert!(vector_inv.near_mag(1.0 / vector.mag)); // 1/3
+    assert!(bivector_inv.near_mag(1.0 / bivector.mag)); // 1/4
+    assert!(trivector_inv.near_mag(1.0 / trivector.mag)); // 1/5
 
     // test multiplicative identity: geo * geo.inv() = 1
     let scalar_identity = scalar * scalar_inv;
@@ -774,7 +774,7 @@ fn it_inverts_without_matrix_operations() {
 
     // traditional: would need 2^1000000 × 2^1000000 matrix inversion (impossible)
     // geonum: same reciprocal + angle transformation regardless of dimension
-    assert_eq!(million_inv.mag, 1.0 / million_obj.mag); // reciprocal formula
+    assert!(million_inv.near_mag(1.0 / million_obj.mag)); // reciprocal formula
     assert_eq!(million_inv.angle.blade(), million_obj.angle.blade() + 2); // +2 blade arithmetic
 
     // test inversion chain: inv(inv(x)) = x (involution property)

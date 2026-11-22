@@ -84,6 +84,18 @@ fn it_produces_taylor_coefficients_from_angle_descent() {
             taylor_coeff
         );
     }
+
+    // the descent itself: x⁷ turned a quarter turn, counted once for each angle of x it
+    // carries, over the quarter turn of x. seven times over, each step handed its count and
+    // proving it against the angle the last one left. the seventh lands on 7! with no angle remaining
+    let mut descending = powers[7];
+    for count in (1..=7).rev() {
+        descending = turn_and_divide(&descending, &x, count as f64);
+    }
+    assert!(
+        descending.near(&Geonum::scalar(5040.0)),
+        "d⁷/dx⁷[x⁷] = 7! = [5040, 0]"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -197,6 +209,7 @@ fn it_shows_derivative_cycling_creates_trig_series() {
     // the series structure comes from grade filtering
 
     // verify the derivative cycle at grade level
+    // sin and cos turn at unit rate in x, so each derivative is a bare quarter turn
     let f = Geonum::new(1.0, 0.0, 1.0); // grade 0
 
     let grades: Vec<usize> = (0..8)
@@ -339,7 +352,7 @@ fn it_shows_the_dual_creates_alternating_signs() {
 
     let f = Geonum::new(1.0, 0.0, 1.0); // grade 0
 
-    // differentiate twice: grade 0 → grade 2
+    // differentiate twice, against its own angle: grade 0 → grade 2
     let f_double = f.differentiate().differentiate();
     assert_eq!(f_double.angle.grade(), 2, "two quarter turns reach grade 2");
 
@@ -571,3 +584,24 @@ fn it_shows_convergence_is_angle_normalization_dominance() {
 // the series doesn't approximate the function from outside
 // it reads the function's angular structure from inside
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ---------------------------------------------------------------------------
+// helpers — the patterns geonum has no named api for yet
+// ---------------------------------------------------------------------------
+
+// the rate of f against x: turn both a quarter turn, count, and divide. magnitudes divide,
+// angles subtract, the quarter turns cancel
+// differentiate_test.rs proves this is the power, sum, product and chain rules
+//
+// the count is how many times x went into f. whoever made f has it and hands it over, and
+// it is proven here in angle space: the angle of x taken that many times is the angle of
+// f. angles add, and no angle is read out as a float to find it
+fn turn_and_divide(f: &Geonum, x: &Geonum, count: f64) -> Geonum {
+    assert!(
+        f.angle.near(&(x.angle * count)),
+        "x went into f {count} times"
+    );
+    let df = f.differentiate().scale(count);
+    let dx = x.differentiate();
+    Geonum::new_with_angle(df.mag / dx.mag, df.angle - dx.angle)
+}

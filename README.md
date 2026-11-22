@@ -14,9 +14,9 @@
 
 # geonum
 
-dimensions as quarter turns each number [counts](https://en.wikipedia.org/wiki/Blade_(geometry)) instead of a shared array of scalars
+dimensions as quarter turns each number [counts](https://en.wikipedia.org/wiki/Blade_(geometry)) instead of a shared array of scalars they all sit inside
 
-`[1, 1, 1]` -> `blade: 3` frees up numbers from algebras, and their vectors from spaces, matrices & tensors
+`[1, 1, 1]` basis -> `blade: 3` quarter turn counter frees up numbers from algebras, and their vectors from spaces, matrices & tensors
 
 "scalars" drop the angle and spend `n^k` tensor and `2^n` multivector components recovering it. geonum stores it: angles add, mags multiply, 2 components at any dimension
 
@@ -33,7 +33,7 @@ struct Geonum {
 * project(onto: Angle) -> angle_diff.cos() into any dimension without defining it first
 * dual() = blade + 2, duality adds π and maps grades k → (k + 2) mod 4 (0 ↔ 2, 1 ↔ 3) at every n, whereas traditional GA's k → n − k has to be told n
 * grade() = blade % 4, geometric grade
-* differentiate() = angle + π/2, polynomial coefficients computed from sin(θ+π/2) = cos(θ) quadrature identity
+* differentiate() = angle + π/2, the sin(θ+π/2) = cos(θ) quadrature identity. a powers coefficient counts how many more times it turns
 
 ### how dimensions work
 
@@ -248,6 +248,7 @@ affine_test.rs
 algebra_test.rs
 algorithms_test.rs
 angle_arithmetic_test.rs
+angle_forward_test.rs
 anomaly_test.rs
 arithmetic_test.rs
 astrophysics_test.rs
@@ -265,6 +266,7 @@ convolution_test.rs
 cosmology_test.rs
 crystallography_test.rs
 curve_test.rs
+differentiate_test.rs
 dimension_test.rs
 directional_stats_test.rs
 economic_spacetime_test.rs
@@ -408,7 +410,7 @@ all geonum operations maintain constant time regardless of dimension, eliminatin
 
 #### automatic calculus
 - differentiation through π/2 rotation eliminates limit computation
-- polynomial coefficients emerge from quadrature sin(θ+π/2) = cos(θ)
+- polynomial coefficients count how many more times a power turns
 - grade cycling: f→f'→f''→f'''→f with grades 0→1→2→3→0
 - no symbolic manipulation, no numerical approximation
 
@@ -467,7 +469,7 @@ multiplying numbers adds their angles and multiplies their magnitudes:
 
 - `[2, 0] * [3, pi/2] = [6, pi/2]`
 
-differentiation is just rotating a number by +pi/2:
+differentiating a number against its own angle is just rotating it by +pi/2:
 
 - `[4, 0]' = [4, pi/2]`
 - `[4, pi/2]' = [4, pi]`
@@ -536,45 +538,52 @@ geometric numbers build dimensions by rotating—not stacking
       - its_a_dual_number:172-218
       - its_an_octonion:221-241
       - its_a_matrix:244-298
-      - its_a_tensor:301-479
-      - it_dualizes_log2_geometric_algebra_components:531-564
-      - its_a_clifford_number:736-816
+      - its_a_tensor:301-503
+      - it_dualizes_log2_geometric_algebra_components:555-588
+      - its_a_clifford_number:760-840
 
     - tests/pseudoscalar_test.rs
       - it_solves_the_exponential_complexity_explosion:18-79
-      - it_doesnt_need_a_pseudoscalar:93-288
-      - it_demonstrates_pseudoscalar_elimination_benefits:291-328
-      - it_proves_dualization_as_angle_ops_compresses_ga:331-394
+      - it_doesnt_need_a_pseudoscalar:93-295
+      - it_demonstrates_pseudoscalar_elimination_benefits:298-335
+      - it_proves_dualization_as_angle_ops_compresses_ga:338-401
 
     - tests/grade_test.rs
       - it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:259-341
       - it_compresses_traditional_ga_grades_to_two_involutive_pairs:344-379
 
     - tests/dimension_test.rs
-      - it_proves_rotational_quadrature_expresses_quadratic_forms:640-814
+      - it_proves_rotational_quadrature_expresses_quadratic_forms:652-826
 
     - tests/calculus_test.rs
-      - it_encodes_the_power_in_the_angle:35-88
-      - it_derives_x_squared_without_limits:91-121
-      - it_shows_limits_discard_what_angles_preserve:350-387
-      - it_shows_limits_lose_the_tangent_normal_dual:390-427
-      - it_shows_factorial_emerges_from_angle_descent:501-542
-      - it_proves_differentiation_cycles_grades:586-664
-      - it_proves_fundamental_theorem_is_accumulation_equals_interference:704-743
-      - its_a_gradient:803-850
-      - its_a_laplacian:853-899
-      - its_a_line_integral:906-928
-      - its_a_surface_integral:931-945
+      - it_encodes_the_power_in_the_angle:35-100
+      - it_derives_x_squared_without_limits:157-197
+      - it_shows_limits_discard_what_angles_preserve:468-505
+      - it_shows_limits_lose_the_tangent_normal_dual:508-545
+      - it_shows_factorial_emerges_from_angle_descent:622-675
+      - it_proves_differentiation_cycles_grades:732-816
+      - it_proves_fundamental_theorem_is_accumulation_equals_interference:857-901
+      - its_a_gradient:972-1066
+      - its_a_laplacian:1069-1115
+      - its_a_line_integral:1201-1223
+      - its_a_surface_integral:1226-1240
+
+    - tests/differentiate_test.rs
+      - it_reads_the_rate_of_a_projection_off_the_quarter_turn:45-70
+      - it_proves_the_two_ratios_are_the_quarter_turns_cancelling:89-118
+      - it_proves_the_product_rule_is_angles_adding:166-194
+      - it_proves_the_chain_rule_is_turn_counts_multiplying:197-222
+      - it_differentiates_a_number_that_grows_while_it_turns:225-255
 
     - tests/mechanics_test.rs
-      - it_cycles_the_kinematic_hierarchy_through_grades:30-53
-      - it_carries_its_own_motion_in_the_quarter_turn:56-105
-      - it_grows_displacement_quadratically_from_derived_acceleration:108-145
-      - it_reads_kinematic_level_off_grade_not_blade:148-166
-      - it_dots_velocity_into_kinetic_energy:266-289
-      - it_conserves_energy_as_the_phase_magnitude:556-597
-      - it_conserves_momentum_because_the_interaction_forces_are_pi_apart:437-464
-      - it_conserves_angular_momentum_because_the_wedge_is_antisymmetric:467-503
+      - it_cycles_the_kinematic_hierarchy_through_grades:30-57
+      - it_carries_its_own_motion_in_the_quarter_turn:60-109
+      - it_grows_displacement_quadratically_from_derived_acceleration:112-152
+      - it_reads_kinematic_level_off_grade_not_blade:155-174
+      - it_dots_velocity_into_kinetic_energy:280-303
+      - it_conserves_energy_as_the_phase_magnitude:590-654
+      - it_conserves_momentum_because_the_interaction_forces_are_pi_apart:454-481
+      - it_conserves_angular_momentum_because_the_wedge_is_antisymmetric:484-520
 
     create tests/my_test.rs with use geonum::*;
     ```

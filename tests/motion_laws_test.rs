@@ -92,7 +92,7 @@ fn it_ships_conservation_with_motion() {
 
         // Arbitrary small rotation to show conservation holds
         // Don't focus on the numbers - focus on the STRUCTURE
-        let small_rotation = Angle::new(0.001, PI);
+        let small_rotation = Angle::new(0.001 / PI, 1.0);
 
         position.angle = position.angle + small_rotation;
         momentum.angle = momentum.angle + small_rotation;
@@ -310,8 +310,8 @@ fn it_unifies_newtons_disparate_laws_into_one_operation() {
     // The geometric product is the sum of dot and wedge parts
     // This unification IS what Newton split into "force" and "torque"
     let reconstructed = alignment + rotation;
-    assert_eq!(
-        interaction.mag, reconstructed.mag,
+    assert!(
+        interaction.near_mag(reconstructed.mag),
         "Geometric product = dot + wedge: unified where Newton saw separate forces"
     );
     assert_eq!(

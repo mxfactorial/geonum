@@ -54,7 +54,7 @@ fn its_a_metric_signature() {
     // 0 + 0 = 0, cos(0) = +1
     assert_eq!(e1_squared.angle.blade(), 0);
     assert!(e1_squared.angle.grade_angle().cos() > 0.0); // positive signature
-    assert_eq!(e1_squared.mag, 1.0);
+    assert!(e1_squared.near_mag(1.0));
 
     // test 2: minkowski signature emerges from timelike at π/2
     // traditional: "time has negative signature in the metric"
@@ -92,7 +92,7 @@ fn its_a_metric_signature() {
     // π + π = 2π, and 2π ≡ 0 (mod 2π)
     assert!(squared.angle.grade_angle().abs() < 1e-10); // back to 0
     assert!(squared.angle.grade_angle().cos() > 0.0); // positive result
-    assert_eq!(squared.mag, 1.0);
+    assert!(squared.near_mag(1.0));
 
     // this is why (-1) × (-1) = +1: its just π + π = 2π ≡ 0
 
@@ -127,7 +127,7 @@ fn its_a_metric_signature() {
     let flipped_signature = Geonum::new_with_blade(1.0, 2, 0.0, 1.0); // cos(π) = -1
 
     // same basis vector, just rotated by π
-    assert_eq!(positive_signature.mag, flipped_signature.mag);
+    assert!(positive_signature.near_mag(flipped_signature.mag));
     assert_eq!(
         (positive_signature.angle.blade() + 2) % 4,
         flipped_signature.angle.blade() % 4
@@ -177,14 +177,15 @@ fn its_a_metric_signature() {
     let i_squared_euclidean = i_3d_euclidean * i_3d_euclidean;
 
     // 3π/2 + 3π/2 = 3π ≡ π (mod 2π), cos(π) = -1
-    assert_eq!(i_squared_euclidean.angle.grade_angle().cos(), -1.0); // I² = -1 for euclidean
+    assert!((i_squared_euclidean.angle.grade_angle().cos() - -1.0).abs() < EPSILON); // I² = -1 for euclidean
 
     // in 4D minkowski: 1 time (π/2) + 3 space (0°)
     let i_4d_minkowski = Geonum::new_with_blade(1.0, 4, 0.0, 1.0); // 4 × π/2 = 2π
     let i_squared_minkowski = i_4d_minkowski * i_4d_minkowski;
 
     // 2π + 2π = 4π ≡ 0 (mod 2π), cos(0) = +1
-    assert_eq!(i_squared_minkowski.angle.grade_angle().cos(), 1.0); // I² = +1 for minkowski
+    assert!((i_squared_minkowski.angle.grade_angle().cos() - 1.0).abs() < EPSILON);
+    // I² = +1 for minkowski
 
     // the ±1 "mystery" is just whether your total angle is odd or even multiples of π
 

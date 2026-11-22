@@ -1,7 +1,7 @@
 #![cfg_attr(coverage, allow(unused_variables))]
 
 use geonum::*;
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::PI;
 use std::time::Instant;
 
 // small value for floating-point comparisons
@@ -21,7 +21,7 @@ fn its_a_tensor_product() {
     let tensor_product = e1.wedge(&e2);
 
     // test result has combined properties
-    assert_eq!(tensor_product.mag, 1.0); // 1.0 × 1.0 = 1.0
+    assert!(tensor_product.near_mag(1.0)); // 1.0 × 1.0 = 1.0
     assert_eq!(tensor_product.angle, Angle::new(1.0, 1.0)); // 0 + π/2 + π/2 = π
     assert_eq!(tensor_product.angle.blade(), 2); // bivector grade
 
@@ -74,8 +74,8 @@ fn its_a_tensor_product() {
 
     // construct b + c in polar form for geonum representation
     let b_plus_c = Geonum::new_with_angle(
-        sum_length,                // cartesian sum of b and c magnitudes
-        Angle::new(sum_angle, PI), // direction of the sum vector
+        sum_length,                      // cartesian sum of b and c magnitudes
+        Angle::new(sum_angle / PI, 1.0), // direction of the sum vector
     );
 
     // compute a ⊗ (b + c) as a bivector via wedge product
@@ -107,7 +107,8 @@ fn its_a_tensor_product() {
     // prove that a ⊗ (b + c) and a ⊗ b + a ⊗ c differ in phase by 45° (π/4 radians)
     // geonum captures this additional structure — tensors do not
 
-    let angle_diff = (left_distribute.angle - Angle::new(sum_products_angle, PI)).grade_angle();
+    let angle_diff =
+        (left_distribute.angle - Angle::new(sum_products_angle / PI, 1.0)).grade_angle();
     assert!((angle_diff - PI / 4.0).abs() < EPSILON); // ≈ 0.785398...
 
     // demonstrate rank-3 tensor operation efficiency
@@ -164,7 +165,7 @@ fn its_a_tensor_product() {
     let ijk = ij * k;
 
     // in geonum ijk = [1, π/2 + π + 3π/2] = [1, 3π] = [1, π] = -1
-    assert_eq!(ijk.mag, 1.0);
+    assert!(ijk.near_mag(1.0));
     assert!(ijk.angle.near_rad(PI));
 
     // compare with traditional tensor implementation
@@ -216,7 +217,7 @@ fn its_a_kronecker_product() {
     let kronecker = matrix_a * matrix_b;
 
     // geonum computes kronecker through angle arithmetic
-    assert_eq!(kronecker.mag, 2.5 * 6.5); // matrix elements combine through length multiplication
+    assert!(kronecker.near_mag(2.5 * 6.5)); // matrix elements combine through length multiplication
     assert_eq!(kronecker.angle, matrix_a.angle + matrix_b.angle); // transformations compose through angle addition
 
     // why do kronecker users want blocks? they need to:
@@ -280,7 +281,7 @@ fn its_a_kronecker_product() {
     let high_kronecker = high_matrix_a * high_matrix_b;
 
     // high-dimensional kronecker through angle arithmetic
-    assert_eq!(high_kronecker.mag, 100.0 * 50.0); // magnitudes multiply
+    assert!(high_kronecker.near_mag(100.0 * 50.0)); // magnitudes multiply
     assert_eq!(high_kronecker.angle.blade(), 1000 + 500); // transformations compose
 
     // users can still access any "block" element through projections:
@@ -365,7 +366,7 @@ fn its_a_contraction() {
     let high_contracted = high_tensor_a * high_tensor_b;
 
     // contraction works in arbitrary dimensions through angle arithmetic
-    assert_eq!(high_contracted.mag, 15.0 * 23.0); // lengths multiply
+    assert!(high_contracted.near_mag(15.0 * 23.0)); // lengths multiply
     assert_eq!(high_contracted.angle.blade(), 1000 + 500); // blades add (directional combination)
 
     // project to verify high-dimensional directional relationships preserved
@@ -390,104 +391,152 @@ fn its_a_contraction() {
 fn its_a_covariant_derivative() {
     // traditional: covariant derivative ∇_μV^ν = ∂_μV^ν + Γ^ν_μλV^λ requires christoffel symbols
     // must compute connection coefficients from metric, then apply to each vector component
-    // geonum: covariant derivative through geometric rotation accounting for spacetime curvature
+    // geonum: the connection is the frame turning. a vector is one angle, and what the
+    // christoffel symbols add back is the quarter turn the components left out
 
-    // test vector field in curved spacetime
-    let vector_field = Geonum::new_from_cartesian(1.0, 0.0); // radial vector field
+    // a vector field with constant components in the polar frame: V = 3 ê_r + 4 ê_φ everywhere
+    // at azimuth φ the frame's ê_r points along φ, so the field there is the components
+    // rotated by φ: one geonum, [5, φ + atan(4/3)]
+    let azimuth = Angle::new(1.0, 6.0); // φ = π/6
+    let components = Geonum::new_from_cartesian(3.0, 4.0); // (V^r, V^φ) = (3, 4)
+    let vector_field = components.rotate(azimuth);
 
-    // ordinary derivative: π/2 rotation (flat space)
-    let ordinary_derivative = vector_field.differentiate(); // grade 0 → 1
-
-    // spacetime curvature modifies the derivative
-    let mass = Geonum::scalar(1.0); // gravitational source
-    let curvature_full = mass * vector_field.inv() * vector_field.inv(); // curvature ~ M/r²
-    let curvature = Geonum::new_with_angle(curvature_full.mag, curvature_full.angle.base_angle()); // clean blade history
-    let curved_angle = Angle::new(curvature.mag, PI); // convert to rotation angle
-
-    // covariant derivative: ordinary derivative modified by curvature rotation
-    let covariant_derivative = ordinary_derivative.rotate(curved_angle);
-
-    // prove covariant differs from ordinary due to curvature
+    // ordinary derivative: the components are constant, so ∂_φ V^r = ∂_φ V^φ = 0
+    // read the field in its own frame at another azimuth and the same (3, 4) comes back
+    let elsewhere = Angle::new(5.0, 7.0);
+    let read_there = Geonum::new_with_angle(5.0, components.rotate(elsewhere).angle - elsewhere);
     assert!(
-        (covariant_derivative.angle.grade_angle() - ordinary_derivative.angle.grade_angle()).abs()
-            > EPSILON,
-        "curvature modifies derivative through rotation"
+        read_there.near(&components),
+        "the components never change: the ordinary derivative is zero"
     );
 
-    // test parallel transport: vector transported along geodesic
+    // covariant derivative: the frame turns with φ and carries the field with it. the field
+    // turns at unit rate in φ, so its derivative along φ is its quarter turn
+    let covariant_derivative = vector_field.differentiate();
+
+    // read in the local frame, by rotating the azimuth back out, it is (−4, 3):
+    // (∇_φ V)^r = ∂_φ V^r − V^φ = −4 and (∇_φ V)^φ = ∂_φ V^φ + V^r = 3
+    // the −V^φ and +V^r are the two terms the christoffel symbols supply
+    let in_frame = Geonum::new_with_angle(
+        covariant_derivative.mag,
+        covariant_derivative.angle - azimuth,
+    );
+    assert!(
+        (in_frame.project_to_dimension(0) + 4.0).abs() < EPSILON,
+        "(∇_φ V)^r = −V^φ = −4, with no connection coefficient computed"
+    );
+    assert!(
+        (in_frame.project_to_dimension(1) - 3.0).abs() < EPSILON,
+        "(∇_φ V)^φ = +V^r = 3, with no connection coefficient computed"
+    );
+
+    // test parallel transport: a vector carried along a path in the flat plane keeps its
+    // direction, so its geonum does not change. the polar frame turns under it, and its
+    // frame components turn backward by the azimuth traveled
     let initial_vector = Geonum::new(1.0, 1.0, 6.0); // vector at π/6
-    let transport_rotation = Angle::new(curvature.mag * 0.1, PI); // curvature × path length
-    let parallel_transported = initial_vector.rotate(transport_rotation);
+    let traveled = Angle::new(1.0, 3.0); // carried from φ = 0 to φ = π/3
+    let parallel_transported = initial_vector; // nothing to solve: the angle is absolute
 
-    // prove parallel transport changes orientation in curved space
+    let components_before = initial_vector; // read in the frame at φ = 0
+    let components_after = Geonum::new_with_angle(
+        parallel_transported.mag,
+        parallel_transported.angle + Angle::new(2.0, 1.0) - traveled,
+    )
+    .base_angle(); // read in the frame at φ = π/3
     assert!(
-        (parallel_transported.angle.grade_angle() - initial_vector.angle.grade_angle()).abs()
-            > EPSILON,
-        "parallel transport rotates vector in curved space"
+        components_after.near(&Geonum::new(1.0, 11.0, 6.0)),
+        "the components turned back by π/3: from π/6 to −π/6, stored forward as 11π/6"
     );
-    assert_eq!(
-        parallel_transported.mag, initial_vector.mag,
+    assert!(
+        components_after.near_mag(components_before.mag),
         "parallel transport preserves length"
     );
 
-    // test geodesic deviation: nearby geodesics separate due to differential curvature
-    let geodesic1 = Geonum::new_from_cartesian(100.0, 0.0);
-    let geodesic2 = Geonum::new_from_cartesian(100.1, 0.01);
-    let separation_vector = geodesic2 - geodesic1;
-
-    // compute differential curvature with blade cleanup
-    let curvature1_full = mass * geodesic1.inv() * geodesic1.inv();
-    let curvature2_full = mass * geodesic2.inv() * geodesic2.inv();
-    let curvature1_clean =
-        Geonum::new_with_angle(curvature1_full.mag, curvature1_full.angle.base_angle());
-    let curvature2_clean =
-        Geonum::new_with_angle(curvature2_full.mag, curvature2_full.angle.base_angle());
-    let differential_curvature = curvature2_clean - curvature1_clean;
-
-    // geodesic deviation through differential curvature rotation
-    let evolved_separation = separation_vector.rotate(Angle::new(differential_curvature.mag, PI));
-
-    // prove geodesic deviation through angle change caused by differential curvature
+    // that backward turn is the transport equation ∇_φ V = 0: per radian the components
+    // change by their own backward quarter turn, integrate(), and the frame adds the forward
+    // one, differentiate(). the two are a half turn apart and cancel
     assert!(
-        (evolved_separation.angle.grade_angle() - separation_vector.angle.grade_angle()).abs()
-            > EPSILON,
-        "differential curvature rotates geodesic separation vector"
+        (components_before.integrate() + components_before.differentiate()).near_mag(0.0),
+        "component change + connection term = 0"
     );
 
-    // test holonomy: transport vector around closed loop reveals total curvature
-    let test_vector = Geonum::new(1.0, 1.0, 8.0); // vector to transport around loop
-    let loop_positions = vec![
-        Geonum::new(1.0, 0.0, 1.0), // start position
-        Geonum::new(1.0, 1.0, 4.0), // π/4 position
-        Geonum::new(1.0, 1.0, 2.0), // π/2 position
-        Geonum::new(1.0, 3.0, 4.0), // 3π/4 position
-    ];
+    // test geodesic deviation: two geodesics leave the pole of a unit sphere a small azimuth
+    // apart. their separation after arc length s is Δφ·sin(s): the dimension 1 reading of
+    // [Δφ, s], a number that turns as the geodesics run
+    let spread = 0.01; // Δφ
+    let arc = Angle::new(1.0, 3.0); // s = π/3
+    let separation_vector = Geonum::new_with_angle(spread, arc);
+    let (_, sin_arc) = arc.cos_sin();
+    assert!((separation_vector.project_to_dimension(1) - spread * sin_arc).abs() < EPSILON);
 
-    let mut transported_vector = test_vector;
-    for position in &loop_positions {
-        // compute local curvature and transport
-        let local_curvature_full = mass * position.inv() * position.inv();
-        let local_curvature = Geonum::new_with_angle(
-            local_curvature_full.mag,
-            local_curvature_full.angle.base_angle(),
-        );
-        let transport_rotation = Angle::new(local_curvature.mag * 0.1, PI); // curvature × step
-        transported_vector = transported_vector.rotate(transport_rotation);
-    }
-
-    // holonomy: net rotation after completing the loop
-    let holonomy_angle =
-        (transported_vector.angle.grade_angle() - test_vector.angle.grade_angle()).abs();
-
-    // prove nonzero holonomy reveals spacetime curvature
+    // the jacobi equation ξ″ = −K ξ is two quarter turns landing on the negation, with the
+    // sphere's curvature K = 1 the rate the separation turns at
+    let evolved_separation = separation_vector.differentiate().differentiate();
     assert!(
-        holonomy_angle > EPSILON,
-        "holonomy around loop reveals curvature"
+        evolved_separation.near(&separation_vector.negate()),
+        "ξ″ = −ξ: curvature bends the geodesics back together"
+    );
+    assert!(
+        (evolved_separation.project_to_dimension(1) + spread * sin_arc).abs() < EPSILON,
+        "the second rate of the separation is −Δφ·sin(s)"
+    );
+
+    // in the flat plane the same two geodesics separate as Δφ·s. that grows along a ray and
+    // never turns, so its second rate is nothing: K = 0
+    let run = Geonum::new(2.0, 1.0, 12.0); // s = 2 at π/12, given an angle so the count can be proven
+    let flat_separation = run.scale(spread); // Δφ·s
+    let turns = 1.0;
+    assert!(flat_separation.angle.near(&(run.angle * turns)));
+    let (d_separation, d_run) = (
+        flat_separation.differentiate().scale(turns),
+        run.differentiate(),
+    );
+    let first_rate = Geonum::new_with_angle(
+        d_separation.mag / d_run.mag,
+        d_separation.angle - d_run.angle,
+    );
+    assert!(
+        first_rate.near(&Geonum::scalar(spread)),
+        "ξ′ = Δφ, and the quarter turns cancelled down to no angle at all"
+    );
+    let turns_left = 0.0;
+    assert!(first_rate.angle.near(&(run.angle * turns_left)));
+    let second_rate = first_rate.differentiate().scale(turns_left).mag / d_run.mag;
+    assert!(
+        second_rate.abs() < EPSILON,
+        "ξ″ = 0 in flat space: the separation has no turn left to count"
+    );
+
+    // test holonomy: transport a vector around a closed loop on the unit sphere. the loop is
+    // the octant triangle: pole to equator, a quarter of the equator, and back to the pole
+    let test_vector = Geonum::new(1.0, 1.0, 8.0); // vector to transport around loop
+    let corner = Angle::new(1.0, 2.0); // each of its three corners is a right angle
+
+    // along each geodesic side the vector keeps its angle to the path. at each corner the path
+    // turns by π/2 and the vector does not. a flat triangle's corners turn the path a full
+    // turn. these three turn it three quarters, and the vector is left holding the difference
+    let path_turning = corner + corner + corner;
+    let holonomy_angle = Angle::new(2.0, 1.0) - path_turning;
+    let transported_vector = test_vector.rotate(holonomy_angle);
+
+    // prove nonzero holonomy reveals curvature: the vector comes back a quarter turn on, and
+    // that quarter turn is the area the loop encloses, one eighth of the sphere's 4π
+    assert!(
+        holonomy_angle.near(&Angle::new(1.0, 2.0)),
+        "holonomy around the loop is π/2"
+    );
+    assert!(
+        holonomy_angle.near_rad(4.0 * PI / 8.0),
+        "the enclosed area over R² is the angle the vector turned"
+    );
+    assert!(
+        transported_vector.near(&test_vector.differentiate()),
+        "the transported vector returns one blade on"
     );
 
     // traditional: christoffel symbols + riemann tensor + complex parallel transport equations
-    // geonum: geometric rotation by curvature angles with base_angle cleanup
-    // eliminates connection coefficient computation through angle arithmetic
+    // geonum: the connection is a quarter turn, transport is no change at all, deviation is
+    // two quarter turns, and holonomy is the turn the loop's corners left out
 }
 
 #[test]
@@ -557,7 +606,7 @@ fn its_a_quantum_tensor_network() {
     let two_qubit_state = q0 * q1;
 
     // verify result has proper length
-    assert_eq!(two_qubit_state.mag, 1.0);
+    assert!(two_qubit_state.near_mag(1.0));
 
     // create hadamard gate as angle transformation
     let hadamard = |q: &Geonum| -> Geonum {
@@ -597,7 +646,7 @@ fn its_a_quantum_tensor_network() {
     // entanglement angle encodes correlation - no separate components
 
     // verify bell state properties
-    assert_eq!(bell_state.mag, 1.0 / 2.0_f64.sqrt());
+    assert!(bell_state.near_mag(1.0 / 2.0_f64.sqrt()));
     assert_eq!(bell_state.angle, bell_angle);
 
     // test matrix product state (mps) representation
@@ -613,7 +662,7 @@ fn its_a_quantum_tensor_network() {
     let q012 = q01 * q2;
 
     // verify result has correct length
-    assert_eq!(q012.mag, 1.0);
+    assert!(q012.near_mag(1.0));
     assert_eq!(q012.angle, Angle::new(0.0, 1.0));
 
     // traditional: (|100⟩ + |010⟩ + |001⟩)/√3
@@ -626,7 +675,7 @@ fn its_a_quantum_tensor_network() {
     // the angle encodes the symmetric distribution
 
     // verify W state properties
-    assert_eq!(w_state.mag, 1.0);
+    assert!(w_state.near_mag(1.0));
     assert_eq!(w_state.angle, w_angle);
 
     // test handling high-dimensional quantum state
@@ -646,7 +695,7 @@ fn its_a_quantum_tensor_network() {
     let big_state = high_dim_state(n_qubits);
 
     // verify properties
-    assert_eq!(big_state.mag, 1.0);
+    assert!(big_state.near_mag(1.0));
 
     // simulate time evolution
     // traditionally requires matrix exponential of 2^n × 2^n matrix
@@ -654,7 +703,7 @@ fn its_a_quantum_tensor_network() {
     let evolve = |state: &Geonum, time: f64, energy: f64| -> Geonum {
         Geonum::new_with_angle(
             state.mag,
-            state.angle + Angle::new(energy * time, PI), // phase evolution through angle
+            state.angle + Angle::new(energy * time / PI, 1.0), // phase evolution through angle
         )
     };
 
@@ -685,7 +734,7 @@ fn its_a_quantum_tensor_network() {
     let extreme_evolved = evolve(&extreme_state, 0.1, PI / 4.0);
 
     // verify evolution
-    assert_eq!(extreme_evolved.mag, extreme_state.mag);
+    assert!(extreme_evolved.near_mag(extreme_state.mag));
     assert_eq!(
         extreme_evolved.angle,
         extreme_state.angle + Angle::new(0.1 / 4.0, 1.0)
@@ -796,17 +845,28 @@ fn its_a_quantum_tensor_network() {
     // simple gradient descent
     let learning_rate = 0.1;
     for _ in 0..20 {
-        // compute energy at perturbed angles
-        let e_plus = energy_function(opt_angle + 0.01);
-        let e_minus = energy_function(opt_angle - 0.01);
+        // no perturbed angles: the energy is the offset from π/3 squared, so it turns twice
+        // as far as the offset. its quarter turn counts 2, and over the quarter turn of the
+        // offset 2 × offset is left
+        let offset = opt_angle - PI / 3.0;
+        let offset_geo = Geonum::new(offset.abs(), 1.0, 12.0); // given an angle so the count can be proven
+        let energy_geo = offset_geo * offset_geo;
+        let turns = 2.0;
+        assert!(energy_geo.angle.near(&(offset_geo.angle * turns)));
+        let rate = energy_geo.differentiate().scale(turns).mag / offset_geo.differentiate().mag;
 
-        // compute gradient
-        let gradient = (e_plus - e_minus) / 0.02;
+        // compute gradient: the rate, pointing the way the offset does
+        let gradient = rate * offset.signum();
 
         // update angle
         opt_angle -= learning_rate * gradient;
         opt_energy = energy_function(opt_angle);
     }
+
+    // the minimum itself needs no descent. the rate is 2 × offset, which is nothing only
+    // where the offset is nothing, at π/3. the loop above walks toward that with the same
+    // rate, twenty steps to come within 0.1 of what one subtraction states
+    assert!(energy_function(PI / 3.0).abs() < EPSILON);
 
     // verify optimization found minimum
     assert!((opt_angle - PI / 3.0).abs() < 0.1);
@@ -913,8 +973,8 @@ fn its_a_tensor_decomposition() {
         .rotate(v_rotation);
 
     // verify SVD decomposition properties
-    assert_eq!(
-        svd_result.mag, singular_scale,
+    assert!(
+        svd_result.near_mag(singular_scale),
         "SVD preserves singular value as length"
     );
     assert_eq!(
@@ -1094,7 +1154,10 @@ fn its_a_tensor_decomposition() {
 
     let hier_result = hier_train(unit_input);
     assert!(hier_result.mag > 0.0, "Hierarchical decomposition valid");
-    assert_eq!(hier_result.mag, 1.4 * 1.3, "Hierarchical scales compose");
+    assert!(
+        hier_result.near_mag(1.4 * 1.3),
+        "Hierarchical scales compose"
+    );
 
     // ===== DECOMPOSITION RANK SELECTION =====
     // traditional: based on singular value decay
@@ -1124,14 +1187,12 @@ fn its_a_tensor_decomposition() {
 
     assert!(uniform_coherence > 0.0, "Uniform collection has coherence");
     assert!(diverse_coherence > 0.0, "Diverse collection has coherence");
-    assert_eq!(
-        uniform_coherence,
-        1.0 / 3.0,
+    assert!(
+        (uniform_coherence - (1.0 / 3.0)).abs() < EPSILON,
         "Uniform: any element is 1/3 of total"
     );
-    assert_eq!(
-        diverse_coherence,
-        1.0 / 3.0,
+    assert!(
+        (diverse_coherence - (1.0 / 3.0)).abs() < EPSILON,
         "Diverse: each element is 1/3 of total"
     );
 
@@ -1391,7 +1452,7 @@ fn its_a_multi_linear_map() {
     let mixed_transformed = Geonum::new(mixed_tensor.mag, 0.0, 1.0);
 
     // verify result
-    assert_eq!(mixed_transformed.mag, mixed_tensor.mag);
+    assert!(mixed_transformed.near_mag(mixed_tensor.mag));
 
     // test high-dimensional tensor transformation
     // traditionally requires o(n^tensor_rank) operations
@@ -1450,9 +1511,9 @@ fn its_a_multi_linear_map() {
     );
 
     // verify pullback preserves form
-    assert_eq!(pullback.mag, two_form.mag);
+    assert!(pullback.near_mag(two_form.mag));
     assert!(
-        (pullback.angle - (two_form.angle - Angle::new(theta, PI)))
+        (pullback.angle - (two_form.angle - Angle::new(theta / PI, 1.0)))
             .grade_angle()
             .abs()
             < EPSILON
@@ -1469,8 +1530,8 @@ fn its_a_multi_linear_map() {
                 .grade_angle()
                 .cos(),
         two_form.angle.blade() - 1,
-        two_form.angle.rem() + PI / 2.0,
-        TAU,
+        (two_form.angle.rem() + PI / 2.0) / PI,
+        2.0,
     );
 
     // verify interior product decreases form degree
@@ -1483,8 +1544,8 @@ fn its_a_multi_linear_map() {
     let lie_derivative = Geonum::new_with_blade(
         vector.mag * two_form.mag,
         two_form.angle.blade(),
-        (vector.angle + two_form.angle + Angle::new(1.0, 2.0)).rem(),
-        TAU,
+        (vector.angle + two_form.angle + Angle::new(1.0, 2.0)).rem() / PI,
+        2.0,
     );
 
     // verify lie derivative preserves form degree
@@ -1957,7 +2018,7 @@ fn its_a_tensor_comparison() {
         geo_vector = Geonum::new_with_blade(
             geo_vector.mag,
             1,
-            (geo_vector.angle + Angle::new(0.001 * (i as f64).sin(), PI)).grade_angle(),
+            (geo_vector.angle + Angle::new(0.001 * (i as f64).sin() / PI, 1.0)).grade_angle(),
             1.0,
         );
     }

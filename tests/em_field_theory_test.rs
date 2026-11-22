@@ -53,18 +53,24 @@ fn it_curls_into_a_bivector_in_any_dimension() {
     // ∇×E in Faraday's law returns a vector only in 3D — in general the curl of a vector is a 2-form
     // (a bivector). geonum's curl is a π/2 rotation that raises the grade to that bivector, and it
     // runs in any dimension where the 3-vector ∇× cannot even be written
+    //
+    // the quarter turn is the geometry. the size comes from how fast the field's phase turns
+    // across space, the wavenumber k, the way orbit_test scales its quarter turn by ω:
+    // for a plane wave |∇×E| = k|E|
+    let k = 3.0; // the phase advances 3 radians per unit length
     let e = Geonum::new(2.0, 1.0, 2.0); // E as a grade-1 vector
-    let curl = e.differentiate();
+    let curl = e.differentiate().scale(k);
     assert_eq!(
         curl.angle.grade(),
         2,
         "curl of a vector is a bivector — a 2-form"
     );
+    assert!(curl.near_mag(6.0), "|∇×E| = k|E| = 3 × 2");
 
     let e_hi = Geonum::new_with_angle(2.0, Angle::new_with_blade(1000, 1.0, 2.0));
-    let curl_hi = e_hi.differentiate();
+    let curl_hi = e_hi.differentiate().scale(k);
     assert!(
-        curl_hi.near_mag(e.mag),
+        curl_hi.near_mag(curl.mag),
         "the curl computes in 1000D, where ∇× has no vector form"
     );
     assert_eq!(

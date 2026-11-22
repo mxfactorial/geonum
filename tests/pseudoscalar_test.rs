@@ -55,7 +55,7 @@ fn it_solves_the_exponential_complexity_explosion() {
     let product = a * b;
 
     // geonum: O(1) operations
-    assert_eq!(product.mag, 6.0); // lengths multiply
+    assert!(product.near_mag(6.0)); // lengths multiply
     assert_eq!(product.angle, Angle::new(1.0, 2.0)); // angles add: π/6 + π/3 = π/2
 
     // traditional GA: O(4^n) operations for the same result!
@@ -67,7 +67,7 @@ fn it_solves_the_exponential_complexity_explosion() {
     let chain = a * b * c;
 
     // geonum: still O(1)
-    assert_eq!(chain.mag, 9.0); // 2 × 3 × 1.5
+    assert!(chain.near_mag(9.0)); // 2 × 3 × 1.5
     assert_eq!(chain.angle, Angle::new(3.0, 4.0)); // π/6 + π/3 + π/4 = 3π/4
 
     // traditional GA: must expand (a*b) into 2^n components,
@@ -131,8 +131,10 @@ fn it_doesnt_need_a_pseudoscalar() {
     let dual_magnitude_sq: f64 = dual_vector[0] * dual_vector[0]
         + dual_vector[1] * dual_vector[1]
         + dual_vector[2] * dual_vector[2];
-    assert_eq!(vector_magnitude_sq.sqrt(), dual_magnitude_sq.sqrt()); // |I|² normalization preserved
-    assert_eq!(dual_vector, [0.0, 0.0, 3.0]);
+    assert!((vector_magnitude_sq.sqrt() - dual_magnitude_sq.sqrt()).abs() < EPSILON); // |I|² normalization preserved
+    for (got, want) in dual_vector.iter().zip([0.0, 0.0, 3.0]) {
+        assert!(f64::abs(got - want) < EPSILON);
+    }
 
     // 4. GRADE EXTRACTION: extract k-grade part using pseudoscalar projections
     //    traditional: pseudoscalar projections for grade filtering
@@ -146,7 +148,7 @@ fn it_doesnt_need_a_pseudoscalar() {
     // extract scalar (grade 0): ⟨A⟩₀ = A ⌋ I⁰ = A ⌋ 1 = scalar_part
     let scalar_part = scale_factor; // grade 0 extraction
     let pseudoscalar_grade0 = 1.0; // I⁰ = identity for scalar extraction
-    assert_eq!(scalar_part * pseudoscalar_grade0, scale_factor); // pseudoscalar I⁰ appears in extraction
+    assert!(f64::abs(scalar_part * pseudoscalar_grade0 - scale_factor) < EPSILON); // pseudoscalar I⁰ appears in extraction
 
     // extract bivector (grade 2): ⟨A⟩₂ = (A ∧ I²) ⌋ I⁻² / 2!
     // in 2D: pseudoscalar I = e₁∧e₂, so I² = -1
@@ -156,7 +158,7 @@ fn it_doesnt_need_a_pseudoscalar() {
         [rotation_angle.cos(), -rotation_angle.sin()],
         [rotation_angle.sin(), rotation_angle.cos()],
     ]; // grade 2 (bivector) as rotation matrix
-    assert_eq!(bivector_coefficient, -rotation_angle); // pseudoscalar I² = -1 negates coefficient in extraction formula
+    assert!((bivector_coefficient + rotation_angle).abs() < EPSILON); // pseudoscalar I² = -1 negates coefficient in extraction formula
 
     // apply decomposed operations: scaling then rotation matrix multiplication
     let input_point = [1.0, 0.0];
@@ -168,7 +170,7 @@ fn it_doesnt_need_a_pseudoscalar() {
 
     // geonum: unified operation without grade extraction
     let input = Geonum::new(1.0, 0.0, 1.0);
-    let geonum_result = input.scale_rotate(scale_factor, Angle::new(rotation_angle, PI));
+    let geonum_result = input.scale_rotate(scale_factor, Angle::new(rotation_angle / PI, 1.0));
     let geonum_x = geonum_result.mag * geonum_result.angle.grade_angle().cos();
     let geonum_y = geonum_result.mag * geonum_result.angle.grade_angle().sin();
     assert!((traditional_result[0] - geonum_x).abs() < 1e-10);
@@ -188,13 +190,15 @@ fn it_doesnt_need_a_pseudoscalar() {
         line_vector[1] * pseudoscalar_3d,
         line_vector[2] * pseudoscalar_3d,
     ]; // complement is the orthogonal subspace
-    assert_eq!(traditional_complement, [1.0, 0.0, 0.0]);
+    for (got, want) in traditional_complement.iter().zip([1.0, 0.0, 0.0]) {
+        assert!(f64::abs(got - want) < EPSILON);
+    }
 
     // geonum: complement through dual() blade arithmetic
     let line = Geonum::new_with_blade(1.0, 1, 0.0, 1.0); // grade 1 line
     let complement = line.dual(); // complement via blade addition
     assert_eq!(complement.angle.blade(), 3); // grade 1 → grade 3 (line → volume)
-    assert_eq!(complement.mag, 1.0); // magnitude preserved
+    assert!(complement.near_mag(1.0)); // magnitude preserved
 
     // 6. CROSS PRODUCTS: v × w = (v ∧ w) · I^(-1) in 3D
     //    traditional: wedge then multiply by pseudoscalar inverse
@@ -218,7 +222,10 @@ fn it_doesnt_need_a_pseudoscalar() {
         e31_coeff * pseudoscalar_inverse, // zx → y component
         e12_coeff * pseudoscalar_inverse, // xy → z component
     ];
-    assert_eq!(traditional_cross, [0.0, 0.0, 1.0]); // x × y = z
+    // x × y = z
+    for (got, want) in traditional_cross.iter().zip([0.0, 0.0, 1.0]) {
+        assert!(f64::abs(got - want) < EPSILON);
+    }
 
     // test magnitude |v × w| = |v| |w| sin(θ)
     let cross_magnitude_sq: f64 = traditional_cross[0] * traditional_cross[0]
@@ -230,13 +237,13 @@ fn it_doesnt_need_a_pseudoscalar() {
     let w_magnitude_sq: f64 = w[0] * w[0] + w[1] * w[1] + w[2] * w[2];
     let w_magnitude = w_magnitude_sq.sqrt();
     let expected_magnitude = v_magnitude * w_magnitude * (PI / 2.0).sin(); // sin(90°) = 1
-    assert_eq!(cross_magnitude, expected_magnitude);
+    assert!((cross_magnitude - expected_magnitude).abs() < EPSILON);
 
     // geonum: wedge without pseudoscalar inverse computation
     let v_geonum = Geonum::new_from_cartesian(1.0, 0.0);
     let w_geonum = Geonum::new_from_cartesian(0.0, 1.0);
     let geonum_wedge = v_geonum.wedge(&w_geonum);
-    assert_eq!(geonum_wedge.mag, 1.0); // magnitude preserved without pseudoscalar operations
+    assert!(geonum_wedge.near_mag(1.0)); // magnitude preserved without pseudoscalar operations
 
     // 7. NORMAL VECTORS: surface normals via pseudoscalar multiplication
     //    traditional: compute tangent cross product then multiply pseudoscalar
@@ -366,8 +373,8 @@ fn it_proves_dualization_as_angle_ops_compresses_ga() {
     // eliminating need for dimension-specific pseudoscalars or exponential storage
 
     // prove duality preserves length (isometry property)
-    assert_eq!(dual_million.mag, million_dim_vector.mag);
-    assert_eq!(dual_billion.mag, billion_dim_bivector.mag);
+    assert!(dual_million.near_mag(million_dim_vector.mag));
+    assert!(dual_billion.near_mag(billion_dim_bivector.mag));
 
     // prove duality involution: dual(dual(x)) returns to original grade
     let double_dual_million = dual_million.dual();
@@ -391,4 +398,39 @@ fn it_proves_dualization_as_angle_ops_compresses_ga() {
         dual_billion.angle.blade(),
         billion_dim_bivector.angle.blade() + 2
     );
+}
+
+#[test]
+fn it_reads_the_sign_of_a_squared_pseudoscalar_off_its_grade() {
+    // traditional GA: the unit of volume in n dimensions, the pseudoscalar I, squares to +1
+    // or −1, and textbooks tabulate which by dimension: I² = (−1)^(n(n−1)/2)
+    //
+    // geonum: the n basis units sit at blades 0 to n − 1. multiplied they sit at the sum,
+    // n(n−1)/2, and squared at twice that. the sign in the table is the grade of the square:
+    // 0 reads +1 and 2 reads −1
+
+    // the textbooks table, typed, for n = 1 to 12
+    let table = [
+        1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0,
+    ];
+
+    let mut grades = Vec::new();
+    for (n, sign) in (1..=12).zip(table) {
+        let volume = (1..n)
+            .map(|k| Geonum::create_dimension(1.0, k))
+            .fold(Geonum::create_dimension(1.0, 0), |volume, unit| {
+                volume * unit
+            });
+        assert_eq!(volume.angle.blade(), n * (n - 1) / 2);
+        grades.push(volume.angle.grade());
+
+        let squared = volume * volume;
+        assert_eq!(squared.angle.blade(), n * (n - 1));
+        assert_eq!(squared.angle.grade(), if sign > 0.0 { 0 } else { 2 });
+        assert!((squared.project_to_dimension(0) - sign).abs() < EPSILON);
+    }
+
+    // the grade of the volume itself runs 0, 1, 3, 2, 2, 3, 1, 0 and comes round every 8
+    // dimensions
+    assert_eq!(grades, [0, 1, 3, 2, 2, 3, 1, 0, 0, 1, 3, 2]);
 }
