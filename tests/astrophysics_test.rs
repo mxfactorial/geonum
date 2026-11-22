@@ -48,7 +48,20 @@ fn it_tides_by_a_field_gradient() {
     let tidal = near - far; // near pulled harder → the body elongates toward the source
 
     // the difference follows the gradient ≈ 4·G·M·h / d³ (G = 1), steeper than the field's 1/d²
-    let gradient = 4.0 * source_mass * h / d.powi(3);
+    // the gradient is not a formula to supply. the field M/d² turns −2 times as far as d, so
+    // its quarter turn counts −2, and over the quarter turn of d that leaves 2M/d³ per unit
+    // length. across the body's full extent 2h it is 4Mh/d³
+    let distance = Geonum::new(d, 1.0, 12.0); // [d, π/12], given an angle so the count can be proven
+    let field = distance.pow(-2.0).scale(source_mass); // M/d²
+
+    // d went into the field −2 times: the angle of d taken −2 times is the fields angle
+    assert!(field.angle.near(&(distance.angle * -2.0)));
+    let per_length = field.differentiate().scale(-2.0).mag / distance.differentiate().mag;
+    assert!(
+        (per_length - 2.0 * source_mass / d.powi(3)).abs() < 1e-12,
+        "the field changes at 2M/d³, in one step from its own turn"
+    );
+    let gradient = per_length * 2.0 * h;
     assert!(
         (tidal.mag - gradient).abs() < 1e-4,
         "tidal stretch ≈ 4GMh/d³ — the field gradient, two samples and a subtraction"

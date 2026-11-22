@@ -1,5 +1,18 @@
 # changelog
 
+## 0.17.4 (2026-11-21)
+
+### added
+- differentiate_test: the rules of differential calculus as one quarter turn counted, compared or added. the rate of f against x is f read against x, times how many times x went into f. the count is handed over by whoever made f and proven by `x.angle * count`, with no angle read out as a float
+- angle_forward_test: angles add and magnitudes multiply with nothing subtracted. a negative and a turn back are both a turn on, and a minus sign shows only in a projection
+
+### changed
+- `differentiate()` and `integrate()` rustdoc name the angle as the variable
+- the calculus, integral and physics suites take a rate as a quarter turn counted and divided, and an antiderivative as that run backward, where they held a bare quarter turn or a hand written number
+- fem_test rebuilt around the mesh it removes: a stiffness as one projection, a joint by two reads and two divides, and a loaded bar read at its two ends. qm_test keeps the angle at each side of the bell test and reaches 2√2
+- no suite passes PI as a divisor to an angle constructor or compares floats with `assert_eq!`
+- agent instructions move from CLAUDE.md and .agents/onboard.md into AGENTS.md. readme test listing adds differentiate_test and angle_forward_test, and cited line ranges are revised
+
 ## 0.17.3 (2026-10-27)
 
 ### added

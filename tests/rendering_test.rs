@@ -699,12 +699,17 @@ fn it_enables_a_graphics_rendering_stack_rewrite() {
 
     // --- 8. surface normal at hit point ---
     // traditional: cross product of tangent vectors, normalize
-    // geonum: differentiate for tangent, rotate π/2 for normal
+    // geonum: differentiate for tangent, rotate π/2 for normal. two quarter turns from the
+    // hit point land on its own line facing in, so the outward normal is the hit point's ray
     // see tests/cga_test.rs:2559 it_computes_tangent_to_circle
 
     let hit_point = Geonum::new_with_angle(bounding_radius, propagated.angle);
     let tangent = hit_point.differentiate(); // π/2 rotation gives tangent
-    let normal = tangent.differentiate(); // another π/2 gives outward normal
+    let normal = tangent.differentiate(); // another π/2 gives the normal, facing in
+    assert!(
+        normal.near(&hit_point.negate()),
+        "the normal sits on the line through the hit point"
+    );
 
     assert_eq!(
         tangent.angle.grade(),
@@ -716,8 +721,8 @@ fn it_enables_a_graphics_rendering_stack_rewrite() {
         (hit_point.angle.grade() + 2) % 4,
         "normal two grades up"
     );
-    assert_eq!(
-        tangent.mag, hit_point.mag,
+    assert!(
+        tangent.near_mag(hit_point.mag),
         "differentiation preserves magnitude"
     );
 
@@ -728,8 +733,8 @@ fn it_enables_a_graphics_rendering_stack_rewrite() {
 
     let reflected = propagated.reflect(&hit_point);
 
-    assert_eq!(
-        reflected.mag, propagated.mag,
+    assert!(
+        reflected.near_mag(propagated.mag),
         "reflection preserves intensity"
     );
 

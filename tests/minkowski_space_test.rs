@@ -434,7 +434,7 @@ fn it_counts_time_as_winding_where_minkowski_translates_along_t() {
     }
 
     // the rate: minkowski differentiates along t with a limit; the model
-    // rotates by a quarter turn
+    // rotates by a quarter turn, the number against its own angle
     // (calculus_test::it_shows_limits_discard_what_angles_preserve)
     assert!(
         present

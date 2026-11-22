@@ -64,7 +64,12 @@ fn it_picks_schwarzschild_as_the_linear_solution_of_rf() {
     // direction never turns — it IS a straight line. curvature is how much the
     // tangent angle rotates from segment to segment, and here it rotates by
     // nothing. (r·f)'' = 0 read as one constant direction, not a second difference
-    let tangent = |r: f64| Geonum::new_from_cartesian(2e-3, rf(r + 1e-3) - rf(r - 1e-3)).angle;
+    //
+    // and not a first difference either: r·f is the sum r − r_s. the r turns once as
+    // far as r and leaves 1, the constant turns 0 times and leaves nothing
+    let terms = [(1.0, 1.0), (-r_s, 0.0)]; // r − r_s
+    assert!((value(&terms, 7.0) - rf(7.0)).abs() < EPSILON);
+    let tangent = |r: f64| heading(slope(&terms, r));
     let slope_dir = tangent(3.0);
     for r in [5.0, 10.0, 50.0, 100.0] {
         assert!(
@@ -99,8 +104,8 @@ fn it_recovers_minkowski_as_the_zero_slope_intercept_solution() {
     // intercept 0). minkowski is the "no mass" boundary condition on the same
     // einstein equation, not a separate theory
     let rf_flat = |r: f64| r * f(r, 0.0);
-    let tangent =
-        |r: f64| Geonum::new_from_cartesian(2e-3, rf_flat(r + 1e-3) - rf_flat(r - 1e-3)).angle;
+    // r·f = r is one term turning once as far as r: slope 1, read off its turn
+    let tangent = |r: f64| heading(slope(&[(1.0, 1.0)], r));
     let slope_dir = Angle::new(1.0, 4.0); // π/4 — slope 1 through the origin
 
     for r in [1.0, 10.0, 100.0, 1000.0] {
@@ -126,8 +131,14 @@ fn it_breaks_the_vacuum_condition_for_any_other_metric_ansatz() {
     // the wrong metric's (r, r·f) curve BENDS: trace its tangent direction and it
     // turns with r — steeper near the source, flattening outward. that turning IS
     // the curvature, and a curve that isn't straight isn't vacuum
-    let tangent_fake =
-        |r: f64| Geonum::new_from_cartesian(2e-3, rf_fake(r + 1e-3) - rf_fake(r - 1e-3)).angle;
+    //
+    // r·f = r − r_s/r. the second term is a negative power: it turns −1 times as far as
+    // r, so its quarter turn counts −1 and the slope picks up + r_s/r². that is the part
+    // that changes with r
+    let fake_terms = [(1.0, 1.0), (-r_s, -1.0)];
+    assert!((value(&fake_terms, 7.0) - rf_fake(7.0)).abs() < EPSILON);
+    assert!((slope(&fake_terms, 3.0) - (1.0 + r_s / 9.0)).abs() < EPSILON);
+    let tangent_fake = |r: f64| heading(slope(&fake_terms, r));
     assert!(
         !tangent_fake(3.0).near(&tangent_fake(10.0)),
         "the tangent direction turns between r = 3 and r = 10 — curved, not vacuum"
@@ -143,8 +154,14 @@ fn it_breaks_the_vacuum_condition_for_any_other_metric_ansatz() {
     // equation is the discriminator — it rules out look-alikes
     let f_exp = |r: f64| (-r_s / r).exp();
     let rf_exp = |r: f64| r * f_exp(r);
-    let tangent_exp =
-        |r: f64| Geonum::new_from_cartesian(2e-3, rf_exp(r + 1e-3) - rf_exp(r - 1e-3)).angle;
+    // r·e^u with u = −r_s/r is a product, so it moves by each factor in turn: e^u when r
+    // moves, and r times the motion of e^u. e^u grows at its own size times the rate of u
+    // (exponential_test), and the rate of u is the negative power again, + r_s/r²
+    let tangent_exp = |r: f64| {
+        let u_rate = slope(&[(-r_s, -1.0)], r); // r_s/r²
+        heading(f_exp(r) + r * f_exp(r) * u_rate)
+    };
+    assert!((rf_exp(5.0) - 5.0 * f_exp(5.0)).abs() < EPSILON);
     assert!(
         !tangent_exp(3.0).near(&tangent_exp(10.0)),
         "the exponential look-alike bends too — its tangent turns, so it isn't vacuum"
@@ -177,9 +194,10 @@ fn it_falls_out_of_birkhoffs_theorem() {
     // t, a multiplicative time-dependent factor preserves linearity. but the
     // FULL einstein equation also constrains how f changes with t, and a
     // nonzero ∂f/∂t at fixed r is a separate non-vacuum source
-    let tangent = |r: f64| {
-        Geonum::new_from_cartesian(2e-3, rf_perturbed(r + 1e-3) - rf_perturbed(r - 1e-3)).angle
-    };
+    // the factor scales both terms and changes neither count: the slope is the factor itself
+    let perturbed_terms = [(perturb, 1.0), (-r_s * perturb, 0.0)];
+    assert!((value(&perturbed_terms, 7.0) - rf_perturbed(7.0)).abs() < EPSILON);
+    let tangent = |r: f64| heading(slope(&perturbed_terms, r));
     let slope_dir = tangent(3.0);
     for r in [5.0, 10.0] {
         assert!(
@@ -352,8 +370,19 @@ fn it_curves_the_proper_length_when_the_field_is_nonlinear() {
     };
     let rf_full = |r: f64| r * f_interior(r);
 
-    let tangent =
-        |r: f64| Geonum::new_from_cartesian(2e-3, rf_full(r + 1e-3) - rf_full(r - 1e-3)).angle;
+    // inside the body r·f = r − (8π/3)ρ r³: the cubic term turns 3 times as far as r, so
+    // the slope bends with r². outside it is r − r_s again, and the constant leaves nothing
+    let inside_terms = [(1.0, 1.0), (-8.0 * PI / 3.0 * rho_0, 3.0)];
+    let outside_terms = [(1.0, 1.0), (-8.0 * PI * rho_0 * r_body.powi(3) / 3.0, 0.0)];
+    assert!((value(&inside_terms, 4.0) - rf_full(4.0)).abs() < EPSILON);
+    assert!((value(&outside_terms, 20.0) - rf_full(20.0)).abs() < EPSILON);
+    let tangent = |r: f64| {
+        heading(if r <= r_body {
+            slope(&inside_terms, r)
+        } else {
+            slope(&outside_terms, r)
+        })
+    };
 
     // outside: the rescaled field is straight — its tangent never turns, ricci-flat,
     // curvature lives only where the source is
@@ -379,4 +408,37 @@ fn it_curves_the_proper_length_when_the_field_is_nonlinear() {
     // bondi field equals (up to a constant) the local energy density. nothing
     // about r-dependence "spreads" the source — the geometry tracks ρ point by
     // point. one field, one local equation, no propagator
+}
+
+// ---------------------------------------------------------------------------
+// helpers — the patterns geonum has no named api for yet
+// ---------------------------------------------------------------------------
+
+// a sum of powers of r, each term c·rⁿ given as (c, n)
+fn value(terms: &[(f64, f64)], r: f64) -> f64 {
+    terms.iter().map(|&(c, n)| c * r.powf(n)).sum()
+}
+
+// the slope of that sum at r, with no second sample taken. each power is rotated a quarter
+// turn and counted once for each time r went into it, over the quarter turn of r. a
+// negative count arrives as a half turn, read here as the minus sign. the coefficient is
+// applied after
+fn slope(terms: &[(f64, f64)], r: f64) -> f64 {
+    let r_geo = Geonum::new(r, 1.0, 12.0); // [r, π/12], given an angle so the count can be proven
+    terms
+        .iter()
+        .map(|&(c, n)| {
+            // rⁿ was made with n, so n is the count: the angle of r taken n times is its
+            // angle. nothing is read back out of it
+            let power = r_geo.pow(n);
+            assert!(power.angle.near(&(r_geo.angle * n)));
+            let size = power.differentiate().scale(n).mag / r_geo.differentiate().mag;
+            c * size * n.signum()
+        })
+        .sum()
+}
+
+// the direction a curve heads at r, from its slope
+fn heading(slope: f64) -> Angle {
+    Geonum::new_from_cartesian(1.0, slope).angle
 }

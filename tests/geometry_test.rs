@@ -94,6 +94,46 @@ fn its_a_line() {
 }
 
 #[test]
+fn it_bends_a_line_by_multiplying_it_by_itself() {
+    // a straight line is every number that projects the same onto one angle. this one sits ½ out
+    // along 3π/4: each number on it is the foot plus a run a quarter turn from the normal
+    let normal = Geonum::new(1.0, 3.0, 4.0);
+    let foot = normal.scale(0.5);
+    let along = normal.rotate(Angle::new(1.0, 2.0));
+
+    // the normal multiplied by itself sits at twice its angle, 3π/2
+    let doubled = normal * normal;
+
+    // the textbook y = x² − ¼
+    for (x, y) in [
+        (-2.0, 3.75),
+        (-1.0, 0.75),
+        (0.0, -0.25),
+        (1.0, 0.75),
+        (2.0, 3.75),
+    ] {
+        let on_the_line = foot + along.scale(x);
+        assert!(
+            on_the_line.project(&normal).near_mag(0.5),
+            "the same ½ at every x: straight"
+        );
+
+        // multiply the number by itself: its magnitude squares and its angle doubles
+        let squared = on_the_line * on_the_line;
+        assert!((squared.project_to_dimension(0) - x).abs() < 1e-10);
+        assert!(
+            (squared.project_to_dimension(1) - y).abs() < 1e-10,
+            "the line now curves: x² − ¼"
+        );
+
+        // no projection is shared any more. what every number on the curve keeps is its magnitude
+        // plus its reading along the doubled normal: ½, twice the lines ½ squared
+        let reading = squared.mag * squared.angle.project(doubled.angle);
+        assert!((squared.mag + reading - 0.5).abs() < 1e-10);
+    }
+}
+
+#[test]
 fn it_overshoots_the_length_when_it_sums_the_legs() {
     // the Cartesian legs r cos φ + r sin φ do NOT sum to the straight length r. at 45° their sum is
     // √2·r — reading the point off the axes costs the length the projection threw away

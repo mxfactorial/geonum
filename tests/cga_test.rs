@@ -329,7 +329,7 @@ fn it_represents_lines_as_circle_limits() {
     // traditional CGA: must compute P₁ ∧ P₂ in conformal space
     // geonum: direct angle arithmetic
     let line_direction = p2 - p1;
-    assert_eq!(line_direction.angle.rem(), 0.0, "horizontal line");
+    assert!(line_direction.angle.near_rem(0.0), "horizontal line");
 
     // IMPROVEMENT 2: perpendicular via π/2 rotation
     // traditional CGA: compute dual in conformal space using I₅
@@ -378,7 +378,10 @@ fn it_represents_lines_as_circle_limits() {
 
     // demonstrate that line has zero curvature (infinite radius)
     let line_curvature = 0.0; // by definition for straight line
-    assert_eq!(line_curvature, 0.0, "line has zero curvature");
+    assert!(
+        (line_curvature - 0.0_f64).abs() < EPSILON,
+        "line has zero curvature"
+    );
 
     // IMPROVEMENT 5: point-line relationships without e∞
     // traditional CGA: test (P ∧ L)·e∞ = 0 for point on line
@@ -428,10 +431,22 @@ fn it_represents_planes_as_sphere_limits() {
     let sphere_r1000 = Geonum::new(1000.0, 0.0, 1.0); // radius 1000
 
     // curvature naturally emerges as 1/radius
-    assert_eq!(1.0 / sphere_r1.mag, 1.0, "curvature = 1/radius");
-    assert_eq!(1.0 / sphere_r10.mag, 0.1, "decreasing curvature");
-    assert_eq!(1.0 / sphere_r100.mag, 0.01, "approaching plane");
-    assert_eq!(1.0 / sphere_r1000.mag, 0.001, "nearly flat");
+    assert!(
+        ((1.0 / sphere_r1.mag) - 1.0).abs() < EPSILON,
+        "curvature = 1/radius"
+    );
+    assert!(
+        ((1.0 / sphere_r10.mag) - 0.1).abs() < EPSILON,
+        "decreasing curvature"
+    );
+    assert!(
+        ((1.0 / sphere_r100.mag) - 0.01).abs() < EPSILON,
+        "approaching plane"
+    );
+    assert!(
+        ((1.0 / sphere_r1000.mag) - 0.001).abs() < EPSILON,
+        "nearly flat"
+    );
 
     // test limit behavior: as sphere radius → ∞, curvature → 0
     let test_radii = [10.0, 100.0, 1000.0, 10000.0, 100000.0];
@@ -475,7 +490,7 @@ fn it_computes_distance_between_points() {
     let point_at_5_rotated = Geonum::new(5.0, 1.0, 2.0); // 5 units along 90°
 
     // distance between origin and point is just the length
-    assert_eq!((point_at_5 - origin).mag, 5.0, "radial distance");
+    assert!((point_at_5 - origin).near_mag(5.0), "radial distance");
 
     // distance between two points at same radius but different angles
     let arc_distance = (point_at_5_rotated - point_at_5).mag;
@@ -490,8 +505,8 @@ fn it_computes_distance_between_points() {
     let infinity_point = finite_point.normalize().dual();
 
     // prove infinity point has unit length (not actually infinite)
-    assert_eq!(
-        infinity_point.mag, 1.0,
+    assert!(
+        infinity_point.near_mag(1.0),
         "infinity has finite representation"
     );
 
@@ -518,8 +533,8 @@ fn it_computes_distance_between_points() {
     let null_at_pi = Geonum::new(0.0, 1.0, 1.0);
 
     // both are null (zero length) but at different angles
-    assert_eq!(null_at_0.mag, 0.0);
-    assert_eq!(null_at_pi.mag, 0.0);
+    assert!(null_at_0.near_mag(0.0));
+    assert!(null_at_pi.near_mag(0.0));
     assert_ne!(
         null_at_0.angle, null_at_pi.angle,
         "null vectors can have different angles"
@@ -528,7 +543,7 @@ fn it_computes_distance_between_points() {
     // traditional CGA would need special null-vector handling
     // geonum: null is just length=0, works with standard operations
     let from_null = point_at_5 - null_at_0;
-    assert_eq!(from_null.mag, 5.0, "distance from null point");
+    assert!(from_null.near_mag(5.0), "distance from null point");
 }
 
 #[test]
@@ -750,8 +765,8 @@ fn it_tests_point_on_circle() {
         "point at (1000,0) is scalar"
     );
     assert_eq!(dual_point.angle.grade(), 2, "dual of scalar is bivector");
-    assert_eq!(
-        dual_point.mag, large_circle_point.mag,
+    assert!(
+        dual_point.near_mag(large_circle_point.mag),
         "dual preserves length"
     );
 
@@ -1552,8 +1567,8 @@ fn it_applies_rotation() {
     let test_point = Geonum::new(2.5, 1.0, 3.0);
     let unchanged = test_point.rotate(identity);
 
-    assert_eq!(
-        unchanged.mag, test_point.mag,
+    assert!(
+        unchanged.near_mag(test_point.mag),
         "zero rotation preserves length"
     );
     assert_eq!(
@@ -1565,7 +1580,10 @@ fn it_applies_rotation() {
     let full_circle = Angle::new(2.0, 1.0); // 2π
     let cycled = test_point.rotate(full_circle);
 
-    assert_eq!(cycled.mag, test_point.mag, "2π rotation preserves length");
+    assert!(
+        cycled.near_mag(test_point.mag),
+        "2π rotation preserves length"
+    );
 
     // build expected angle step by step
     let initial_angle = test_point.angle; // starting angle (0 in this case)
@@ -1720,7 +1738,10 @@ fn it_applies_dilation() {
     // case: zero dilation (collapse to point)
     let zero_dilator = Geonum::scalar(0.0);
     let collapsed = test_point * zero_dilator;
-    assert_eq!(collapsed.mag, 0.0, "zero dilation collapses to zero length");
+    assert!(
+        collapsed.near_mag(0.0),
+        "zero dilation collapses to zero length"
+    );
     assert_eq!(
         collapsed.angle, test_point.angle,
         "angle preserved even at zero length"
@@ -1821,7 +1842,7 @@ fn it_applies_reflection_across_a_line() {
         let reflected = point.reflect(&x_axis);
 
         // reflection preserves length
-        assert_eq!(reflected.mag, point.mag, "reflection preserves length");
+        assert!(reflected.near_mag(point.mag), "reflection preserves length");
 
         // forward-only reflection accumulates blade
         // to get traditional behavior, use base_angle()
@@ -1843,7 +1864,7 @@ fn it_applies_reflection_across_a_line() {
     for point in &points {
         let reflected = point.reflect(&y_axis);
 
-        assert_eq!(reflected.mag, point.mag, "reflection preserves length");
+        assert!(reflected.near_mag(point.mag), "reflection preserves length");
 
         // forward-only reflection accumulates blade
         // to get traditional behavior, use base_angle()
@@ -1961,7 +1982,7 @@ fn it_applies_inversion_in_unit_sphere() {
         scaled.angle, test_vector.angle,
         "scalar mult preserves angle"
     );
-    assert_eq!(scaled.mag, 6.0, "scalar mult scales length");
+    assert!(scaled.near_mag(6.0), "scalar mult scales length");
 
     // geonum ghosts CGA's -P̃/(P·P) with normalize + scalar multiplication
     // O(1) inversion vs O(2^5) conformal operations
@@ -3234,11 +3255,11 @@ fn it_handles_imaginary_circles() {
 
     // test that "imaginary" is just a 90° rotation
     assert_eq!(imaginary_radius.angle, Angle::new(1.0, 2.0)); // π/2
-    assert_eq!(imaginary_radius.mag, 2.0);
+    assert!(imaginary_radius.near_mag(2.0));
 
     // squaring "imaginary" radius gives negative real
     let radius_squared = imaginary_radius * imaginary_radius;
-    assert_eq!(radius_squared.mag, 4.0);
+    assert!(radius_squared.near_mag(4.0));
     assert_eq!(radius_squared.angle, Angle::new(1.0, 1.0)); // π (negative)
 
     // in cartesian projection: 4*cos(π) = -4
@@ -3292,7 +3313,7 @@ fn it_handles_imaginary_circles() {
     // prove i² = -1 in geonum representation
     let i = Geonum::new(1.0, 1.0, 2.0); // [1, π/2]
     let i_squared = i * i;
-    assert_eq!(i_squared.mag, 1.0);
+    assert!(i_squared.near_mag(1.0));
     assert_eq!(i_squared.angle, Angle::new(1.0, 1.0)); // π
 
     // π means pointing backward = -1
@@ -3585,14 +3606,17 @@ fn it_applies_mobius_transformation() {
     };
 
     // test reciprocal relationship
-    assert_eq!(inv.mag, 1.0, "unit circle point inverts to unit length");
+    assert!(
+        inv.near_mag(1.0),
+        "unit circle point inverts to unit length"
+    );
 
     // Step 2: Rotation
     let rotated = inv.rotate(rotation);
 
     // test rotation preserves length
-    assert_eq!(
-        rotated.mag, inv.mag,
+    assert!(
+        rotated.near_mag(inv.mag),
         "rotation preserves length: {} unchanged",
         inv.mag
     );
@@ -3849,9 +3873,8 @@ fn it_handles_apollonian_circles() {
 
     // circles are externally tangent when distance = r1 + r2
     let center_distance = (circle2_center - circle1_center).mag;
-    assert_eq!(
-        center_distance,
-        circle1_radius + circle2_radius,
+    assert!(
+        (center_distance - (circle1_radius + circle2_radius)).abs() < EPSILON,
         "external tangency at distance = r1 + r2"
     );
 
@@ -3860,16 +3883,16 @@ fn it_handles_apollonian_circles() {
     // geonum: rotate by π/2 to find perpendicular, scale by desired offset
 
     let midpoint = (circle1_center + circle2_center).scale(0.5);
-    assert_eq!(midpoint.mag, 5.0, "midpoint at 5 units from origin");
+    assert!(midpoint.near_mag(5.0), "midpoint at 5 units from origin");
     assert_eq!(midpoint.angle.blade(), 0, "midpoint preserves blade count");
 
     let to_second = circle2_center - circle1_center;
-    assert_eq!(to_second.mag, 6.0, "vector between centers");
+    assert!(to_second.near_mag(6.0), "vector between centers");
     assert_eq!(to_second.angle.blade(), 0, "blade 0 - blade 0 = blade 0");
 
     // perpendicular via blade increment (π/2 rotation adds 1 blade)
     let perpendicular = to_second.rotate(Angle::new(1.0, 2.0));
-    assert_eq!(perpendicular.mag, 6.0, "rotation preserves length");
+    assert!(perpendicular.near_mag(6.0), "rotation preserves length");
     assert_eq!(
         perpendicular.angle.blade(),
         1,
@@ -4271,7 +4294,7 @@ fn it_computes_steiner_chain() {
     assert!(scaled.angle.blade() == chain_circle.angle.blade() || scaled.mag < EPSILON);
     // rotation by π/3 adds that angle
     let expected_angle = chain_circle.angle + Angle::new(1.0, 3.0);
-    assert_eq!(rotated.angle.grade_angle(), expected_angle.grade_angle());
+    assert!(rotated.angle.near_rad(expected_angle.grade_angle()));
 
     // non-concentric case: offset inner circle
     let offset_inner = inner_center + Geonum::new(1.0, 0.0, 1.0);
@@ -4680,7 +4703,7 @@ fn it_computes_conformal_center() {
 
     // transformations compose via multiplication
     let composed = rotation_blade * dilation_blade;
-    assert_eq!(composed.mag, 2.0, "lengths multiply");
+    assert!(composed.near_mag(2.0), "lengths multiply");
     assert_eq!(composed.angle, Angle::new(1.0, 4.0), "angles add");
 
     // geonum ghosts eigenvector analysis in conformal space
@@ -4704,7 +4727,10 @@ fn it_handles_conformal_split() {
 
     // euclidean part: the length (distance from origin)
     let euclidean_part = point.mag; // 5.0
-    assert_eq!(euclidean_part, 5.0, "euclidean magnitude");
+    assert!(
+        (euclidean_part - 5.0).abs() < EPSILON,
+        "euclidean magnitude"
+    );
 
     // conformal part: the angle (directional structure)
     let conformal_part = point.angle;
@@ -4721,7 +4747,10 @@ fn it_handles_conformal_split() {
 
     // rotation: preserves euclidean, modifies conformal
     let rotated = point.rotate(Angle::new(1.0, 6.0)); // rotate by π/6
-    assert_eq!(rotated.mag, point.mag, "rotation preserves euclidean part");
+    assert!(
+        rotated.near_mag(point.mag),
+        "rotation preserves euclidean part"
+    );
     assert_ne!(
         rotated.angle, point.angle,
         "rotation changes conformal part"
@@ -4729,9 +4758,8 @@ fn it_handles_conformal_split() {
 
     // scaling: modifies euclidean, preserves conformal
     let scaled = point.scale(2.0);
-    assert_eq!(
-        scaled.mag,
-        point.mag * 2.0,
+    assert!(
+        scaled.near_mag(point.mag * 2.0),
         "scaling changes euclidean part"
     );
     assert_eq!(
@@ -4741,9 +4769,8 @@ fn it_handles_conformal_split() {
 
     // inversion: modifies both parts
     let inverted = point.inv();
-    assert_eq!(
-        inverted.mag,
-        1.0 / point.mag,
+    assert!(
+        inverted.near_mag(1.0 / point.mag),
         "inversion inverts euclidean part"
     );
     assert_ne!(
@@ -4784,7 +4811,7 @@ fn it_handles_conformal_split() {
 
     // conformal weight naturally encoded in blade structure
     let weighted = Geonum::new_with_blade(5.0, 2, 0.0, 1.0); // bivector grade
-    assert_eq!(weighted.mag, 5.0, "euclidean weight");
+    assert!(weighted.near_mag(5.0), "euclidean weight");
     assert_eq!(weighted.angle.grade(), 2, "conformal grade");
 
     // minkowski metric emerges from angle arithmetic
@@ -4901,7 +4928,7 @@ fn it_handles_inversive_distance() {
     let p = Geonum::new(2.0, 1.0, 6.0); // r=2 at π/6
     let p_inv = p.inv(); // r → 1/r
 
-    assert_eq!(p_inv.mag, 0.5, "inversion: 2 → 1/2");
+    assert!(p_inv.near_mag(0.5), "inversion: 2 → 1/2");
     assert_eq!(p_inv.angle, p.angle + Angle::new(1.0, 1.0), "inv adds π");
 
     // double inversion returns original
@@ -4950,21 +4977,24 @@ fn it_computes_bend_of_circle() {
 
     // bend (curvature) is 1/radius
     let bend = 1.0 / radius;
-    assert_eq!(bend, 0.5, "bend = 1/radius");
+    assert!((bend - 0.5_f64).abs() < EPSILON, "bend = 1/radius");
 
     // in geonum, represent radius as geometric number
     let radius_geonum = Geonum::scalar(radius);
 
     // bend is the inverse
     let bend_geonum = radius_geonum.inv();
-    assert_eq!(bend_geonum.mag, 0.5, "bend via inv()");
+    assert!(bend_geonum.near_mag(0.5), "bend via inv()");
 
     // bend transforms under scaling
     let scale = 3.0;
     let scaled_radius = radius * scale;
     let scaled_bend = 1.0 / scaled_radius;
 
-    assert_eq!(scaled_bend, bend / scale, "bend scales inversely");
+    assert!(
+        (scaled_bend - (bend / scale)).abs() < EPSILON,
+        "bend scales inversely"
+    );
 
     // for a line (infinite radius), bend = 0
     // geonum: line is limit as radius → ∞, so bend → 0
@@ -5022,7 +5052,7 @@ fn it_computes_bend_of_circle() {
     let inv_bend = bend_with_angle.inv();
 
     // inverting bend gives radius with opposite rotation
-    assert_eq!(inv_bend.mag, radius, "inv(bend) = radius");
+    assert!(inv_bend.near_mag(radius), "inv(bend) = radius");
     assert_eq!(inv_bend.angle.blade(), 2, "inversion adds π rotation");
 
     // blade arithmetic for bend relationships
@@ -5045,7 +5075,7 @@ fn it_computes_bend_of_circle() {
     let bend2 = Geonum::scalar(b2);
     let tangency_product = bend1 * bend2;
 
-    assert_eq!(tangency_product.mag, b1 * b2, "bend product");
+    assert!(tangency_product.near_mag(b1 * b2), "bend product");
     assert_eq!(
         tangency_product.angle.blade(),
         0,
@@ -5077,8 +5107,8 @@ fn it_solves_descartes_circle_theorem() {
     // c3 tangent to both c1 and c2
     // find c3 center using triangle with sides r1+r3, r2+r3, d12
     let d12 = (c2_center - c1_center).mag;
-    assert_eq!(d12, 6.0, "c1 and c2 are tangent");
-    assert_eq!(d12, r1 + r2, "tangency condition");
+    assert!((d12 - 6.0).abs() < EPSILON, "c1 and c2 are tangent");
+    assert!((d12 - (r1 + r2)).abs() < EPSILON, "tangency condition");
 
     // place c3 to be tangent to both
     let r3 = 3.0;
@@ -5483,7 +5513,7 @@ fn it_eliminates_versor_complexity() {
     // scaling without dilator versor D = e^(λe₀∧e∞)
     let scale_factor = 2.0;
     let scaled = point.scale(scale_factor); // just length multiplication
-    assert_eq!(scaled.mag, point.mag * scale_factor);
+    assert!(scaled.near_mag(point.mag * scale_factor));
     assert_eq!(scaled.angle, point.angle); // angle preserved
 
     // inversion without reflector versor
@@ -5637,12 +5667,12 @@ fn it_unifies_conformal_and_projective_geometry() {
 
     // conformal scaling - just multiply length
     let scaled = conformal_point.scale(1.5);
-    assert_eq!(scaled.mag, 3.0);
+    assert!(scaled.near_mag(3.0));
     assert_eq!(scaled.angle, conformal_point.angle, "angle preserved");
 
     // conformal rotation - just add angle
     let rotated = conformal_point.rotate(Angle::new(1.0, 4.0)); // +π/4
-    assert_eq!(rotated.mag, conformal_point.mag, "length preserved");
+    assert!(rotated.near_mag(conformal_point.mag), "length preserved");
 
     // PROJECTIVE: homogeneous coordinates, perspective transformations
     // in geonum: length represents homogeneous scaling factor
@@ -5682,8 +5712,8 @@ fn it_unifies_conformal_and_projective_geometry() {
 
     // normalize to get direction at infinity
     let point_at_infinity = approaching_infinity.normalize();
-    assert_eq!(
-        point_at_infinity.mag, 1.0,
+    assert!(
+        point_at_infinity.near_mag(1.0),
         "infinity has unit representation"
     );
     assert_eq!(
@@ -5734,7 +5764,7 @@ fn it_unifies_conformal_and_projective_geometry() {
     let dual_point = any_point.dual();
 
     // dual operation works regardless of geometric interpretation
-    assert_eq!(dual_point.mag, any_point.mag, "dual preserves length");
+    assert!(dual_point.near_mag(any_point.mag), "dual preserves length");
 
     // dual maps grades through involutive pairs: 0↔2, 1↔3
     // any_point has angle 2π/3, which gives blade 1 (vector grade)

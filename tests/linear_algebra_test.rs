@@ -47,8 +47,8 @@ fn it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle
     assert!((decomposed_angle - expected_difference).abs() < EPSILON);
 
     // GEONUM multiplication adds angles
-    let g1 = Geonum::new(1.0, theta1, PI);
-    let g2 = Geonum::new(1.0, theta2, PI);
+    let g1 = Geonum::new(1.0, theta1 / PI, 1.0);
+    let g2 = Geonum::new(1.0, theta2 / PI, 1.0);
     let product = g1 * g2;
 
     let expected_sum = theta1 + theta2;
@@ -153,8 +153,8 @@ fn it_proves_decomposition_distributes_one_angle_across_multiple_scalars() {
     println!("\nTotal scalars used to store 1 angle: {}", total_scalars);
 
     // GEONUM: angle stored once
-    let geonum = Geonum::new(1.0, theta, PI);
-    assert_eq!(geonum.angle, Angle::new(theta, PI));
+    let geonum = Geonum::new(1.0, theta / PI, 1.0);
+    assert_eq!(geonum.angle, Angle::new(theta / PI, 1.0));
     println!("\nGeonum: angle {} stored directly as Angle struct", theta);
     println!("  No decomposition, no redundancy, no reconstruction");
 }
@@ -177,7 +177,7 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
     let magnitude = 5.0;
 
     // ORIGINAL GEOMETRIC OBJECT
-    let geometric = Geonum::new(magnitude, angle, PI);
+    let geometric = Geonum::new(magnitude, angle / PI, 1.0);
     println!("Original: magnitude={}, angle={}", magnitude, angle);
 
     // DECOMPOSITION INTO BASIS VECTORS
@@ -215,10 +215,10 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
     let rotation_angle = PI / 6.0; // rotate by 30°
 
     // geonum: just add angles
-    let rotated_geometric = geometric.rotate(Angle::new(rotation_angle, PI));
+    let rotated_geometric = geometric.rotate(Angle::new(rotation_angle / PI, 1.0));
     assert_eq!(
         rotated_geometric.angle,
-        geometric.angle + Angle::new(rotation_angle, PI)
+        geometric.angle + Angle::new(rotation_angle / PI, 1.0)
     );
     println!("\nRotating by {}:", rotation_angle);
     println!(
@@ -264,8 +264,8 @@ fn it_proves_decomposing_angles_into_scalar_coefficients_makes_angle_a_multivari
     assert!((product_angle - (v2_angle - v1_angle)).abs() < EPSILON);
 
     // geonum preserves angle addition
-    let g1 = Geonum::new(1.0, v1_angle, PI);
-    let g2 = Geonum::new(1.0, v2_angle, PI);
+    let g1 = Geonum::new(1.0, v1_angle / PI, 1.0);
+    let g2 = Geonum::new(1.0, v2_angle / PI, 1.0);
     let product = g1 * g2;
     println!(
         "  Geonum gives: {} + {} = {}",
@@ -368,8 +368,8 @@ fn it_proves_linear_combination_forces_angle_through_coefficient_algebra() {
     assert!((double_angle - (2.0 * angle1)).abs() < EPSILON);
 
     // GEONUM: angles are primitives, operations are direct
-    let g1 = Geonum::new(1.0, angle1, PI);
-    let g2 = Geonum::new(1.0, angle2, PI);
+    let g1 = Geonum::new(1.0, angle1 / PI, 1.0);
+    let g2 = Geonum::new(1.0, angle2 / PI, 1.0);
 
     println!("\nGeonum operations:");
     println!(
@@ -497,7 +497,7 @@ fn it_proves_angle_becomes_implicit_ratio_between_components() {
     // - angle access: direct field access (no computation)
 
     // geonum: angle is first-class, not a ratio ghost
-    let g = Geonum::new(r, theta, PI);
+    let g = Geonum::new(r, theta / PI, 1.0);
     println!("\ngeonum keeps angle explicit:");
     println!("  angle = {} (directly stored)", g.angle.grade_angle());
     println!("  not computed from ratios");
@@ -505,7 +505,7 @@ fn it_proves_angle_becomes_implicit_ratio_between_components() {
     println!("  not dependent on basis choice");
 
     // rotation is just angle addition: O(1) always
-    let g_rotated = g.rotate(Angle::new(rotation, PI));
+    let g_rotated = g.rotate(Angle::new(rotation / PI, 1.0));
     assert!(g_rotated.angle.near_rad(theta + rotation));
     println!(
         "  rotation: {} + {} = {} (direct addition)",

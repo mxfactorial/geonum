@@ -137,10 +137,30 @@ fn it_finds_the_horizon_where_the_bondi_factor_vanishes() {
     // outside the horizon the geometry is regular — k is a smooth function of r,
     // its derivative is finite, no singularity in the field. the geonum reading:
     // r = r_s is a zero of a smooth field, not a singularity of the description
-    let dk_dr_at_2rs = (k(2.0 * r_s + 1e-6, r_s) - k(2.0 * r_s - 1e-6, r_s)) / 2e-6;
+    //
+    // the rate is two turn counts linked, with no second sample. k is the square root of
+    // 1 − r_s/r, so it turns half as far as what is under the root. and what is under the
+    // root has one moving term, a negative power of r, which turns −1 times as far as r
+    let r = 2.0 * r_s;
+    let under_root = Geonum::new(1.0 - r_s / r, 1.0, 12.0); // given an angle so the count can be proven
+    let root = under_root.pow(0.5);
+
+    // what is under the root went into the root half a time: its angle taken half a time is
+    // the roots angle
+    assert!(root.angle.near(&(under_root.angle * 0.5)));
+    let k_against_root = root.differentiate().scale(0.5).mag / under_root.differentiate().mag;
+
+    // and r went into 1/r −1 times
+    let r_geo = Geonum::new(r, 1.0, 12.0);
+    let inverse = r_geo.pow(-1.0);
+    assert!(inverse.angle.near(&(r_geo.angle * -1.0)));
+    let inverse_against_r = -inverse.mag / r_geo.mag; // −1/r²
+    let root_against_r = -r_s * inverse_against_r; // + r_s/r²
+
+    let dk_dr_at_2rs = k_against_root * root_against_r;
     assert!(
-        dk_dr_at_2rs.is_finite() && dk_dr_at_2rs > 0.0,
-        "dk/dr is smooth outside — no coordinate singularity, just a field's zero"
+        (dk_dr_at_2rs - r_s / (2.0 * r * r * k(r, r_s))).abs() < EPSILON,
+        "dk/dr = r_s / (2r²k) is smooth outside — no coordinate singularity, just a field's zero"
     );
 
     // the true singularity at r = 0 is where k diverges (1 − r_s/r → −∞ under

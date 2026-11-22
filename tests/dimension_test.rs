@@ -120,7 +120,7 @@ fn it_proves_quadrature_creates_dimensional_structure() {
     assert!((dim_3 - entity.project_to_dimension(7)).abs() < EPSILON); // 3 = 7 (mod 4)
 
     // prove the quadrature generates polynomial coefficients in calculus
-    let base_function = Geonum::new(4.0, 0.0, 1.0); // grade 0 function
+    let base_function = Geonum::new(4.0, 0.0, 1.0); // grade 0, turned against its own angle
     let first_derivative = base_function.differentiate(); // π/2 rotation to grade 1
     let second_derivative = first_derivative.differentiate(); // π/2 rotation to grade 2
     let third_derivative = second_derivative.differentiate(); // π/2 rotation to grade 3
@@ -132,6 +132,18 @@ fn it_proves_quadrature_creates_dimensional_structure() {
     assert_eq!(second_derivative.angle.grade(), 2);
     assert_eq!(third_derivative.angle.grade(), 3);
     assert_eq!(fourth_derivative.angle.grade(), 0); // cycle complete
+
+    // and the coefficient: x² turns twice as far as x, so its quarter turn counts 2, and
+    // over the quarter turn of x that leaves 2x (differentiate_test proves it for any power)
+    let x = Geonum::new(4.0, 1.0, 6.0); // [4, π/6]
+    let squared = x * x; // [16, π/3]
+    let coefficient = 2.0;
+    assert!(
+        squared.angle.near(&(x.angle * coefficient)),
+        "the coefficient is the turn count"
+    );
+    let rate = squared.differentiate().scale(coefficient).mag / x.differentiate().mag;
+    assert!((rate - 8.0).abs() < EPSILON, "d/dx[x²] = 2x = 8 at x = 4");
 
     // dimensional structure emerges from trigonometric identities
     // coordinate spaces emerge from dimensional structure, not the reverse
@@ -284,20 +296,20 @@ fn it_proves_angle_space_is_absolute() {
     let negative_five = Geonum::new(5.0, 1.0, 1.0); // 5 at angle π
 
     // these aren't "opposites" in a relative sense - they're at absolute positions
-    assert_eq!(positive_five.angle.rem(), 0.0); // absolute position: 0 radians
+    assert!(positive_five.angle.near_rem(0.0)); // absolute position: 0 radians
     assert_eq!(negative_five.angle.blade(), 2); // blade 2 means 2 × π/2 rotations
-    assert_eq!(negative_five.angle.rem(), 0.0); // but value within blade is 0
+    assert!(negative_five.angle.near_rem(0.0)); // but value within blade is 0
 
     // multiplication adds absolute angles - not relative "signs"
     let product = positive_five * negative_five;
     assert_eq!(product.angle.blade(), 2); // 0 + 2 = 2 blade rotations
-    assert_eq!(product.mag, 25.0);
+    assert!(product.near_mag(25.0));
 
     // what we call "negation" is moving to absolute position π away
     let negated = positive_five.negate();
     assert_eq!(negated.angle.blade(), 2); // π = 2 × π/2 blade rotations
 
-    // differentiation moves to absolute position π/2 ahead
+    // differentiation against its own angle moves to absolute position π/2 ahead
     let differentiated = positive_five.differentiate();
     assert_eq!(differentiated.angle.blade(), 1); // π/2 = 1 blade rotation
 
@@ -337,17 +349,17 @@ fn it_proves_angle_space_is_absolute() {
     let zero_at_pi_2 = Geonum::new(0.0, 1.0, 2.0);
 
     // all represent zero but at different angle positions
-    assert_eq!(zero_at_0.mag, 0.0);
-    assert_eq!(zero_at_pi.mag, 0.0);
-    assert_eq!(zero_at_pi_2.mag, 0.0);
+    assert!(zero_at_0.near_mag(0.0));
+    assert!(zero_at_pi.near_mag(0.0));
+    assert!(zero_at_pi_2.near_mag(0.0));
 
     // multiplying by zero preserves the zero's angle (absolute position matters)
     let five = Geonum::new(5.0, 0.0, 1.0);
     let result1 = five * zero_at_0; // 5 * 0 with 0 at angle 0
     let result2 = five * zero_at_pi; // 5 * 0 with 0 at angle π
 
-    assert_eq!(result1.mag, 0.0);
-    assert_eq!(result2.mag, 0.0);
+    assert!(result1.near_mag(0.0));
+    assert!(result2.near_mag(0.0));
     assert_eq!(result1.angle.blade(), 0); // preserves blade 0
     assert_eq!(result2.angle.blade(), 2); // preserves blade 2 (π rotation)
 
@@ -438,7 +450,7 @@ fn it_proves_multiplicative_inverse_preserves_geometric_structure() {
 
     // traditional expectation: get scalar 1 at grade 0
     // geonum reality: get unit length at grade determined by input
-    assert_eq!(product.mag, 1.0); // unit length ✓
+    assert!(product.near_mag(1.0)); // unit length ✓
 
     // but the angle is 2θ + π = 2π/3 + π = 5π/3
     let expected_angle = a.angle + a.angle + Angle::new(1.0, 1.0);
@@ -455,7 +467,7 @@ fn it_proves_multiplicative_inverse_preserves_geometric_structure() {
     let b = Geonum::new(3.0, 1.0, 4.0); // [3, π/4]
     let product_b = b * b.inv();
 
-    assert_eq!(product_b.mag, 1.0);
+    assert!(product_b.near_mag(1.0));
     // angle is 2(π/4) + π = π/2 + π = 3π/2
     assert_eq!(product_b.angle.blade(), 3); // also trivector
 
@@ -482,10 +494,10 @@ fn it_proves_multiplicative_inverse_preserves_geometric_structure() {
     let trivector_inv_product = trivector * trivector.inv();
 
     // all have unit length
-    assert_eq!(scalar_inv_product.mag, 1.0);
-    assert_eq!(vector_inv_product.mag, 1.0);
-    assert_eq!(bivector_inv_product.mag, 1.0);
-    assert_eq!(trivector_inv_product.mag, 1.0);
+    assert!(scalar_inv_product.near_mag(1.0));
+    assert!(vector_inv_product.near_mag(1.0));
+    assert!(bivector_inv_product.near_mag(1.0));
+    assert!(trivector_inv_product.near_mag(1.0));
 
     // but different starting grades produce different blade counts
     // inv() adds π, multiplication adds angles: 2θ + π
@@ -535,7 +547,7 @@ fn it_sets_angle_forward_geometry_as_primitive() {
         "base_angle resets to blade 0 for grade 0"
     );
     assert_eq!(reset.angle.grade(), 0, "grade preserved");
-    assert_eq!(reset.mag, position.mag, "length unchanged");
+    assert!(reset.near_mag(position.mag), "length unchanged");
 
     // demonstrate double reflection blade accumulation and reset
     let point = Geonum::new(2.0, 0.0, 1.0);

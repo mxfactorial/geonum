@@ -32,7 +32,7 @@ fn it_adds_scalars() {
     };
 
     // verify result is [7, 0]
-    assert_eq!(result.mag, 7.0);
+    assert!(result.near_mag(7.0));
     assert_eq!(result.angle, Angle::new(0.0, 1.0));
 
     // test with negative scalar (on the negative real axis)
@@ -55,7 +55,7 @@ fn it_adds_scalars() {
     };
 
     // verify result is [3, pi] (negative 3)
-    assert_eq!(result2.mag, 3.0);
+    assert!(result2.near_mag(3.0));
     assert_eq!(result2.angle, Angle::new(1.0, 1.0));
 }
 
@@ -73,7 +73,7 @@ fn it_multiplies_scalars() {
     let product1 = a * b;
 
     // verify result is [12, 0]
-    assert_eq!(product1.mag, 12.0);
+    assert!(product1.near_mag(12.0));
     assert_eq!(product1.angle, Angle::new(0.0, 1.0));
 
     // multiply positive by negative
@@ -85,7 +85,7 @@ fn it_multiplies_scalars() {
     let product2 = c * d;
 
     // verify result is [10, pi] (negative 10)
-    assert_eq!(product2.mag, 10.0);
+    assert!(product2.near_mag(10.0));
     assert_eq!(product2.angle, Angle::new(1.0, 1.0));
 
     // multiply two negative numbers
@@ -97,7 +97,7 @@ fn it_multiplies_scalars() {
     let product3 = e * f;
 
     // verify result is [6, 2pi] which reduces to [6, 0] (positive 6)
-    assert_eq!(product3.mag, 6.0);
+    assert!(product3.near_mag(6.0));
     assert_eq!(product3.angle, Angle::new(4.0, 2.0)); // 2pi = 4 * pi/2
 }
 
@@ -174,7 +174,7 @@ fn it_multiplies_vectors() {
     let product = a * b;
 
     // verify the result has length 2*3=6 and angle pi/4+pi/3=7pi/12
-    assert_eq!(product.mag, 6.0);
+    assert!(product.near_mag(6.0));
     // product of two blade-1 vectors: blade accumulates, angles add
     // blade: 1 + 1 = 2
     // angle: PI/4 + PI/3 = 3PI/12 + 4PI/12 = 7PI/12
@@ -196,7 +196,7 @@ fn it_multiplies_vectors() {
     let perpendicular_product = c * d;
 
     // verify result has length 2*4=8 and angle 0+pi/2=pi/2
-    assert_eq!(perpendicular_product.mag, 8.0);
+    assert!(perpendicular_product.near_mag(8.0));
     // c: blade 1, angle 0; d: blade 1, angle PI/2
     // product: blade 2, angle PI/2, but PI/2 is boundary so blade 3, angle 0
     assert_eq!(perpendicular_product.angle.blade(), 3);
@@ -219,7 +219,7 @@ fn it_multiplies_vectors() {
     let opposite_product = e * f;
 
     // verify result has length 5*2=10
-    assert_eq!(opposite_product.mag, 10.0);
+    assert!(opposite_product.near_mag(10.0));
     // e: blade 1, angle PI/6; f: blade 1, angle -PI/6 (normalizes to 11PI/6)
     // When f is created with negative angle, it normalizes to positive
     // The exact blade count depends on the normalization
@@ -249,7 +249,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product1 = vector * scalar;
 
     // verify result has length 3*2=6 and angle remains pi/4 (unchanged)
-    assert_eq!(product1.mag, 6.0);
+    assert!(product1.near_mag(6.0));
     // vector (blade 1) * scalar (blade 0) = vector (blade 1)
     assert_eq!(product1.angle, Angle::new_with_blade(1, 1.0, 4.0));
 
@@ -264,7 +264,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product2 = vector * negative_scalar;
 
     // verify result has length 3*2=6 and angle is now pi/4+pi=5pi/4 (rotated 180 degrees)
-    assert_eq!(product2.mag, 6.0);
+    assert!(product2.near_mag(6.0));
     // vector (blade 1, PI/4) * negative scalar (blade 0, PI) = blade 1, angle 5PI/4
     // 5PI/4 = 2.5 * PI/2, so 2 boundary crossings: blade 3, angle PI/4
     assert_eq!(product2.angle.blade(), 3);
@@ -274,7 +274,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product3 = negative_scalar * vector;
 
     // should have same length and angle as product2
-    assert_eq!(product3.mag, product2.mag);
+    assert!(product3.near_mag(product2.mag));
     assert_eq!(product3.angle, product2.angle);
 
     // test scaling a vector by zero
@@ -288,7 +288,7 @@ fn it_multiplies_vectors_with_scalars() {
     let product4 = vector * zero_scalar;
 
     // verify result has length 0 (angle doesn't matter for zero vector)
-    assert_eq!(product4.mag, 0.0);
+    assert!(product4.near_mag(0.0));
 }
 
 #[test]
@@ -315,7 +315,7 @@ fn it_computes_ijk_product() {
 
     // ijk = −1: blade 6 = grade 2, the negative real ray, magnitude 1
     let ijk = ij * k;
-    assert_eq!(ijk.mag, 1.0);
+    assert!(ijk.near_mag(1.0));
     assert_eq!(
         ijk.angle.grade(),
         2,
@@ -346,9 +346,9 @@ fn it_operates_in_extreme_dimensions() {
     let v2 = Geonum::create_dimension(1.0, 1); // second basis vector e₂
 
     // verify basic properties - constant time operations
-    assert_eq!(v1.mag, 1.0);
+    assert!(v1.near_mag(1.0));
     assert_eq!(v1.angle, Angle::new(0.0, 1.0));
-    assert_eq!(v2.mag, 1.0);
+    assert!(v2.near_mag(1.0));
     assert_eq!(v2.angle, Angle::new(1.0, 2.0));
 
     // compute operations in this million-dimensional space
@@ -374,15 +374,15 @@ fn it_operates_in_extreme_dimensions() {
 
     // verify results
     assert!(dot.near_mag(0.0)); // orthogonal vectors have zero dot product
-    assert_eq!(wedge.mag, 1.0); // unit bivector
-    assert_eq!(geo_product.mag, 1.0);
+    assert!(wedge.near_mag(1.0)); // unit bivector
+    assert!(geo_product.near_mag(1.0));
     // v1 (blade 0) * v2 (blade 1) = blade 0 + 1 = blade 1
     assert_eq!(geo_product.angle.blade(), 1);
     assert!(geo_product.angle.near_rem(0.0));
 
-    assert_eq!(result.mag, 2.0); // length of v3
-                                 // (v1*v2) has blade 1, angle 0; v3 has blade 1, angle PI/3
-                                 // result: blade 1 + 1 = 2, angle PI/3
+    assert!(result.near_mag(2.0)); // length of v3
+                                   // (v1*v2) has blade 1, angle 0; v3 has blade 1, angle PI/3
+                                   // result: blade 1 + 1 = 2, angle PI/3
     assert_eq!(result.angle.blade(), 2);
     assert!(result.angle.near_rem(PI / 3.0));
 

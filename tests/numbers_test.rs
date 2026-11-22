@@ -13,8 +13,8 @@ fn its_a_scalar() {
     let scalar = Geonum::new(1.0, 0.0, 1.0);
 
     // test if scalar has expected properties
-    assert_eq!(scalar.mag, 1.0);
-    assert_eq!(scalar.angle.grade_angle(), 0.0);
+    assert!(scalar.near_mag(1.0));
+    assert!(scalar.angle.near_rad(0.0));
 
     // multiplying scalars follows "angles add, lengths multiply" rule
     let scalar2 = Geonum::new(2.0, 0.0, 1.0);
@@ -22,8 +22,8 @@ fn its_a_scalar() {
     let product = scalar * scalar2;
 
     // 1 × 2 = 2
-    assert_eq!(product.mag, 2.0);
-    assert_eq!(product.angle.grade_angle(), 0.0);
+    assert!(product.near_mag(2.0));
+    assert!(product.angle.near_rad(0.0));
 
     // multiplication with negative scalar
     let neg_scalar = Geonum::new(3.0, 1.0, 1.0); // PI radians
@@ -31,8 +31,8 @@ fn its_a_scalar() {
     let neg_product = scalar * neg_scalar;
 
     // 1 × (-3) = -3
-    assert_eq!(neg_product.mag, 3.0);
-    assert_eq!(neg_product.angle.grade_angle(), PI);
+    assert!(neg_product.near_mag(3.0));
+    assert!(neg_product.angle.near_rad(PI));
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn its_a_vector() {
                                              // blade 1 (vector grade) + π/4 remainder
 
     // test vector properties
-    assert_eq!(vector.mag, 2.0);
+    assert!(vector.near_mag(2.0));
     assert_eq!(vector.angle.blade(), 1); // blade 1 = vector (grade 1) in geometric algebra
     assert!(vector.angle.near_rem(PI / 4.0)); // π/4 remainder after π/2 rotation
 
@@ -112,7 +112,7 @@ fn its_an_imaginary_number() {
     // i * i = -1
     let squared = imaginary * imaginary;
 
-    assert_eq!(squared.mag, 1.0);
+    assert!(squared.near_mag(1.0));
     assert_eq!(squared.angle, Angle::new(2.0, 2.0)); // this is -1 in geometric number form (π)
 
     // rotation property: i rotates by 90 degrees
@@ -120,7 +120,7 @@ fn its_an_imaginary_number() {
 
     let rotated = imaginary * real;
 
-    assert_eq!(rotated.mag, 2.0);
+    assert!(rotated.near_mag(2.0));
     assert_eq!(rotated.angle, Angle::new(1.0, 2.0)); // rotated 90 degrees
 
     // multiplying by i four times returns to original number
@@ -129,7 +129,7 @@ fn its_an_imaginary_number() {
     let rot3 = imaginary * rot2; // rotate three times
     let rot4 = imaginary * rot3; // rotate four times
 
-    assert_eq!(rot4.mag, real.mag);
+    assert!(rot4.near_mag(real.mag));
     assert!(rot4.angle.grade_angle().abs() < EPSILON); // back to original angle
 }
 
@@ -171,26 +171,23 @@ fn its_a_complex_number() {
 #[test]
 fn its_a_dual_number() {
     // a dual number a + bε packs a value and its derivative into two slots, and ε² = 0 is the
-    // truncation keeping the derivative from folding onto the value. geonum needs no ε:
-    // differentiate is a quarter turn, so the value and its derivative sit at orthogonal
-    // grades — that grade separation is what ε² = 0 enforces. the derivative VALUE (2x) is
-    // read from the power in the angle (calculus_test::it_encodes_the_power_in_the_angle);
-    // here the structure is the point, not the number
+    // rule keeping the derivative from folding onto the value. geonum needs no ε and no rule:
+    // rotate a unit a quarter turn, add it to x and multiply. the product sorts itself by
+    // blade, the value on blade 0, the derivative on blade 1, the term ε² zeroes on blade 2
+    // (differentiate_test::it_automates_differentiation_by_rotating_a_unit_beside_x)
 
-    // f(x) = x² at x = 3: the value is a grade-0 scalar
-    let value = Geonum::new(9.0, 0.0, 1.0); // f(3) = 9
+    // f(x) = x² at x = 3, beside a unit rotated a quarter turn, where the ε slot sits
+    let x = Geonum::new(3.0, 0.0, 1.0); // [3, 0]
+    let rotated = Geonum::new(1.0, 0.0, 1.0).rotate(Angle::new(1.0, 2.0)); // [1, π/2]
 
-    // the derivative is the value rotated a quarter turn — the ε slot, grade 1
-    let derivative = value.differentiate();
-    assert_eq!(
-        derivative.angle.grade(),
-        1,
-        "the derivative sits a quarter turn off the value"
-    );
-    assert!(
-        derivative.near_mag(value.mag),
-        "the quarter turn carries the magnitude, no ε algebra"
-    );
+    // (x + rotated)² multiplied out, every term kept
+    let value = x * x; // [9, 0]: f(3) = 9
+    let derivative = x * rotated + rotated * x; // [6, π/2]: f'(3) = 6
+    let dropped = rotated * rotated; // [1, π]
+
+    assert!(value.near_mag(9.0), "the value slot is blade 0");
+    assert_eq!(derivative.angle.grade(), 1, "the ε slot is blade 1");
+    assert!(derivative.near_mag(6.0), "it holds 2x = 6, no ε algebra");
 
     // value ⊥ derivative — the dot vanishes. that orthogonality is what ε² = 0 buys the
     // scalar dual number: the value and derivative slots cannot mix
@@ -199,9 +196,12 @@ fn its_a_dual_number() {
         "value ⊥ derivative — the ε² = 0 separation, geometric"
     );
 
-    // ε² = 0 stops the scalar dual number at first order. geonum does not stop: differentiate
-    // on and the grade cycles 1 → 2 → 3 → 0, the higher derivatives landing in their own
-    // slots where the truncated dual number has nothing
+    // ε² = 0 stops the scalar dual number at first order. the term it zeroes did not vanish:
+    // it landed two quarter turns on, in the slot of the second derivative over 2!
+    assert_eq!(dropped.angle.blade(), 2, "ε × ε is a half turn");
+    assert!(dropped.near_mag(1.0), "f''/2! = 1");
+
+    // geonum does not stop: differentiate on against its own angle and the grade cycles 1→2→3→0
     let mut d = value;
     for expected in [1usize, 2, 3, 0] {
         d = d.differentiate();
@@ -253,28 +253,28 @@ fn its_a_matrix() {
 
     // test vector [3, 4] → [5, arctan(4/3)]
     let vector = Geonum::new_from_cartesian(3.0, 4.0);
-    assert_eq!(vector.mag, 5.0); // magnitude √(3²+4²) = 5
+    assert!(vector.near_mag(5.0)); // magnitude √(3²+4²) = 5
 
     // identity transformation: v * identity = v
     let identity_result = vector * identity;
-    assert_eq!(identity_result.mag, vector.mag);
+    assert!(identity_result.near_mag(vector.mag));
     assert_eq!(identity_result.angle, vector.angle);
 
     // rotation transformation: rotate vector by 45°
     let rotated = vector.rotate(Angle::new(1.0, 4.0)); // π/4
-    assert_eq!(rotated.mag, 5.0); // rotation preserves length
+    assert!(rotated.near_mag(5.0)); // rotation preserves length
     assert_ne!(rotated.angle, vector.angle); // angle changed
 
     // scale transformation: 2× scaling
     let scale_2x = Geonum::scalar(2.0);
     let scaled = vector * scale_2x;
-    assert_eq!(scaled.mag, 10.0); // 5 * 2 = 10
+    assert!(scaled.near_mag(10.0)); // 5 * 2 = 10
     assert_eq!(scaled.angle, vector.angle); // scaling preserves angle
 
     // combined transformation: rotate then scale
     let transform = rotation_45 * scale_2x; // compose transformations
     let result = vector * transform;
-    assert_eq!(result.mag, 10.0); // scaled by 2
+    assert!(result.near_mag(10.0)); // scaled by 2
 
     // traditional matrix approach for comparison:
     // [cos(θ) -sin(θ)] [s  0] = complex 8-component operation
@@ -289,7 +289,7 @@ fn its_a_matrix() {
     // O(1) transformation vs O(n²) matrix multiplication
     let vector_3d = Geonum::new(7.0, 1.0, 3.0);
     let result_3d = vector_3d * transform_3d;
-    assert_eq!(result_3d.mag, 17.5); // 7 * 2.5
+    assert!(result_3d.near_mag(17.5)); // 7 * 2.5
 
     // matrix inverse: traditional O(n³), geonum O(1)
     let transform_inv = transform_3d.inv();
@@ -316,7 +316,7 @@ fn its_a_tensor() {
     let test_vector = Geonum::scalar(1.0);
     let result = tensor_transform(test_vector);
 
-    assert_eq!(result.mag, 1.0, "tensor preserves magnitude");
+    assert!(result.near_mag(1.0), "tensor preserves magnitude");
     let expected_angle = Angle::new(1.0, 6.0) + Angle::new(1.0, 4.0) + Angle::new(1.0, 3.0);
     assert_eq!(result.angle, expected_angle, "tensor rotations compose");
 
@@ -332,7 +332,7 @@ fn its_a_tensor() {
     // contract tensor with three vectors
     let contraction = v * w * u;
 
-    assert_eq!(contraction.mag, 9.0, "2 * 3 * 1.5 = 9");
+    assert!(contraction.near_mag(9.0), "2 * 3 * 1.5 = 9");
     // blade arithmetic depends on the angles within each blade-1 vector
     // the actual blade count comes from how the angles compose
     assert_eq!(
@@ -354,8 +354,8 @@ fn its_a_tensor() {
     // blade 4 has grade 0 (4 % 4 = 0)
     assert_eq!(outer.angle.blade(), 4, "e1 ∧ e2 gives blade 4");
     assert_eq!(outer.angle.grade(), 0, "blade 4 has grade 0");
-    assert_eq!(outer.mag, 1.0, "wedge preserves unit magnitude");
-    assert_eq!(outer.angle.rem(), 0.0, "wedge result at angle 0");
+    assert!(outer.near_mag(1.0), "wedge preserves unit magnitude");
+    assert!(outer.angle.near_rem(0.0), "wedge result at angle 0");
 
     // verify orthogonality through dot product
     let dot = e1.dot(&e2);
@@ -374,7 +374,7 @@ fn its_a_tensor() {
     };
 
     let trace_result = trace_transform(test_vector);
-    assert_eq!(trace_result.mag, 2.0, "trace sums diagonal");
+    assert!(trace_result.near_mag(2.0), "trace sums diagonal");
     assert_eq!(
         trace_result.angle,
         Angle::new(0.0, 1.0),
@@ -409,7 +409,7 @@ fn its_a_tensor() {
     let r3 = rank3(test_vector);
 
     // rank-1: pure rotation by π/5
-    assert_eq!(r1.mag, 1.0, "rank-1 preserves unit length");
+    assert!(r1.near_mag(1.0), "rank-1 preserves unit length");
     assert_eq!(r1.angle, Angle::new(1.0, 5.0), "rank-1 rotates by π/5");
 
     // rank-2: weighted sum of two rotations gives specific angle
@@ -433,43 +433,67 @@ fn its_a_tensor() {
 
     // === CHRISTOFFEL SYMBOLS ===
     // traditional: Γⁱⱼₖ connection coefficients, O(n³) storage
-    // geonum: connection is just angle gradient
+    // geonum: the connection is the frame turning. in polar coordinates the frame at
+    // azimuth φ is the fixed frame rotated by φ, so a field with constant components in it
+    // turns with φ at unit rate, and what the christoffel symbols add back is its quarter
+    // turn (tensor_test::its_a_covariant_derivative)
 
-    let christoffel = |position: Geonum| -> Angle {
-        // connection at this point: how angles change with position
-        Angle::new(position.mag / 10.0, 1.0) // simple linear connection
+    let christoffel = |components: Geonum, azimuth: Angle| -> Geonum {
+        // the covariant derivative along φ of a field with constant polar components,
+        // read back in the local frame
+        let turned = components.rotate(azimuth).differentiate();
+        Geonum::new_with_angle(turned.mag, turned.angle - azimuth)
     };
 
-    let pos1 = Geonum::new(5.0, 0.0, 1.0);
-    let pos2 = Geonum::new(10.0, 0.0, 1.0);
+    let field = Geonum::new_from_cartesian(3.0, 4.0); // (V^r, V^φ) = (3, 4)
+    let connection1 = christoffel(field, Angle::new(1.0, 6.0));
+    let connection2 = christoffel(field, Angle::new(5.0, 7.0));
 
-    let connection1 = christoffel(pos1);
-    let connection2 = christoffel(pos2);
-
-    // pos1 has length 5, so connection = 5/10 = 0.5
-    // pos2 has length 10, so connection = 10/10 = 1.0
-    assert_eq!(connection1, Angle::new(0.5, 1.0), "connection at r=5");
-    assert_eq!(connection2, Angle::new(1.0, 1.0), "connection at r=10");
+    // (∇_φ V)^r = −V^φ = −4 and (∇_φ V)^φ = +V^r = 3, at any azimuth: the two terms the
+    // connection coefficients supply
+    for connection in [connection1, connection2] {
+        assert!(
+            (connection.project_to_dimension(0) + 4.0).abs() < EPSILON,
+            "the connection gives −V^φ"
+        );
+        assert!(
+            (connection.project_to_dimension(1) - 3.0).abs() < EPSILON,
+            "the connection gives +V^r"
+        );
+    }
 
     // === RIEMANN CURVATURE TENSOR ===
     // traditional: Rⁱⱼₖₗ with O(n⁴) components
-    // geonum: curvature is rotation rate change
+    // geonum: curvature is the turn a closed loop leaves behind. carry a vector around a
+    // loop and it returns rotated by a full turn less the turning of the loop's corners,
+    // which is the curvature times the area enclosed (gauss_bonnet_test, holonomy_test)
 
-    let curvature = |path: Geonum| -> Geonum {
-        // parallel transport around loop: net rotation = curvature
-        path.rotate(Angle::new(0.1, 1.0)) // small rotation = small curvature
+    let curvature = |path: Geonum, corners: &[Angle]| -> Geonum {
+        // parallel transport around loop: net rotation = curvature × area
+        let turned = corners
+            .iter()
+            .fold(Angle::new(0.0, 1.0), |sum, corner| sum + *corner);
+        path.rotate(Angle::new(2.0, 1.0) - turned)
     };
 
     let loop_start = Geonum::scalar(1.0);
-    let after_loop = curvature(loop_start);
 
-    // curvature adds 0.1π rotation
-    assert_eq!(
-        after_loop.angle,
-        Angle::new(0.1, 1.0),
-        "curvature rotates by 0.1π"
+    // the octant of a unit sphere: three right angle corners enclosing 4π/8
+    let right = Angle::new(1.0, 2.0);
+    let after_loop = curvature(loop_start, &[right, right, right]);
+    assert!(
+        after_loop.angle.near(&Angle::new(1.0, 2.0)),
+        "curvature 1 over an area of π/2 rotates by π/2"
     );
-    assert_eq!(after_loop.mag, 1.0, "curvature preserves magnitude");
+    assert!(after_loop.near_mag(1.0), "curvature preserves magnitude");
+
+    // a flat triangle: its three corners turn the path a full turn and leave nothing
+    let third = Angle::new(2.0, 3.0);
+    let after_flat = curvature(loop_start, &[third, third, third]);
+    assert!(
+        after_flat.angle.near(&loop_start.angle),
+        "no curvature, no rotation"
+    );
 
     println!("Tensor operations via angle arithmetic:");
     println!("  2×2×2 tensor: O(1) instead of O(8) storage");
@@ -560,7 +584,7 @@ fn it_dualizes_log2_geometric_algebra_components() {
 
     // log2(4) = 2 components (length and angle) instead of 4 components
     // this matches the statement from the README
-    assert_eq!(4.0_f64.log2(), 2.0);
+    assert!((4.0_f64.log2() - 2.0).abs() < EPSILON);
 }
 
 #[test]
@@ -622,8 +646,8 @@ fn its_a_bernoulli_number() {
     let b4_value = b4.mag * b4.angle.grade_angle().cos(); // division result projected to scalar
 
     // test the computed values
-    assert_eq!(b0_value, 1.0);
-    assert_eq!(b1_value, 0.5);
+    assert!((b0_value - 1.0).abs() < EPSILON);
+    assert!((b1_value - 0.5).abs() < EPSILON);
     assert!((b2_value - 1.0 / 6.0).abs() < EPSILON);
     assert!((b4_value - (1.0 / 30.0)).abs() < EPSILON); // (-1)/30 = +1/30 via blade arithmetic
 
@@ -640,7 +664,7 @@ fn its_a_bernoulli_number() {
     let sum_formula = n * (n + 1.0) * (2.0 * n + 1.0) * b2_value;
 
     // test the bernoulli number formula gives the expected sum
-    assert_eq!(sum_direct, 55.0);
+    assert!((sum_direct - 55.0_f64).abs() < EPSILON);
     assert!((sum_formula - 55.0).abs() < EPSILON);
 
     // test odd bernoulli numbers (except B1) are zero
@@ -648,7 +672,7 @@ fn its_a_bernoulli_number() {
     let b3_value = 0.0; // B3 = 0
 
     // test the property
-    assert_eq!(b3_value, 0.0);
+    assert!((b3_value - 0.0_f64).abs() < EPSILON);
 
     // test zeta function relationship: ζ(2) = PI²/6
     // this involves bernoulli number B2 = 1/6
@@ -711,7 +735,7 @@ fn its_a_quadrature() {
         "sin(θ+π/2) = cos(θ) — the quadrature identity"
     );
 
-    // that quarter turn is differentiation: a unit object and its derivative are perpendicular
+    // that quarter turn is differentiation against its own angle: a unit object ⊥ its derivative
     let f = Geonum::new_with_angle(1.0, theta);
     let f_prime = f.differentiate();
     assert!(
@@ -789,7 +813,7 @@ fn its_a_clifford_number() {
 
     // operations on this component remain O(1) regardless of the blade grade
     let rotated = high_dim_component.rotate(Angle::new(1.0, 6.0)); // rotate by π/6
-    assert_eq!(rotated.mag, 1.0);
+    assert!(rotated.near_mag(1.0));
     assert_eq!(rotated.angle.blade(), 500); // blade grade preserved
 
     // million-D clifford algebra - impossible traditionally, trivial with geonum:
@@ -849,7 +873,7 @@ fn its_a_eulers_identity() {
     // but in history-preserving, forward-only geometry,
     // inv() explicitly adds a π rotation instead of obscuring
     // it with a scalar sign flip: [1, π].inv() = [1, 2π]
-    assert_eq!(multiplicative_inverse.mag, e_to_ipi.mag);
+    assert!(multiplicative_inverse.near_mag(e_to_ipi.mag));
     let expected_inv_angle = e_to_ipi.angle + Angle::new(1.0, 1.0); // π + π = 2π (blade 4)
     assert_eq!(multiplicative_inverse.angle, expected_inv_angle);
 
@@ -858,7 +882,7 @@ fn its_a_eulers_identity() {
     let self_product = e_to_ipi * e_to_ipi;
 
     // Test that e^(iπ) × e^(iπ) = 1 (multiplicative identity)
-    assert_eq!(self_product.mag, 1.0);
+    assert!(self_product.near_mag(1.0));
     assert!(self_product.angle.grade_angle().abs() < EPSILON); // 2π ≡ 0 (mod 2π)
 
     // STEP 6: This is what Euler's identity actually demonstrates
@@ -867,10 +891,10 @@ fn its_a_eulers_identity() {
 
     // Verify: (-1) × (-1) = 1 in traditional arithmetic
     let traditional_check = (-1.0) * (-1.0);
-    assert_eq!(traditional_check, 1.0);
+    assert!((traditional_check - 1.0_f64).abs() < EPSILON);
 
     // Same relationship in geonum: [1, π] × [1, π] = [1, 0]
-    assert_eq!(self_product.mag, traditional_check);
+    assert!(self_product.near_mag(traditional_check));
 
     // STEP 7: The additive part of Euler's identity
     // e^(iπ) + 1 = 0 shows that [1, π] and [1, 0] are additive inverses
@@ -906,7 +930,7 @@ fn its_a_eulers_identity() {
     );
 
     // 2π ≡ 0 (mod 2π), so we're back to [1, 0] = multiplicative identity
-    assert_eq!(twice_rotated.mag, 1.0);
+    assert!(twice_rotated.near_mag(1.0));
     assert!(twice_rotated.angle.grade_angle().abs() < EPSILON);
 
     // CONCLUSION: Euler's identity reveals fundamental geometric inverse properties

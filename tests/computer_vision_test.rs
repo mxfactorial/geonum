@@ -59,7 +59,7 @@ fn its_a_feature_detector() {
 
     // verify gradient direction is correct
     assert!((gradient_direction - PI / 4.0).abs() < EPSILON);
-    assert_eq!(gradient_magnitude, 1.0);
+    assert!((gradient_magnitude - 1.0).abs() < EPSILON);
 
     // 3. generate oriented SIFT-like descriptor
 
@@ -90,8 +90,8 @@ fn its_a_feature_detector() {
 
     // create a similar feature with slight rotation (simulating another view of same point)
     let rotated_feature = Geonum::new_with_angle(
-        0.95,                                        // slightly weaker in second view
-        corner_feature.angle + Angle::new(0.05, PI), // slight rotation
+        0.95,                                              // slightly weaker in second view
+        corner_feature.angle + Angle::new(0.05 / PI, 1.0), // slight rotation
     ); // vector (grade 1) - same feature type
 
     // compute match quality using angle distance
@@ -117,8 +117,8 @@ fn its_a_feature_detector() {
         let angle = (i as f64) * 2.0 * PI / (dimensions as f64);
         high_dim_descriptor.push(Geonum::new(
             1.0 / (1.0 + (angle - gradient_direction).abs()),
-            angle,
-            PI,
+            angle / PI,
+            1.0,
         )); // vector (grade 1) - gradient component
     }
 
@@ -154,8 +154,8 @@ fn its_an_optical_flow_estimator() {
     let frame1_point = Geonum::new(1.0, 1.0, 6.0); // orientation at π/6
 
     let frame2_point = Geonum::new_with_angle(
-        1.05,                                      // slightly moved outward
-        frame1_point.angle + Angle::new(0.02, PI), // slightly rotated
+        1.05,                                            // slightly moved outward
+        frame1_point.angle + Angle::new(0.02 / PI, 1.0), // slightly rotated
     );
 
     // traditional design: compute flow field with least squares estimation
@@ -193,8 +193,8 @@ fn its_an_optical_flow_estimator() {
     let flow_grade_1 = Geonum::new_with_blade(
         flow_vector.mag,
         1, // ensure vector (grade 1)
-        flow_vector.angle.grade_angle(),
-        PI,
+        flow_vector.angle.grade_angle() / PI,
+        1.0,
     );
 
     let multiscale_flow = GeoCollection::from(vec![
@@ -202,14 +202,14 @@ fn its_an_optical_flow_estimator() {
         Geonum::new_with_blade(
             flow_vector.mag * 0.5, // half magnitude at coarser scale
             2,                     // bivector (grade 2) - coarser scale flow
-            flow_vector.angle.grade_angle(),
-            PI,
+            flow_vector.angle.grade_angle() / PI,
+            1.0,
         ),
         Geonum::new_with_blade(
             flow_vector.mag * 0.25, // quarter magnitude at coarsest scale
             3,                      // trivector (grade 3) - coarsest scale flow
-            flow_vector.angle.grade_angle(),
-            PI,
+            flow_vector.angle.grade_angle() / PI,
+            1.0,
         ),
     ]); // optical flow at multiple scales
 
@@ -254,7 +254,7 @@ fn its_an_optical_flow_estimator() {
             let angle = (i as f64) * 2.0 * PI / (num_points as f64);
             let magnitude = 0.1 * ((i as f64) / (num_points as f64)).sin().abs();
 
-            Geonum::new(magnitude, angle, PI) // vector (grade 1) - flow vector at image point
+            Geonum::new(magnitude, angle / PI, 1.0) // vector (grade 1) - flow vector at image point
         })
         .collect::<Vec<Geonum>>();
 
@@ -307,8 +307,8 @@ fn its_a_camera_calibration() {
 
     // simulated observed point (with noise)
     let observed_point = Geonum::new_with_angle(
-        projected_point.mag + 0.1,                    // add noise to length
-        projected_point.angle + Angle::new(0.01, PI), // add noise to angle
+        projected_point.mag + 0.1,                          // add noise to length
+        projected_point.angle + Angle::new(0.01 / PI, 1.0), // add noise to angle
     );
 
     // compute reprojection error as an angle-based distance
@@ -341,7 +341,7 @@ fn its_a_camera_calibration() {
         .map(|i| {
             // distribute cameras in a circle
             let angle = (i as f64) * 2.0 * PI / (num_cameras as f64);
-            Geonum::new(focal_length, angle, PI)
+            Geonum::new(focal_length, angle / PI, 1.0)
         })
         .collect::<Vec<Geonum>>();
 
@@ -358,8 +358,8 @@ fn its_a_camera_calibration() {
             if visible {
                 Some(Geonum::new(
                     focal_length * world_point.mag / (10.0 * world_point.mag),
-                    relative_angle, // angle in camera frame
-                    PI,
+                    relative_angle / PI, // angle in camera frame
+                    1.0,
                 ))
             } else {
                 None // point not visible to this camera
@@ -416,7 +416,7 @@ fn its_a_3d_reconstruction() {
     // potential match in second camera (close to epipolar line)
     let candidate_match = Geonum::new_with_angle(
         0.6,
-        epipolar_line.angle + Angle::new(0.01, PI), // small deviation from epipolar line
+        epipolar_line.angle + Angle::new(0.01 / PI, 1.0), // small deviation from epipolar line
     );
 
     // compute distance to epipolar line (simplified as angle difference)
@@ -480,7 +480,7 @@ fn its_a_3d_reconstruction() {
         .sum::<f64>()
         / observations.len() as f64;
 
-    let _refined_point = Geonum::new(avg_length, avg_angle, PI);
+    let _refined_point = Geonum::new(avg_length, avg_angle / PI, 1.0);
 
     // 6. measure performance for large-scale reconstruction
 
@@ -494,7 +494,7 @@ fn its_a_3d_reconstruction() {
             let angle = (i as f64) * 2.0 * PI / (num_points as f64);
             let depth = 1.0 + (i as f64 / num_points as f64);
 
-            Geonum::new(depth, angle, PI)
+            Geonum::new(depth, angle / PI, 1.0)
         })
         .collect::<Vec<Geonum>>();
 
@@ -570,7 +570,7 @@ fn its_an_image_registration() {
             let feature_angle = (i as f64) * 2.0 * PI / (num_features as f64);
 
             // original feature
-            let feature = Geonum::new(1.0, feature_angle, PI);
+            let feature = Geonum::new(1.0, feature_angle / PI, 1.0);
 
             // transformed feature
             let transformed_feature = feature.rotate(rotation_angle);
@@ -695,8 +695,8 @@ fn its_a_neural_image_processing() {
             "ReLU should preserve positive signals"
         );
     } else {
-        assert_eq!(
-            activated_output.mag, 0.0,
+        assert!(
+            activated_output.near_mag(0.0),
             "ReLU should zero out negative signals"
         );
     }
@@ -721,7 +721,7 @@ fn its_a_neural_image_processing() {
     let mut features = (0..features_per_layer)
         .map(|i| {
             let angle = (i as f64) * 2.0 * PI / (features_per_layer as f64);
-            Geonum::new(1.0, angle, PI)
+            Geonum::new(1.0, angle / PI, 1.0)
         })
         .collect::<Vec<Geonum>>();
 
@@ -732,8 +732,8 @@ fn its_a_neural_image_processing() {
             .iter()
             .map(|feature| {
                 let output = Geonum::new_with_angle(
-                    feature.mag * 0.95,                   // slight attenuation
-                    feature.angle + Angle::new(0.01, PI), // slight rotation
+                    feature.mag * 0.95,                         // slight attenuation
+                    feature.angle + Angle::new(0.01 / PI, 1.0), // slight rotation
                 );
 
                 // simplified activation
@@ -785,7 +785,7 @@ fn its_a_segmentation_algorithm() {
             // add noise to orientation
             let index = f64::from(i);
             let noise = (index / f64::from(num_pixels)) * 0.2 - 0.1;
-            Geonum::new_with_angle(1.0, region_orientation.angle + Angle::new(noise, PI))
+            Geonum::new_with_angle(1.0, region_orientation.angle + Angle::new(noise / PI, 1.0))
         })
         .collect::<Vec<Geonum>>();
 
@@ -847,7 +847,7 @@ fn its_a_segmentation_algorithm() {
             // each segment has distinct orientation
             let segment_angle = (segment_id as f64) * PI / (num_segments as f64);
 
-            Geonum::new(1.0, segment_angle, PI)
+            Geonum::new(1.0, segment_angle / PI, 1.0)
         })
         .take(1000)
         .collect::<Vec<Geonum>>(); // Only process 1000 pixels for benchmark
@@ -889,8 +889,8 @@ fn its_an_object_detection() {
 
     // create another bounding box for the same object (slight variation)
     let bbox2 = Geonum::new_with_angle(
-        object.mag * 1.05,                 // slightly larger
-        bbox.angle + Angle::new(0.02, PI), // slightly rotated
+        object.mag * 1.05,                       // slightly larger
+        bbox.angle + Angle::new(0.02 / PI, 1.0), // slightly rotated
     );
 
     // compute IoU-like similarity directly from angles and scales
@@ -916,8 +916,8 @@ fn its_an_object_detection() {
     // create multiple detections of same object
     let detections = [
         Geonum::new(2.0, 1.0, 6.0), // detection at π/6
-        Geonum::new_with_angle(2.1, Angle::new(1.0, 6.0) + Angle::new(0.05, PI)), // slightly rotated
-        Geonum::new_with_angle(1.9, Angle::new(1.0, 6.0) - Angle::new(0.03, PI)), // slightly opposite rotation
+        Geonum::new_with_angle(2.1, Angle::new(1.0, 6.0) + Angle::new(0.05 / PI, 1.0)), // slightly rotated
+        Geonum::new_with_angle(1.9, Angle::new(1.0, 6.0) - Angle::new(0.03 / PI, 1.0)), // slightly opposite rotation
     ];
 
     // cluster detections by angle similarity
@@ -970,7 +970,7 @@ fn its_an_object_detection() {
             let scale = 1.0 + (i % 10) as f64 * 0.1;
 
             // detection for object
-            let detection = Geonum::new(scale, position_angle, PI);
+            let detection = Geonum::new(scale, position_angle / PI, 1.0);
 
             // class probabilities represented as multivector
             // each grade corresponds to a class
@@ -982,8 +982,8 @@ fn its_an_object_detection() {
                     Geonum::new_with_blade(
                         prob,
                         c + 1, // blade grade represents class ID range
-                        (class_id as f64) * 2.0 / (num_classes as f64),
-                        PI,
+                        (class_id as f64) * 2.0 / (num_classes as f64) / PI,
+                        1.0,
                     )
                 })
                 .collect::<Vec<Geonum>>();

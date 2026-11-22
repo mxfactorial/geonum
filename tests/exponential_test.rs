@@ -1,7 +1,7 @@
 //! exponential test
 //!
 //! eˣ in geonum. the 'e' is scaffolding for rotation: its_a_eulers_identity
-//! (numbers_test:1022) shows e^(iπ) = [1, π], so the imaginary exponential IS the
+//! (numbers_test:843) shows e^(iπ) = [1, π], so the imaginary exponential IS the
 //! angle — e^(iθ) = [1, θ], a pure rotation, no limit, no symbol. e splits across
 //! geonum's two numbers: rotation in the angle (e^(iθ)), growth in the magnitude (eˣ).
 //!
@@ -90,6 +90,29 @@ fn it_gives_up_the_integral_through_the_fixed_point() {
     // the magnitude the product converged in, not from any exponent in the angle — eˣ is
     // where the power-in-the-angle fold reaches its fixed point
     let n = 1_000_000;
+
+    // that it is its own antiderivative is read off the product, not supplied. (1 + x/n)ⁿ is
+    // one step u = 1 + x/n multiplied n times, so it turns n times as far as u. its rate
+    // against u is its quarter turn counted n times, over the quarter turn of u: n uⁿ⁻¹. and u
+    // moves 1/n for each unit of x, so against x the n cancels: the rate is the product with
+    // one factor of u taken back out, within a step of the product itself
+    let u = Geonum::new(1.0 + 1.0 / n as f64, 1.0, 12.0); // given an angle so the count can be proven
+    let product = u.pow(n as f64);
+
+    // u went into the product n times: the angle of u taken n times is the products angle
+    let turns = n as f64;
+    assert!(product.angle.near(&(u.angle * turns)));
+    let rate_against_u = product.differentiate().scale(turns).mag / u.differentiate().mag;
+    let rate_against_x = rate_against_u / n as f64;
+    assert!(
+        (rate_against_x - product.mag / u.mag).abs() < 1e-9,
+        "the rate is the product, one factor of the step short"
+    );
+    assert!(
+        (rate_against_x / product.mag - 1.0).abs() < 2.0 / n as f64,
+        "so eˣ is its own rate to within one step, and its own antiderivative"
+    );
+
     let integral = exp_step(1.0, 0.0, 1.0, n).mag - exp_step(0.0, 0.0, 1.0, n).mag; // e¹ − e⁰
     assert!(
         (integral - (E - 1.0)).abs() < 1e-3,

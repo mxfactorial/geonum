@@ -17,13 +17,13 @@ fn its_a_ray() {
     let ray = Geonum::new(1.0, 1.0, 4.0); // π/4 propagation direction
 
     // intensity encoded in length, direction in angle
-    assert_eq!(ray.mag, 1.0); // unit intensity
+    assert!(ray.near_mag(1.0)); // unit intensity
     assert!(ray.angle.near_rem(PI / 4.0)); // 45° propagation
 
     // ray propagation: just scale by distance
     let distance = 100.0;
     let propagated = ray.scale(distance); // intensity × distance
-    assert_eq!(propagated.mag, distance);
+    assert!(propagated.near_mag(distance));
     assert_eq!(propagated.angle, ray.angle); // direction unchanged
 
     // traditional: parametric equation R(100) = P₀ + 100*d
@@ -48,7 +48,7 @@ fn its_a_lens() {
     let focused_ray = incident_ray.rotate(lens_transform);
 
     // verify lens operation
-    assert_eq!(focused_ray.mag, incident_ray.mag); // intensity preserved
+    assert!(focused_ray.near_mag(incident_ray.mag)); // intensity preserved
     assert_ne!(focused_ray.angle, incident_ray.angle); // angle changed by lens
 
     // traditional: matrix multiplication [A B; C D][y; θ] = [y'; θ']
@@ -128,7 +128,7 @@ fn its_a_polarizer() {
     // parallel polarizer: 0° difference gives full transmission
     let parallel_diff = incident.angle - incident.angle; // 0 difference
     let parallel_transmission = parallel_diff.grade_angle().cos().powi(2);
-    assert_eq!(parallel_transmission, 1.0); // cos²(0) = 1
+    assert!((parallel_transmission - 1.0).abs() < 1e-10); // cos²(0) = 1
 
     // verify expected intensity calculation
     assert!((expected_intensity - incident.mag * cos_squared).abs() < EPSILON);
@@ -214,7 +214,7 @@ fn its_a_diffraction_grating() {
     // verify orders have different angles (except zeroth order)
     for m in 1..5 {
         assert_ne!(orders[m].angle, orders[0].angle); // each order at different angle
-        assert_eq!(orders[m].mag, orders[0].mag); // equal intensity (simplified)
+        assert!(orders[m].near_mag(orders[0].mag)); // equal intensity (simplified)
     }
 
     // grating efficiency: blazed grating maximizes specific order
@@ -264,7 +264,7 @@ fn its_an_interferometer() {
     let wavelength = 500e-9; // 500nm light
     let phase_shift = 2.0 * PI * path_difference / wavelength; // 2π phase shift
 
-    let beam_delayed = beam1.rotate(Angle::new(phase_shift, 2.0 * PI));
+    let beam_delayed = beam1.rotate(Angle::new(phase_shift / PI, 2.0));
     let michelson_pattern = beam1 + beam_delayed;
 
     // 2π phase shift produces destructive interference in geonum addition operation
@@ -275,8 +275,8 @@ fn its_an_interferometer() {
     let path1_shift = PI / 6.0; // π/6 phase shift in arm 1
     let path2_shift = PI / 4.0; // π/4 phase shift in arm 2
 
-    let arm1 = beam1.rotate(Angle::new(path1_shift, PI));
-    let arm2 = beam1.rotate(Angle::new(path2_shift, PI));
+    let arm1 = beam1.rotate(Angle::new(path1_shift / PI, 1.0));
+    let arm2 = beam1.rotate(Angle::new(path2_shift / PI, 1.0));
     let mach_zehnder = arm1 + arm2;
 
     // verify Mach-Zehnder produces partial interference between arms
@@ -321,14 +321,14 @@ fn its_a_prism() {
         let incident_sin = ray.angle.grade_angle().sin();
         let refracted_sin = incident_sin * n1 / n2;
         let refracted_angle = refracted_sin.asin();
-        Geonum::new(ray.mag, refracted_angle, PI)
+        Geonum::new(ray.mag, refracted_angle / PI, 1.0)
     };
 
     let refracted = snells_law(&incident, n1, n2);
 
     // verify refraction bends toward normal (smaller angle for dense medium)
     assert!(refracted.angle.rem() < incident.angle.rem()); // ray bends toward normal
-    assert_eq!(refracted.mag, incident.mag); // intensity preserved
+    assert!(refracted.near_mag(incident.mag)); // intensity preserved
 
     // critical angle demonstration: dense to rare medium
     let glass_incident = Geonum::new(1.0, 1.0, 3.0); // π/3 = 60° in glass
@@ -341,7 +341,7 @@ fn its_a_prism() {
 
     // total internal reflection: no transmitted ray, all energy reflected
     let tir_reflected = glass_incident.negate(); // phase flip on total reflection
-    assert_eq!(tir_reflected.mag, glass_incident.mag); // energy conserved in reflection
+    assert!(tir_reflected.near_mag(glass_incident.mag)); // energy conserved in reflection
     assert_ne!(tir_reflected.angle, glass_incident.angle); // phase changed by π
 
     // prism dispersion: different wavelengths refract differently
@@ -489,7 +489,7 @@ fn its_a_hologram() {
     // geonum: hologram is angle relationship between reference and object encoded in bivector
     let reference_amplitude = 1.0;
     let reference_phase = 0.0; // reference beam at 0 phase
-    let reference = Geonum::new(reference_amplitude, reference_phase, 2.0 * PI);
+    let reference = Geonum::new(reference_amplitude, reference_phase / PI, 2.0);
 
     let object_amplitude = 0.7;
     let object = Geonum::new(object_amplitude, 1.0, 4.0); // π/4 via constructor
@@ -640,8 +640,8 @@ fn its_a_beam_splitter() {
     let brewster_reflected = brewster_p.scale(0.0); // Rp = 0
     let brewster_transmitted = brewster_p.scale(1.0); // Tp = 1
 
-    assert_eq!(brewster_reflected.mag, 0.0); // no p-polarized reflection
-    assert_eq!(brewster_transmitted.mag, 1.0); // complete p-polarized transmission
+    assert!(brewster_reflected.near_mag(0.0)); // no p-polarized reflection
+    assert!(brewster_transmitted.near_mag(1.0)); // complete p-polarized transmission
 
     // interference between reflected beams: coherent addition
     let coherent_beam1 = Geonum::new(0.7, 0.0, 1.0); // beam 1
@@ -680,196 +680,96 @@ fn its_a_beam_splitter() {
 
 #[test]
 fn its_lens_design_optimization() {
-    // traditional: lens optimization requires ray tracing + numerical gradient estimation
-    // finite difference: ∂(merit_function)/∂(parameter) ≈ [f(x+δ) - f(x)]/δ
-    // thousands of rays traced through perturbed systems to estimate sensitivities
-    // ZEMAX, Code V use Monte Carlo + Levenberg-Marquardt for iterative optimization
+    // traditional: lens optimization needs ray tracing plus numerical gradient estimation
+    // finite difference: ∂(merit)/∂(parameter) ≈ [f(x+δ) - f(x)]/δ, with thousands of rays
+    // traced through perturbed systems and levenberg-marquardt iterating on the estimates
+    //
+    // geonum: the merit function carries its sensitivity in its angle. spherical aberration
+    // grows with the 4th power of the aperture, W = wρ⁴, so W turns 4 times as far as ρ
+    // turn both a quarter turn and divide, and dW/dρ = 4wρ³ is left with no ray traced
+    // (differentiate_test::it_proves_the_two_ratios_are_the_quarter_turns_cancelling)
 
-    // geonum: exact gradients through geometric differentiation - no ray tracing needed
-    // differentiate() gives true sensitivity direction via π/2 rotation in parameter space
-    // optimization becomes navigation in angle space toward better configurations
+    let w = 0.05; // waves of spherical aberration at a 1 mm aperture
+    let merit = |aperture: &Geonum| aperture.pow(4.0).scale(w);
+    let sensitivity = |aperture: &Geonum| {
+        let error = merit(aperture);
+        let turns = 4.0; // the aperture went into the merit 4 times
+        assert!(error.angle.near(&(aperture.angle * turns)));
+        let d_error = error.differentiate().scale(turns);
+        let d_aperture = aperture.differentiate();
+        Geonum::new_with_angle(
+            d_error.mag / d_aperture.mag,
+            d_error.angle - d_aperture.angle,
+        )
+    };
 
-    // EDUCATIONAL NOTE: geonum's automatic differentiation works because:
-    // - differentiation IS π/2 rotation in geometric space (like sin → cos)
-    // - no approximations needed - the calculus is built into angle arithmetic
-    // - traditional finite differences estimate what geonum computes exactly
+    // a 2 mm aperture carries 0.8 waves of error
+    let aperture = Geonum::new(2.0, 1.0, 12.0); // [2, π/12]
+    let error = merit(&aperture);
+    assert!(error.near_mag(0.8), "W = 0.05 × 2⁴ = 0.8 waves");
 
-    // encode optical system: angle represents optical path, length represents performance metric
-    let focal_length: f64 = 100.0; // 100mm design parameter
-    let system_error = 0.1; // current aberration level
-    let optical_path_angle = 1.0 / focal_length; // optical power in angle
-
-    let lens_system = Geonum::new(system_error, optical_path_angle, 1.0);
-    println!(
-        "initial system: error={:.3}, optical_angle={:.6} rad",
-        lens_system.mag,
-        lens_system.angle.grade_angle()
-    );
-
-    // automatic differentiation: get exact sensitivity direction
-    // this is the KEY insight - differentiate() gives the true gradient, not an approximation
-    let gradient = lens_system.differentiate(); // π/2 rotation gives exact sensitivity
-
-    println!(
-        "gradient direction: magnitude={:.6}, angle={:.6} rad",
-        gradient.mag,
-        gradient.angle.grade_angle()
-    );
-
-    // optimization step: use gradient to compute correction direction
-    // in traditional optimization: parameter -= learning_rate * gradient
-    // in geonum: gradient at higher blade gives optimization direction through geometric operations
-    let gradient_base = gradient.base_angle(); // reset blade while preserving geometric relationships
-    let optimization_direction = gradient_base - lens_system; // direction toward better configuration
-    let learning_rate = 0.1;
-
-    let optimized_system = lens_system + optimization_direction.scale(learning_rate);
-    println!(
-        "optimized system: error={:.6}, optical_angle={:.6} rad",
-        optimized_system.mag,
-        optimized_system.angle.grade_angle()
-    );
-
-    // verify optimization reduces error (length represents error magnitude)
+    // sensitivity from the count of 4: 4wρ³ = 1.6 waves per mm, on the ray of ρ³
+    let gradient = sensitivity(&aperture);
+    assert!(gradient.near_mag(1.6), "dW/dρ = 4 × 0.05 × 2³ = 1.6");
     assert!(
-        optimized_system.mag < lens_system.mag,
-        "optimization reduces error"
+        gradient.near(&aperture.pow(3.0).scale(4.0 * w)),
+        "the sensitivity is a geonum too: 4wρ³"
     );
 
-    // multi-parameter optimization: compound lens system
-    let lens1_power = 1.0 / 50.0; // 50mm element
-    let lens2_power = 1.0 / 200.0; // 200mm element
-    let spacing_error = 0.05; // alignment error
-
-    // encode system as combination of elements
-    let element1 = Geonum::new(spacing_error, lens1_power, 1.0);
-    let element2 = Geonum::new(spacing_error, lens2_power, 1.0);
-    let compound_system = element1 * element2; // combined system
-
-    println!(
-        "compound system: error={:.6}, combined_power={:.6}",
-        compound_system.mag,
-        compound_system.angle.grade_angle()
-    );
-
-    // system-level gradient: automatic differentiation of composed system
-    let system_gradient = compound_system.differentiate();
-
-    // optimization preserves the geometric relationships while reducing error
-    let system_gradient_base = system_gradient.base_angle();
-    let system_direction = system_gradient_base - compound_system;
-    let optimized_compound = compound_system + system_direction.scale(0.05);
-
+    // the finite difference closes in on 1.6 and stops short of it
+    let delta = 1e-4;
+    let estimate = (w * (aperture.mag + delta).powi(4) - error.mag) / delta;
     assert!(
-        optimized_compound.mag < compound_system.mag,
-        "system optimization improves performance"
+        (estimate - gradient.mag).abs() < 1e-3,
+        "the estimate is close"
+    );
+    assert!(
+        (estimate - gradient.mag).abs() > 1e-6,
+        "and still an estimate"
     );
 
-    // aberration correction through gradient descent
-    // traditional: compute Zernike coefficients, optimize aspheric parameters
-    // geonum: navigate in angle space toward configurations with lower aberration
+    // tolerance analysis: a ±0.01 mm aperture tolerance moves the error by 0.016 waves
+    // traditional: monte carlo over perturbed parameters. here: one multiplication
+    let tolerance = 0.01;
+    assert!(
+        (gradient.mag * tolerance - 0.016).abs() < 1e-10,
+        "performance variation = sensitivity × tolerance"
+    );
 
-    let mut current_system = lens_system;
-    let target_error = 0.01; // design specification
-    let mut iteration = 0;
-
-    while current_system.mag > target_error && iteration < 15 {
-        let current_gradient = current_system.differentiate();
-        let gradient_base = current_gradient.base_angle();
-        let optimization_direction = gradient_base - current_system;
-
-        // adaptive step size: larger corrections when far from target
-        let step_size = (current_system.mag / target_error * 0.1).min(0.2);
-
-        current_system = current_system + optimization_direction.scale(step_size);
-        iteration += 1;
-
-        println!("iteration {}: error={:.6}", iteration, current_system.mag);
+    // optimization: stop the lens down until the error meets a 0.05 wave target
+    // each step divides the excess error by the sensitivity read at that aperture
+    let target = 0.05;
+    let mut current = aperture;
+    let mut iterations = 0;
+    while (merit(&current).mag - target).abs() > 1e-12 && iterations < 20 {
+        let step = (merit(&current).mag - target) / sensitivity(&current).mag;
+        current = current.scale((current.mag - step) / current.mag);
+        iterations += 1;
     }
 
+    assert!(current.near_mag(1.0), "a 1 mm aperture meets the target");
+    assert!(merit(&current).near_mag(target), "0.05 waves at 1 mm");
     assert!(
-        current_system.mag <= target_error,
-        "optimization converged to specification"
+        iterations < 10,
+        "converged in {iterations} steps, each with a sensitivity that was never estimated"
     );
-    println!(
-        "converged in {} iterations to error={:.6}",
-        iteration, current_system.mag
-    );
-
-    // tolerance analysis: manufacturing sensitivity
-    // traditional: Monte Carlo with perturbed parameters
-    // geonum: exact sensitivity from differentiate()
-
-    let manufacturing_tolerance = 0.01; // ±0.01mm focal length variation
-    let sensitivity = gradient.mag; // how much error changes per unit parameter change
-    let performance_variation = sensitivity * manufacturing_tolerance;
-
-    println!("manufacturing sensitivity: {:.6} error/mm", sensitivity);
-    println!(
-        "tolerance impact: ±{:.6} error for ±{:.2}mm variation",
-        performance_variation, manufacturing_tolerance
+    assert_eq!(
+        current.angle, aperture.angle,
+        "stopping down moved the aperture along its ray, the angle untouched"
     );
 
+    // the steps were closing in on one root. W = wρ⁴ meets the target where ρ⁴ = target/w,
+    // and the fourth root of that is the aperture, with no step taken
+    let root = Geonum::scalar(target / w).pow(0.25);
     assert!(
-        performance_variation < 0.1,
-        "design robust to manufacturing tolerances"
-    );
-
-    // PERFORMANCE COMPARISON with traditional methods:
-
-    // traditional ray tracing optimization:
-    // - 10,000 rays × 20 surfaces × 50 parameters = 10M ray-surface intersections
-    // - finite difference requires 2× evaluations per parameter = 20M operations
-    // - optimization needs 100+ iterations = 2B+ total operations
-
-    // geonum optimization:
-    // - encode system: O(1)
-    // - differentiate(): O(1) exact gradient
-    // - optimize: O(1) per iteration
-    // - total: O(iterations) = O(10) for this example
-
-    let traditional_operations = 2_000_000_000u64; // 2 billion ray operations
-    let geonum_operations = 10u64; // 10 iterations
-    let speedup = traditional_operations / geonum_operations;
-
-    println!(
-        "traditional ray tracing: {} operations",
-        traditional_operations
-    );
-    println!("geonum optimization: {} operations", geonum_operations);
-    println!("speedup: {}× faster", speedup);
-
-    // chromatic optimization: wavelength-dependent correction
-    // traditional: optimize for multiple wavelengths simultaneously
-    // geonum: wavelength variations encoded in angle relationships
-
-    let wavelength_variation = 0.02; // dispersion effect
-    let chromatic_system =
-        Geonum::new(system_error, optical_path_angle + wavelength_variation, 1.0);
-    let chromatic_gradient = chromatic_system.differentiate();
-
-    // achromatic correction: balance chromatic errors across wavelengths
-    let chromatic_gradient_base = chromatic_gradient.base_angle();
-    let combined_direction = (gradient_base + chromatic_gradient_base).scale(0.5); // average correction
-    let achromatic_direction = combined_direction - lens_system;
-    let achromatic_system = lens_system + achromatic_direction.scale(0.1);
-
-    println!(
-        "achromatic optimization: error={:.6}",
-        achromatic_system.mag
+        root.near_mag(1.0),
+        "the fourth root of 1 is the 1 mm aperture"
     );
     assert!(
-        achromatic_system.mag < lens_system.mag,
-        "chromatic correction improves system"
+        (current.mag - root.mag).abs() < 1e-9,
+        "the steps land on the root"
     );
 
-    // EDUCATIONAL SUMMARY:
-    // 1. geonum's differentiate() gives exact gradients, not finite difference approximations
-    // 2. optimization navigates in angle space using geometric calculus
-    // 3. no ray tracing needed - sensitivities computed directly from system encoding
-    // 4. scales to arbitrary complexity with O(1) gradient computation
-    // 5. traditional lens design computational complexity eliminated through geometric representation
-
-    // traditional: finite difference ray tracing, numerical optimization, iterative parameter search
-    // geonum: exact geometric gradients, direct angle space navigation, automatic differentiation
+    // traditional: finite difference ray tracing, numerical optimization, parameter search
+    // geonum: the turn count and one division, at every step
 }

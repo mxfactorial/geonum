@@ -253,7 +253,12 @@ fn it_collapses_the_constant_weight_integral_to_a_boundary_read() {
     // limit. but the weight ½r² is CONSTANT, so the integral collapses to a boundary read:
     // ½r²θ, the antiderivative at the boundary. the chords merely approach what it states
     let theta = PI / 2.0;
-    let sector = 0.5 * theta; // ½r²θ with r = 1 → π/4
+
+    // the boundary read is produced, not typed in. the weight ½r² is constant, so it turns 0
+    // times as far as θ. multiply by the quarter turn of θ, rotate the other three quarter
+    // turns, and the result turns once as far as θ: ½r²θ with r = 1 → π/4
+    let sweep = Geonum::new(theta, 1.0, 12.0); // given an angle so the count can be proven
+    let sector = turn_back_and_divide(&Geonum::scalar(0.5), &sweep, 1.0).mag;
 
     let coarse = inscribed_area(10, theta);
     let fine = inscribed_area(100_000, theta);
@@ -279,7 +284,11 @@ fn it_collapses_a_varying_radius_when_its_square_is_integrable_in_theta() {
     // varying radius loses its O(1) shortcut only when its square isnt integrable in θ
     // (r = e^(θ²)) — and geonum still sums it. r³/3 is the antiderivative in θ, not ∫r²dr in r
     let theta = 2.0_f64; // sweep θ ∈ [0, 2]; the spiral point at angle t is [t, t]
-    let boundary = 0.5 * theta.powi(3) / 3.0; // ½ · r³/3 = θ³/6
+
+    // θ³/3 is produced, not typed in: θ² times the quarter turn of θ, rotated the rest of the
+    // way round, divided by the 3 turns the result carries
+    let sweep = Geonum::new(theta, 1.0, 12.0); // given an angle so the count can be proven
+    let boundary = 0.5 * turn_back_and_divide(&(sweep * sweep), &sweep, 3.0).mag; // ½ · r³/3 = θ³/6
     assert!(
         (boundary - theta.powi(3) / 6.0).abs() < EPSILON,
         "the boundary read is θ³/6 via r³/3"
@@ -290,7 +299,7 @@ fn it_collapses_a_varying_radius_when_its_square_is_integrable_in_theta() {
     let pts: Vec<Geonum> = (0..=n)
         .map(|k| {
             let t = theta * k as f64 / n as f64;
-            Geonum::new_with_angle(t, Angle::new(t, PI)) // [t, t] — radius and angle both t
+            Geonum::new_with_angle(t, Angle::new(t / PI, 1.0)) // [t, t] — radius and angle both t
         })
         .collect();
     assert!(
@@ -307,13 +316,27 @@ fn it_collapses_the_exponential_spiral() {
     // swept area collapses to (r_b² − r_a²)/4 — a boundary read of the two magnitudes
     let big = 1.0_f64; // sweep θ ∈ [0, 1]; the spiral point at angle t is [e^t, t]
     let (r_a, r_b) = (0.0_f64.exp(), big.exp()); // boundary magnitudes e^0 = 1, e^1
-    let boundary = (r_b * r_b - r_a * r_a) / 4.0; // (e² − 1)/4
+
+    // the 2 under e^(2θ)/2 is produced, not typed in. r² turns twice as far as r, so its
+    // rate against r is 2r. r = e^θ grows at its own size (exponential_test), so against θ
+    // the square grows at twice its own size, and going backward is one divide by that 2
+    let r = Geonum::new(r_b, 1.0, 12.0); // [r, π/12], given an angle so the count can be proven
+    let r_squared = r * r;
+    let turns = 2.0;
+    assert!(r_squared.angle.near(&(r.angle * turns)));
+    let rate_against_r = r_squared.differentiate().scale(turns).mag / r.differentiate().mag;
+    let growth = rate_against_r * r.mag / r_squared.mag; // 2r · r / r² = 2
+    assert!(
+        (growth - 2.0).abs() < EPSILON,
+        "r² grows at twice its own size"
+    );
+    let boundary = 0.5 * (r_b * r_b - r_a * r_a) / growth; // (e² − 1)/4
 
     let n = 200_000;
     let pts: Vec<Geonum> = (0..=n)
         .map(|k| {
             let t = big * k as f64 / n as f64;
-            Geonum::new_with_angle(t.exp(), Angle::new(t, PI)) // [e^t, t] — exponential growth
+            Geonum::new_with_angle(t.exp(), Angle::new(t / PI, 1.0)) // [e^t, t] — exponential growth
         })
         .collect();
     assert!(
@@ -391,7 +414,22 @@ fn weighted_angle_area(points: &[Geonum]) -> f64 {
 // inscribe n chords on the unit-circle arc [0, θ] and sum their weighted angles
 fn inscribed_area(n: usize, theta: f64) -> f64 {
     let pts: Vec<Geonum> = (0..=n)
-        .map(|k| Geonum::new(1.0, theta * k as f64 / n as f64, PI)) // [1, (k/n)·θ]
+        .map(|k| Geonum::new(1.0, theta * k as f64 / n as f64 / PI, 1.0)) // [1, (k/n)·θ]
         .collect();
     weighted_angle_area(&pts)
+}
+
+// the antiderivative of rate against x: turn_and_divide run backward. multiply by the
+// quarter turn of x, rotate the other three quarter turns with integrate(), drop the full
+// turn that makes with base_angle(), then divide by the count. integral_test.rs proves it
+//
+// the count is how many times x has gone into the result, one more than into the rate. it
+// is handed over and proven the same way, in angle space
+fn turn_back_and_divide(rate: &Geonum, x: &Geonum, count: f64) -> Geonum {
+    let around = (*rate * x.differentiate()).integrate().base_angle();
+    assert!(
+        around.angle.near(&(x.angle * count).base_angle()),
+        "x went into the result {count} times"
+    );
+    around.scale(1.0 / count)
 }

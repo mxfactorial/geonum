@@ -101,7 +101,7 @@ fn its_a_group() {
     // test how rotation naturally creates closure
     // multiplying any two elements gives another element in the group
     let result = quarter_turn * half_turn;
-    assert_eq!(result.mag, 1.0);
+    assert!(result.near_mag(1.0));
     // quarter turn (π/2) + half turn (π) = 3π/2
     assert_eq!(result.angle, Angle::new(3.0, 2.0));
 
@@ -192,7 +192,7 @@ fn its_a_ring() {
     let right_side = Geonum::new_from_cartesian(right_side_cartesian[0], right_side_cartesian[1]);
 
     // test that cartesian conversion matches direct computation
-    assert_eq!(right_side.mag, right_side_expected.mag);
+    assert!(right_side.near_mag(right_side_expected.mag));
     assert_eq!(right_side.angle, right_side_expected.angle);
 
     // test that the distributive property holds
@@ -209,7 +209,7 @@ fn its_a_ring() {
 
     let product1 = scalar1 * scalar2;
     let product2 = scalar2 * scalar1;
-    assert_eq!(product1.mag, product2.mag);
+    assert!(product1.near_mag(product2.mag));
     assert_eq!(product1.angle, product2.angle);
 }
 
@@ -262,10 +262,10 @@ fn its_a_field() {
     let complex_a = real + imag; // addition computes complex number
 
     // test field properties apply to this special case
-    assert_eq!(complex_a.mag, 5.0); // |3+4i| = 5
+    assert!(complex_a.near_mag(5.0)); // |3+4i| = 5
 
     // test norm computation matches complex numbers
-    assert_eq!(complex_a.mag * complex_a.mag, 25.0); // |3+4i|² = 25
+    assert!(((complex_a.mag * complex_a.mag) - 25.0).abs() < EPSILON); // |3+4i|² = 25
 }
 
 #[test]
@@ -334,7 +334,7 @@ fn its_an_algebra() {
     // test rotation-based multiplication
     // e1 * e2 = rotation by adding angles
     let e1e2 = e1 * e2;
-    assert_eq!(e1e2.mag, 1.0);
+    assert!(e1e2.near_mag(1.0));
     // π/2 + π = 3π/2
     assert_eq!(e1e2.angle, Angle::new(3.0, 2.0));
 
@@ -343,7 +343,7 @@ fn its_an_algebra() {
     let left = (e0 * e1) * e2;
     let right = e0 * (e1 * e2);
 
-    assert_eq!(left.mag, right.mag);
+    assert!(left.near_mag(right.mag));
 
     // angles are exactly equal for associative multiplication
     assert_eq!(left.angle, right.angle);
@@ -373,8 +373,8 @@ fn its_an_algebra() {
 
     // test it represents the identity matrix
     assert_eq!(matrix.len(), 4);
-    assert_eq!(matrix[0].mag, 1.0);
-    assert_eq!(matrix[3].mag, 1.0);
+    assert!(matrix[0].near_mag(1.0));
+    assert!(matrix[3].near_mag(1.0));
 }
 
 #[test]
@@ -460,7 +460,7 @@ fn its_a_clifford_algebra() {
     let _bivector = scalar.wedge(&vector);
 
     // test grade separation through angles
-    assert_eq!(scalar.angle.rem(), 0.0);
+    assert!(scalar.angle.near_rem(0.0));
     assert_eq!(vector.angle, Angle::new(1.0, 2.0)); // PI/2
 
     // in our simplified model, bivector angle may vary
@@ -472,8 +472,8 @@ fn its_a_clifford_algebra() {
     let e1_squared = e1 * e1;
     let e2_squared = e2 * e2;
 
-    assert_eq!(e1_squared.mag, 1.0);
-    assert_eq!(e2_squared.mag, 1.0);
+    assert!(e1_squared.near_mag(1.0));
+    assert!(e2_squared.near_mag(1.0));
 
     // test angles are consistent with geometric algebra
     // different implementations may have different conventions
@@ -615,11 +615,11 @@ fn its_a_manifold() {
     // angles directly serve as coordinates without charts
 
     // test tangent space as direct differentiation
-    // differentiation is simply rotation by π/2
+    // differentiation against a number's own angle is simply rotation by π/2
     let tangent = Geonum::new_with_angle(p.mag, p.angle + Angle::new(1.0, 2.0));
     let derivative = p.differentiate();
 
-    assert_eq!(derivative.mag, tangent.mag);
+    assert!(derivative.near_mag(tangent.mag));
     assert_eq!(derivative.angle, tangent.angle);
 }
 
@@ -642,8 +642,8 @@ fn its_a_fiber_bundle() {
     // test base-fiber split as angle-length split
     // points with same angle but different lengths are in the same fiber
     assert_eq!(p1.angle, p2.angle); // same base point (same angle)
-    assert_eq!(p1.mag, 1.0);
-    assert_eq!(p2.mag, 2.0); // different fiber points (different lengths)
+    assert!(p1.near_mag(1.0));
+    assert!(p2.near_mag(2.0)); // different fiber points (different lengths)
 
     // test sections as angle slices
     // a section assigns one point in each fiber
@@ -655,8 +655,8 @@ fn its_a_fiber_bundle() {
     let s1 = section(Angle::new(0.0, 1.0));
     let s2 = section(Angle::new(1.0, 2.0));
 
-    assert_eq!(s1.mag, 2.0); // sin(0) + 2 = 2
-    assert_eq!(s2.mag, 3.0); // sin(π/2) + 2 = 3
+    assert!(s1.near_mag(2.0)); // sin(0) + 2 = 2
+    assert!(s2.near_mag(3.0)); // sin(π/2) + 2 = 3
 
     // test connections through direct angle change
     // parallel transport is implemented by keeping the length fixed
@@ -667,7 +667,7 @@ fn its_a_fiber_bundle() {
 
     // test parallel transport around the circle
     let transported = transport(&p1, Angle::new(1.0, 1.0)); // PI
-    assert_eq!(transported.mag, 1.0); // preserved length
+    assert!(transported.near_mag(1.0)); // preserved length
     assert_eq!(transported.angle, p1.angle + Angle::new(1.0, 1.0)); // changed angle
 }
 
@@ -682,7 +682,7 @@ fn it_rejects_set_theory() {
     let vector = Geonum::new(1.0, 1.0, 4.0);
 
     // test the vector exists in physical space
-    assert_eq!(vector.mag, 1.0);
+    assert!(vector.near_mag(1.0));
     assert_eq!(vector.angle, Angle::new(1.0, 4.0));
 
     // test paradox avoidance through physical grounding
@@ -772,7 +772,7 @@ fn it_unifies_discrete_and_continuous() {
     let doubled = vector * Geonum::new(2.0, 0.0, 1.0);
     let rotated = Geonum::new_with_angle(vector.mag, vector.angle + vector.angle);
 
-    assert_eq!(doubled.mag, 4.0);
+    assert!(doubled.near_mag(4.0));
     assert_eq!(rotated.angle, Angle::new(2.0, 3.0));
 }
 
@@ -792,7 +792,7 @@ fn it_models_computing_structures() {
     let float_one = Geonum::new(1.0, 0.0, 1.0);
 
     // test both have same internal representation but different type spaces
-    assert_eq!(int_one.mag, float_one.mag);
+    assert!(int_one.near_mag(float_one.mag));
     assert_eq!(int_one.angle, float_one.angle);
 
     // test language semantics as angle transformation
@@ -806,7 +806,7 @@ fn it_models_computing_structures() {
     let input = Geonum::new(3.0, 0.0, 1.0);
     let output = geo_function(input);
 
-    assert_eq!(output.mag, 9.0);
+    assert!(output.near_mag(9.0));
 
     // test data structures as geometric entities
     // an array is a multivector with indexed elements
@@ -817,9 +817,9 @@ fn it_models_computing_structures() {
     ]);
 
     // access elements by index
-    assert_eq!(array[0].mag, 10.0);
-    assert_eq!(array[1].mag, 20.0);
-    assert_eq!(array[2].mag, 30.0);
+    assert!(array[0].near_mag(10.0));
+    assert!(array[1].near_mag(20.0));
+    assert!(array[2].near_mag(30.0));
 
     // test a simple tree data structure using geometric representation
     // tree structure - collection of nodes:
@@ -830,7 +830,7 @@ fn it_models_computing_structures() {
     ]);
 
     // test tree properties
-    assert_eq!(tree[0].mag, 1.0); // root value
-    assert_eq!(tree[1].mag, 2.0); // left child
-    assert_eq!(tree[2].mag, 3.0); // right child
+    assert!(tree[0].near_mag(1.0)); // root value
+    assert!(tree[1].near_mag(2.0)); // left child
+    assert!(tree[2].near_mag(3.0)); // right child
 }

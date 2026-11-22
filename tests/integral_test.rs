@@ -22,9 +22,16 @@
 //!    CONVERGES to the area, never reaching it. the wedge draws the same region
 //!    exactly in one rotation — no step, no mesh.
 //!
+//! 4. the antiderivative is the turn run backward — differentiate_test proves a
+//!    rate is a quarter turn counted, then divided by the quarter turn of x.
+//!    run it the other way: multiply by the quarter turn of x, rotate the other
+//!    three quarter turns, divide by how far the result turns. a power, a power
+//!    times a wave, an exponential times a wave and 1/x all come out exactly,
+//!    with nothing summed over the interval.
+//!
 //! the integration patterns geonum has no named api for yet — boundary
-//! evaluation and the swept-area element — are factored into helpers stacked at
-//! the bottom of this file.
+//! evaluation, the swept-area element, and the turn run backward — are factored
+//! into helpers stacked at the bottom of this file.
 //!
 //! run with:  cargo test --test integral_test
 
@@ -62,8 +69,10 @@ fn it_inverts_differentiation_preserving_the_projection_ratio() {
 
 // ---------------------------------------------------------------------------
 // 2. definite integral of cos over [a, b] = sin(b) - sin(a)
-//    antiderivative of cos is sin — its projection read off the angle, the two
-//    endpoints subtracted by definite_integral
+//    cos is the dimension 0 reading of the unit number at that angle. its
+//    antiderivative is not supplied: integrate() rotates the unit number back a
+//    quarter turn and the same reading is taken again, the two endpoints
+//    subtracted by definite_integral
 // ---------------------------------------------------------------------------
 #[test]
 fn it_integrates_cos_over_an_interval() {
@@ -85,8 +94,17 @@ fn it_integrates_cos_over_an_interval() {
     ];
 
     for (a, b, expected) in cases {
-        // ∫cos = sin: the imaginary projection of the angle
-        let area = definite_integral(a, b, |x| x.cos_sin().1);
+        // ∫cos = sin: rotate back a quarter turn, read dimension 0 again
+        let antiderivative = |x: Angle| {
+            Geonum::new_with_angle(1.0, x)
+                .integrate()
+                .project_to_dimension(0)
+        };
+        assert!(
+            (antiderivative(b) - b.cos_sin().1).abs() < EPSILON,
+            "the rotated reading is sin, with nothing typed in"
+        );
+        let area = definite_integral(a, b, antiderivative);
 
         assert!(
             (area - expected).abs() < EPSILON,
@@ -97,7 +115,9 @@ fn it_integrates_cos_over_an_interval() {
 
 // ---------------------------------------------------------------------------
 // 3. definite integral of sin over [a, b] = cos(a) - cos(b)
-//    antiderivative of sin is -cos
+//    sin is the dimension 1 reading of the same unit number. integrate() and
+//    the same reading again give -cos, the minus sign arriving as the half turn
+//    the two quarter turns add up to
 // ---------------------------------------------------------------------------
 #[test]
 fn it_integrates_sin_over_an_interval() {
@@ -108,8 +128,17 @@ fn it_integrates_sin_over_an_interval() {
     ];
 
     for (a, b, expected) in cases {
-        // ∫sin = -cos: negate the real projection of the angle
-        let area = definite_integral(a, b, |x| -x.cos_sin().0);
+        // ∫sin = -cos: rotate back a quarter turn, read dimension 1 again
+        let antiderivative = |x: Angle| {
+            Geonum::new_with_angle(1.0, x)
+                .integrate()
+                .project_to_dimension(1)
+        };
+        assert!(
+            (antiderivative(b) + b.cos_sin().0).abs() < EPSILON,
+            "the rotated reading is -cos, with nothing typed in"
+        );
+        let area = definite_integral(a, b, antiderivative);
 
         assert!(
             (area - expected).abs() < EPSILON,
@@ -147,7 +176,12 @@ fn it_cancels_the_four_cardinal_cosines() {
 // ---------------------------------------------------------------------------
 #[test]
 fn it_telescopes_the_definite_integral_at_every_resolution() {
-    let sin_anti = |x: Angle| x.cos_sin().1; // antiderivative of cos
+    // antiderivative of cos: the unit number rotated back a quarter turn, read on dimension 0
+    let sin_anti = |x: Angle| {
+        Geonum::new_with_angle(1.0, x)
+            .integrate()
+            .project_to_dimension(0)
+    };
     let (a, b) = (Angle::new(0.0, 1.0), Angle::new(1.0, 2.0)); // [0, π/2]
     let expected = definite_integral(a, b, sin_anti); // = 1.0
 
@@ -331,6 +365,216 @@ fn it_takes_down_the_riemann_mesh() {
     );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// the antiderivative is the turn run backward. sections 2 and 3 are handed
+// their antiderivative; these produce it, with no strips and no limit
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ---------------------------------------------------------------------------
+// 12. a power: the three steps of differentiation in reverse. multiply by the
+//     quarter turn of x, rotate the other three quarter turns, divide by how
+//     far the result turns. the n+1 under xⁿ⁺¹ is that count: x went into xⁿ⁺¹ n+1 times
+// ---------------------------------------------------------------------------
+#[test]
+fn it_integrates_a_power_by_running_the_turn_backward() {
+    let x = Geonum::new(3.0, 1.0, 12.0); // [3, π/12]
+
+    // 2x back to x², one step at a time
+    let rate = x.scale(2.0); // [6, π/12]
+
+    // multiply by the quarter turn of x: this is x² turned, the number
+    // differentiation divides by the quarter turn of x
+    let turned = rate * x.differentiate(); // [18, 2π/12 + π/2]
+    assert!(turned.near(&(x * x).differentiate().scale(2.0)));
+
+    // integrate() rotates the other three quarter turns, a full turn on from x²
+    let around = turned.integrate();
+    assert_eq!(around.angle.blade(), (x * x).angle.blade() + 4);
+
+    // x went into x² twice, so divide by 2. the angle of x taken twice is where it sits,
+    // once the full turn is dropped
+    let count = 2.0;
+    assert!(
+        around.angle.base_angle().near(&(x.angle * count)),
+        "the count is 2"
+    );
+    assert!(
+        around.scale(1.0 / count).base_angle().near(&(x * x)),
+        "2x integrates to x² = [9, 2π/12]"
+    );
+
+    // every power the same way: xᵏ gives xᵏ⁺¹/(k+1)
+    for k in [0.0, 1.0, 2.0, 3.0, 0.5] {
+        let antiderivative = turn_back_and_divide(&x.pow(k), &x, k + 1.0);
+        assert!(
+            antiderivative.near_mag(3.0_f64.powf(k + 1.0) / (k + 1.0)),
+            "the antiderivative of x^{k} at x = 3"
+        );
+    }
+
+    // definite: ∫₂⁵ 2x dx = 25 − 4 = 21, the antiderivative read at the two ends
+    // calculus_test reaches the same 21 by summing 1000 strips
+    let at = |r: f64| {
+        let x = Geonum::new(r, 1.0, 12.0);
+        turn_back_and_divide(&x.scale(2.0), &x, 2.0).mag
+    };
+    assert!((at(5.0) - at(2.0) - 21.0).abs() < EPSILON, "21, no strips");
+}
+
+// ---------------------------------------------------------------------------
+// 13. a power times a wave. t² sin(t) is the dimension 1 reading of [t², t],
+//     which moves out along its ray and around by its quarter turn
+//     (differentiate_test). going backward, rotate it back a quarter turn to
+//     undo the around, then take back the growth that step also counted: one
+//     term per rate of the magnitude, each a quarter turn on from the last,
+//     until the rate runs out
+//
+//       [t², t − π/2] + [2t, t] + [2, t + π/2]
+//
+//     on dimension 1 that reads −t² cos(t) + 2t sin(t) + 2 cos(t), which is
+//     integration by parts done twice
+// ---------------------------------------------------------------------------
+#[test]
+fn it_integrates_a_number_that_grows_while_it_turns() {
+    let terms = |t: Angle| {
+        // the magnitude and its rates, each by its count: t², 2t, 2, then nothing
+        let size = Geonum::new_with_angle(t.grade_angle(), Angle::new(1.0, 12.0));
+        let grows = size.pow(2.0);
+        let rate = turn_and_divide(&grows, &size, 2.0);
+        let rate_of_rate = turn_and_divide(&rate, &size, 1.0);
+        assert!(
+            turn_and_divide(&rate_of_rate, &size, 0.0).near_mag(0.0),
+            "the rate runs out after two"
+        );
+
+        [
+            Geonum::new_with_angle(grows.mag, t).integrate(), // [t², t − π/2]
+            Geonum::new_with_angle(rate.mag, t),              // [2t, t]
+            Geonum::new_with_angle(rate_of_rate.mag, t).differentiate(), // [2, t + π/2]
+        ]
+    };
+    let antiderivative =
+        |t: Angle| -> f64 { terms(t).iter().map(|g| g.project_to_dimension(1)).sum() };
+
+    // from π/6 to π/2, read at the two ends
+    let (a, b) = (Angle::new(1.0, 6.0), Angle::new(1.0, 2.0));
+    let area = definite_integral(a, b, antiderivative);
+
+    // the textbook antiderivative at the same ends
+    let textbook = |t: f64| -t * t * t.cos() + 2.0 * t * t.sin() + 2.0 * t.cos();
+    let expected = textbook(b.grade_angle()) - textbook(a.grade_angle());
+    assert!(
+        (area - expected).abs() < EPSILON,
+        "three terms at two ends give {expected}, got {area}"
+    );
+
+    // the mesh closes in on the same area and stops short of it
+    let (low, width) = (a.grade_angle(), b.grade_angle() - a.grade_angle());
+    let mesh = width
+        * riemann_left(
+            |u| {
+                let t = low + width * u;
+                t * t * t.sin()
+            },
+            1000,
+        );
+    assert!((mesh - area).abs() < 1e-2, "1000 strips come close");
+    assert!((mesh - area).abs() > 1e-6, "and never arrive");
+
+    // why three terms are enough: turn them forward again at t = π/2. the around of the
+    // first is the integrand, and every other motion meets its neighbor a half turn apart
+    let [back, level, on] = terms(b);
+    let integrand = Geonum::new_with_angle(b.grade_angle().powi(2), b); // [t², t]
+    assert!(
+        back.differentiate().base_angle().near(&integrand),
+        "the first term turned forward is the integrand"
+    );
+
+    let out_of_back = Geonum::new_with_angle(level.mag, back.angle); // it grows at 2t
+    assert!(
+        (out_of_back + level.differentiate()).near_mag(0.0),
+        "the growth of the first cancels the around of the second"
+    );
+
+    let out_of_level = Geonum::new_with_angle(on.mag, level.angle); // it grows at 2
+    assert!(
+        (out_of_level + on.differentiate()).near_mag(0.0),
+        "the growth of the second cancels the around of the third"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 14. an exponential times a wave. eᵗ sin(t) is the dimension 1 reading of
+//     [eᵗ, t]. its magnitude grows at eᵗ, the size it already has, so the out
+//     and the around are equal and a quarter turn apart: the number moves as
+//     itself rotated π/4 and scaled by √2, at every t. backward is one divide
+// ---------------------------------------------------------------------------
+#[test]
+fn it_integrates_a_number_that_grows_as_fast_as_it_turns() {
+    let number = |t: Angle| Geonum::new_with_angle(t.grade_angle().exp(), t); // [eᵗ, t]
+
+    // a unit plus the same unit rotated a quarter turn: [√2, π/4]
+    // addition keeps a full turn of blade history, so read it at its base angle
+    let unit = Geonum::scalar(1.0);
+    let motion = (unit + unit.differentiate()).base_angle();
+    assert!(motion.near(&Geonum::new(2.0_f64.sqrt(), 1.0, 4.0)));
+
+    // forward: out plus around is the number times that one motion
+    let n = number(Angle::new(1.0, 3.0));
+    assert!(
+        (n + n.differentiate()).near(&(n * motion)),
+        "the number moves as itself rotated π/4 and scaled √2"
+    );
+
+    // backward: magnitudes divide, angles subtract. one step and no spiral
+    let antiderivative = |t: Angle| {
+        let n = number(t);
+        Geonum::new_with_angle(n.mag / motion.mag, n.angle - motion.angle).project_to_dimension(1)
+    };
+
+    // from π/6 to π/2 against the textbook eᵗ(sin t − cos t)/2
+    let (a, b) = (Angle::new(1.0, 6.0), Angle::new(1.0, 2.0));
+    let area = definite_integral(a, b, antiderivative);
+    let textbook = |t: f64| t.exp() * (t.sin() - t.cos()) / 2.0;
+    let expected = textbook(b.grade_angle()) - textbook(a.grade_angle());
+    assert!(
+        (area - expected).abs() < EPSILON,
+        "one divide at two ends gives {expected}, got {area}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 15. 1/x is the power whose answer turns 0 times as far as x, so section 12
+//     has no count to divide by. multiply it by the quarter turn of x and x
+//     drops out: a unit quarter turn is left, the same for every x. its
+//     integral over a turn is how far x turned
+// ---------------------------------------------------------------------------
+#[test]
+fn it_integrates_one_over_x_as_the_angle_swept() {
+    let one_over = |x: &Geonum| Geonum::new_with_angle(1.0 / x.mag, Angle::new(0.0, 1.0) - x.angle);
+    let unit_quarter_turn = Geonum::new(1.0, 1.0, 2.0); // [1, π/2]
+
+    let x1 = Geonum::new(3.0, 1.0, 12.0); // [3, π/12]
+    let x2 = Geonum::new(3.0, 1.0, 3.0); // [3, π/3]
+    for x in [x1, x2, Geonum::new(7.0, 2.0, 5.0)] {
+        assert!(
+            (one_over(&x) * x.differentiate())
+                .base_angle()
+                .near(&unit_quarter_turn),
+            "1/x times the quarter turn of x is a unit quarter turn"
+        );
+    }
+
+    // from x1 to x2 the angle swept is π/3 − π/12 = π/4, sitting a quarter turn on:
+    // the imaginary part of ln(x2) − ln(x1), with no logarithm taken
+    let swept = (x2.angle - x1.angle).grade_angle();
+    let integral = unit_quarter_turn.scale(swept);
+    assert!(
+        integral.near(&Geonum::new(PI / 4.0, 1.0, 2.0)),
+        "the integral of 1/x over the turn is the angle swept"
+    );
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // helpers: the geonum integration patterns, plus the finite-difference foil they
 // replace. rust scopes a `let` closure to a fn body, so module-level helpers are
@@ -355,4 +599,36 @@ fn areal(v: &Geonum, w: &Geonum) -> f64 {
 fn riemann_left(f: impl Fn(f64) -> f64, n: usize) -> f64 {
     let dx = 1.0 / n as f64;
     (0..n).map(|k| f(k as f64 * dx) * dx).sum()
+}
+
+// the rate of f against x: turn both a quarter turn, count, and divide. magnitudes divide,
+// angles subtract, the quarter turns cancel. proven as the power, sum, product and chain rules in
+// differentiate_test
+//
+// the count is how many times x went into f. whoever made f has it and hands it over, and
+// it is proven here in angle space: the angle of x taken that many times is the angle of
+// f. angles add, and no angle is read out as a float to find it
+fn turn_and_divide(f: &Geonum, x: &Geonum, count: f64) -> Geonum {
+    assert!(
+        f.angle.near(&(x.angle * count)),
+        "x went into f {count} times"
+    );
+    let df = f.differentiate().scale(count);
+    let dx = x.differentiate();
+    Geonum::new_with_angle(df.mag / dx.mag, df.angle - dx.angle)
+}
+
+// the antiderivative of rate against x: turn_and_divide run backward. multiply by the
+// quarter turn of x, rotate the other three quarter turns with integrate(), drop the full
+// turn that makes with base_angle(), then divide by the count
+//
+// the count is how many times x has gone into the result, one more than into the rate. it
+// is handed over and proven the same way, in angle space
+fn turn_back_and_divide(rate: &Geonum, x: &Geonum, count: f64) -> Geonum {
+    let around = (*rate * x.differentiate()).integrate().base_angle();
+    assert!(
+        around.angle.near(&(x.angle * count).base_angle()),
+        "x went into the result {count} times"
+    );
+    around.scale(1.0 / count)
 }

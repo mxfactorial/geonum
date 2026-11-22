@@ -68,7 +68,7 @@ fn it_models_causal_transaction_structure() {
 
             // return transaction bivector
             // convert angle to geometric representation
-            Geonum::new_with_blade(amount.mag, 2, transaction_angle, PI)
+            Geonum::new_with_blade(amount.mag, 2, transaction_angle / PI, 1.0)
         };
 
     // apply the bivector conversion to each transaction item
@@ -143,9 +143,9 @@ fn it_models_causal_transaction_structure() {
         let transaction_angle = (creditor_angle - debitor_angle) % TAU;
         Geonum::new_with_blade(
             amount * (1.0 + time_difference), // magnitude increases with time delay
-            2,                 // bivector (grade 2) representing the transaction plane
-            transaction_angle, // spatial orientation
-            PI,
+            2,                      // bivector (grade 2) representing the transaction plane
+            transaction_angle / PI, // spatial orientation
+            1.0,
         )
     };
 
@@ -208,13 +208,12 @@ fn it_models_causal_transaction_structure() {
         // in geometric algebra, a bivector represents an oriented area element
         // for transactions, this encodes the economic plane between two accounts
         // and preserves the directed financial relationship between entities
-        Geonum::new_with_blade(new_length, 2, new_angle, PI)
+        Geonum::new_with_blade(new_length, 2, new_angle / PI, 1.0)
     });
 
     // prove the combined flow has the expected magnitude
-    assert_eq!(
-        economic_flow.mag,
-        ground_coffee.mag + pasta.mag + paper_towels.mag + sales_tax.mag
+    assert!(
+        economic_flow.near_mag(ground_coffee.mag + pasta.mag + paper_towels.mag + sales_tax.mag)
     );
 
     // prove constant-time calculation regardless of transaction count
@@ -242,7 +241,7 @@ fn it_models_causal_transaction_structure() {
         };
 
         // bivector (grade 2) representing the combined transaction plane
-        Geonum::new_with_blade(new_length, 2, new_angle, PI)
+        Geonum::new_with_blade(new_length, 2, new_angle / PI, 1.0)
     });
     let duration = start.elapsed();
 
@@ -358,7 +357,7 @@ fn it_models_investment_network_resilience() {
         let angle_shift = avg_angle_after - avg_angle_before;
 
         // return geometric impact
-        Geonum::new_with_blade(loss_ratio, 1, angle_shift, PI)
+        Geonum::new_with_blade(loss_ratio, 1, angle_shift / PI, 1.0)
     };
 
     // copy balances for simulation

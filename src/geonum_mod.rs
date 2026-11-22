@@ -181,7 +181,7 @@ impl Geonum {
         }
     }
 
-    /// computes the derivative of this geometric number with respect to its parameter
+    /// computes the derivative of this geometric number with respect to its own angle
     /// using the differential geometric calculus approach
     ///
     /// in geometric algebra, derivation can be represented as rotating by π/2
@@ -197,7 +197,7 @@ impl Geonum {
         }
     }
 
-    /// computes the anti-derivative (integral) of this geometric number
+    /// computes the anti-derivative (integral) of this geometric number over its own angle
     /// using the differential geometric calculus approach
     ///
     /// in geometric algebra, integration rotates forward by 3π/2 (equivalent to -π/2)

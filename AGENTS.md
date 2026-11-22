@@ -1,4 +1,8 @@
+skip this file if youre following the "learn with ai" instructions in README.md
+
 since lines shift from edits, audit and revise the line ranges referenced in this file when instructed. include function and module comments in line range revisions
+
+keep the ls -1 tests output on README.md current before committing changes to it. exclude tests/lib_test.rs from the README.md ouput list
 
 skip caps when starting sentences
 
@@ -69,18 +73,18 @@ learn how geonum can express any number type from the its_a_scalar:8-36, its_a_v
 
 learn how geonum eliminates angle slack created by decomposing angles into scalar coefficients by reading the it_proves_decomposing_angles_with_linearly_combined_basis_vectors_loses_angle_addition:13-84, it_proves_decomposition_distributes_one_angle_across_multiple_scalars:87-160, it_proves_quaternion_tables_add_back_what_decomposition_subtracts:519-660, it_proves_anticommutativity_exists_because_decomposition_subtracts_different_amounts:663-726 tests in tests/linear_algebra_test.rs
 
-learn how geonum replaces scalar based quadratic forms with simple angle based rotations in the it_proves_rotational_quadrature_expresses_quadratic_forms:640-814 test in tests/dimension_test.rs
+learn how geonum replaces scalar based quadratic forms with simple angle based rotations in the it_proves_rotational_quadrature_expresses_quadratic_forms:652-826 test in tests/dimension_test.rs
 
-learn why dimensions are an unnecessary abstraction in the it_proves_quadrature_creates_dimensional_structure:91-138, it_shows_dimensions_are_quarter_turns:141-199 tests in tests/dimension_test.rs
+learn why dimensions are an unnecessary abstraction in the it_proves_quadrature_creates_dimensional_structure:91-150, it_shows_dimensions_are_quarter_turns:153-211 tests in tests/dimension_test.rs
 
 learn why geonum deprecates grade decomposition in the it_proves_grade_decomposition_ignores_angle_addition:17-80 test in tests/grade_test.rs, and how it dissolves the 2^n explosion in the it_solves_the_exponential_complexity_explosion:18-79 test in tests/pseudoscalar_test.rs
 
 learn how geonum maps grades with the it_replaces_k_to_n_minus_k_with_k_to_4_minus_k:259-341, it_compresses_traditional_ga_grades_to_two_involutive_pairs:344-379 tests in tests/grade_test.rs
 
-learn about angle forward only geometry from the it_sets_angle_forward_geometry_as_primitive:503-637 test in tests/dimension_test.rs
+learn about angle forward only geometry from the it_sets_angle_forward_geometry_as_primitive:515-649 test in tests/dimension_test.rs
 
 read only tests/angle_arithmetic_test.rs:1~20 because the file is large, but you can learn about the angle forward only blade arithmetic of operations from this file
 
-read the it_shows_limits_discard_what_angles_preserve:350-387, it_proves_differentiation_cycles_grades:586-664 tests in tests/calculus_test.rs to understand how geonum automates calculus
+read the it_shows_limits_discard_what_angles_preserve:468-505, it_proves_differentiation_cycles_grades:732-816 tests in tests/calculus_test.rs to understand how geonum automates calculus
 
-tests are styled as trojan horses for simplicity. conventional jargon promising symbol salad but readers get simple arithmetic in test contents. example tests: it_handles_conformal_split:4694-4804, it_handles_inversive_distance:4807-4936 in tests/cga_test.rs
+tests are styled as trojan horses for simplicity. conventional jargon promising symbol salad but readers get simple arithmetic in test contents. example tests: it_handles_conformal_split:4717-4831, it_handles_inversive_distance:4834-4963 in tests/cga_test.rs

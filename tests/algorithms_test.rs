@@ -38,7 +38,7 @@ fn its_a_constant_time_operation() {
     let large_problem_cost = operation;
 
     // test invariance to problem size (cost is the same)
-    assert_eq!(small_problem_cost.mag, large_problem_cost.mag);
+    assert!(small_problem_cost.near_mag(large_problem_cost.mag));
     assert!((small_problem_cost.angle - large_problem_cost.angle).rem() < EPSILON);
 
     // test operation composition (multiple constant operations)
@@ -91,8 +91,8 @@ fn its_a_linear_algorithm() {
     let cost_100 = compute_cost(100);
 
     // verify linear scaling property
-    assert_eq!(cost_20.mag / cost_10.mag, 2.0); // twice the input, twice the cost
-    assert_eq!(cost_100.mag / cost_10.mag, 10.0); // 10x input, 10x cost
+    assert!(((cost_20.mag / cost_10.mag) - 2.0).abs() < EPSILON); // twice the input, twice the cost
+    assert!(((cost_100.mag / cost_10.mag) - 10.0).abs() < EPSILON); // 10x input, 10x cost
 
     // angle remains the same (same operation type)
     assert!((cost_10.angle - cost_20.angle).rem() < EPSILON);
@@ -133,11 +133,11 @@ fn its_a_sorting_algorithm() {
     // create a geometric representation of elements to sort
     // angle represents the value, length can represent frequency or weight
     let unsorted_elements = [
-        Geonum::new(1.0, 0.7, PI), // 0.7 radians ~40°
-        Geonum::new(1.0, 0.2, PI), // 0.2 radians ~11°
-        Geonum::new(1.0, 1.5, PI), // 1.5 radians ~86°
-        Geonum::new(1.0, 0.1, PI), // 0.1 radians ~6°
-        Geonum::new(1.0, 1.0, PI), // 1.0 radians ~57°
+        Geonum::new(1.0, 0.7 / PI, 1.0), // 0.7 radians ~40°
+        Geonum::new(1.0, 0.2 / PI, 1.0), // 0.2 radians ~11°
+        Geonum::new(1.0, 1.5 / PI, 1.0), // 1.5 radians ~86°
+        Geonum::new(1.0, 0.1 / PI, 1.0), // 0.1 radians ~6°
+        Geonum::new(1.0, 1.0 / PI, 1.0), // 1.0 radians ~57°
     ];
 
     // geometric sorting: sort by angle
@@ -246,7 +246,7 @@ fn its_a_graph_algorithm() {
         let mut result = graph.to_vec();
         result.sort_by(|a, b| {
             // use angle distance to find nodes closest to starting angle
-            let start_geonum = Geonum::new(1.0, start, PI);
+            let start_geonum = Geonum::new(1.0, start / PI, 1.0);
             let a_diff = (a.angle - start_geonum.angle).rem().abs();
             let b_diff = (b.angle - start_geonum.angle).rem().abs();
             // handle circular distance
@@ -363,9 +363,9 @@ fn its_a_dynamic_programming() {
     let fib_7 = fib_geo(7);
 
     // validate fibonacci values
-    assert_eq!(fib_5.mag, 5.0); // F(5) = 5
-    assert_eq!(fib_6.mag, 8.0); // F(6) = 8
-    assert_eq!(fib_7.mag, 13.0); // F(7) = 13
+    assert!(fib_5.near_mag(5.0)); // F(5) = 5
+    assert!(fib_6.near_mag(8.0)); // F(6) = 8
+    assert!(fib_7.near_mag(13.0)); // F(7) = 13
 
     // validate angle progression represents position in sequence
     let expected_5 = Angle::new(5.0, 8.0);
@@ -377,7 +377,7 @@ fn its_a_dynamic_programming() {
 
     // demonstrate optimal substructure through angle composition
     // Solution to larger problem (fib_7) uses solutions to smaller problems
-    assert_eq!(fib_7.mag, fib_6.mag + fib_5.mag);
+    assert!(fib_7.near_mag(fib_6.mag + fib_5.mag));
 
     // angle difference represents step in DP table
     let step = Angle::new(1.0, 8.0); // PI/8
@@ -448,8 +448,8 @@ fn its_a_parallel_algorithm() {
     };
 
     let base_time = 10.0;
-    assert_eq!(speedup(base_time, 2.0), 5.0); // 2x speedup
-    assert_eq!(speedup(base_time, 4.0), 2.5); // 4x speedup
+    assert!((speedup(base_time, 2.0) - 5.0).abs() < EPSILON); // 2x speedup
+    assert!((speedup(base_time, 4.0) - 2.5).abs() < EPSILON); // 4x speedup
 }
 
 #[test]
@@ -476,7 +476,7 @@ fn its_a_distributed_algorithm() {
 
         for node in system {
             // compute angular distance
-            let value_geonum = Geonum::new(1.0, value_angle, PI);
+            let value_geonum = Geonum::new(1.0, value_angle / PI, 1.0);
 
             // compute angular distance properly
             let angle_diff = node.angle - value_geonum.angle;
@@ -535,7 +535,7 @@ fn its_a_distributed_algorithm() {
     // verify consensus is reached
     // all nodes should be within PI distance from consensus
     for node in &system {
-        let consensus_geonum = Geonum::new(1.0, consensus_angle, PI);
+        let consensus_geonum = Geonum::new(1.0, consensus_angle / PI, 1.0);
 
         // compute angle distance using Angle arithmetic
         let angle_diff = node.angle - consensus_geonum.angle;
@@ -580,8 +580,10 @@ fn its_a_numerical_method() {
     // test approximation at different precision levels
     let x = PI / 6.0; // 30 degrees
 
-    // exact value
-    let exact = x.sin();
+    // exact value: no series at all. sin(π/6) is the unit number at π/6 read on dimension 1,
+    // and the series below only closes in on that reading
+    let exact = Geonum::new(1.0, 1.0, 6.0).project_to_dimension(1);
+    assert!((exact - 0.5).abs() < 1e-12, "the reading is ½");
 
     // approximations with increasing terms
     let approx_1 = sin_approx(x, 1);
@@ -613,7 +615,22 @@ fn its_a_numerical_method() {
     };
 
     // integrate x^2 from 0 to 1, exact result is 1/3
-    let exact_integral = 1.0 / 3.0;
+    // the 1/3 is produced, not typed in: x² times the quarter turn of x, rotated the other
+    // three quarter turns, divided by the 3 turns the result carries. the trapezoids below
+    // only close in on it
+    let antiderivative = |r: f64| {
+        let x = Geonum::new(r, 1.0, 12.0); // [r, π/12], given an angle so the count can be proven
+        let around = (x * x * x.differentiate()).integrate();
+
+        // x went into the result 3 times: the angle of x taken 3 times, a full turn on
+        assert!(around.angle.base_angle().near(&(x.angle * 3.0)));
+        around.mag / 3.0
+    };
+    let exact_integral = antiderivative(1.0) - antiderivative(0.0);
+    assert!(
+        (exact_integral - 1.0 / 3.0).abs() < 1e-12,
+        "x³/3 at the two ends"
+    );
 
     // approximations with increasing subintervals
     let approx_10 = integrate(f, 0.0, 1.0, 10);
@@ -657,7 +674,7 @@ fn its_a_data_structure() {
 
             // instead of traditional hash, map to angle in [0, 2π)
             let angle_radians = (sum % 360) as f64 * PI / 180.0;
-            let angle_geonum = Geonum::new(1.0, angle_radians, PI);
+            let angle_geonum = Geonum::new(1.0, angle_radians / PI, 1.0);
 
             // convert angle to bucket index
             let total_angle =
@@ -869,15 +886,15 @@ fn its_a_compression_algorithm() {
     // create original data as geometric numbers
     // angle represents the value, length could represent frequency
     let original_data = vec![
-        Geonum::new(1.0, 0.12345, PI),
-        Geonum::new(1.0, 0.12346, PI),
-        Geonum::new(1.0, 0.12347, PI),
-        Geonum::new(1.0, 0.54321, PI),
-        Geonum::new(1.0, 0.54322, PI),
-        Geonum::new(1.0, 0.54323, PI),
-        Geonum::new(1.0, 1.23456, PI),
-        Geonum::new(1.0, 1.23457, PI),
-        Geonum::new(1.0, 1.23458, PI),
+        Geonum::new(1.0, 0.12345 / PI, 1.0),
+        Geonum::new(1.0, 0.12346 / PI, 1.0),
+        Geonum::new(1.0, 0.12347 / PI, 1.0),
+        Geonum::new(1.0, 0.54321 / PI, 1.0),
+        Geonum::new(1.0, 0.54322 / PI, 1.0),
+        Geonum::new(1.0, 0.54323 / PI, 1.0),
+        Geonum::new(1.0, 1.23456 / PI, 1.0),
+        Geonum::new(1.0, 1.23457 / PI, 1.0),
+        Geonum::new(1.0, 1.23458 / PI, 1.0),
     ];
 
     // compression by angle quantization
@@ -901,7 +918,7 @@ fn its_a_compression_algorithm() {
             });
 
             if !angle_exists {
-                quantized.push(Geonum::new(item.mag, quantized_angle, PI));
+                quantized.push(Geonum::new(item.mag, quantized_angle / PI, 1.0));
             }
         }
 
@@ -982,7 +999,7 @@ fn its_a_machine_learning_algorithm() {
             // initialize weights with small random angles
             let mut weights = Vec::with_capacity(features);
             for _ in 0..features {
-                weights.push(Geonum::new(1.0, 0.1, PI)); // small initial angle
+                weights.push(Geonum::new(1.0, 0.1 / PI, 1.0)); // small initial angle
             }
 
             GeoPerceptron {
@@ -1029,7 +1046,7 @@ fn its_a_machine_learning_algorithm() {
                             let delta_angle = self.learning_rate * error as f64 * input;
 
                             // adjust angle based on error and input
-                            let angle_adjustment = Angle::new(delta_angle, PI);
+                            let angle_adjustment = Angle::new(delta_angle / PI, 1.0);
                             self.weights[i] = Geonum::new_with_angle(
                                 self.weights[i].mag,                      // keep same length
                                 self.weights[i].angle + angle_adjustment, // adjust angle
@@ -1071,7 +1088,7 @@ fn its_a_machine_learning_algorithm() {
     let final_angles: Vec<Angle> = perceptron.weights.iter().map(|w| w.angle).collect();
 
     // verify angles changed during training
-    let initial_angle = Angle::new(0.1, PI);
+    let initial_angle = Angle::new(0.1 / PI, 1.0);
     for angle in &final_angles {
         assert!((angle - initial_angle).rem().abs() > EPSILON);
     }
@@ -1112,7 +1129,8 @@ fn its_a_cryptographic_algorithm() {
                 // length encodes the data, angle provides obfuscation
                 let obfuscation_angle =
                     (byte as f64 / 128.0) * PI + self.key_angle + position_shift;
-                let encrypted = Geonum::new((byte as f64) * self.key_length, obfuscation_angle, PI);
+                let encrypted =
+                    Geonum::new((byte as f64) * self.key_length, obfuscation_angle / PI, 1.0);
 
                 ciphertext.push(encrypted);
             }
@@ -1210,9 +1228,9 @@ fn it_rejects_complexity_analysis() {
         let log_op = log_op(n);
 
         // verify different scaling behaviors
-        assert_eq!(c_op.mag, 1.0); // constant stays at 1
-        assert_eq!(l_op.mag, n as f64); // linear scales with n
-        assert_eq!(q_op.mag, (n * n) as f64); // quadratic scales with n²
+        assert!(c_op.near_mag(1.0)); // constant stays at 1
+        assert!(l_op.near_mag(n as f64)); // linear scales with n
+        assert!(q_op.near_mag((n * n) as f64)); // quadratic scales with n²
         assert!(log_op.near_mag((n as f64).log2())); // logarithmic scales with log n
 
         // verify operation types (angles)
@@ -1237,9 +1255,9 @@ fn it_rejects_complexity_analysis() {
     let log_ratio = log_op(n2).mag / log_op(n1).mag;
 
     // verify actual scaling behavior matches expected
-    assert_eq!(constant_ratio, 1.0); // constant: n2/n1 = 1
-    assert_eq!(linear_ratio, n2 as f64 / n1 as f64); // linear: n2/n1 = 10
-    assert_eq!(quadratic_ratio, (n2 * n2) as f64 / (n1 * n1) as f64); // quadratic: (n2/n1)² = 100
+    assert!((constant_ratio - 1.0).abs() < EPSILON); // constant: n2/n1 = 1
+    assert!((linear_ratio - (n2 as f64 / n1 as f64)).abs() < EPSILON); // linear: n2/n1 = 10
+    assert!((quadratic_ratio - ((n2 * n2) as f64 / (n1 * n1) as f64)).abs() < EPSILON); // quadratic: (n2/n1)² = 100
 
     // log ratio is approximately log(n2)/log(n1) which is less than linear
     assert!(log_ratio < linear_ratio);
@@ -1324,7 +1342,7 @@ fn it_unifies_algorithm_design() {
 
     // demonstrate algorithm transformation as rotation
     let transform_algorithm = |algorithm: &Geonum, rotation: f64| -> Geonum {
-        let rotation_angle = Angle::new(rotation, PI); // rotation / PI gives π radians
+        let rotation_angle = Angle::new(rotation / PI, 1.0); // rotation / PI gives π radians
         Geonum::new_with_angle(algorithm.mag, algorithm.angle + rotation_angle)
     };
 

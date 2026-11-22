@@ -90,7 +90,7 @@ fn it_proves_infinity_is_just_opposite_rotation() {
 
     // this "point at infinity" has finite length
     assert!(infinity_x_positive.mag.is_finite());
-    assert_eq!(infinity_x_positive.mag, 1.0);
+    assert!(infinity_x_positive.near_mag(1.0));
 
     // but represents the opposite direction
     // dual() adds π rotation to the normalized angle (which is 0 for x-axis)
@@ -123,7 +123,7 @@ fn it_proves_infinity_is_just_opposite_rotation() {
         );
 
         // prove unit length
-        assert_eq!(infinity_point.mag, 1.0);
+        assert!(infinity_point.near_mag(1.0));
         assert!(infinity_point.mag.is_finite());
     }
 
@@ -209,8 +209,8 @@ fn it_automates_homogeneous_coordinates() {
     let infinity_rotated = infinity_point.rotate(rotation);
 
     // both preserve their lengths under rotation
-    assert_eq!(finite_rotated.mag, finite_point.mag);
-    assert_eq!(infinity_rotated.mag, 1.0); // normalized to unit
+    assert!(finite_rotated.near_mag(finite_point.mag));
+    assert!(infinity_rotated.near_mag(1.0)); // normalized to unit
 
     // blade arithmetic tracks projective structure automatically
     // finite point stays in lower grades
@@ -256,12 +256,11 @@ fn it_automates_homogeneous_coordinates() {
     // scaling works uniformly on both
     let scaled_finite = finite_point.scale(2.0);
     let scaled_infinity = infinity_point.scale(2.0);
-    assert_eq!(
-        scaled_finite.mag,
-        finite_point.mag * 2.0,
+    assert!(
+        scaled_finite.near_mag(finite_point.mag * 2.0),
         "finite point scales"
     );
-    assert_eq!(scaled_infinity.mag, 2.0, "infinity scales uniformly");
+    assert!(scaled_infinity.near_mag(2.0), "infinity scales uniformly");
 
     // geonum automates what homogeneous coords do manually:
     // - no division by w for normalization
@@ -300,7 +299,7 @@ fn it_handles_projective_line_at_infinity() {
     // all infinity points have grade 2 (bivector) from dual operation
     for inf_point in &infinity_points {
         assert_eq!(inf_point.angle.grade(), 2, "infinity points at grade 2");
-        assert_eq!(inf_point.mag, 1.0, "normalized to unit length");
+        assert!(inf_point.near_mag(1.0), "normalized to unit length");
     }
 
     // parallel lines meet at infinity (blade 2)
@@ -410,7 +409,7 @@ fn it_reveals_limit_behavior_through_rotation() {
         let at_infinity = to_projective_infinity(&point);
 
         // projective infinity has unit length
-        assert_eq!(at_infinity.mag, 1.0);
+        assert!(at_infinity.near_mag(1.0));
 
         // and opposite direction
         let expected_angle = point.angle + Angle::new(1.0, 1.0);
@@ -719,7 +718,7 @@ fn it_handles_duality() {
     let line_angles = vec![0.0, PI / 6.0, PI / 4.0, PI / 3.0, PI / 2.0];
 
     for &angle in &line_angles {
-        let line_in_pencil = Geonum::new_with_angle(1.0, Angle::new(angle, PI));
+        let line_in_pencil = Geonum::new_with_angle(1.0, Angle::new(angle / PI, 1.0));
 
         // dual point lies on the dual line (perpendicular to pencil center)
         let dual_point = Geonum::new_with_angle(
@@ -766,8 +765,8 @@ fn it_handles_duality() {
     // double polar returns to pole
     let pole_of_polar = Geonum::new_with_angle(1.0 / polar.mag, polar.angle);
 
-    assert_eq!(
-        pole_of_polar.mag, pole.mag,
+    assert!(
+        pole_of_polar.near_mag(pole.mag),
         "double polar recovers original pole"
     );
 
@@ -923,8 +922,8 @@ fn it_handles_cross_ratios() {
     let d_at_infinity = a.normalize().rotate(Angle::new(1.0, 1.0)); // opposite direction
 
     // prove D is at projective infinity (unit length, opposite direction)
-    assert_eq!(
-        d_at_infinity.mag, 1.0,
+    assert!(
+        d_at_infinity.near_mag(1.0),
         "projective infinity has unit length"
     );
     assert_eq!(
@@ -972,7 +971,7 @@ fn it_eliminates_matrix_complexity() {
     let translation = Geonum::new_from_cartesian(3.0, 4.0); // translate by (3,4)
 
     // prove translation vector has expected properties
-    assert_eq!(translation.mag, 5.0); // sqrt(3² + 4²) = 5
+    assert!(translation.near_mag(5.0)); // sqrt(3² + 4²) = 5
     assert!((translation.angle.grade_angle().tan() - 4.0 / 3.0).abs() < EPSILON); // arctan(4/3)
     let rotation = Geonum::new(1.0, 1.0, 4.0); // rotate by π/4
     let scale = Geonum::new(2.0, 0.0, 1.0); // scale by 2
@@ -1012,7 +1011,7 @@ fn it_eliminates_matrix_complexity() {
     let perspective_point = Geonum::new_with_angle(point.mag / depth, point.angle);
 
     // no matrices needed - perspective emerges from length scaling
-    assert_eq!(perspective_point.mag, 0.5);
+    assert!(perspective_point.near_mag(0.5));
     assert_eq!(perspective_point.angle, point.angle);
 
     // rotation matrices become trivial
@@ -1026,7 +1025,7 @@ fn it_eliminates_matrix_complexity() {
     let rotated_30 = point.rotate(angle_30);
 
     // prove rotation worked
-    assert_eq!(rotated_30.mag, point.mag);
+    assert!(rotated_30.near_mag(point.mag));
     assert_eq!(rotated_30.angle, point.angle + angle_30);
 
     // reflection matrices eliminated
@@ -1036,7 +1035,7 @@ fn it_eliminates_matrix_complexity() {
     let reflected = point.reflect(&normal);
 
     // reflection negates component perpendicular to normal
-    assert_eq!(reflected.mag, point.mag);
+    assert!(reflected.near_mag(point.mag));
 
     // shear transformation without matrices
     // traditional:
@@ -1115,7 +1114,7 @@ fn it_eliminates_matrix_complexity() {
     let vector_on_curve = Geonum::new(1.5, 1.0, 4.0);
     let transported = vector_on_curve; // parallel transport preserves geonum
 
-    assert_eq!(transported.mag, vector_on_curve.mag);
+    assert!(transported.near_mag(vector_on_curve.mag));
     assert_eq!(transported.angle, vector_on_curve.angle);
 
     // prove efficiency: stack 10 transformations
@@ -1140,7 +1139,7 @@ fn it_eliminates_matrix_complexity() {
     let intersection = Geonum::new(0.0, 0.0, 1.0); // origin
 
     // prove intersection is at origin
-    assert_eq!(intersection.mag, 0.0);
+    assert!(intersection.near_mag(0.0));
     assert_eq!(intersection.angle, Angle::new(0.0, 1.0));
 
     // for non-origin lines, intersection emerges from angle difference
@@ -1260,7 +1259,7 @@ fn it_computes_line_through_two_points() {
 
     // prove it equals the point with explicit blade history
     // adds 4 blades from subtraction history
-    assert_eq!(origin_line.mag, point.mag);
+    assert!(origin_line.near_mag(point.mag));
     assert_eq!(
         origin_line.angle,
         point.angle + Angle::new_with_blade(4, 0.0, 1.0)
@@ -1303,7 +1302,7 @@ fn it_computes_line_through_two_points() {
     let infinity_direction = p1_normalized.rotate(Angle::new(1.0, 1.0)); // rotate by π
 
     // this represents the "ideal line" through p1 toward infinity
-    assert_eq!(infinity_direction.mag, 1.0); // unit length at infinity
+    assert!(infinity_direction.near_mag(1.0)); // unit length at infinity
     assert_eq!(
         infinity_direction.angle.blade() - p1_normalized.angle.blade(),
         2,
@@ -1557,8 +1556,8 @@ fn it_proves_parallel_lines_meet_at_infinity() {
 
     // parallel lines have zero wedge product (sin(0) = 0)
     // this represents their intersection at infinity
-    assert_eq!(
-        intersection.mag, 0.0,
+    assert!(
+        intersection.near_mag(0.0),
         "parallel lines meet at infinity (zero length)"
     );
 
@@ -1760,8 +1759,8 @@ fn it_projects_between_planes() {
     );
 
     // length is preserved in this simple projection
-    assert_eq!(
-        projected.mag, point.mag,
+    assert!(
+        projected.near_mag(point.mag),
         "length preserved in rotation projection"
     );
 
@@ -1795,9 +1794,8 @@ fn it_projects_between_planes() {
     let distance_ratio = 2.0; // object twice as far
     let perspective_point = point.scale(1.0 / distance_ratio);
 
-    assert_eq!(
-        perspective_point.mag,
-        point.mag / distance_ratio,
+    assert!(
+        perspective_point.near_mag(point.mag / distance_ratio),
         "perspective scales by inverse distance"
     );
     assert_eq!(

@@ -200,7 +200,7 @@ fn it_is_projection() {
     let v = Geonum::new_with_angle(r, Angle::new(1.0, 4.0)); // θ = π/4
     let onto_self = Geonum::new_with_angle(1.0, v.angle);
     let proj_self = v.project(&onto_self);
-    assert_eq!(proj_self.mag, 1.0);
+    assert!(proj_self.near_mag(1.0));
     assert_eq!(proj_self.angle, v.angle);
 
     // adjacent (φ=0): [1, π/4] → [√2/2, 0]
